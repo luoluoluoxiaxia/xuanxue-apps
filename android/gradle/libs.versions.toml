@@ -1,7 +1,7 @@
 # 版本号全部来自 Google Maven / Maven Central 的实时查询（2026-08-20），不是凭记忆填写。
 # 升级时重新查 group-index.xml 与 maven-metadata.xml，不要手改成没验证过的版本。
 [versions]
-agp = "9.3.1"
+agp = "9.3.2"
 kotlin = "2.4.10"
 ksp = "2.3.11"
 coreKtx = "1.19.0"
