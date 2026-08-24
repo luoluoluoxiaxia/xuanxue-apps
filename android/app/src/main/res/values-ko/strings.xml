@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 한국은 한자 인지도가 낮아 브랜드명도 한글 음역을 사용한다.
+         음역을 유지할지 별도의 한국어 브랜드명을 쓸지는 제품 확인 필요. -->
+    <string name="app_name">현추</string>
+
+    <!-- 로그인 / 가입 -->
+    <string name="auth_title">현추 로그인</string>
+    <!-- 八字는 한국에서 「사주」로 통한다. 직역하지 않는다. -->
+    <string name="auth_subtitle">사주와 육효, 모두 여기에서.</string>
+    <string name="auth_email">이메일</string>
+    <string name="auth_password">비밀번호</string>
+    <string name="auth_login">로그인</string>
+    <string name="auth_register">초대 코드로 가입</string>
+    <string name="auth_email_required">이메일을 입력해 주세요</string>
+    <string name="auth_password_required">비밀번호를 입력해 주세요</string>
+    <string name="auth_logout">로그아웃</string>
+
+    <!-- 홈 -->
+    <string name="home_greeting">오늘 볼 수 있는 횟수</string>
+    <string name="home_quota">비공개 질문 %1$d / %2$d 남음</string>
+    <string name="home_account">계정 %1$s</string>
+    <string name="home_start_bazi">사주 명식 뽑기</string>
+    <string name="home_start_liuyao">육효로 점 보기</string>
+
+    <!-- 명식 입력 -->
+    <string name="chart_title">생년월일시</string>
+    <string name="chart_subtitle">양력으로 입력하세요. 시각은 진태양시로 자동 환산됩니다.</string>
+    <string name="chart_year">년</string>
+    <string name="chart_month">월</string>
+    <string name="chart_day">일</string>
+    <string name="chart_hour">시</string>
+    <string name="chart_minute">분</string>
+    <string name="chart_gender">성별</string>
+    <string name="chart_gender_male">남성</string>
+    <string name="chart_gender_female">여성</string>
+    <string name="chart_location">출생지</string>
+    <string name="chart_cast">명식 뽑기</string>
+    <string name="chart_back">다시 입력</string>
+
+    <!-- 명식 -->
+    <string name="chart_pillars">사주</string>
+    <string name="chart_pillar_year">년주</string>
+    <string name="chart_pillar_month">월주</string>
+    <string name="chart_pillar_day">일주</string>
+    <string name="chart_pillar_hour">시주</string>
+    <!-- 한국에서는 日主를 「일간(日干)」이라 부른다 -->
+    <string name="chart_day_master_label">일간</string>
+    <string name="chart_wuxing">오행</string>
+    <string name="chart_hidden">지장간</string>
+    <string name="chart_na_yin">납음 %1$s</string>
+
+    <!-- 풀이 -->
+    <string name="interpret_question">궁금한 점 (비워 두면 전체 풀이)</string>
+    <string name="interpret_start">풀이 요청하기</string>
+    <string name="interpret_running">풀이 중입니다. 보통 1~2분 걸립니다</string>
+    <string name="interpret_stage">현재 단계: %1$s</string>
+    <string name="interpret_disclaimer">풀이 내용은 오락용 참고이며 전문적인 조언이 아닙니다.</string>
+
+    <!-- 육효 -->
+    <string name="liuyao_title">육효 점 보기</string>
+    <string name="liuyao_subtitle">묻고 싶은 일을 마음속으로 떠올리며 휴대폰을 세 번 흔드세요.</string>
+    <string name="liuyao_question">묻고 싶은 일</string>
+    <string name="liuyao_presets">자주 묻는 질문</string>
+    <string name="liuyao_preset_1">이번 협업이 잘 성사될까요</string>
+    <string name="liuyao_preset_2">요즘 재물운은 어떤가요</string>
+    <string name="liuyao_preset_3">이 일을 그만두어야 할까요</string>
+    <string name="liuyao_need_question">먼저 묻고 싶은 일을 입력해 주세요</string>
+    <string name="liuyao_shake_hint">%1$d 번 더 흔들어 주세요</string>
+    <string name="liuyao_casting">괘를 뽑는 중…</string>
+    <string name="liuyao_cast_now">바로 괘 뽑기</string>
+    <string name="liuyao_interpret">괘 풀이 요청하기</string>
+    <string name="liuyao_new_cast">다시 괘 뽑기</string>
+    <string name="liuyao_palace">괘궁</string>
+    <string name="liuyao_month">월건</string>
+    <string name="liuyao_day">일진</string>
+    <string name="liuyao_kong">순공</string>
+    <string name="liuyao_shi">세</string>
+    <string name="liuyao_ying">응</string>
+    <string name="liuyao_kong_mark">공</string>
+
+    <!-- 공통 -->
+    <string name="common_back">뒤로</string>
+    <string name="common_loading">불러오는 중…</string>
+    <string name="common_retry">다시 시도</string>
+
+    <!-- 보관함 -->
+    <string name="archive_title">내 보관함</string>
+    <string name="archive_empty">아직 저장된 것이 없습니다. 먼저 명식을 뽑아 보세요</string>
+    <string name="archive_no_history">이 명식에는 아직 풀이 기록이 없습니다</string>
+    <string name="archive_history_count">풀이 %1$d건</string>
+    <string name="archive_whole_chart">전체 풀이</string>
+    <string name="archive_reading">풀이 기록</string>
+    <string name="home_archive">내 보관함</string>
+
+    <!-- 커뮤니티 -->
+    <string name="community_title">괘 사례 광장</string>
+    <string name="community_empty">아직 공개된 괘 사례가 없습니다</string>
+    <string name="community_stats">조회 %1$d · 좋아요 %2$d · 댓글 %3$d</string>
+    <string name="community_load_more">더 보기</string>
+    <string name="community_comments">댓글 %1$d개</string>
+    <string name="community_anonymous">익명</string>
+    <string name="community_privacy_note">공개된 사례는 모두 익명 처리되어 생년월일시가 포함되지 않습니다.</string>
+    <string name="home_community">괘 사례 광장</string>
+</resources>

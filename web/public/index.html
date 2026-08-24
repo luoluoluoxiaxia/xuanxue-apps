@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+(() => {
+  try {
+    const query = new URLSearchParams(location.search);
+    const start = query.get("start");
+    const detailedEntry = start === "liuyao" && query.get("flow") === "detailed";
+    const route = history.state?.xuanshuHomeRoute;
+    let resumeSystem = "";
+    let resumeDetailed = false;
+    if (route?.screen === "dash") {
+      const raw = document.cookie.split(";").map(part => part.trim()).find(part => part.startsWith("xz_resume="))?.slice(10);
+      if (raw) {
+        try {
+          const resume = JSON.parse(decodeURIComponent(raw));
+          if (resume?.system === "bazi" || resume?.system === "liuyao") resumeSystem = resume.system;
+          resumeDetailed = !!resume?.personal_case_id;
+        } catch (_) {}
+      }
+    }
+    const detailedWorkspace = !!query.get("personal_case") || route?.workspace === "detailed" || resumeDetailed;
+    const navTarget = query.get("view") === "archives"
+      ? "profile"
+      : detailedEntry || detailedWorkspace
+        ? "detailed"
+        : start === "bazi" || start === "liuyao"
+        ? start
+        : location.hash === "#gua-square"
+          ? "community"
+          : route?.screen === "dash"
+            ? (route.system === "bazi" || route.system === "liuyao" ? route.system : resumeSystem)
+            : "landing";
+    if (start === "bazi" || start === "liuyao") document.documentElement.dataset.entryStart = start;
+    if (!navTarget || navTarget === "landing") return;
+    const syncInitialNavSelection = () => {
+      const target = navTarget === "community"
+        ? document.querySelector("[data-home-community-nav]")
+        : document.querySelector(`[data-hero-nav="${navTarget}"]`);
+      if (!target) return false;
+      document.querySelectorAll("[data-hero-nav], [data-home-community-nav]").forEach(item => {
+        if (item === target) item.setAttribute("aria-current", "page");
+        else item.removeAttribute("aria-current");
+      });
+      return true;
+    };
+    if (!syncInitialNavSelection()) {
+      const observer = new MutationObserver(() => {
+        if (syncInitialNavSelection()) observer.disconnect();
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    }
+    window.setTimeout(() => document.documentElement.removeAttribute("data-entry-start"), 3000);
+  } catch (_) {}
+})();
+</script>
+<style>html[data-entry-start] body{visibility:hidden}</style>
+<title>玄枢 · 免费八字排盘与六爻起卦 AI 解读</title>
+<meta name="description" content="玄枢提供免费的八字排盘、子平命理分析、六爻起卦与 AI 对话解读。在线生成命盘、卦盘、大运流年参考，支持连续追问。">
+<meta name="keywords" content="免费八字排盘,八字排盘,八字算命,子平命理,六爻起卦,六爻占卜,AI命理解读">
+<meta name="robots" content="index,follow,max-image-preview:large">
+<link rel="canonical" href="https://xx.zsien.tech/">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="玄枢">
+<meta property="og:title" content="玄枢 · 免费八字排盘与六爻起卦 AI 解读">
+<meta property="og:description" content="免费在线排八字、起六爻，生成命盘、卦盘与 AI 对话解读，支持事业、财运、关系、大运流年等连续追问。">
+<meta property="og:url" content="https://xx.zsien.tech/">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="玄枢 · 免费八字排盘与六爻起卦 AI 解读">
+<meta name="twitter:description" content="免费在线八字排盘、六爻起卦与 AI 命理解读。">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="assets/xuanshu-favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="community.css?v=community-42">
+<link rel="stylesheet" href="account.css?v=account-9">
+<link rel="stylesheet" href="style.css?v=design-144">
+<link rel="stylesheet" href="personal-home.css?v=personal-workbench-11">
+<link rel="stylesheet" href="chat.css?v=chat-16">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://xx.zsien.tech/#organization",
+      "name": "玄枢",
+      "url": "https://xx.zsien.tech/"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://xx.zsien.tech/#website",
+      "url": "https://xx.zsien.tech/",
+      "name": "玄枢",
+      "alternateName": ["玄学算法", "免费八字排盘", "六爻起卦"],
+      "description": "免费的八字排盘、子平命理分析、六爻起卦与 AI 对话解读工具。",
+      "publisher": {
+        "@id": "https://xx.zsien.tech/#organization"
+      },
+      "inLanguage": "zh-CN"
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://xx.zsien.tech/#app",
+      "name": "玄枢 免费八字排盘与六爻起卦",
+      "url": "https://xx.zsien.tech/",
+      "applicationCategory": "LifestyleApplication",
+      "operatingSystem": "Web",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CNY"
+      },
+      "description": "在线生成八字命盘、六爻卦盘与 AI 对话解读，当前免费开放。",
+      "inLanguage": "zh-CN"
+    }
+  ]
+}
+</script>
+</head>
+<body data-screen="landing" data-mode="basic">
+<a id="skip-to-main" class="skip-link" href="#home-main">跳到主要内容</a>
+
+<!-- ============ LANDING / 观象台 ============ -->
+<section id="landing" class="landing">
+  <div class="hero">
+    <div class="star-field" aria-hidden="true">
+      <span style="--x:9%;--y:18%;--d:0s"></span>
+      <span style="--x:22%;--y:64%;--d:.8s"></span>
+      <span style="--x:37%;--y:12%;--d:1.6s"></span>
+      <span style="--x:52%;--y:82%;--d:2.2s"></span>
+      <span style="--x:88%;--y:12%;--d:.4s"></span>
+      <span style="--x:66%;--y:8%;--d:3s"></span>
+      <span style="--x:5%;--y:44%;--d:2.6s"></span>
+    </div>
+    <aside class="oracle-compass" aria-hidden="true">
+      <div class="compass-cross h"></div>
+      <div class="compass-cross v"></div>
+      <div class="compass-ring ring-outer"></div>
+      <div class="compass-ring ring-ticks"></div>
+      <div class="compass-ring ring-trigrams">
+        <span style="--a:0deg">☲</span><span style="--a:45deg">☷</span><span style="--a:90deg">☱</span><span style="--a:135deg">☰</span>
+        <span style="--a:180deg">☵</span><span style="--a:225deg">☶</span><span style="--a:270deg">☳</span><span style="--a:315deg">☴</span>
+      </div>
+      <div class="compass-ring ring-mountains">
+        <span style="--a:0deg">午</span><span style="--a:15deg">丁</span><span style="--a:30deg">未</span><span style="--a:45deg">坤</span>
+        <span style="--a:60deg">申</span><span style="--a:75deg">庚</span><span style="--a:90deg">酉</span><span style="--a:105deg">辛</span>
+        <span style="--a:120deg">戌</span><span style="--a:135deg">乾</span><span style="--a:150deg">亥</span><span style="--a:165deg">壬</span>
+        <span style="--a:180deg">子</span><span style="--a:195deg">癸</span><span style="--a:210deg">丑</span><span style="--a:225deg">艮</span>
+        <span style="--a:240deg">寅</span><span style="--a:255deg">甲</span><span style="--a:270deg">卯</span><span style="--a:285deg">乙</span>
+        <span style="--a:300deg">辰</span><span style="--a:315deg">巽</span><span style="--a:330deg">巳</span><span style="--a:345deg">丙</span>
+      </div>
+      <div class="compass-ring ring-branches">
+        <span style="--a:0deg">午</span><span style="--a:30deg">未</span><span style="--a:60deg">申</span><span style="--a:90deg">酉</span>
+        <span style="--a:120deg">戌</span><span style="--a:150deg">亥</span><span style="--a:180deg">子</span><span style="--a:210deg">丑</span>
+        <span style="--a:240deg">寅</span><span style="--a:270deg">卯</span><span style="--a:300deg">辰</span><span style="--a:330deg">巳</span>
+      </div>
+      <div class="compass-core">玄</div>
+    </aside>
+    <div class="hero-nav">
+      <button type="button" class="brand" data-hero-nav="landing" aria-label="返回观象台">
+        <span class="brand-mark">玄</span>
+        <span class="brand-copy"><b>玄 枢</b><em>XUANSHU</em></span>
+      </button>
+      <div class="hero-meta">
+        <nav class="hero-links" aria-label="主导航">
+          <button type="button" data-hero-nav="landing" aria-current="page">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 20v-6h6v6"/></svg></span>
+            <span>观象台</span>
+          </button>
+          <button type="button" data-hero-nav="bazi">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16M8 14h2m4 0h2m-8 3h2"/></svg></span>
+            <span>八字排盘</span>
+          </button>
+          <button type="button" data-hero-nav="liuyao">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6h6m2 0h6M5 12h14M5 18h6m2 0h6"/></svg></span>
+            <span>六爻起卦</span>
+          </button>
+          <button type="button" data-hero-nav="detailed">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="5"/><circle cx="16" cy="12" r="5"/></svg></span>
+            <span>一事详断</span>
+          </button>
+          <a class="hero-link-signature" href="#gua-square" data-home-community-nav>
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-5.5z"/><path d="M8 8h8m-8 4h5"/></svg></span>
+            <span>卦帖广场</span>
+          </a>
+          <button type="button" data-hero-nav="profile">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
+            <span>我的档案</span>
+          </button>
+          <button type="button" class="account-nav-button" data-account-button>
+            <span data-account-label>登录 / 注册</span>
+          </button>
+        </nav>
+        <div class="hero-actions-m" aria-label="快捷操作">
+          <button type="button" class="chip-btn" data-account-button><span data-account-label>登录 / 注册</span></button>
+          <button type="button" id="hero-profile-btn" class="chip-btn">档案</button>
+        </div>
+      </div>
+    </div>
+
+    <main id="personal-workbench" class="personal-workbench" aria-label="登录用户观象台" tabindex="-1" hidden>
+      <section class="ph-loading" data-ph-loading aria-live="polite">
+        <span aria-hidden="true"></span>
+        <p>正在打开观象台</p>
+      </section>
+
+      <section class="ph-ready" data-ph-ready hidden>
+        <section class="ph-onboarding ph-home-gate" data-ph-onboarding data-ph-home-gate hidden aria-live="polite"></section>
+
+        <section class="ph-today" data-ph-today aria-labelledby="ph-today-title">
+          <header>
+            <h1 id="ph-today-title">今日</h1>
+            <p>
+              <span data-ph-daily-date>—</span><i aria-hidden="true">·</i><span data-ph-daily-weekday>—</span>
+              <i aria-hidden="true">·</i><button type="button" data-ph-edit-city><span data-ph-city-label>设置常住城市</span></button>
+            </p>
+          </header>
+          <div class="ph-today-grid" data-ph-daily-content aria-live="polite">
+            <section>
+              <h3>今日宜</h3>
+              <ul data-ph-daily-suitable></ul>
+            </section>
+            <section>
+              <h3>今日忌</h3>
+              <ul data-ph-daily-avoid></ul>
+            </section>
+          </div>
+          <section class="ph-period-pending ph-daily-pending" data-ph-daily-pending hidden aria-live="polite">
+            <span aria-hidden="true"></span>
+            <p>正在准备今日宜忌</p>
+          </section>
+          <section class="ph-period-error ph-daily-error" data-ph-daily-error hidden role="alert">
+            <p>今日宜忌暂时没有生成成功</p>
+            <button type="button" data-ph-retry-day>重新生成今日</button>
+          </section>
+        </section>
+
+        <section class="ph-month" data-ph-month aria-labelledby="ph-month-title">
+          <header class="ph-month-head">
+            <h2 id="ph-month-title">本月</h2>
+          </header>
+
+          <div class="ph-month-grid" data-ph-month-content aria-live="polite">
+            <section class="ph-column ph-suitable" aria-labelledby="ph-suitable-title">
+              <h3 id="ph-suitable-title">本月宜</h3>
+              <ul data-ph-suitable></ul>
+            </section>
+            <section class="ph-column ph-avoid" aria-labelledby="ph-avoid-title">
+              <h3 id="ph-avoid-title">本月忌</h3>
+              <ul data-ph-avoid></ul>
+            </section>
+            <section class="ph-column ph-outfit" aria-labelledby="ph-outfit-title">
+              <h3 id="ph-outfit-title">本月穿搭</h3>
+              <p class="ph-style-intent" data-ph-style-intent></p>
+              <div class="ph-swatches" data-ph-colors></div>
+              <div class="ph-bracelet">
+                <span>手镯材质</span>
+                <div data-ph-bracelet-materials></div>
+              </div>
+            </section>
+          </div>
+
+          <section class="ph-period-pending ph-month-pending" data-ph-month-pending hidden aria-live="polite">
+            <span aria-hidden="true"></span>
+            <p>正在准备本月内容</p>
+          </section>
+
+          <section class="ph-period-error ph-month-error" data-ph-month-error hidden role="alert">
+            <p>本月内容暂时没有生成成功</p>
+            <button type="button" data-ph-retry-month>重新生成本月</button>
+          </section>
+        </section>
+
+        <nav class="ph-action-rail" aria-label="继续使用玄枢">
+          <button type="button" class="is-featured" data-open-detailed>
+            <span>命盘与卦象一起看</span><b>一事详断</b><i aria-hidden="true">→</i>
+          </button>
+          <button type="button" data-ph-start-liuyao>
+            <span>问眼前</span><b>六爻起卦</b><i aria-hidden="true">→</i>
+          </button>
+          <button type="button" data-ph-start-bazi>
+            <span>看长期</span><b>八字排盘</b><i aria-hidden="true">→</i>
+          </button>
+        </nav>
+      </section>
+
+      <section class="ph-error" data-ph-error hidden role="alert">
+        <h1>观象台暂时没有打开</h1>
+        <p data-ph-error-message>网络连接不稳定，请稍后重试。</p>
+        <button type="button" data-ph-retry-home>重新加载</button>
+      </section>
+    </main>
+
+    <dialog class="ph-city-dialog" data-ph-city-dialog aria-labelledby="ph-city-title">
+      <form method="dialog" data-ph-city-form>
+        <button type="button" class="ph-dialog-close" data-ph-close-city aria-label="关闭">×</button>
+        <span>常住城市</span>
+        <h2 id="ph-city-title">现在生活在哪座城市</h2>
+        <p>用于本月穿搭与手镯的城市方位辅助。</p>
+        <label for="ph-city-input">城市</label>
+        <input id="ph-city-input" name="city" maxlength="80" autocomplete="address-level2" required placeholder="例如：杭州">
+        <p class="ph-dialog-error" data-ph-city-error hidden role="alert"></p>
+        <button type="submit" class="ph-detail-submit" data-ph-city-submit>保存</button>
+      </form>
+    </dialog>
+
+    <main id="home-main" class="hero-body" data-home-action-panel aria-labelledby="home-page-title" tabindex="-1">
+      <h1 id="home-page-title" class="sr-only-label">玄枢 · 免费八字排盘与六爻起卦 AI 解读</h1>
+      <div class="hero-main">
+        <div class="algorithm-grid" aria-label="选择法门">
+          <button type="button" class="algorithm-card primary" data-start-liuyao>
+            <span class="algo-k">问眼前</span>
+            <span class="algo-title">六爻起卦</span>
+            <span class="algo-body">适合感情、工作、选择、失物等具体问题。</span>
+            <span class="algo-action">去起一卦 <span>→</span></span>
+          </button>
+          <button type="button" class="algorithm-card" data-start-bazi>
+            <span class="algo-k">看长期</span>
+            <span class="algo-title">八字排盘</span>
+            <span class="algo-body">看命局、事业、财运、关系与大运流年。</span>
+            <span class="algo-action">去排命盘 <span>→</span></span>
+          </button>
+        </div>
+        <div class="hero-cta" aria-hidden="true">
+          <button type="button" id="btn-start" class="btn-gold">八字排盘</button>
+          <button type="button" id="btn-liuyao" class="btn-outline-dark">六爻起卦</button>
+        </div>
+      </div>
+    </main>
+
+    <nav class="home-action-dock" data-home-action-dock aria-label="快捷选择" aria-hidden="true">
+      <button type="button" class="home-action-dock-item is-liuyao" data-start-liuyao>
+        <b>六爻起卦</b><span>问眼前</span>
+      </button>
+      <button type="button" class="home-action-dock-item is-bazi" data-start-bazi>
+        <b>八字排盘</b><span>看长期</span>
+      </button>
+    </nav>
+
+    <aside id="gua-square" class="home-community" aria-labelledby="home-community-title">
+      <div class="home-community-card">
+        <div class="home-community-head">
+          <span class="home-community-kicker"><i></i>公开卦帖</span>
+          <button type="button" class="home-community-all" data-home-community-filter-toggle aria-expanded="false" aria-controls="home-community-filters">分类筛选 <span aria-hidden="true">⌄</span></button>
+        </div>
+        <h2 id="home-community-title">卦帖广场 <span>正在发生的问与答</span></h2>
+        <p class="home-community-intro">匿名公开的真实问题，点击即可查看解答。</p>
+        <div id="home-community-filters" class="home-community-filters" aria-label="筛选卦帖" hidden>
+          <div class="home-community-filter-group" aria-label="排序方式">
+            <span>排序</span>
+            <div class="home-community-filter-options">
+              <button type="button" data-home-community-view="latest" aria-pressed="true">最新</button>
+              <button type="button" data-home-community-view="popular" aria-pressed="false">热门</button>
+              <button type="button" data-home-community-view="featured" aria-pressed="false">精选</button>
+            </div>
+          </div>
+          <div class="home-community-filter-group" aria-label="事情类型">
+            <span>分类</span>
+            <div class="home-community-filter-options">
+              <button type="button" data-home-community-type="" aria-pressed="true">全部</button>
+              <button type="button" data-home-community-type="contract" aria-pressed="false">合同合作</button>
+              <button type="button" data-home-community-type="relationship" aria-pressed="false">感情关系</button>
+              <button type="button" data-home-community-type="career" aria-pressed="false">事业工作</button>
+              <button type="button" data-home-community-type="wealth" aria-pressed="false">财运投资</button>
+              <button type="button" data-home-community-type="exam" aria-pressed="false">考试求职</button>
+              <button type="button" data-home-community-type="lost" aria-pressed="false">失物寻人</button>
+              <button type="button" data-home-community-type="health" aria-pressed="false">健康疾病</button>
+              <button type="button" data-home-community-type="travel" aria-pressed="false">出行迁移</button>
+              <button type="button" data-home-community-type="other" aria-pressed="false">其他</button>
+            </div>
+          </div>
+        </div>
+        <div id="home-community-feed" class="home-community-feed" data-state="empty" role="list" aria-live="polite" aria-busy="true">
+          <div class="home-community-empty">
+            <span class="home-community-empty-mark" aria-hidden="true">卦</span>
+            <span>
+              <b>广场刚刚开卷</b>
+              <em>还没有公开卦帖。提出一个具体问题，审核通过后就会出现在这里。</em>
+              <a class="home-community-empty-action" href="/?start=liuyao">去公开起卦 <span aria-hidden="true">→</span></a>
+            </span>
+          </div>
+        </div>
+        <div class="home-community-load">
+          <span class="home-community-load-state" data-home-community-status role="status" aria-live="polite" hidden></span>
+          <button type="button" class="home-community-more" data-home-community-more hidden>继续加载</button>
+          <span class="home-community-sentinel" data-home-community-sentinel aria-hidden="true"></span>
+        </div>
+      </div>
+    </aside>
+
+    <footer class="hero-footer">
+      <span data-site-stats-summary>已排 0 盘 · 已断 0 卦 · 今日 0 问</span>
+      <span class="hero-footer-row">
+        <span>解读只作参考，不替代医疗、法律、投资等专业判断</span>
+        <button type="button" id="hero-feedback-btn" class="hero-feedback">反馈</button>
+      </span>
+    </footer>
+  </div>
+</section>
+
+<!-- ============ DASHBOARD / 工作台 ============ -->
+<main id="dashboard" class="dashboard" aria-label="AI 解读" tabindex="-1" hidden>
+  <div class="dash-topbar">
+    <div class="dash-topbar-inner">
+      <div class="dt-left">
+        <button type="button" id="home-btn" class="dt-logo" title="返回观象台">玄</button>
+        <div id="session-switcher" class="session-switcher" aria-label="命盘和卦盘">
+          <button type="button" id="session-bazi-btn" class="session-btn active">命 · 命盘</button>
+          <button type="button" id="session-liuyao-btn" class="session-btn add">卦 +</button>
+        </div>
+        <div id="detailed-workspace-label" class="detailed-workspace-label" hidden>
+          <span>一事详断</span><em>八字 × 卦象</em>
+        </div>
+        <span id="dt-stamp" class="dt-stamp"></span>
+      </div>
+      <div class="dt-right">
+        <span id="dt-pillars" class="dt-pillars"></span>
+        <div class="segmented" role="tablist" aria-label="详细程度">
+          <button type="button" id="mode-basic" class="seg-btn" data-mode-btn="basic" aria-pressed="true">基础</button>
+          <button type="button" id="mode-advanced" class="seg-btn" data-mode-btn="advanced" aria-pressed="false">进阶</button>
+        </div>
+        <button type="button" id="rechart-btn" class="dt-rechart">修改信息</button>
+        <button type="button" id="top-chart-btn" class="top-chart-btn">看盘</button>
+        <button type="button" id="top-profile-btn" class="top-profile-btn"><span class="top-profile-label">档案</span><span class="top-profile-sep"> · </span><span id="top-profile-state">暂无记录</span></button>
+        <button type="button" class="account-nav-button" data-account-button><span data-account-label>登录 / 注册</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="board-strip" class="board-strip" aria-label="盘面速览">
+    <div id="board-strip-main" class="board-strip-main"></div>
+    <button type="button" id="open-chart-btn" class="board-chart-btn">看盘 ▾</button>
+  </div>
+
+  <div class="workspace">
+    <aside class="chart-rail" id="chart-rail" aria-labelledby="rail-title-m">
+      <div class="rail-head-m">
+        <div class="rail-head-m-title"><h2 id="rail-title-m">命 盘</h2><span id="rail-sub-m"></span></div>
+        <button type="button" id="chart-rail-close" class="modal-close" aria-label="收起看盘">×</button>
+      </div>
+      <section class="natal-chart">
+        <div class="nc-glow"></div>
+        <div class="nc-head">
+          <div class="nc-title"><h2>命 盘</h2><span id="nc-daymaster" class="nc-dm"></span></div>
+          <button type="button" id="ask-chart-btn" class="nc-ask">开始解读</button>
+        </div>
+        <div id="pillars-grid" class="pillars-grid"></div>
+        <div class="nc-mode-row-m">
+          <span>点任意一柱看古典细断</span>
+          <div class="segmented" role="tablist" aria-label="详细程度">
+            <button type="button" id="mode-basic-m" class="seg-btn" data-mode-btn="basic" aria-pressed="true">基础</button>
+            <button type="button" id="mode-advanced-m" class="seg-btn" data-mode-btn="advanced" aria-pressed="false">进阶</button>
+          </div>
+        </div>
+        <div id="shensha-row" class="shensha-row"></div>
+        <div id="basic-hint" class="basic-hint">点任意一柱查看含义 · 想看藏干/神煞切到 <b>进阶</b></div>
+        <div id="natal-facts" class="natal-facts" aria-label="命局速览"></div>
+        <div id="wuxing-bar" class="wuxing-bar"></div>
+      </section>
+
+      <section class="stage-card sc-scroll">
+        <div class="stage-head">
+          <h2>行 运</h2>
+          <button type="button" id="open-trend-btn" class="stage-trend-btn">大运走势</button>
+        </div>
+        <div id="stage-rows" class="stage-rows"></div>
+        <div id="dayun-timeline" class="dayun-timeline" hidden></div>
+        <div id="advanced-stage" class="advanced-stage"></div>
+      </section>
+
+      <div class="rail-actions-m">
+        <button type="button" id="rail-rechart-btn">修改信息</button>
+        <button type="button" id="rail-gloss-btn">名词解释</button>
+      </div>
+    </aside>
+    <div id="chart-mask" class="chart-mask" hidden></div>
+
+    <section class="conversation" aria-label="对话解读">
+      <div class="conv-head">
+        <div class="conv-head-top conv-topicbar">
+          <div id="tab-row" class="tab-row sc-scroll" aria-label="对话说明"></div>
+          <button type="button" id="gloss-tab-btn" class="gloss-tab-btn">名词解释</button>
+          <button type="button" id="new-cast-btn" class="new-cast-btn" hidden>开新卦</button>
+          <div id="dm-summary" class="dm-summary"></div>
+        </div>
+      </div>
+      <div id="chat-thread" class="chat-thread sc-scroll" role="tabpanel"></div>
+      <div id="composer" class="composer">
+        <div class="composer-box">
+          <button type="button" id="new-session-btn" class="btn-ghost-sm" title="开启新的八字对话">新会话</button>
+          <input type="text" id="draft-input" autocomplete="off" placeholder="把现实问题写清楚，例如：今年适合换工作吗？">
+          <button type="button" id="send-btn" class="btn-gold-sm">发送</button>
+        </div>
+        <label id="composer-risk-ack" class="composer-risk-ack" hidden>
+          <input type="checkbox" id="risk-ack-input">
+          <span>我已知晓：命理解读只作参考，不替代医疗、法律、投资等专业判断。</span>
+        </label>
+        <div class="composer-disclaimer-m">解读只作参考，不替代医疗、法律、投资等专业判断</div>
+      </div>
+    </section>
+  </div>
+  <button type="button" id="profile-fab" class="profile-fab" aria-label="打开档案与历史">
+    <span class="profile-fab-main">档案</span>
+    <span id="profile-fab-state" class="profile-fab-state">暂无记录</span>
+  </button>
+</main>
+
+<!-- ============ BAZI ENTRY / 录入生辰 ============ -->
+<main id="birth-modal" class="entry-mask site-content-page" aria-labelledby="birth-page-title" tabindex="-1" hidden>
+  <div class="birth-modal entry-shell">
+    <div class="entry-nav bm-head">
+      <button type="button" class="brand entry-brand" aria-label="玄枢">
+        <span class="brand-mark">玄</span>
+        <span class="brand-copy"><b>玄 学 算 法</b><em>XUANSHU CONSOLE</em></span>
+      </button>
+      <button type="button" id="birth-close" class="entry-back-link" aria-label="返回">← 返回首页</button>
+    </div>
+    <div class="entry-layout">
+      <aside class="entry-guide">
+        <div class="entry-kicker">第 一 步 · 录 生 辰</div>
+        <h2 id="birth-page-title">录入生辰<br>以定四柱</h2>
+        <p>时间态用于真太阳时与节气换月；已知四柱态则直接以干支入盘，并用近年匹配定位流年流月。</p>
+        <ol class="entry-steps">
+          <li class="active"><b>序 · 录入生辰</b><span>此刻</span></li>
+          <li><b>盘 · 四柱与行运即时排出</b><span>约一息之间</span></li>
+          <li><b>问 · 择话题起解读，随问随答</b><span>由你手动开始</span></li>
+        </ol>
+      </aside>
+
+      <form id="birth-form" class="bm-body entry-card">
+        <div class="entry-card-head">
+          <div class="entry-card-head-row">
+            <h2 id="birth-form-title">出生信息</h2>
+            <span class="entry-step-mark">第 1 步 / 共 3 步</span>
+          </div>
+          <p id="birth-form-copy">公历或农历均可，临近时辰边界时会单独提示。</p>
+          <div class="entry-tabs" role="tablist" aria-label="录入方式">
+            <button type="button" role="tab" data-input-mode-btn="birth_time" aria-selected="true" aria-controls="birth-time-section">按出生时间</button>
+            <button type="button" role="tab" data-input-mode-btn="manual_pillars" aria-selected="false" aria-controls="manual-pillars-section" tabindex="-1">已知四柱</button>
+          </div>
+          <select id="f-input-mode" class="sr-only-field" hidden aria-hidden="true" tabindex="-1">
+            <option value="birth_time">出生时间排盘</option>
+            <option value="manual_pillars">已知四柱</option>
+          </select>
+        </div>
+
+        <div class="bm-section-label">基本资料</div>
+        <div class="bm-grid-2 bm-grid-basic">
+          <label>可选昵称
+            <input type="text" id="f-name" placeholder="如 小秋、我的命盘；留空自动命名">
+          </label>
+          <label>性别
+            <select id="f-gender"><option value="男">男</option><option value="女">女</option><option value="">不透露</option></select>
+          </label>
+          <label class="birth-time-only">历法
+            <select id="f-calendar"><option value="solar">公历</option><option value="lunar">农历</option></select>
+          </label>
+          <label class="bm-leap birth-time-only" id="f-leap-wrap" hidden><input type="checkbox" id="f-leap"> 闰月</label>
+        </div>
+
+        <div id="birth-time-section" class="birth-time-only" role="tabpanel">
+          <div class="bm-section-label">出生时刻</div>
+          <div class="bm-grid-time" aria-describedby="birth-time-hint">
+            <label>年<input type="text" id="f-year" inputmode="numeric" placeholder="1990"></label>
+            <label>月<input type="text" id="f-month" inputmode="numeric" placeholder="1"></label>
+            <label>日<input type="text" id="f-day" inputmode="numeric" placeholder="1"></label>
+            <label>时<input type="text" id="f-hour" inputmode="numeric" placeholder="0–23" aria-describedby="birth-time-hint"></label>
+            <label>分<input type="text" id="f-minute" inputmode="numeric" placeholder="0"></label>
+          </div>
+          <span id="birth-time-hint" class="bm-hint bm-time-hint">出生小时必填；分钟可留空，按 00 分处理。不确定时辰可先填 12，并在解读时注明。</span>
+        </div>
+
+        <div id="manual-pillars-section" role="tabpanel" hidden>
+          <div class="bm-section-label">四柱干支 · 点框手选，或直接输入</div>
+          <div class="bm-grid-4 bm-manual-pillars">
+            <label>年柱<input type="text" id="f-year-pillar" data-pillar-input="year" maxlength="2" placeholder="乙巳"></label>
+            <label>月柱<input type="text" id="f-month-pillar" data-pillar-input="month" maxlength="2" placeholder="乙酉"></label>
+            <label>日柱<input type="text" id="f-day-pillar" data-pillar-input="day" maxlength="2" placeholder="壬寅"></label>
+            <label>时柱<input type="text" id="f-hour-pillar" data-pillar-input="hour" maxlength="2" placeholder="癸卯"></label>
+          </div>
+          <input type="hidden" id="f-manual-birth-year">
+          <div id="pillar-picker" class="pillar-picker" hidden></div>
+          <div class="bm-section-label">生年甲子 · 干支六十年一轮回</div>
+          <div id="jiazi-candidates" class="jiazi-candidates">填写年柱后显示近 120 年候选。</div>
+          <span class="bm-hint">大运流年按系统匹配到的出生时间起算；四柱不合阴阳会在提交前提示。</span>
+        </div>
+
+        <details id="birth-location-section" class="bm-optional birth-time-only">
+          <summary><span>出生地 <em>选填 · 用于真太阳时</em></span></summary>
+          <div class="bm-optional-body">
+            <div class="bm-location-grid">
+              <label>省 / 国家 / 地区
+                <select id="f-province"></select>
+              </label>
+              <label class="bm-city-field">市 / 地区
+                <select id="f-city" disabled></select>
+              </label>
+              <label class="bm-county-field">区 / 县 / 城市
+                <select id="f-county" disabled></select>
+              </label>
+              <input type="hidden" id="f-location">
+              <div id="f-location-preview" class="bm-location-preview" aria-live="polite">未选择出生地</div>
+              <span class="bm-hint">用于真太阳时校正；海外地区请继续选择城市，留空或未识别时不做经度修正。</span>
+            </div>
+          </div>
+        </details>
+
+        <details class="bm-advanced birth-time-only">
+          <summary>更多设置：换日规则 <em class="bm-advanced-hint">可不填</em></summary>
+          <div class="bm-grid-2">
+            <label class="bm-switch" hidden><input type="checkbox" id="f-tst" checked> 真太阳时校正</label>
+            <label>换日规则
+              <select id="f-boundary">
+                <option value="zi">子时换日（23:00）</option>
+                <option value="midnight">零点换日（00:00）</option>
+                <option value="late_zi">零点换日 + 夜子时</option>
+              </select>
+            </label>
+          </div>
+        </details>
+        <div id="birth-error" class="bm-error" role="alert" aria-live="assertive" hidden></div>
+        <div class="bm-foot">
+          <button type="submit" id="birth-submit" class="btn-gold btn-cta">生 成 命 盘</button>
+          <span class="bm-foot-note" id="birth-foot-note">先生成命盘，解读由你手动开始</span>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+<!-- ============ LIUYAO ENTRY / 六爻起卦 ============ -->
+<main id="cast-modal" class="entry-mask site-content-page cast-entry-mask" aria-labelledby="cast-page-title" tabindex="-1" hidden>
+  <div class="birth-modal entry-shell cast-entry">
+    <div class="entry-nav bm-head">
+      <button type="button" class="brand entry-brand" aria-label="玄枢">
+        <span class="brand-mark">玄</span>
+        <span class="brand-copy"><b>玄 学 算 法</b><em>XUANSHU CONSOLE</em></span>
+      </button>
+      <button type="button" id="cast-close" class="entry-back-link" aria-label="返回">← 返回首页</button>
+    </div>
+    <div class="entry-layout cast-layout">
+      <aside class="entry-guide cast-guide">
+        <div class="entry-kicker">问 眼 前 · 六 爻 起 卦</div>
+        <h2 id="cast-page-title">一事一卦<br>据问而断</h2>
+        <p>先把现实问题写清楚，再自下而上完成六爻。公开问题经审核后会进入卦帖广场，供浏览、评论与分享。</p>
+        <ol class="entry-steps">
+          <li class="active"><b>问 · 写下具体问题</b><span>此刻</span></li>
+          <li><b>卦 · 本机摇钱或手动录入</b><span>六爻成卦</span></li>
+          <li><b>断 · 看卦并继续追问</b><span>在同一工作区完成</span></li>
+        </ol>
+      </aside>
+      <div class="cast-center">
+        <form id="cast-form" class="cast-card" novalidate>
+        <div class="cast-card-inner">
+          <div class="cast-head-row">
+            <div>
+              <h2>六爻 · 起卦</h2>
+              <p>静心，默念所问之事。一事一卦，卦成不改。</p>
+            </div>
+            <button type="button" id="cast-close-x" class="modal-close" aria-label="返回">×</button>
+          </div>
+          <div class="cast-workspace-grid">
+            <div class="cast-question-panel">
+              <label class="wide cast-question-label">
+                <span class="cast-question-title"><b>你想问什么</b><em>只问一件具体事情</em></span>
+                <textarea id="cast-question" rows="4" aria-label="要问的事" aria-describedby="cast-question-hint cast-question-error" placeholder="例如：本月能否签下这个合同？"></textarea>
+                <span id="cast-question-hint" class="cast-question-hint">写清时间范围和现实背景；请勿填写姓名、电话、住址或证件号。</span>
+                <span id="cast-question-error" class="cast-question-error" role="alert" hidden></span>
+              </label>
+              <fieldset class="cast-visibility" aria-label="提问可见性">
+                <legend>谁可以看到这次问题</legend>
+                <div class="cast-visibility-options">
+                  <label class="cast-visibility-option cast-visibility-public">
+                    <input type="radio" name="cast-visibility" value="public" checked>
+                    <span>
+                      <b>公开提问 <i>不限次数</i></b>
+                      <em>匿名进入卦帖广场，可被浏览、评论和分享。</em>
+                      <small>选择公开即同意：经 Pro 审核后发布问题、卦象与首轮 AI 解答；后续追问不公开。请勿填写个人身份信息。</small>
+                    </span>
+                  </label>
+                  <label class="cast-visibility-option">
+                    <input type="radio" name="cast-visibility" value="private">
+                    <span>
+                      <b>私密提问 <i data-private-quota-label>每日 1 次</i></b>
+                      <em>仅登录账户可见，不进入社区，也不生成分享链接。</em>
+                    </span>
+                  </label>
+                </div>
+              </fieldset>
+            </div>
+            <div class="cast-oracle-panel">
+              <div class="cast-method-row">
+                <div class="cast-method-copy">
+                  <span class="cast-method-k">起卦之法</span>
+                  <span class="cast-method-note">自下而上 · 六爻成卦</span>
+                </div>
+                <div class="entry-tabs cast-method-tabs" role="tablist" aria-label="起卦方式">
+                  <button type="button" role="tab" data-cast-method-btn="client_coins" aria-selected="true" aria-controls="cast-rows">本机摇钱</button>
+                  <button type="button" role="tab" data-cast-method-btn="manual" aria-selected="false" aria-controls="cast-rows" tabindex="-1">手动录入</button>
+                </div>
+              </div>
+              <label class="sr-only-label" hidden aria-hidden="true">方式
+                <select id="cast-method" class="sr-only-field" hidden aria-hidden="true" tabindex="-1">
+                  <option value="client_coins">本机摇钱（点一次摇一爻）</option>
+                  <option value="manual">手动录入（自己摇好的六爻）</option>
+                </select>
+              </label>
+              <div class="coin-stage" id="coin-stage" aria-hidden="true">
+                <span class="coin-face c1"><img class="front" src="assets/qianlong_coin_front_transparent_512.png" alt=""><img class="back" src="assets/qianlong_coin_back_transparent_512.png" alt=""><i class="coin-tag"></i></span>
+                <span class="coin-face c2"><img class="front" src="assets/qianlong_coin_front_transparent_512.png" alt=""><img class="back" src="assets/qianlong_coin_back_transparent_512.png" alt=""><i class="coin-tag"></i></span>
+                <span class="coin-face c3"><img class="front" src="assets/qianlong_coin_front_transparent_512.png" alt=""><img class="back" src="assets/qianlong_coin_back_transparent_512.png" alt=""><i class="coin-tag"></i></span>
+              </div>
+              <div class="coin-caption">字面「乾隆通宝」· 背面满文「宝泉」 ｜ 一背少阳 · 二背少阴 · 三背老阳 ○ · 三字老阴 ✕</div>
+              <div id="cast-rows" class="cast-rows" role="tabpanel" aria-label="六爻录入" aria-live="polite"></div>
+              <div id="cast-complete-banner" class="cast-complete-banner" hidden>
+                <div><span>卦 成</span><b>六爻已齐</b></div>
+                <em>动爻 0 处</em>
+              </div>
+              <div id="cast-error" class="bm-error" hidden></div>
+              <div class="cast-foot">
+                <button type="submit" id="cast-submit" class="btn-gold btn-cta cast-primary">掷 铜 钱</button>
+                <div id="cast-manual-hint" class="cast-manual-hint" hidden>逐爻点选 · 点已录之爻可重选</div>
+                <button type="button" id="cast-reset-btn" class="cast-reset-btn">重新起卦</button>
+              </div>
+              <div id="cast-foot-note" class="cast-foot-note">随机只在你的浏览器里发生 · 自下而上，六掷成卦</div>
+            </div>
+          </div>
+        </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- ============ FLOATING PANELS ============ -->
+<div id="pop-modal" class="modal-mask" hidden>
+  <div id="pop-card" class="pop-card" role="dialog" aria-modal="true" aria-label="古典文化解读"></div>
+</div>
+
+<div id="trend-modal" class="modal-mask" hidden>
+  <div id="trend-card" class="trend-card" role="dialog" aria-modal="true" aria-label="大运走势"></div>
+</div>
+
+<div id="gloss-modal" class="modal-mask" hidden>
+  <div id="gloss-card" class="gloss-card" role="dialog" aria-modal="true" aria-label="名词解释"></div>
+</div>
+
+<div id="profile-modal" class="modal-mask" hidden>
+  <div id="profile-card" class="profile-card" role="dialog" aria-modal="true" aria-label="命盘档案"></div>
+</div>
+
+<button type="button" id="feedback-fab" class="feedback-fab" aria-label="提交反馈">反馈</button>
+
+<div id="feedback-modal" class="modal-mask" hidden>
+  <div class="feedback-card" role="dialog" aria-modal="true" aria-label="提交反馈">
+    <div class="feedback-head">
+      <div>
+        <h2>反 馈</h2>
+        <p>断得准不准、哪里不顺手、想要什么功能 —— 直说无妨。</p>
+        <p class="feedback-contact-note">如需直接联系，可发邮件到 <a href="mailto:luoluoluoxiaxia@gmail.com">luoluoluoxiaxia@gmail.com</a>。</p>
+      </div>
+      <button type="button" id="feedback-close" class="modal-close" aria-label="关闭">×</button>
+    </div>
+    <form id="feedback-form" class="feedback-body">
+      <div class="feedback-rating" role="group" aria-label="反馈类型">
+        <button type="button" data-feedback-rating="体验建议">体验建议</button>
+        <button type="button" data-feedback-rating="断语不准">断语不准</button>
+        <button type="button" data-feedback-rating="想要功能">想要功能</button>
+      </div>
+      <label>反馈内容
+        <textarea id="feedback-message" rows="4" placeholder="断得准不准、哪里不顺手、想要什么功能 —— 直说无妨"></textarea>
+      </label>
+      <label>你的联系方式（可选）
+        <input type="text" id="feedback-contact" placeholder="邮箱、微信或手机号">
+      </label>
+      <div id="feedback-error" class="bm-error" hidden></div>
+      <div class="feedback-foot">
+        <button type="submit" id="feedback-submit" class="btn-gold">提交</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="ritual-overlay" class="ritual-overlay" role="status" aria-live="polite" aria-atomic="true" hidden>
+  <div class="ritual-compass" aria-hidden="true"><span>玄</span></div>
+  <div id="ritual-text" class="ritual-text">起局 · 观盘</div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="chat-render.js?v=chat-1"></script>
+<script src="regions.js?v=20260629"></script>
+<script src="account.js?v=account-16"></script>
+<script src="share-card.js?v=share-card-5"></script>
+<script src="personal-home.js?v=personal-workbench-10"></script>
+<script src="modules/core.js?v=web-modules-1"></script>
+<script src="modules/chat-copy.js?v=web-modules-1"></script>
+<script src="modules/chart-domain.js?v=web-modules-2"></script>
+<script src="modules/location-picker.js?v=web-modules-1"></script>
+<script src="modules/modal-manager.js?v=web-modules-2"></script>
+<script src="modules/home-community.js?v=web-modules-2"></script>
+<script src="app.js?v=design-178"></script>
+<script src="modules/profile-workspace.js?v=web-modules-1"></script>
+<script src="modules/chat-workspace.js?v=web-modules-1"></script>
+<script src="app-bootstrap.js?v=design-177"></script>
+<script src="community.js?v=community-18"></script>
+</body>
+</html>

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>岁运全书 · 专属查阅 | 玄枢</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="/assets/xuanshu-favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css?v=design-144">
+<style>
+.fv-layout{max-width:1220px;margin:0 auto;display:block}
+.fv-page{max-width:860px;margin:0 auto;padding:0 22px 100px;min-width:0}
+/* ── 左侧导航（桌面、解锁后） ── */
+.fv-side{display:none}
+@media(min-width:1080px){
+  body.fv-unlocked .fv-layout{display:grid;grid-template-columns:250px minmax(0,1fr);gap:10px}
+  body.fv-unlocked .fv-side{
+    display:block;position:sticky;top:0;height:100vh;overflow-y:auto;
+    padding:26px 8px 40px 22px;box-sizing:border-box;
+    border-right:1px solid var(--line-2);
+  }
+  body.fv-unlocked .fv-toc{display:none}
+}
+.fv-side-brand{display:flex;align-items:center;gap:10px;text-decoration:none;margin-bottom:22px}
+.fv-side-brand .brand-mark{width:30px;height:30px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--gold-2);font-family:var(--serif);font-weight:900;font-size:15px}
+.fv-side-brand b{color:var(--text);font-family:var(--serif);letter-spacing:.28em;font-size:13px}
+.fv-side-title{font-family:var(--serif);color:var(--gold);font-size:15px;letter-spacing:.2em;margin:2px 0 14px}
+.fv-side-nav{display:flex;flex-direction:column;gap:2px}
+.fv-side-link{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 12px 8px 10px;text-decoration:none;border-left:2px solid transparent;
+  color:var(--muted);font-size:13px;letter-spacing:.04em;transition:color .15s,border-color .15s,background .15s;
+}
+.fv-side-link:hover{color:var(--gold-2)}
+.fv-side-link.active{color:var(--gold-2);border-left-color:var(--gold);background:rgba(212,175,93,.07)}
+.fv-side-link .k{flex:0 0 34px;font-family:var(--mono);font-size:11px;color:var(--gold-dim);margin-right:2px;text-align:right}
+.fv-side-link .nm{flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fv-side-year{color:var(--weak);font-family:var(--mono);font-size:10px;letter-spacing:.28em;padding:10px 10px 3px;border-bottom:1px dashed var(--line-2);margin-bottom:4px}
+.fv-side-link .sc{flex:0 0 auto;font-family:var(--mono);font-size:11px;font-weight:700}
+.fv-side-link .sc.hi{color:var(--gold-2)}
+.fv-side-link .sc.mid{color:var(--gold-dim)}
+.fv-side-link .sc.lo{color:var(--cinnabar-dark)}
+.fv-side-sep{height:1px;background:var(--line-2);margin:10px 0}
+/* ── 顶栏与书头 ── */
+.fv-topbar{display:flex;align-items:center;justify-content:space-between;padding:24px 0 0}
+.fv-topbar .brand{display:inline-flex;align-items:center;gap:12px;text-decoration:none}
+.fv-topbar .brand-mark{width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--gold-2);font-family:var(--serif);font-weight:900}
+.fv-topbar .brand-copy b{display:block;color:var(--text);font-family:var(--serif);letter-spacing:.4em;font-size:13px}
+.fv-topbar a.fv-home{color:var(--muted);text-decoration:none;font-size:12.5px;letter-spacing:.1em}
+.fv-topbar a.fv-home:hover{color:var(--gold-2)}
+body.fv-unlocked .fv-topbar{display:none}
+@media(max-width:1079px){body.fv-unlocked .fv-topbar{display:flex}}
+.fv-head{text-align:center;padding:56px 0 10px}
+body.fv-unlocked .fv-head{padding:34px 0 4px}
+.fv-kicker{color:var(--gold);font-family:var(--serif);font-size:13px;letter-spacing:.5em}
+.fv-title{font-family:var(--serif);font-size:min(64px,11vw);font-weight:900;letter-spacing:.16em;margin-top:12px;color:transparent;background:linear-gradient(180deg,#F6E7BD 12%,#D4AF5D 58%,#9C7A35 100%);-webkit-background-clip:text;background-clip:text}
+body.fv-unlocked .fv-title{font-size:min(46px,9vw)}
+.fv-span{margin-top:10px;color:var(--gold-dim);font-size:14px;letter-spacing:.14em}
+/* ── 密码卡 ── */
+.fv-lock{max-width:430px;margin:36px auto 0;border:1px solid var(--line-strong);background:var(--panel);padding:34px 30px;text-align:center}
+.fv-lock p{color:var(--muted);font-size:13.5px;line-height:2}
+.fv-pass{margin-top:20px;width:100%;background:var(--panel-3);border:1px solid var(--line);color:var(--gold-2);padding:14px;font-size:26px;letter-spacing:.5em;text-align:center;font-family:var(--mono);outline:none;border-radius:0;box-sizing:border-box}
+.fv-pass:focus{border-color:var(--gold)}
+.fv-unlock-btn{margin-top:18px;width:100%;padding:14px;background:linear-gradient(180deg,var(--gold-2),var(--gold));border:0;color:#14120D;font-weight:700;font-size:14.5px;letter-spacing:.26em;cursor:pointer}
+.fv-unlock-btn:disabled{opacity:.55;cursor:wait}
+.fv-lock-err{margin-top:14px;color:var(--danger);font-size:13px;display:none}
+.fv-lock-note{margin-top:16px;color:var(--weak);font-size:11.5px;letter-spacing:.08em}
+/* ── 正文 ── */
+.fv-book{display:none;margin-top:26px}
+.fv-toc{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:26px 0 6px}
+.fv-toc-item{border:1px solid var(--line);padding:10px 6px;text-align:center;text-decoration:none;transition:border-color .15s}
+.fv-toc-item b{display:block;color:var(--gold-2);font-family:var(--mono);font-size:12px}
+.fv-toc-item span{display:block;margin-top:3px;color:var(--muted);font-size:11px}
+.fv-toc-item:hover{border-color:var(--gold)}
+.fv-chapter{margin-top:26px;border:1px solid var(--line);background:var(--panel);padding:30px 34px;scroll-margin-top:24px}
+.fv-chapter-title{font-family:var(--serif);color:var(--gold);font-size:22px;font-weight:700;letter-spacing:.1em}
+.fv-chapter-sub{margin-top:6px;color:var(--muted);font-size:12.5px;letter-spacing:.06em;padding-bottom:14px;border-bottom:1px solid var(--line-2);margin-bottom:16px}
+.fv-p{margin:0 0 12px;line-height:2.05;color:var(--text);font-size:15px}
+.fv-sec{color:var(--gold-3)}
+.fv-h3{margin:20px 0 10px;color:var(--gold);font-family:var(--serif);font-size:17px;letter-spacing:.06em}
+.fv-hr{border:0;height:1px;background:var(--line);margin:18px 0}
+.fv-trend{width:100%;height:auto;display:block;margin-top:6px}
+.fv-chart{background:linear-gradient(170deg,rgba(212,175,93,.06),transparent 55%)}
+/* 月章节头：标题 + 指数环 */
+.fv-chapter-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.fv-ring{flex:0 0 auto;width:62px;height:62px;margin-top:-4px}
+/* 穿衣主色色卡条 */
+.fv-swatches{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:2px 0 14px}
+.fv-swatches-label{color:var(--gold-dim);font-size:11.5px;letter-spacing:.22em}
+.fv-swatch{display:inline-flex;align-items:center;gap:7px;color:var(--text-2);font-size:12.5px;border:1px solid var(--line-2);border-radius:20px;padding:4px 12px 4px 5px;background:rgba(255,255,255,.015)}
+.fv-swatch i{width:20px;height:20px;border-radius:50%;border:1px solid rgba(240,234,218,.28);box-shadow:inset -2px -3px 6px rgba(0,0,0,.35),inset 2px 2px 5px rgba(255,255,255,.16)}
+/* 全年五行能量环 */
+.fv-wuxing-wrap{margin-top:22px;padding-top:18px;border-top:1px solid var(--line-2)}
+.fv-wuxing{display:flex;align-items:center;gap:30px;flex-wrap:wrap;margin-top:8px}
+.fv-wuxing svg{width:168px;height:168px;flex:0 0 auto}
+.fv-wx-legend{display:flex;flex-direction:column;gap:8px}
+.fv-wx-item{display:inline-flex;align-items:center;gap:9px;color:var(--muted);font-size:13px;letter-spacing:.05em}
+.fv-wx-item i{width:12px;height:12px;border-radius:3px}
+.fv-wx-item.is-favor{color:var(--gold-2)}
+.fv-wx-item.is-avoid{opacity:.55}
+.fv-progress{display:none;max-width:430px;margin:36px auto 0;border:1px solid var(--line);background:var(--panel);padding:30px;text-align:center;color:var(--muted);font-size:13.5px;line-height:2}
+.fv-top-btn{position:fixed;right:22px;bottom:26px;width:42px;height:42px;border:1px solid var(--line-strong);background:var(--float);color:var(--gold-2);font-size:18px;cursor:pointer;display:none;z-index:5}
+.fv-footer{margin-top:56px;text-align:center;color:var(--weak);font-size:12px;line-height:2}
+.fv-footer a{color:var(--gold-dim);text-decoration:none}
+@media(max-width:760px){
+  .fv-toc{grid-template-columns:repeat(4,1fr)}
+  .fv-chapter{padding:22px 18px}
+}
+</style>
+<link rel="stylesheet" href="/forecast.css?v=forecast-10">
+</head>
+<body>
+<a class="forecast-skip-link" href="#forecast-view-main">跳到主要内容</a>
+<div class="fv-layout">
+  <aside class="fv-side" aria-label="全书目录">
+    <a class="fv-side-brand" href="/">
+      <span class="brand-mark">玄</span><b>玄 枢</b>
+    </a>
+    <div class="fv-side-title">岁运全书</div>
+    <nav class="fv-side-nav" id="fv-side-nav"></nav>
+  </aside>
+
+  <div class="fv-page">
+    <div class="fv-topbar">
+      <a class="brand" href="/">
+        <span class="brand-mark">玄</span>
+        <span class="brand-copy"><b>玄 枢</b></span>
+      </a>
+      <a class="fv-home" href="/">返回观象台 →</a>
+    </div>
+
+    <main id="forecast-view-main" tabindex="-1">
+    <header class="fv-head">
+      <div class="fv-kicker">玄 枢 亲 算 · 专 属 查 阅</div>
+      <h1 class="fv-title">岁运全书</h1>
+      <div class="fv-span" id="fv-span">未来十二个月 · 逐月推演</div>
+    </header>
+
+    <div class="fv-lock" id="fv-lock">
+      <p>本书含你的生辰与全年运势细节，仅凭访问密码查阅。<br>密码在原成书通知邮件中。</p>
+      <div class="fv-pass-wrap">
+        <input class="fv-pass" id="fv-pass" type="password" inputmode="numeric" autocomplete="one-time-code" minlength="6" maxlength="6" pattern="[0-9]{6}" placeholder="······" aria-label="六位访问密码" aria-describedby="fv-err fv-lock-note">
+        <button class="fv-pass-toggle" id="fv-pass-toggle" type="button" aria-label="显示访问密码" aria-pressed="false">显示</button>
+      </div>
+      <button class="fv-unlock-btn" id="fv-unlock" type="button">解 卷</button>
+      <div class="fv-lock-err" id="fv-err" role="alert" aria-live="assertive" tabindex="-1"></div>
+      <div class="fv-lock-note" id="fv-lock-note">密码请勿转发他人 · 链接长期有效</div>
+    </div>
+
+    <div class="fv-progress" id="fv-progress" role="status" aria-live="polite" tabindex="-1">
+      <h2 class="fv-progress-title" id="fv-progress-title">全书正在推演</h2>
+      <p class="fv-progress-copy" id="fv-progress-copy">正在读取最新进度。</p>
+      <div class="fv-progress-bar" id="fv-progress-bar" role="progressbar" aria-label="成书进度" aria-valuemin="0" aria-valuemax="12" aria-valuenow="0"><i id="fv-progress-fill"></i></div>
+      <div class="fv-progress-meta" id="fv-progress-meta">第 0 / 12 月</div>
+      <a class="fv-progress-action" id="fv-progress-action" href="/">返回观象台</a>
+    </div>
+
+    <article class="fv-book" id="fv-book" tabindex="-1"></article>
+    </main>
+
+    <footer class="fv-footer">
+      <p>解读只作参考，不替代医疗、法律、投资等专业判断。</p>
+      <p><a href="/">玄枢 · 免费八字排盘与六爻起卦</a></p>
+    </footer>
+  </div>
+</div>
+<button class="fv-top-btn" id="fv-top" type="button" aria-label="回到顶部">↑</button>
+
+<script>
+(function () {
+  var match = location.pathname.match(/\/forecast\/view\/([0-9a-f]{32})/);
+  var orderId = match ? match[1] : "";
+  var lock = document.getElementById("fv-lock");
+  var book = document.getElementById("fv-book");
+  var progress = document.getElementById("fv-progress");
+  var passInput = document.getElementById("fv-pass");
+  var passToggle = document.getElementById("fv-pass-toggle");
+  var unlockBtn = document.getElementById("fv-unlock");
+  var errEl = document.getElementById("fv-err");
+  var spanEl = document.getElementById("fv-span");
+  var topBtn = document.getElementById("fv-top");
+  var sideNav = document.getElementById("fv-side-nav");
+  var progressTitle = document.getElementById("fv-progress-title");
+  var progressCopy = document.getElementById("fv-progress-copy");
+  var progressBar = document.getElementById("fv-progress-bar");
+  var progressFill = document.getElementById("fv-progress-fill");
+  var progressMeta = document.getElementById("fv-progress-meta");
+  var progressAction = document.getElementById("fv-progress-action");
+  var pollTimer = null;
+  var unlockInFlight = false;
+  var reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function showError(message, focusInput, shouldFocus) {
+    errEl.textContent = message;
+    errEl.style.display = "block";
+    if (focusInput) passInput.setAttribute("aria-invalid", "true");
+    if (shouldFocus === false) return;
+    var target = focusInput ? passInput : errEl;
+    target.focus({ preventScroll: true });
+    if (focusInput) passInput.select();
+    target.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+  }
+
+  function clearError() {
+    errEl.style.display = "none";
+    passInput.removeAttribute("aria-invalid");
+  }
+
+  function setUnlockPending(pending) {
+    unlockInFlight = pending;
+    unlockBtn.disabled = pending;
+    unlockBtn.textContent = pending ? "正在解卷…" : "解 卷";
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function stageLabel(data) {
+    if (data.status === "pending") return "已进入生成队列";
+    if (data.status === "running") return "正在生成内容";
+    return "推演正在进行";
+  }
+
+  function isWorkingStatus(status) {
+    return !status || status === "pending" || status === "running";
+  }
+
+  function scoreClass(score) {
+    if (score == null) return "mid";
+    if (score >= 7) return "hi";
+    if (score <= 3) return "lo";
+    return "mid";
+  }
+
+  function sideLink(target, label, tail, title) {
+    return '<a class="fv-side-link" href="#' + target + '" data-target="' + target + '"' +
+      (title ? ' title="' + title + '"' : "") + '>' + label + (tail || "") + "</a>";
+  }
+
+  function buildSideNav(months) {
+    var parts = [];
+    parts.push(sideLink("chapter-trend", '<span class="nm">全年走势</span>'));
+    parts.push(sideLink("chapter-overview", '<span class="nm">开卷总纲</span>'));
+    parts.push('<div class="fv-side-sep"></div>');
+    var lastYear = null;
+    (months || []).forEach(function (m) {
+      if (m.solar_year && m.solar_year !== lastYear) {
+        lastYear = m.solar_year;
+        parts.push('<div class="fv-side-year">' + m.solar_year + ' 年</div>');
+      }
+      var score = m.score == null ? "–" : m.score;
+      var solar = m.solar_month ? m.solar_month + "月" : "第" + m.index + "月";
+      parts.push(sideLink(
+        "month-" + m.index,
+        '<span class="k">' + solar + '</span>' +
+        '<span class="nm">' + m.month_name + " · " + m.pillar + "</span>",
+        '<span class="sc ' + scoreClass(m.score) + '">' + score + "</span>",
+        "公历 " + (m.label || "")
+      ));
+    });
+    parts.push('<div class="fv-side-sep"></div>');
+    parts.push(sideLink("chapter-summary", '<span class="nm">收卷</span>'));
+    sideNav.innerHTML = parts.join("");
+  }
+
+  function spyChapters() {
+    var links = {};
+    sideNav.querySelectorAll(".fv-side-link").forEach(function (a) {
+      links[a.getAttribute("data-target")] = a;
+    });
+    var current = null;
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (!entry.isIntersecting) return;
+        var id = entry.target.id;
+        if (!links[id]) return;
+        if (current) current.classList.remove("active");
+        current = links[id];
+        current.classList.add("active");
+      });
+    }, { rootMargin: "-15% 0px -70% 0px" });
+    book.querySelectorAll(".fv-chapter").forEach(function (el) { observer.observe(el); });
+  }
+
+  function showBook(data, shouldFocus) {
+    stopPolling();
+    clearError();
+    lock.style.display = "none";
+    progress.style.display = "none";
+    if (data.span) spanEl.textContent = data.span + " · 十二个月逐月推演";
+    book.innerHTML = data.html;
+    book.style.display = "block";
+    document.body.classList.add("fv-unlocked");
+    buildSideNav(data.months || []);
+    spyChapters();
+    if (shouldFocus) {
+      book.focus({ preventScroll: true });
+      book.scrollIntoView({ block: "start", behavior: reduceMotion ? "auto" : "smooth" });
+    }
+  }
+
+  function showProgress(data, shouldFocus) {
+    lock.style.display = "none";
+    book.style.display = "none";
+    document.body.classList.remove("fv-unlocked");
+    var done = Math.max(0, Number(data.month_done || 0));
+    var total = Math.max(1, Number(data.month_total || 12));
+    var pct = Math.min(92, Math.round(done / total * 92));
+    progress.classList.remove("is-failed");
+    progress.setAttribute("role", "status");
+    progress.setAttribute("aria-live", "polite");
+    progressTitle.textContent = "全书正在推演";
+    progressCopy.textContent = stageLabel(data) + "。页面会自动刷新，完成后直接在这里开卷。";
+    progressBar.style.display = "block";
+    progressBar.setAttribute("aria-valuemax", String(total));
+    progressBar.setAttribute("aria-valuenow", String(Math.min(done, total)));
+    progressFill.style.width = pct + "%";
+    progressMeta.textContent = "第 " + Math.min(done, total) + " / " + total + " 月";
+    progressAction.style.display = "none";
+    progress.style.display = "block";
+    if (shouldFocus) {
+      progress.focus({ preventScroll: true });
+      progress.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    }
+  }
+
+  function showFailure(data, shouldFocus) {
+    stopPolling();
+    lock.style.display = "none";
+    book.style.display = "none";
+    document.body.classList.remove("fv-unlocked");
+    progress.classList.add("is-failed");
+    progress.setAttribute("role", "alert");
+    progress.setAttribute("aria-live", "assertive");
+    progressTitle.textContent = "本次推演未能完成";
+    progressCopy.textContent = data.error || "推演服务暂时繁忙，本次没有生成不完整的全书。";
+    progressBar.style.display = "none";
+    progressMeta.textContent = "岁运全书已停止新建；如需帮助，请通过首页反馈联系我们。";
+    progressAction.style.display = "inline-flex";
+    progress.style.display = "block";
+    if (shouldFocus) {
+      progress.focus({ preventScroll: true });
+      progress.scrollIntoView({ block: "center", behavior: reduceMotion ? "auto" : "smooth" });
+    }
+  }
+
+  function pollStatus(password) {
+    stopPolling();
+    var tick = function () {
+      if (document.hidden) return;
+      fetch("/api/forecast/" + orderId)
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) {
+          if (!data) return;
+          if (data.status === "failed" || data.status === "cancelled") return showFailure(data, false);
+          if (data.status === "done" || data.status === "done_unsent") {
+            stopPolling();
+            return unlock(password, true);
+          }
+          showProgress(data, false);
+        })
+        .catch(function () {});
+    };
+    pollTimer = setInterval(tick, 8000);
+  }
+
+  function unlock(password, silent) {
+    if (!orderId) return showError("链接无效，请从邮件重新打开。", false, !silent);
+    if (unlockInFlight) return;
+    setUnlockPending(true);
+    fetch("/api/forecast/" + orderId + "/unlock", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password: password })
+    })
+      .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, status: r.status, data: data }; }); })
+      .then(function (res) {
+        setUnlockPending(false);
+        if (!res.ok) {
+          stopPolling();
+          lock.style.display = "block";
+          progress.style.display = "none";
+          if (res.status === 403) passInput.value = "";
+          return showError(res.data && res.data.detail ? res.data.detail : "解锁失败，请稍后重试。", true, !silent);
+        }
+        clearError();
+        if (res.data.ready) return showBook(res.data, !silent);
+        if (!isWorkingStatus(res.data.status)) return showFailure(res.data, !silent);
+        showProgress(res.data, !silent);
+        pollStatus(password);
+      })
+      .catch(function () {
+        setUnlockPending(false);
+        lock.style.display = "block";
+        progress.style.display = "none";
+        showError("网络异常，请稍后重试。", true, !silent);
+      });
+  }
+
+  unlockBtn.addEventListener("click", function () {
+    clearError();
+    var password = (passInput.value || "").trim();
+    if (!/^[0-9]{6}$/.test(password)) return showError("请输入六位数字访问密码。", true, true);
+    unlock(password, false);
+  });
+  passInput.addEventListener("input", function () {
+    var digits = passInput.value.replace(/\D/g, "").slice(0, 6);
+    if (passInput.value !== digits) passInput.value = digits;
+    clearError();
+  });
+  passInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") unlockBtn.click();
+  });
+  passToggle.addEventListener("click", function () {
+    var reveal = passInput.type === "password";
+    passInput.type = reveal ? "text" : "password";
+    passToggle.textContent = reveal ? "隐藏" : "显示";
+    passToggle.setAttribute("aria-pressed", String(reveal));
+    passToggle.setAttribute("aria-label", reveal ? "隐藏访问密码" : "显示访问密码");
+    passInput.focus({ preventScroll: true });
+  });
+  topBtn.addEventListener("click", function () {
+    window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
+  });
+  window.addEventListener("scroll", function () {
+    if (book.style.display === "block") {
+      topBtn.style.display = window.scrollY > 600 ? "block" : "none";
+    }
+  });
+
+  // One-time migration: use a legacy credential once, then remove it permanently.
+  // New credentials stay in page memory only and are never written to Web Storage.
+  var legacyPassword = "";
+  try {
+    var legacyCredentials = JSON.parse(localStorage.getItem("xz_forecast_cred") || "{}");
+    var legacyEntry = legacyCredentials[orderId] || {};
+    legacyPassword = typeof legacyEntry === "string"
+      ? legacyEntry
+      : String(legacyEntry.password || "");
+    localStorage.removeItem("xz_forecast_cred");
+  } catch (e) {
+    try { localStorage.removeItem("xz_forecast_cred"); } catch (_) {}
+  }
+  if (/^[0-9]{6}$/.test(legacyPassword)) {
+    passInput.value = legacyPassword;
+    unlock(legacyPassword, true);
+  }
+})();
+</script>
+</body>
+</html>

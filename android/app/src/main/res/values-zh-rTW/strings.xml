@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">玄樞</string>
+
+    <!-- 登入 / 註冊 -->
+    <string name="auth_title">登入玄樞</string>
+    <string name="auth_subtitle">八字與六爻，都在這裡。</string>
+    <string name="auth_email">電子信箱</string>
+    <string name="auth_password">密碼</string>
+    <string name="auth_login">登入</string>
+    <string name="auth_register">用邀請碼註冊</string>
+    <string name="auth_email_required">請填寫電子信箱</string>
+    <string name="auth_password_required">請填寫密碼</string>
+    <string name="auth_logout">登出</string>
+
+    <!-- 首頁 -->
+    <string name="home_greeting">今日可問</string>
+    <string name="home_quota">私密提問剩餘 %1$d / %2$d</string>
+    <string name="home_account">帳號 %1$s</string>
+    <string name="home_start_bazi">排八字命盤</string>
+    <string name="home_start_liuyao">六爻起一卦</string>
+
+    <!-- 排盤 -->
+    <string name="chart_title">出生資訊</string>
+    <string name="chart_subtitle">請依國曆填寫，時辰會自動換算真太陽時。</string>
+    <string name="chart_year">年</string>
+    <string name="chart_month">月</string>
+    <string name="chart_day">日</string>
+    <string name="chart_hour">時</string>
+    <string name="chart_minute">分</string>
+    <string name="chart_gender">性別</string>
+    <string name="chart_gender_male">男</string>
+    <string name="chart_gender_female">女</string>
+    <string name="chart_location">出生地</string>
+    <string name="chart_cast">起盤</string>
+    <string name="chart_back">重新填寫</string>
+
+    <!-- 命盤 -->
+    <string name="chart_pillars">四柱</string>
+    <string name="chart_pillar_year">年柱</string>
+    <string name="chart_pillar_month">月柱</string>
+    <string name="chart_pillar_day">日柱</string>
+    <string name="chart_pillar_hour">時柱</string>
+    <string name="chart_day_master_label">日主</string>
+    <string name="chart_wuxing">五行</string>
+    <string name="chart_hidden">藏干</string>
+    <string name="chart_na_yin">納音 %1$s</string>
+
+    <!-- 解讀 -->
+    <string name="interpret_question">想問什麼（留空則整體看盤）</string>
+    <string name="interpret_start">請老師傅解讀</string>
+    <string name="interpret_running">正在推演，通常需要一到兩分鐘</string>
+    <string name="interpret_stage">目前階段：%1$s</string>
+    <string name="interpret_disclaimer">解讀內容僅供娛樂參考，不構成任何專業建議。</string>
+
+    <!-- 六爻 -->
+    <string name="liuyao_title">六爻起卦</string>
+    <string name="liuyao_subtitle">心中默念所問之事，搖動手機三次。</string>
+    <string name="liuyao_question">所問之事</string>
+    <string name="liuyao_presets">常問</string>
+    <string name="liuyao_preset_1">這次合作能否順利落定</string>
+    <string name="liuyao_preset_2">近期財運如何</string>
+    <string name="liuyao_preset_3">該不該換這份工作</string>
+    <string name="liuyao_need_question">先寫下要問的事，再搖卦</string>
+    <string name="liuyao_shake_hint">還需搖動 %1$d 次</string>
+    <string name="liuyao_casting">正在成卦…</string>
+    <string name="liuyao_cast_now">直接起卦</string>
+    <string name="liuyao_interpret">請老師傅斷卦</string>
+    <string name="liuyao_new_cast">重新起一卦</string>
+    <string name="liuyao_palace">卦宮</string>
+    <string name="liuyao_month">月建</string>
+    <string name="liuyao_day">日辰</string>
+    <string name="liuyao_kong">旬空</string>
+    <string name="liuyao_shi">世</string>
+    <string name="liuyao_ying">應</string>
+    <string name="liuyao_kong_mark">空</string>
+
+    <!-- 通用 -->
+    <string name="common_back">返回</string>
+    <string name="common_loading">載入中…</string>
+    <string name="common_retry">重試</string>
+
+    <!-- 檔案 -->
+    <string name="archive_title">我的檔案</string>
+    <string name="archive_empty">還沒有檔案，先排一個盤吧</string>
+    <string name="archive_no_history">這個檔案還沒有解讀留檔</string>
+    <string name="archive_history_count">%1$d 則解讀</string>
+    <string name="archive_whole_chart">整體看盤</string>
+    <string name="archive_reading">解讀留檔</string>
+    <string name="home_archive">我的檔案</string>
+
+    <!-- 社群 -->
+    <string name="community_title">卦例廣場</string>
+    <string name="community_empty">還沒有公開的卦例</string>
+    <string name="community_stats">瀏覽 %1$d · 讚 %2$d · 留言 %3$d</string>
+    <string name="community_load_more">載入更多</string>
+    <string name="community_comments">%1$d 則留言</string>
+    <string name="community_anonymous">匿名</string>
+    <string name="community_privacy_note">公開卦例均已匿名去識別化，不含任何生辰資訊。</string>
+    <string name="home_community">卦例廣場</string>
+</resources>

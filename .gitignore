@@ -1,0 +1,15 @@
+.DS_Store
+.idea/
+.vscode/
+dist/
+node_modules/
+*.log
+
+android/.gradle/
+android/.kotlin/
+android/**/build/
+android/local.properties
+android/*.jks
+android/*.keystore
+android/*.hprof
+android/captures/

@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /forecast/view/
+Disallow: /forecast-view.html
+
+Sitemap: https://xx.zsien.tech/sitemap.xml

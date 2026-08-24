@@ -1,0 +1,484 @@
+/* ACCOUNT CLOUD ARCHIVE · 统一账户与跨设备档案体验（account-5） */
+:root {
+  --account-accent: #ff2442;
+  --account-accent-strong: #d91f3b;
+  --account-accent-hover: #bd1932;
+  --account-accent-soft: #fff0f3;
+  --account-surface: #fff;
+  --account-soft: #f6f6f7;
+  --account-ink: #111113;
+  --account-muted: #73737a;
+  --account-line: #e5e5e8;
+  --account-success: #197a50;
+}
+
+.account-nav-button {
+  appearance: none;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  color: inherit;
+  cursor: pointer;
+  min-height: 34px;
+  padding: 6px 13px;
+  font: 500 12px/1.2 "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+
+.account-nav-button[data-authenticated="true"]::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: #2f8f57;
+  vertical-align: 1px;
+}
+
+html.account-dialog-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+  scrollbar-gutter: stable;
+}
+
+body.account-dialog-open {
+  position: fixed;
+  top: calc(-1 * var(--account-scroll-y, 0px));
+  right: 0;
+  left: 0;
+  width: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+.account-dialog {
+  width: min(520px, calc(100vw - 28px));
+  max-height: min(780px, calc(100dvh - 28px));
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--account-line);
+  border-radius: 24px;
+  background: var(--account-surface);
+  color: var(--account-ink);
+  box-shadow: 0 30px 90px rgba(17, 17, 19, .18);
+  overflow: auto;
+}
+
+.account-dialog::backdrop {
+  background: rgba(17, 17, 19, .38);
+  backdrop-filter: blur(8px);
+}
+
+.account-dialog-close {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  right: 15px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--account-soft);
+  color: var(--account-muted);
+  cursor: pointer;
+  font: 300 24px/36px sans-serif;
+}
+.account-dialog-close:hover { background: #ececef; color: var(--account-ink); }
+.account-dialog-close:focus-visible { outline: 3px solid rgba(255, 36, 66, .2); outline-offset: 2px; }
+
+.account-dialog-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 22px 58px 18px 24px;
+  border-bottom: 1px solid var(--account-line);
+}
+
+.account-dialog-brand > i {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--account-accent);
+  color: #fff;
+  box-shadow: 0 8px 22px rgba(255, 36, 66, .2);
+  font: normal 700 19px/1 "Noto Serif SC", serif;
+}
+
+.account-dialog-brand span { display: grid; gap: 2px; }
+.account-dialog-brand b { font: 600 14px/1.2 "Noto Serif SC", serif; letter-spacing: .1em; }
+.account-dialog-brand em { color: var(--account-muted); font: normal 11px/1.2 "Noto Sans SC", sans-serif; }
+.account-dialog-body { padding: 28px; }
+
+.account-auth-head > span,
+.account-home-head > span {
+  color: var(--account-accent-strong);
+  font: 600 11px/1.2 "Noto Sans SC", sans-serif;
+  letter-spacing: .12em;
+}
+
+.account-auth-head h2,
+.account-home-head h2 {
+  margin: 7px 0 0;
+  color: var(--account-ink);
+  font: 700 27px/1.25 "Noto Serif SC", serif;
+  overflow-wrap: anywhere;
+}
+
+.account-personal-home-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 20px 0 0;
+  border: 1px solid #ffd0d7;
+  border-radius: 14px;
+  background: var(--account-accent-soft);
+  color: var(--account-ink);
+  padding: 15px 16px;
+  text-decoration: none;
+}
+.account-personal-home-link span { display: grid; min-width: 0; gap: 4px; }
+.account-personal-home-link b { font: 700 14px/1.3 "Noto Sans SC", sans-serif; }
+.account-personal-home-link em { color: var(--account-muted); font: normal 10px/1.5 "Noto Sans SC", sans-serif; }
+.account-personal-home-link i { color: var(--account-accent); font: normal 700 18px/1 "Noto Sans SC", sans-serif; }
+.account-personal-home-link:hover { border-color: #ff9dac; }
+.account-personal-home-link:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+
+.account-context-note {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--account-line);
+  background: var(--account-soft);
+  color: #5f5f66;
+  font: 400 12px/1.6 "Noto Sans SC", sans-serif;
+}
+
+.account-context-note.success { border-color: #cfe8dc; background: #eff9f4; color: var(--account-success); }
+.account-context-note.error { border-color: #ffd2d9; background: var(--account-accent-soft); color: var(--account-accent-strong); }
+
+.account-archive-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-top: 23px;
+  padding: 16px 17px;
+  border: 1px solid var(--account-line);
+  border-radius: 17px;
+  background: #fafafa;
+}
+.account-archive-copy { display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: 7px; }
+.account-archive-copy > span { color: var(--account-muted); font: 500 11px/1.2 "Noto Sans SC", sans-serif; }
+.account-archive-copy strong { display: flex; align-items: baseline; gap: 3px; color: var(--account-ink); }
+.account-archive-copy strong b { font: 700 29px/1 "Space Mono", monospace; }
+.account-archive-copy strong i { color: var(--account-muted); font: normal 500 11px/1 "Noto Sans SC", sans-serif; }
+.account-archive-copy > em { grid-column: 1 / -1; margin-top: 4px; color: var(--account-muted); font: normal 10px/1.4 "Noto Sans SC", sans-serif; white-space: nowrap; }
+.account-archive-detail { display: flex; flex-wrap: wrap; gap: 5px 11px; color: #5f5f66; font: 500 10px/1.4 "Noto Sans SC", sans-serif; }
+.account-archive-detail span + span::before { content: "·"; margin-right: 11px; color: #b6b6bc; }
+.account-archive-detail .active{color:var(--account-accent-strong)}
+.account-archive-card > button,
+.account-archive-entry-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border: 1px solid #ffcbd3;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--account-accent-strong);
+  cursor: pointer;
+  font: 600 11px/1.2 "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.account-archive-card > button:hover,
+.account-archive-entry-actions button:hover { border-color: #ff9dac; background: var(--account-accent-soft); }
+.account-archive-card > button:focus-visible,
+.account-archive-entry-actions button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+.account-archive-entry-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-width: 158px;
+}
+
+.account-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 24px 0 18px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--account-soft);
+}
+
+.account-tabs button {
+  min-height: 40px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--account-muted);
+  cursor: pointer;
+  padding: 10px;
+  font: 500 13px/1 "Noto Sans SC", sans-serif;
+}
+
+.account-tabs button[aria-selected="true"] {
+  background: #fff;
+  color: var(--account-accent-strong);
+  box-shadow: 0 2px 8px rgba(17, 17, 19, .08);
+}
+.account-tabs button:hover { color: var(--account-ink); }
+.account-tabs button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 1px; }
+
+.account-login-methods {
+  display: flex;
+  gap: 18px;
+  margin: -3px 0 17px;
+  border-bottom: 1px solid var(--account-line);
+}
+
+.account-login-methods button {
+  position: relative;
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--account-muted);
+  cursor: pointer;
+  padding: 4px 1px 10px;
+  font: 500 12px/1.2 "Noto Sans SC", sans-serif;
+}
+
+.account-login-methods button[aria-pressed="true"] { color: var(--account-ink); }
+.account-login-methods button[aria-pressed="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--account-accent);
+}
+.account-login-methods button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+
+.account-auth-form { display: grid; gap: 15px; }
+.account-auth-form label { display: grid; gap: 7px; color: #56565d; font: 500 12px/1.2 "Noto Sans SC", sans-serif; }
+.account-auth-form input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d8d8dc;
+  border-radius: 11px;
+  outline: none;
+  background: #fff;
+  color: var(--account-ink);
+  padding: 12px 13px;
+  font: 400 15px/1.4 "Noto Sans SC", sans-serif;
+}
+.account-auth-form input:focus { border-color: var(--account-accent); box-shadow: 0 0 0 3px rgba(255, 36, 66, .12); }
+.account-password-group { display: grid; gap: 7px; }
+.account-password-group > label { color: #56565d; font: 500 12px/1.2 "Noto Sans SC", sans-serif; }
+.account-password-field { position: relative; display: block; }
+.account-password-field input { padding-right: 68px; }
+.account-password-field button {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  min-width: 52px;
+  min-height: 40px;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--account-accent-strong);
+  cursor: pointer;
+  font: 600 12px/1 "Noto Sans SC", sans-serif;
+}
+.account-password-field button:hover { background: var(--account-accent-soft); }
+.account-password-field button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 1px; }
+.account-code-group { display: grid; gap: 7px; }
+.account-code-field { display: grid; grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; }
+.account-code-field button {
+  border: 1px solid #ffd0d7;
+  border-radius: 11px;
+  background: var(--account-accent-soft);
+  color: var(--account-accent-strong);
+  cursor: pointer;
+  padding: 0 10px;
+  font: 500 12px/1.2 "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.account-code-field button:hover:not(:disabled) { border-color: #ff9dac; background: #ffe5ea; }
+.account-code-field button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+.account-code-field button:disabled { cursor: default; opacity: .58; }
+.account-registration-code-group { position: relative; display: grid; gap: 7px; }
+.account-registration-code-group > label { color: #56565d; font: 500 12px/1.2 "Noto Sans SC", sans-serif; }
+.account-registration-code-field { display: grid; grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; }
+.account-registration-code-field input { text-transform: uppercase; font-family: "Space Mono", monospace; letter-spacing: .04em; }
+.account-registration-code-field button {
+  border: 1px solid #ffd0d7;
+  border-radius: 11px;
+  background: var(--account-accent-soft);
+  color: var(--account-accent-strong);
+  cursor: pointer;
+  padding: 0 10px;
+  font: 500 12px/1.2 "Noto Sans SC", sans-serif;
+  white-space: nowrap;
+}
+.account-registration-code-field button:hover:not(:disabled) { border-color: #ff9dac; background: #ffe5ea; }
+.account-registration-code-field button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+.account-registration-code-field button:disabled { cursor: wait; opacity: .58; }
+.account-registration-code-popover {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 4px 12px;
+  margin-top: 3px;
+  padding: 12px 13px;
+  border: 1px solid #ffd2d9;
+  border-radius: 12px;
+  background: #fff9fa;
+  box-shadow: 0 12px 28px rgba(84, 25, 35, .1);
+}
+.account-registration-code-popover[hidden] { display: none; }
+.account-registration-code-popover::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 52px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  border-top: 1px solid #ffd2d9;
+  border-left: 1px solid #ffd2d9;
+  background: #fff9fa;
+}
+.account-registration-code-popover span { color: var(--account-muted); font: 500 10px/1.3 "Noto Sans SC", sans-serif; }
+.account-registration-code-popover strong { grid-row: 2; color: var(--account-accent-strong); font: 700 16px/1.3 "Space Mono", monospace; letter-spacing: .04em; }
+.account-registration-code-popover em { grid-column: 2; grid-row: 1 / span 2; max-width: 150px; color: var(--account-muted); font: normal 10px/1.45 "Noto Sans SC", sans-serif; text-align: right; }
+.account-form-hint,
+.account-privacy-note { margin: 0; color: var(--account-muted); font: 400 11px/1.6 "Noto Sans SC", sans-serif; }
+.account-code-status { margin: -6px 0 0; color: var(--account-success); font: 500 11px/1.5 "Noto Sans SC", sans-serif; }
+.account-form-error { margin: 0; color: var(--account-accent-strong); font: 500 12px/1.5 "Noto Sans SC", sans-serif; }
+.account-submit {
+  border: 0;
+  border-radius: 11px;
+  background: var(--account-accent-strong);
+  color: #fff;
+  cursor: pointer;
+  padding: 13px 18px;
+  font: 600 14px/1.2 "Noto Sans SC", sans-serif;
+}
+.account-submit:hover:not(:disabled) { background: var(--account-accent-hover); transform: translateY(-1px); }
+.account-submit:active:not(:disabled) { transform: translateY(0); }
+.account-submit:focus-visible { outline: 3px solid rgba(255, 36, 66, .22); outline-offset: 2px; }
+.account-submit:disabled { cursor: wait; opacity: .58; }
+.account-privacy-note { margin-top: 16px; text-align: center; }
+
+.account-quota-card {
+  display: grid;
+  grid-template-columns: 1.05fr .95fr;
+  gap: 18px;
+  margin-top: 23px;
+  padding: 20px;
+  border: 1px solid #ffd8de;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #fff 0%, var(--account-accent-soft) 100%);
+}
+.account-quota-main { display: grid; align-content: center; gap: 5px; }
+.account-quota-main > span { color: #56565d; font: 500 12px/1.2 "Noto Sans SC", sans-serif; }
+.account-quota-main strong { display: flex; align-items: baseline; gap: 5px; color: var(--account-accent-strong); }
+.account-quota-main strong b { font: 700 42px/1 "Space Mono", monospace; }
+.account-quota-main strong i { font: normal 500 18px/1 "Space Mono", monospace; color: #9a6570; }
+.account-quota-main > em { color: var(--account-muted); font: normal 10px/1.5 "Noto Sans SC", sans-serif; }
+.account-quota-detail { display: grid; align-content: center; gap: 12px; padding-left: 18px; border-left: 1px solid #ffd8de; }
+.account-quota-detail span { display: grid; gap: 3px; }
+.account-quota-detail b { color: var(--account-ink); font: 600 11px/1.2 "Noto Sans SC", sans-serif; }
+.account-quota-detail em { color: var(--account-muted); font: normal 11px/1.4 "Noto Sans SC", sans-serif; }
+
+.account-referral-card {
+  margin-top: 15px;
+  padding: 19px;
+  border: 1px solid #ffd2d9;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #fff0f3 0%, #fff 76%);
+  color: var(--account-ink);
+}
+.account-referral-card > div:first-child { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
+.account-referral-card > div:first-child span { font: 600 13px/1.3 "Noto Sans SC", sans-serif; }
+.account-referral-card > div:first-child strong { color: var(--account-accent-strong); font: 700 27px/1 "Space Mono", monospace; }
+.account-referral-card > p { margin: 10px 0 16px; color: var(--account-muted); font: 400 11px/1.7 "Noto Sans SC", sans-serif; }
+.account-referral-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; overflow: hidden; border: 1px solid #ffe0e5; border-radius: 10px; background: #ffe0e5; }
+.account-referral-stats span { display: grid; gap: 5px; padding: 11px 8px; background: rgba(255,255,255,.84); text-align: center; }
+.account-referral-stats b { color: var(--account-ink); font: 600 16px/1 "Space Mono", monospace; }
+.account-referral-stats em { color: var(--account-muted); font: normal 9px/1.3 "Noto Sans SC", sans-serif; }
+.account-referral-card > a { display: flex; justify-content: space-between; margin-top: 14px; color: var(--account-accent-strong); text-decoration: none; font: 600 11px/1.4 "Noto Sans SC", sans-serif; }
+.account-referral-card > a:hover { color: var(--account-accent-hover); }
+.account-home-actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 15px; }
+.account-home-actions button { border: 1px solid var(--account-line); border-radius: 9px; background: #fff; color: #56565d; cursor: pointer; padding: 9px 13px; font: 500 11px/1 "Noto Sans SC", sans-serif; }
+.account-home-actions button:hover { border-color: #ffb5c0; background: var(--account-accent-soft); color: var(--account-accent-strong); }
+.account-home-actions button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
+.account-home-actions .account-logout { border-color: transparent; color: var(--account-accent-strong); }
+
+.account-invite-prompt {
+  position: fixed;
+  z-index: 80;
+  left: 50%;
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: min(680px, calc(100vw - 28px));
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  padding: 14px 16px;
+  border: 1px solid #ffd2d9;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .97);
+  color: var(--account-ink);
+  box-shadow: 0 18px 50px rgba(17, 17, 19, .18);
+}
+.account-invite-prompt > button:first-child { order: 3; width: 26px; border: 0; background: transparent; color: var(--account-muted); cursor: pointer; font-size: 20px; }
+.account-invite-prompt > span { display: grid; flex: 1; gap: 3px; }
+.account-invite-prompt b { font: 600 12px/1.3 "Noto Sans SC", sans-serif; }
+.account-invite-prompt em { color: var(--account-muted); font: normal 10px/1.5 "Noto Sans SC", sans-serif; }
+.account-invite-prompt [data-invite-register] { border: 0; border-radius: 9px; background: var(--account-accent-strong); color: #fff; cursor: pointer; padding: 10px 13px; font: 600 11px/1 "Noto Sans SC", sans-serif; white-space: nowrap; }
+.account-invite-prompt [data-invite-register]:hover { background: var(--account-accent-hover); }
+.account-invite-prompt [data-invite-register]:focus-visible { outline: 3px solid rgba(255, 36, 66, .2); outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  .account-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 19px; }
+  .account-dialog-body { padding: 22px 18px 20px; }
+  .account-quota-card { grid-template-columns: 1fr; gap: 13px; }
+  .account-archive-card { grid-template-columns: minmax(0, 1fr) auto; gap: 11px; }
+  .account-archive-detail { grid-column: 1 / -1; grid-row: 2; }
+  .account-archive-copy > em { white-space: normal; }
+  .account-quota-detail { grid-template-columns: 1fr 1fr; padding: 13px 0 0; border-top: 1px solid #ffd8de; border-left: 0; }
+  .account-code-field { grid-template-columns: minmax(0, 1fr) 108px; }
+  .account-registration-code-field { grid-template-columns: minmax(0, 1fr) 108px; }
+  .account-registration-code-popover { grid-template-columns: 1fr; }
+  .account-registration-code-popover em { grid-column: 1; grid-row: 3; max-width: none; text-align: left; }
+  .account-invite-prompt { bottom: 10px; gap: 10px; padding: 12px; }
+  .account-invite-prompt em { display: none; }
+  .account-invite-prompt > button:first-child { position: absolute; top: -9px; right: 2px; border-radius: 50%; background: #f0f0f2; }
+}
+
+/* ACCOUNT AUTH TOUCH UX · 密码可见性与手机触控热区（account-6） */
+
+/* ACCOUNT EMPTY ARCHIVE · 空账户直接选择八字或六爻，减少一次无效弹窗（account-9） */
+@media (max-width: 600px) {
+  .account-archive-card.empty { grid-template-columns: 1fr; }
+  .account-archive-card.empty .account-archive-copy { width: max-content; }
+  .account-archive-card.empty .account-archive-entry-actions {
+    width: 100%;
+    grid-column: 1 / -1;
+  }
+}

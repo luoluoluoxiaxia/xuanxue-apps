@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 启动窗口主题：Compose 接管之后的配色在 :core:designsystem 里定义。
+         这里用深色底避免冷启动时先闪一帧白。 -->
+    <style name="Theme.Xuanshu" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

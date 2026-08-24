@@ -1,0 +1,56 @@
+# 版本号全部来自 Google Maven / Maven Central 的实时查询（2026-08-20），不是凭记忆填写。
+# 升级时重新查 group-index.xml 与 maven-metadata.xml，不要手改成没验证过的版本。
+[versions]
+agp = "9.3.1"
+kotlin = "2.4.10"
+ksp = "2.3.11"
+coreKtx = "1.19.0"
+activityCompose = "1.13.0"
+composeBom = "2026.08.00"
+lifecycle = "2.11.0"
+navigation3 = "1.1.6"
+hilt = "2.60.1"
+hiltNavigationCompose = "1.4.0"
+room = "2.8.4"
+work = "2.11.2"
+retrofit = "3.0.0"
+okhttp = "5.5.0"
+eventsource = "4.3.0"
+kotlinxSerialization = "1.11.0"
+coroutines = "1.11.0"
+coil = "3.5.0"
+markdown = "0.44.0"
+
+[libraries]
+androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+retrofit = { group = "com.squareup.retrofit2", name = "retrofit", version.ref = "retrofit" }
+retrofit-kotlinx-serialization = { group = "com.squareup.retrofit2", name = "converter-kotlinx-serialization", version.ref = "retrofit" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+okhttp-logging = { group = "com.squareup.okhttp3", name = "logging-interceptor", version.ref = "okhttp" }
+# SSE 不用 Square 的 okhttp-sse：它至今 experimental，且不提供自动重连与
+# Last-Event-ID 恢复。这个库是稳定版本化的，底层同样是 OkHttp，可与
+# Retrofit 共享同一个 OkHttpClient。
+okhttp-eventsource = { group = "com.launchdarkly", name = "okhttp-eventsource", version.ref = "eventsource" }
+kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+# LLM 输出的 Markdown 用它渲染：提供 rememberStreamingMarkdownState()，
+# 追加内容时只重解析文档尾部的不稳定片段，而非每来一段就整篇重解析。
+markdown-renderer-m3 = { group = "com.mikepenz", name = "multiplatform-markdown-renderer-m3", version.ref = "markdown" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-ui-graphics = { group = "androidx.compose.ui", name = "ui-graphics" }
+androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling" }
+androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation3-runtime = { group = "androidx.navigation3", name = "navigation3-runtime", version.ref = "navigation3" }
+androidx-navigation3-ui = { group = "androidx.navigation3", name = "navigation3-ui", version.ref = "navigation3" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+# 注意：AGP 9 起内置 Kotlin，不要再声明 org.jetbrains.kotlin.android。
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

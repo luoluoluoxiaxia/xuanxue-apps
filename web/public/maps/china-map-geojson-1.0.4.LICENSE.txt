@@ -1,0 +1,6 @@
+china-map-geojson 1.0.4
+Copyright (c) twobin
+License: ISC
+
+Source package: https://registry.npmjs.org/china-map-geojson/-/china-map-geojson-1.0.4.tgz
+Repository: https://github.com/twobin/china-map-geojson

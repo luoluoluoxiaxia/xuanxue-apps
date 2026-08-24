@@ -1,0 +1,819 @@
+(() => {
+  "use strict";
+
+  const body = document.body;
+  const pageSlug = body?.dataset.postSlug || "";
+  const previewCache = new Map();
+  const PREVIEW_DIALOG_HTML = `
+    <dialog class="post-preview-dialog" data-post-preview aria-labelledby="post-preview-title">
+      <button type="button" class="post-preview-close" data-preview-close aria-label="关闭卦帖">×</button>
+      <div class="post-preview-loading" data-preview-loading role="status">
+        <span></span>
+        <b>正在打开卦帖</b>
+      </div>
+      <div class="post-preview-error" data-preview-error hidden>
+        <b>这条卦帖暂时没有打开</b>
+        <p data-preview-error-message>请稍后再试。</p>
+        <a class="secondary-action" data-preview-error-link href="/#gua-square">前往完整页面</a>
+      </div>
+      <div class="post-preview-content" data-preview-content hidden>
+        <section class="post-preview-context">
+          <header class="post-preview-head">
+            <h2 id="post-preview-title" data-preview-question></h2>
+            <div class="preview-meta"><time data-preview-date></time><span data-preview-viewers></span></div>
+          </header>
+
+          <section class="post-oracle-panel post-preview-oracle" aria-label="卦象">
+            <div class="gua-board">
+              <div class="gua-pair">
+                <div class="gua-figure">
+                  <div class="gua-figure-title"><span>本卦</span><strong data-preview-ben-name></strong></div>
+                  <div class="gua-lines" data-preview-ben-lines aria-hidden="true"></div>
+                </div>
+                <span class="gua-change-arrow" aria-hidden="true">→</span>
+                <div class="gua-figure" data-preview-bian-figure>
+                  <div class="gua-figure-title">
+                    <em class="gua-palace-meta" data-preview-oracle-meta></em>
+                    <span>变卦</span><strong data-preview-bian-name></strong>
+                  </div>
+                  <div class="gua-lines" data-preview-bian-lines aria-hidden="true"></div>
+                  <div class="quiet-gua" data-preview-quiet hidden aria-label="六爻安静">静</div>
+                </div>
+              </div>
+              <div class="oracle-facts">
+                <span><small>动爻</small><b data-preview-moving></b></span>
+                <span><small>世应</small><b data-preview-shiying></b></span>
+                <span><small>月建</small><b data-preview-month></b></span>
+                <span><small>日辰</small><b data-preview-day></b></span>
+              </div>
+              <details class="yao-ledger">
+                <summary><span>完整六爻排布</span><em data-preview-method></em></summary>
+                <div class="yao-ledger-body">
+                  <div class="yao-ledger-labels" aria-hidden="true"><span>爻</span><span>六神</span><span>阴阳</span><span>六亲纳甲</span><span>世应</span></div>
+                  <div data-preview-ledger></div>
+                </div>
+              </details>
+            </div>
+          </section>
+        </section>
+
+        <section class="post-preview-story">
+          <div class="post-preview-scroll">
+            <section class="post-preview-answer">
+              <div class="section-title-row">
+                <div><span class="section-heading-copy"><h3>解答</h3><small data-preview-disclosure></small></span></div>
+              </div>
+              <article class="reading-prose" data-preview-answer></article>
+            </section>
+
+            <section class="post-preview-comments">
+              <div class="section-title-row">
+                <div><h3>讨论</h3></div>
+                <span data-preview-comment-count></span>
+              </div>
+              <div data-preview-comments></div>
+            </section>
+          </div>
+          <div class="post-preview-actions">
+            <a class="primary-action" href="/?start=liuyao">我也要起卦</a>
+            <button type="button" class="preview-action-button post-like-action" data-preview-like data-like-post="" aria-pressed="false"><span data-like-icon aria-hidden="true">♡</span><b data-like-count>0</b></button>
+            <button type="button" class="preview-action-button" data-preview-share>分享</button>
+            <button type="button" class="preview-action-button" data-preview-copy>复制标题+链接</button>
+            <a class="preview-open-page" data-preview-open-page href="/#gua-square">完整页面 ↗</a>
+          </div>
+        </section>
+      </div>
+    </dialog>`;
+
+  function ensureCommunityToast() {
+    let element = document.querySelector("[data-community-toast]");
+    if (element || !body) return element;
+    element = document.createElement("div");
+    element.className = "community-toast";
+    element.dataset.communityToast = "";
+    element.setAttribute("role", "status");
+    element.setAttribute("aria-live", "polite");
+    element.hidden = true;
+    body.append(element);
+    return element;
+  }
+
+  function ensurePreviewDialog() {
+    let dialog = document.querySelector("[data-post-preview]");
+    if (dialog || !body) return dialog;
+    if (!document.querySelector("#home-community-feed, [data-community-post]")) return null;
+    const template = document.createElement("template");
+    template.innerHTML = PREVIEW_DIALOG_HTML.trim();
+    dialog = template.content.firstElementChild;
+    if (dialog) body.append(dialog);
+    return dialog;
+  }
+
+  const toast = ensureCommunityToast();
+  let toastTimer = 0;
+  let toastHideTimer = 0;
+
+  window.XuanxueChatRenderer?.renderMarkdownElements(document);
+
+  function canonicalFor(slug) {
+    return `${location.origin}/gua/${slug}`;
+  }
+
+  async function shareTarget(slug) {
+    return await window.XuanxueAccount?.shareTarget(slug) || {
+      url: `${canonicalFor(slug)}?ref=post_share`,
+      attributed: false,
+    };
+  }
+
+  function nativeSharePayload(title, url) {
+    const shareTitle = String(title || "玄枢六爻卦帖").trim() || "玄枢六爻卦帖";
+    return {
+      title: shareTitle,
+      text: `${shareTitle}\n${url}`,
+    };
+  }
+
+  function formatStamp(value, includeTime = false) {
+    const text = String(value || "");
+    return (includeTime ? text.slice(0, 16) : text.slice(0, 10)).replace("T", " ");
+  }
+
+  function showToast(message, tone = "success") {
+    if (!toast) return;
+    window.clearTimeout(toastTimer);
+    window.clearTimeout(toastHideTimer);
+    toast.textContent = message;
+    toast.dataset.tone = tone;
+    toast.hidden = false;
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+    toastTimer = window.setTimeout(() => {
+      toast.classList.remove("is-visible");
+      toastHideTimer = window.setTimeout(() => { toast.hidden = true; }, 180);
+    }, 2400);
+  }
+
+  async function track(slug, channel) {
+    if (!slug) return;
+    try {
+      await fetch("/api/community/share-events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slug,
+          channel,
+          ref: new URLSearchParams(location.search).get("ref") || "",
+        }),
+        keepalive: true,
+      });
+    } catch (_) {}
+  }
+
+  async function copyLink(slug, title) {
+    if (!slug) return;
+    const target = await shareTarget(slug);
+    const url = target.url;
+    const data = nativeSharePayload(title || document.title, url);
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(data.text);
+      copied = true;
+    } catch (_) {
+      const input = document.createElement("textarea");
+      input.value = data.text;
+      document.body.appendChild(input);
+      input.select();
+      copied = document.execCommand("copy");
+      input.remove();
+    }
+    if (!copied) {
+      showToast("复制失败，请手动复制标题和链接", "error");
+      return;
+    }
+    await track(slug, "copy");
+    showToast(target.attributed ? "邀请链接已复制，新用户激活后每日额度永久 +1" : "标题和链接已复制");
+  }
+
+  async function sharePost(slug, title, post = null) {
+    if (!slug) return;
+    const target = await shareTarget(slug);
+    if (window.XuanxueShareCard?.open) {
+      await window.XuanxueShareCard.open({
+        slug,
+        title,
+        post,
+        ref: new URLSearchParams(location.search).get("ref") || "community_share",
+        shareUrl: target.url,
+        attributed: target.attributed,
+      });
+      return;
+    }
+    const url = target.url;
+    const data = nativeSharePayload(title || document.title, url);
+    if (navigator.share) {
+      try {
+        await navigator.share(data);
+        await track(slug, "native");
+        showToast("分享已完成");
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    await copyLink(slug, title);
+  }
+
+  const pageTitle = document.querySelector(".public-post-head h1")?.textContent?.trim() || "";
+  document.querySelectorAll("[data-share-post]").forEach(button => {
+    button.addEventListener("click", () => sharePost(pageSlug, pageTitle));
+  });
+  document.querySelectorAll("[data-copy-post]").forEach(button => {
+    button.addEventListener("click", () => copyLink(pageSlug, pageTitle));
+  });
+
+  function likeButtonsFor(slug) {
+    return Array.from(document.querySelectorAll("[data-like-post]"))
+      .filter(button => button.dataset.likePost === slug);
+  }
+
+  function syncLikeState(slug, count, liked = true) {
+    likeButtonsFor(slug).forEach(button => {
+      button.disabled = false;
+      button.classList.toggle("is-liked", liked);
+      button.setAttribute("aria-pressed", liked ? "true" : "false");
+      const title = button.dataset.likeTitle || "这条卦帖";
+      button.setAttribute("aria-label", `${liked ? "已赞" : "点赞"}：${title}`);
+      button.title = liked ? "已点赞" : "点赞";
+      const icon = button.querySelector("[data-like-icon]");
+      if (icon) icon.textContent = liked ? "♥" : "♡";
+      const counter = button.querySelector("[data-like-count]");
+      if (counter) counter.textContent = String(Number(count) || 0);
+    });
+    const cached = previewCache.get(slug);
+    if (cached) cached.then(post => {
+      post.like_count = Number(count) || 0;
+      post.viewer_liked = liked;
+    }).catch(() => {});
+  }
+
+  function syncViewerState(slug, viewerCount, viewCount) {
+    document.querySelectorAll("[data-post-viewers]").forEach(element => {
+      if (element.dataset.postViewers !== slug) return;
+      element.textContent = `${Number(viewerCount) || 0} 人看过`;
+      element.title = `共 ${Number(viewCount) || 0} 次浏览`;
+    });
+    const cached = previewCache.get(slug);
+    if (cached) cached.then(post => {
+      post.viewer_count = Number(viewerCount) || 0;
+      post.view_count = Number(viewCount) || 0;
+    }).catch(() => {});
+  }
+
+  async function likePost(slug) {
+    if (!slug) return;
+    const buttons = likeButtonsFor(slug);
+    if (buttons.some(button => button.getAttribute("aria-pressed") === "true")) {
+      showToast("你已经赞过这条卦帖了");
+      return;
+    }
+    buttons.forEach(button => { button.disabled = true; });
+    try {
+      const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/like`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Xuanshu-Interaction": "same-origin-v1",
+        },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.detail || "点赞失败，请稍后再试");
+      syncLikeState(slug, result.like_count, true);
+      showToast(result.newly_liked ? "已点赞" : "你已经赞过这条卦帖了");
+    } catch (error) {
+      buttons.forEach(button => { button.disabled = false; });
+      showToast(error.message || "点赞失败，请稍后再试", "error");
+    }
+  }
+
+  async function recordView(slug) {
+    if (!slug) return null;
+    try {
+      const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/view`, {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "X-Xuanshu-Interaction": "same-origin-v1",
+        },
+        keepalive: true,
+      });
+      if (!response.ok) return null;
+      const result = await response.json();
+      syncViewerState(slug, result.viewer_count, result.view_count);
+      return result;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  document.addEventListener("click", event => {
+    const button = event.target instanceof Element ? event.target.closest("[data-like-post]") : null;
+    if (!button) return;
+    event.preventDefault();
+    event.stopPropagation();
+    void likePost(button.dataset.likePost || "");
+  });
+
+  const report = document.querySelector("[data-report-post]");
+  const reportDialog = document.querySelector("[data-report-dialog]");
+  const reportForm = document.querySelector("[data-report-form]");
+  if (report && reportDialog && reportForm && pageSlug) {
+    const reportOverlayId = "community-report";
+    const closeReportDialogNow = () => {
+      if (reportDialog.open) reportDialog.close();
+    };
+    const openReportDialogNow = () => {
+      reportForm.reset();
+      reportForm.querySelector("[data-report-state]").textContent = "";
+      reportForm.querySelector("button[type=submit]").disabled = false;
+      if (!reportDialog.open) reportDialog.showModal();
+      body.classList.add("report-dialog-open");
+      requestAnimationFrame(() => reportForm.querySelector("input, textarea, button")?.focus({ preventScroll: true }));
+    };
+    window.XuanOverlayHistory?.register(reportOverlayId, {
+      isOpen: () => reportDialog.open,
+      open: openReportDialogNow,
+      close: closeReportDialogNow,
+    });
+    const openReportDialog = () => window.XuanOverlayHistory
+      ? window.XuanOverlayHistory.open(reportOverlayId)
+      : openReportDialogNow();
+    const closeReportDialog = () => window.XuanOverlayHistory
+      ? window.XuanOverlayHistory.requestClose(reportOverlayId)
+      : (closeReportDialogNow(), Promise.resolve(true));
+    report.addEventListener("click", openReportDialog);
+    reportDialog.querySelectorAll("[data-report-cancel]").forEach(button => {
+      button.addEventListener("click", closeReportDialog);
+    });
+    reportDialog.addEventListener("click", event => {
+      if (event.target === reportDialog) closeReportDialog();
+    });
+    reportDialog.addEventListener("cancel", event => {
+      event.preventDefault();
+      closeReportDialog();
+    });
+    reportDialog.addEventListener("close", () => {
+      body.classList.remove("report-dialog-open");
+      report.focus({ preventScroll: true });
+    });
+    reportForm.addEventListener("submit", async event => {
+      event.preventDefault();
+      const form = new FormData(reportForm);
+      const submit = reportForm.querySelector("button[type=submit]");
+      const state = reportForm.querySelector("[data-report-state]");
+      submit.disabled = true;
+      state.textContent = "正在提交…";
+      try {
+        const response = await fetch("/api/community/reports", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            slug: pageSlug,
+            reason: String(form.get("reason") || ""),
+            detail: String(form.get("detail") || "").trim(),
+          }),
+        });
+        if (!response.ok) {
+          const detail = (await response.json().catch(() => ({}))).detail;
+          throw new Error(detail || "举报提交失败，请稍后再试");
+        }
+        closeReportDialog();
+        showToast("举报已提交，我们会尽快处理");
+      } catch (error) {
+        state.textContent = error.message || "举报提交失败，请稍后再试";
+        submit.disabled = false;
+      }
+    });
+  }
+
+  const commentComposer = document.querySelector("[data-comment-composer]");
+  const commentSection = document.querySelector(".comments-section");
+
+  function commentFormMarkup() {
+    return `<form class="comment-form" data-comment-form>
+      <label for="comment-body">写下你的看法</label>
+      <textarea id="comment-body" name="body" rows="4" maxlength="500" required placeholder="就问题和解答友善交流；请勿填写姓名、电话、住址等隐私信息"></textarea>
+      <div class="comment-form-actions">
+        <span><b data-comment-length>0</b> / 500 · 公开显示为匿名卦友编号</span>
+        <button type="submit" class="primary-action">发布评论</button>
+      </div>
+      <p class="form-state" data-comment-state role="status" aria-live="polite"></p>
+    </form>`;
+  }
+
+  function commentGateMarkup() {
+    return `<div class="comment-gate">
+      <span>评</span>
+      <div><b>登录后即可匿名参与评论</b><p>公开显示为卦友编号，不展示你的邮箱。</p></div>
+      <button type="button" class="comment-login-action" data-comment-login>登录后评论</button>
+    </div>`;
+  }
+
+  function syncCommentTotal(increment = 0) {
+    const total = commentSection?.querySelector("[data-comment-total]");
+    if (!total) return;
+    const count = Math.max(0, Number(total.dataset.count || 0) + increment);
+    total.dataset.count = String(count);
+    total.textContent = `${count} 条`;
+  }
+
+  function appendPublishedComment(comment) {
+    if (!commentSection) return;
+    commentSection.querySelector(".section-empty")?.remove();
+    let list = commentSection.querySelector(".comment-list");
+    if (!list) {
+      list = document.createElement("div");
+      list.className = "comment-list";
+      commentComposer?.before(list);
+    }
+    list.append(renderComment(comment));
+    syncCommentTotal(1);
+  }
+
+  function bindCommentLogin() {
+    commentComposer?.querySelector("[data-comment-login]")?.addEventListener("click", async event => {
+      const button = event.currentTarget;
+      button.disabled = true;
+      const loggedIn = await window.XuanxueAccount?.requireLogin({
+        mode: "login",
+        message: "登录后即可用匿名卦友编号参与公开讨论；页面不会展示邮箱。",
+      });
+      if (loggedIn) renderCommentComposer();
+      else button.disabled = false;
+    });
+  }
+
+  function renderCommentGate() {
+    if (!commentComposer) return;
+    commentComposer.dataset.writeReady = "false";
+    commentComposer.innerHTML = commentGateMarkup();
+    bindCommentLogin();
+  }
+
+  function bindCommentForm() {
+    const form = commentComposer?.querySelector("[data-comment-form]");
+    if (!form || form.dataset.commentBound === "true") return;
+    form.dataset.commentBound = "true";
+    const input = form.elements.body;
+    const length = form.querySelector("[data-comment-length]");
+    const state = form.querySelector("[data-comment-state]");
+    const submit = form.querySelector("button[type=submit]");
+    const syncLength = () => { length.textContent = String(input.value.length); };
+    input.addEventListener("input", syncLength);
+    syncLength();
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+      if (!input.reportValidity()) return;
+      submit.disabled = true;
+      submit.textContent = "正在发布…";
+      state.textContent = "";
+      state.dataset.tone = "";
+      try {
+        await window.XuanxueAccount?.ready();
+        const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(pageSlug)}/comments`, {
+          method: "POST",
+          headers: window.XuanxueAccount?.csrfHeaders({
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          }) || { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ body: input.value.trim() }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(payload.detail || "评论发布失败，请稍后再试"), { status: response.status });
+        appendPublishedComment(payload.item);
+        input.value = "";
+        syncLength();
+        state.textContent = `已发布，将显示为 ${payload.item?.author_name || "匿名卦友"}`;
+        state.dataset.tone = "success";
+        showToast("评论已发布");
+      } catch (error) {
+        if (error?.status === 401 || error?.status === 403) {
+          await window.XuanxueAccount?.refresh();
+          renderCommentGate();
+          showToast("登录状态已失效，请重新登录后评论", "error");
+          return;
+        }
+        state.textContent = error.message || "评论发布失败，请稍后再试";
+        state.dataset.tone = "error";
+      } finally {
+        if (submit.isConnected) {
+          submit.disabled = false;
+          submit.textContent = "发布评论";
+        }
+      }
+    });
+  }
+
+  function renderCommentComposer() {
+    if (!commentComposer) return;
+    commentComposer.dataset.writeReady = "true";
+    commentComposer.innerHTML = commentFormMarkup();
+    bindCommentForm();
+    requestAnimationFrame(() => commentComposer.querySelector("textarea")?.focus());
+  }
+
+  if (commentComposer) {
+    if (commentComposer.dataset.writeReady === "true") bindCommentForm();
+    else bindCommentLogin();
+    window.XuanxueAccount?.ready().then(account => {
+      if (account.authenticated && commentComposer.dataset.writeReady !== "true") renderCommentComposer();
+    });
+    document.addEventListener("xuanshu:authchange", event => {
+      if (event.detail?.authenticated) {
+        if (commentComposer.dataset.writeReady !== "true") renderCommentComposer();
+      } else if (commentComposer.dataset.writeReady === "true") {
+        renderCommentGate();
+      }
+    });
+  }
+
+  const previewDialog = ensurePreviewDialog();
+  if (!previewDialog) return;
+
+  const previewClose = previewDialog.querySelector("[data-preview-close]");
+  const previewLoading = previewDialog.querySelector("[data-preview-loading]");
+  const previewError = previewDialog.querySelector("[data-preview-error]");
+  const previewErrorMessage = previewDialog.querySelector("[data-preview-error-message]");
+  const previewErrorLink = previewDialog.querySelector("[data-preview-error-link]");
+  const previewContent = previewDialog.querySelector("[data-preview-content]");
+  const previewScroll = previewDialog.querySelector(".post-preview-scroll");
+  let activePreview = null;
+  let activeRequest = 0;
+  let opener = null;
+
+  function field(selector) {
+    return previewDialog.querySelector(selector);
+  }
+
+  function setField(selector, value) {
+    const element = field(selector);
+    if (element) element.textContent = String(value || "");
+  }
+
+  function makeElement(tag, className = "", text = "") {
+    const element = document.createElement(tag);
+    if (className) element.className = className;
+    if (text) element.textContent = text;
+    return element;
+  }
+
+  function renderGuaLines(container, lines, changed = false) {
+    container.replaceChildren();
+    lines.forEach(line => {
+      const yin = changed ? line.changed_yin : line.yin;
+      const item = makeElement("span", `gua-line ${yin ? "is-yin" : "is-yang"}${!changed && line.moving ? " is-moving" : ""}`);
+      item.append(makeElement("i"), makeElement("i"));
+      if (!changed && line.moving) item.append(makeElement("b", "", line.moving_mark));
+      container.append(item);
+    });
+  }
+
+  function renderLedger(lines) {
+    const ledger = field("[data-preview-ledger]");
+    ledger.replaceChildren();
+    lines.forEach(line => {
+      const row = makeElement("div", `yao-ledger-row${line.moving ? " is-moving" : ""}`);
+      row.append(
+        makeElement("span", "yao-position", line.position_label),
+        makeElement("span", "yao-spirit", line.liu_shen),
+      );
+      const mini = makeElement("span", `yao-mini-line ${line.yin ? "is-yin" : "is-yang"}`);
+      mini.append(makeElement("i"), makeElement("i"));
+      row.append(mini);
+      const detail = makeElement("span", "yao-detail");
+      detail.append(makeElement("b", "", `${line.liu_qin || ""} ${line.najia || ""}${line.wuxing || ""}`.trim()));
+      if (line.changed_label) detail.append(makeElement("small", "", `→ ${line.changed_label}`));
+      row.append(detail, makeElement("span", "yao-role", `${line.roles || ""}${line.kong ? "空" : ""}`));
+      ledger.append(row);
+    });
+  }
+
+  function renderComment(comment) {
+    const item = makeElement("article", "comment");
+    const meta = makeElement("div", "comment-meta");
+    meta.append(
+      makeElement("b", "", comment.author_name || "卦友"),
+      makeElement("time", "", formatStamp(comment.created_at, true)),
+    );
+    item.append(meta, makeElement("p", "", comment.body || ""));
+    (comment.replies || []).forEach(reply => {
+      const replyItem = makeElement("div", "comment-reply");
+      const replyMeta = makeElement("div", "comment-meta");
+      replyMeta.append(
+        makeElement("b", "", reply.author_name || "卦友"),
+        makeElement("time", "", formatStamp(reply.created_at, true)),
+      );
+      replyItem.append(replyMeta, makeElement("p", "", reply.body || ""));
+      item.append(replyItem);
+    });
+    return item;
+  }
+
+  function renderComments(post) {
+    const host = field("[data-preview-comments]");
+    const comments = post.comments || [];
+    setField("[data-preview-comment-count]", `${post.comment_count || comments.length} 条`);
+    host.replaceChildren();
+    if (!comments.length) {
+      host.append(makeElement("p", "section-empty", "还没有评论。"));
+      return;
+    }
+    const list = makeElement("div", "comment-list");
+    comments.forEach(comment => list.append(renderComment(comment)));
+    host.append(list);
+  }
+
+  function renderPreview(post) {
+    const oracle = post.oracle || {};
+    const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
+    setField("[data-preview-oracle-meta]", oracle.palace_label || [oracle.moving_label, oracle.shi_ying_label].filter(Boolean).join(" · "));
+    setField("[data-preview-ben-name]", oracle.ben_name || "本卦");
+    setField("[data-preview-bian-name]", oracle.bian_name || "无变卦");
+    renderGuaLines(field("[data-preview-ben-lines]"), lines, false);
+    const changedLines = field("[data-preview-bian-lines]");
+    const quiet = field("[data-preview-quiet]");
+    const bianFigure = field("[data-preview-bian-figure]");
+    if (oracle.has_changed) {
+      renderGuaLines(changedLines, lines, true);
+      changedLines.hidden = false;
+      quiet.hidden = true;
+      bianFigure.classList.remove("is-quiet");
+    } else {
+      changedLines.replaceChildren();
+      changedLines.hidden = true;
+      quiet.hidden = false;
+      bianFigure.classList.add("is-quiet");
+    }
+    setField("[data-preview-moving]", oracle.moving_label || "—");
+    setField("[data-preview-shiying]", oracle.shi_ying_label || "—");
+    setField("[data-preview-month]", oracle.month_jian || "—");
+    setField("[data-preview-day]", oracle.day_chen || "—");
+    setField("[data-preview-method]", `${oracle.method_label || ""}${oracle.xun_kong ? ` · 空亡 ${oracle.xun_kong}` : ""}`);
+    renderLedger(lines);
+
+    setField("[data-preview-category]", post.question_type_label || "其他");
+    setField("[data-preview-question]", post.question || post.title || "六爻卦帖");
+    setField("[data-preview-date]", formatStamp(post.published_at || post.created_at));
+    setField("[data-preview-viewers]", `${Number(post.viewer_count) || 0} 人看过`);
+    const previewViewers = field("[data-preview-viewers]");
+    previewViewers.title = `共 ${Number(post.view_count) || 0} 次浏览`;
+    setField("[data-preview-disclosure]", post.ai_disclosure || "AI 生成解读，仅供传统文化研究与娱乐参考");
+    const answer = field("[data-preview-answer]");
+    answer.removeAttribute("data-chat-rendered");
+    answer.setAttribute("data-chat-markdown", "");
+    answer.textContent = post.answer || "";
+    window.XuanxueChatRenderer?.renderMarkdownElements(answer.parentElement);
+    renderComments(post);
+
+    const fullPage = field("[data-preview-open-page]");
+    fullPage.href = canonicalFor(post.slug);
+    const previewLike = field("[data-preview-like]");
+    previewLike.dataset.likePost = post.slug;
+    previewLike.dataset.likeTitle = post.question || post.title || "这条卦帖";
+    syncLikeState(post.slug, post.like_count, !!post.viewer_liked);
+    activePreview = post;
+    previewLoading.hidden = true;
+    previewError.hidden = true;
+    previewContent.hidden = false;
+    previewDialog.removeAttribute("aria-busy");
+    if (previewScroll) previewScroll.scrollTop = 0;
+  }
+
+  async function loadPreview(slug) {
+    if (previewCache.has(slug)) return previewCache.get(slug);
+    const request = fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}`, {
+      headers: { Accept: "application/json" },
+    }).then(async response => {
+      if (!response.ok) {
+        const detail = (await response.json().catch(() => ({}))).detail;
+        throw new Error(detail || "卦帖加载失败，请稍后再试");
+      }
+      return response.json();
+    }).catch(error => {
+      previewCache.delete(slug);
+      throw error;
+    });
+    previewCache.set(slug, request);
+    return request;
+  }
+
+  const previewOverlayId = "community-preview";
+
+  async function openPreviewNow(options = {}) {
+    const slug = String(options.slug || "").trim();
+    if (!slug) return;
+    if (options.opener?.isConnected) opener = options.opener;
+    const requestId = ++activeRequest;
+    activePreview = null;
+    previewContent.hidden = true;
+    previewError.hidden = true;
+    previewLoading.hidden = false;
+    previewDialog.setAttribute("aria-busy", "true");
+    previewErrorLink.href = options.href || canonicalFor(slug);
+    if (!previewDialog.open) {
+      previewDialog.showModal();
+      body.classList.add("preview-open");
+    }
+    requestAnimationFrame(() => previewClose.focus());
+    try {
+      const [post, view] = await Promise.all([loadPreview(slug), recordView(slug)]);
+      if (view) Object.assign(post, view);
+      if (requestId !== activeRequest || !previewDialog.open) return;
+      renderPreview(post);
+    } catch (error) {
+      if (requestId !== activeRequest || !previewDialog.open) return;
+      previewLoading.hidden = true;
+      previewContent.hidden = true;
+      previewError.hidden = false;
+      previewDialog.removeAttribute("aria-busy");
+      previewErrorMessage.textContent = error.message || "请稍后再试。";
+    }
+  }
+
+  function openPreview(link) {
+    const slug = String(link?.dataset?.postSlug || "").trim();
+    if (!slug) return undefined;
+    opener = link;
+    const payload = { slug, href: link.href || canonicalFor(slug) };
+    if (window.XuanOverlayHistory) {
+      return window.XuanOverlayHistory.open(previewOverlayId, payload, { ...payload, opener: link });
+    }
+    return openPreviewNow({ ...payload, opener: link });
+  }
+
+  function closePreviewNow() {
+    if (previewDialog.open) previewDialog.close();
+  }
+
+  function closePreview() {
+    if (window.XuanOverlayHistory) return window.XuanOverlayHistory.requestClose(previewOverlayId);
+    closePreviewNow();
+    return Promise.resolve(true);
+  }
+
+  window.XuanOverlayHistory?.register(previewOverlayId, {
+    isOpen: () => previewDialog.open,
+    open: openPreviewNow,
+    close: closePreviewNow,
+  });
+
+  function previewLinkFor(event) {
+    return event.target instanceof Element ? event.target.closest("[data-community-post]") : null;
+  }
+
+  document.addEventListener("pointerover", event => {
+    const link = previewLinkFor(event);
+    if (link) loadPreview(link.dataset.postSlug || "").catch(() => {});
+  });
+  document.addEventListener("focusin", event => {
+    const link = previewLinkFor(event);
+    if (link) loadPreview(link.dataset.postSlug || "").catch(() => {});
+  });
+  document.addEventListener("click", event => {
+    const link = previewLinkFor(event);
+    if (!link || (
+      event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey ||
+      event.shiftKey || event.altKey
+    )) return;
+    event.preventDefault();
+    openPreview(link);
+  });
+
+  previewClose.addEventListener("click", closePreview);
+  previewDialog.addEventListener("click", event => {
+    if (event.target !== previewDialog) return;
+    const rect = previewDialog.getBoundingClientRect();
+    const outside = event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom;
+    if (outside) closePreview();
+  });
+  previewDialog.addEventListener("cancel", event => {
+    event.preventDefault();
+    closePreview();
+  });
+  previewDialog.addEventListener("close", () => {
+    activeRequest += 1;
+    activePreview = null;
+    body.classList.remove("preview-open");
+    if (opener?.isConnected) opener.focus({ preventScroll: true });
+  });
+  field("[data-preview-copy]").addEventListener("click", () => {
+    if (activePreview) copyLink(activePreview.slug, activePreview.question || activePreview.title);
+  });
+  field("[data-preview-share]").addEventListener("click", () => {
+    if (activePreview) sharePost(
+      activePreview.slug,
+      activePreview.question || activePreview.title,
+      activePreview,
+    );
+  });
+})();

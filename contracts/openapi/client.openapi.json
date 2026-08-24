@@ -1,0 +1,6168 @@
+{
+  "components": {
+    "schemas": {
+      "BirthInput": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "calendar": {
+            "default": "solar",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "day": {
+            "default": 0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "day_boundary": {
+            "default": "zi",
+            "title": "Day Boundary",
+            "type": "string"
+          },
+          "day_pillar": {
+            "default": "",
+            "title": "Day Pillar",
+            "type": "string"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "hour": {
+            "default": 0,
+            "title": "Hour",
+            "type": "integer"
+          },
+          "hour_pillar": {
+            "default": "",
+            "title": "Hour Pillar",
+            "type": "string"
+          },
+          "input_mode": {
+            "default": "birth_time",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "is_leap_month": {
+            "default": false,
+            "title": "Is Leap Month",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "manual_birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Birth Year"
+          },
+          "method": {
+            "default": "coins",
+            "title": "Method",
+            "type": "string"
+          },
+          "minute": {
+            "default": 0,
+            "title": "Minute",
+            "type": "integer"
+          },
+          "month": {
+            "default": 0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "month_pillar": {
+            "default": "",
+            "title": "Month Pillar",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "personal_case_id": {
+            "default": "",
+            "title": "Personal Case Id",
+            "type": "string"
+          },
+          "pillars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pillars"
+          },
+          "public_consent": {
+            "default": false,
+            "title": "Public Consent",
+            "type": "boolean"
+          },
+          "public_consent_version": {
+            "default": "",
+            "title": "Public Consent Version",
+            "type": "string"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "system": {
+            "default": "bazi",
+            "title": "System",
+            "type": "string"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "tz_offset": {
+            "default": 8.0,
+            "title": "Tz Offset",
+            "type": "number"
+          },
+          "use_true_solar": {
+            "default": true,
+            "title": "Use True Solar",
+            "type": "boolean"
+          },
+          "visibility": {
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "yaos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaos"
+          },
+          "year": {
+            "default": 0,
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_pillar": {
+            "default": "",
+            "title": "Year Pillar",
+            "type": "string"
+          }
+        },
+        "title": "BirthInput",
+        "type": "object"
+      },
+      "ChatMessageFeedbackCreate": {
+        "properties": {
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "reaction": {
+            "title": "Reaction",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "task_id": {
+            "default": "",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reaction"
+        ],
+        "title": "ChatMessageFeedbackCreate",
+        "type": "object"
+      },
+      "ClientAccount": {
+        "additionalProperties": false,
+        "properties": {
+          "archive_summary": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientArchiveSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "csrf_token": {
+            "default": "",
+            "title": "Csrf Token",
+            "type": "string"
+          },
+          "private_quota": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPrivateQuota"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Expires In"
+          },
+          "session_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Token"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientAccountUser"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "authenticated"
+        ],
+        "title": "ClientAccount",
+        "type": "object"
+      },
+      "ClientAccountUser": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_city": {
+            "default": "",
+            "title": "Current City",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "created_at"
+        ],
+        "title": "ClientAccountUser",
+        "type": "object"
+      },
+      "ClientAppVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "latest_version_code": {
+            "title": "Latest Version Code",
+            "type": "integer"
+          },
+          "min_supported_version_code": {
+            "title": "Min Supported Version Code",
+            "type": "integer"
+          },
+          "notice": {
+            "default": "",
+            "title": "Notice",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "store_url": {
+            "title": "Store Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform",
+          "latest_version_code",
+          "min_supported_version_code",
+          "store_url"
+        ],
+        "title": "ClientAppVersion",
+        "type": "object"
+      },
+      "ClientArchiveSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "bazi": {
+            "title": "Bazi",
+            "type": "integer"
+          },
+          "history_count": {
+            "title": "History Count",
+            "type": "integer"
+          },
+          "liuyao": {
+            "title": "Liuyao",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "bazi",
+          "liuyao",
+          "history_count",
+          "active"
+        ],
+        "title": "ClientArchiveSummary",
+        "type": "object"
+      },
+      "ClientBaziChart": {
+        "additionalProperties": false,
+        "properties": {
+          "analysis_date": {
+            "title": "Analysis Date",
+            "type": "string"
+          },
+          "boundary_check": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boundary Check"
+          },
+          "chart": {
+            "additionalProperties": true,
+            "title": "Chart",
+            "type": "object"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "current_liu_yue": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Liu Yue"
+          },
+          "da_yun": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziDaYun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "liu_nian": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liu Nian"
+          },
+          "liu_yue": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liu Yue"
+          },
+          "month_command": {
+            "additionalProperties": true,
+            "title": "Month Command",
+            "type": "object"
+          },
+          "next_liu_nian": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Liu Nian"
+          },
+          "pillars_detail": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ClientBaziPillarDetail"
+            },
+            "title": "Pillars Detail",
+            "type": "object"
+          },
+          "profile": {
+            "additionalProperties": true,
+            "title": "Profile",
+            "type": "object"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "profile_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Name"
+          },
+          "relations": {
+            "additionalProperties": true,
+            "title": "Relations",
+            "type": "object"
+          },
+          "roots": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Roots",
+            "type": "array"
+          },
+          "shensha": {
+            "additionalProperties": true,
+            "title": "Shensha",
+            "type": "object"
+          },
+          "tai_yuan": {
+            "title": "Tai Yuan",
+            "type": "string"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          },
+          "wuxing_count": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Wuxing Count",
+            "type": "object"
+          },
+          "wuxing_count_with_hidden": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Wuxing Count With Hidden",
+            "type": "object"
+          },
+          "xun_kong": {
+            "title": "Xun Kong",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile",
+          "analysis_date",
+          "warnings",
+          "boundary_check",
+          "chart",
+          "month_command",
+          "pillars_detail",
+          "relations",
+          "roots",
+          "shensha",
+          "tai_yuan",
+          "xun_kong",
+          "wuxing_count",
+          "wuxing_count_with_hidden"
+        ],
+        "title": "ClientBaziChart",
+        "type": "object"
+      },
+      "ClientBaziDaYun": {
+        "additionalProperties": false,
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "current_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziDayunStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "forward": {
+            "title": "Forward",
+            "type": "boolean"
+          },
+          "list": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBaziDayunStep"
+            },
+            "title": "List",
+            "type": "array"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "next_detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziDayunStep"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start_age": {
+            "title": "Start Age",
+            "type": "number"
+          }
+        },
+        "required": [
+          "forward",
+          "start_age",
+          "list"
+        ],
+        "title": "ClientBaziDaYun",
+        "type": "object"
+      },
+      "ClientBaziDayunStep": {
+        "additionalProperties": false,
+        "properties": {
+          "age_range": {
+            "title": "Age Range",
+            "type": "string"
+          },
+          "branch_element": {
+            "title": "Branch Element",
+            "type": "string"
+          },
+          "branch_hidden_stems": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBaziHiddenStem"
+            },
+            "title": "Branch Hidden Stems",
+            "type": "array"
+          },
+          "day_master_stage": {
+            "title": "Day Master Stage",
+            "type": "string"
+          },
+          "display_trend_score": {
+            "title": "Display Trend Score",
+            "type": "integer"
+          },
+          "display_years": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBaziDisplayYear"
+            },
+            "title": "Display Years",
+            "type": "array"
+          },
+          "end_age": {
+            "title": "End Age",
+            "type": "number"
+          },
+          "end_year": {
+            "title": "End Year",
+            "type": "integer"
+          },
+          "ganzhi": {
+            "title": "Ganzhi",
+            "type": "string"
+          },
+          "in_natal_xun_kong": {
+            "title": "In Natal Xun Kong",
+            "type": "boolean"
+          },
+          "na_yin": {
+            "title": "Na Yin",
+            "type": "string"
+          },
+          "pillar_xun_kong": {
+            "title": "Pillar Xun Kong",
+            "type": "string"
+          },
+          "relations_to_natal": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Relations To Natal",
+            "type": "array"
+          },
+          "relations_to_natal_endpoints": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Relations To Natal Endpoints",
+            "type": "array"
+          },
+          "shensha": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Shensha",
+            "type": "array"
+          },
+          "start_age": {
+            "title": "Start Age",
+            "type": "number"
+          },
+          "start_year": {
+            "title": "Start Year",
+            "type": "integer"
+          },
+          "stem_element": {
+            "title": "Stem Element",
+            "type": "string"
+          },
+          "stem_ten_god": {
+            "title": "Stem Ten God",
+            "type": "string"
+          },
+          "year_range": {
+            "title": "Year Range",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ganzhi",
+          "start_age",
+          "end_age",
+          "age_range",
+          "start_year",
+          "end_year",
+          "year_range",
+          "stem_element",
+          "branch_element",
+          "stem_ten_god",
+          "branch_hidden_stems",
+          "day_master_stage",
+          "na_yin",
+          "pillar_xun_kong",
+          "in_natal_xun_kong",
+          "shensha",
+          "relations_to_natal",
+          "relations_to_natal_endpoints",
+          "display_trend_score"
+        ],
+        "title": "ClientBaziDayunStep",
+        "type": "object"
+      },
+      "ClientBaziDisplayYear": {
+        "additionalProperties": false,
+        "properties": {
+          "branch_element": {
+            "title": "Branch Element",
+            "type": "string"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "display_trend_score": {
+            "title": "Display Trend Score",
+            "type": "integer"
+          },
+          "pillar": {
+            "title": "Pillar",
+            "type": "string"
+          },
+          "stem_element": {
+            "title": "Stem Element",
+            "type": "string"
+          },
+          "stem_ten_god": {
+            "title": "Stem Ten God",
+            "type": "string"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "pillar",
+          "stem_element",
+          "branch_element",
+          "stem_ten_god",
+          "display_trend_score",
+          "current"
+        ],
+        "title": "ClientBaziDisplayYear",
+        "type": "object"
+      },
+      "ClientBaziHiddenStem": {
+        "additionalProperties": false,
+        "properties": {
+          "element": {
+            "title": "Element",
+            "type": "string"
+          },
+          "exposed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exposed"
+          },
+          "qi": {
+            "title": "Qi",
+            "type": "string"
+          },
+          "stem": {
+            "title": "Stem",
+            "type": "string"
+          },
+          "ten_god": {
+            "title": "Ten God",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stem",
+          "ten_god",
+          "qi",
+          "element"
+        ],
+        "title": "ClientBaziHiddenStem",
+        "type": "object"
+      },
+      "ClientBaziPillarDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "branch_element": {
+            "title": "Branch Element",
+            "type": "string"
+          },
+          "di_shi": {
+            "title": "Di Shi",
+            "type": "string"
+          },
+          "hidden": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBaziHiddenStem"
+            },
+            "title": "Hidden",
+            "type": "array"
+          },
+          "na_yin": {
+            "title": "Na Yin",
+            "type": "string"
+          },
+          "pillar": {
+            "title": "Pillar",
+            "type": "string"
+          },
+          "stem_element": {
+            "title": "Stem Element",
+            "type": "string"
+          },
+          "stem_ten_god": {
+            "title": "Stem Ten God",
+            "type": "string"
+          },
+          "xun_kong": {
+            "title": "Xun Kong",
+            "type": "string"
+          }
+        },
+        "required": [
+          "pillar",
+          "stem_ten_god",
+          "stem_element",
+          "branch_element",
+          "hidden",
+          "di_shi",
+          "na_yin",
+          "xun_kong"
+        ],
+        "title": "ClientBaziPillarDetail",
+        "type": "object"
+      },
+      "ClientCapabilities": {
+        "additionalProperties": false,
+        "properties": {
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "systems": {
+            "items": {
+              "$ref": "#/components/schemas/ClientSystem"
+            },
+            "title": "Systems",
+            "type": "array"
+          }
+        },
+        "required": [
+          "system",
+          "systems"
+        ],
+        "title": "ClientCapabilities",
+        "type": "object"
+      },
+      "ClientChatMessage": {
+        "additionalProperties": false,
+        "properties": {
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "chart_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Session Id"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "feedback_reaction": {
+            "default": "",
+            "title": "Feedback Reaction",
+            "type": "string"
+          },
+          "feedback_updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback Updated At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "public_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPublicReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "task_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Id"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "content",
+          "scenario",
+          "topic",
+          "created_at"
+        ],
+        "title": "ClientChatMessage",
+        "type": "object"
+      },
+      "ClientCommentCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ClientCommunityComment"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "item"
+        ],
+        "title": "ClientCommentCreated",
+        "type": "object"
+      },
+      "ClientCommunityComment": {
+        "additionalProperties": false,
+        "properties": {
+          "author_name": {
+            "title": "Author Name",
+            "type": "string"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          },
+          "replies": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCommunityComment"
+            },
+            "title": "Replies",
+            "type": "array"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "author_name",
+          "body",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClientCommunityComment",
+        "type": "object"
+      },
+      "ClientCommunityComments": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCommunityComment"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "write_ready": {
+            "title": "Write Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "write_ready"
+        ],
+        "title": "ClientCommunityComments",
+        "type": "object"
+      },
+      "ClientCommunityFeed": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCommunityPost"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "limit",
+          "offset"
+        ],
+        "title": "ClientCommunityFeed",
+        "type": "object"
+      },
+      "ClientCommunityPost": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_disclosure": {
+            "title": "Ai Disclosure",
+            "type": "string"
+          },
+          "answer": {
+            "default": "",
+            "title": "Answer",
+            "type": "string"
+          },
+          "answer_excerpt": {
+            "title": "Answer Excerpt",
+            "type": "string"
+          },
+          "can_manage": {
+            "default": false,
+            "title": "Can Manage",
+            "type": "boolean"
+          },
+          "comment_count": {
+            "title": "Comment Count",
+            "type": "integer"
+          },
+          "comments": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientCommunityComment"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "comments_enabled": {
+            "title": "Comments Enabled",
+            "type": "boolean"
+          },
+          "comments_write_ready": {
+            "default": false,
+            "title": "Comments Write Ready",
+            "type": "boolean"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "index_enabled": {
+            "title": "Index Enabled",
+            "type": "boolean"
+          },
+          "is_featured": {
+            "title": "Is Featured",
+            "type": "boolean"
+          },
+          "like_count": {
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "oracle": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle"
+          },
+          "oracle_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oracle Summary"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "question_type": {
+            "title": "Question Type",
+            "type": "string"
+          },
+          "question_type_label": {
+            "title": "Question Type Label",
+            "type": "string"
+          },
+          "review_status": {
+            "title": "Review Status",
+            "type": "string"
+          },
+          "review_status_label": {
+            "title": "Review Status Label",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "view_count": {
+            "title": "View Count",
+            "type": "integer"
+          },
+          "viewer_count": {
+            "title": "Viewer Count",
+            "type": "integer"
+          },
+          "viewer_liked": {
+            "title": "Viewer Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "slug",
+          "status",
+          "title",
+          "question",
+          "question_type",
+          "question_type_label",
+          "ai_disclosure",
+          "comments_enabled",
+          "comment_count",
+          "like_count",
+          "view_count",
+          "viewer_count",
+          "viewer_liked",
+          "is_featured",
+          "index_enabled",
+          "review_status",
+          "review_status_label",
+          "answer_excerpt",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClientCommunityPost",
+        "type": "object"
+      },
+      "ClientEmptyState": {
+        "additionalProperties": false,
+        "description": "Serialize an intentionally empty display slot as ``{}``.",
+        "properties": {},
+        "title": "ClientEmptyState",
+        "type": "object"
+      },
+      "ClientEngagement": {
+        "additionalProperties": false,
+        "properties": {
+          "like_count": {
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "liked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liked"
+          },
+          "newly_liked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Newly Liked"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "view_count": {
+            "title": "View Count",
+            "type": "integer"
+          },
+          "viewer_count": {
+            "title": "Viewer Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "like_count",
+          "view_count",
+          "viewer_count"
+        ],
+        "title": "ClientEngagement",
+        "type": "object"
+      },
+      "ClientIdResult": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "id"
+        ],
+        "title": "ClientIdResult",
+        "type": "object"
+      },
+      "ClientInterpretHistory": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "task_id",
+          "scenario",
+          "topic",
+          "question",
+          "answer",
+          "created_at"
+        ],
+        "title": "ClientInterpretHistory",
+        "type": "object"
+      },
+      "ClientInterpretTask": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "default": "",
+            "title": "Answer",
+            "type": "string"
+          },
+          "branch_from_client_request_id": {
+            "default": "",
+            "title": "Branch From Client Request Id",
+            "type": "string"
+          },
+          "branch_from_task_id": {
+            "default": "",
+            "title": "Branch From Task Id",
+            "type": "string"
+          },
+          "branch_reason": {
+            "default": "",
+            "title": "Branch Reason",
+            "type": "string"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "chart_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Session Id"
+          },
+          "client_request_id": {
+            "default": "",
+            "title": "Client Request Id",
+            "type": "string"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          },
+          "error": {
+            "default": "",
+            "title": "Error",
+            "type": "string"
+          },
+          "partial": {
+            "default": false,
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "personal_case_id": {
+            "default": "",
+            "title": "Personal Case Id",
+            "type": "string"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "public_post": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Post"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "scenario": {
+            "default": "",
+            "title": "Scenario",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "done",
+              "failed",
+              "cancelled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "streamable": {
+            "default": false,
+            "title": "Streamable",
+            "type": "boolean"
+          },
+          "task_id": {
+            "title": "Task Id",
+            "type": "string"
+          },
+          "topic": {
+            "default": "",
+            "title": "Topic",
+            "type": "string"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          }
+        },
+        "required": [
+          "task_id",
+          "status",
+          "stage"
+        ],
+        "title": "ClientInterpretTask",
+        "type": "object"
+      },
+      "ClientInviteCode": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "remaining"
+        ],
+        "title": "ClientInviteCode",
+        "type": "object"
+      },
+      "ClientLiuyaoChart": {
+        "additionalProperties": false,
+        "properties": {
+          "ben_gua": {
+            "additionalProperties": true,
+            "title": "Ben Gua",
+            "type": "object"
+          },
+          "bian_gua": {
+            "additionalProperties": true,
+            "title": "Bian Gua",
+            "type": "object"
+          },
+          "cast_time": {
+            "additionalProperties": true,
+            "title": "Cast Time",
+            "type": "object"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "day_chen": {
+            "title": "Day Chen",
+            "type": "string"
+          },
+          "dong_yao": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Dong Yao",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "month_jian": {
+            "title": "Month Jian",
+            "type": "string"
+          },
+          "moving_shi_relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moving Shi Relations"
+          },
+          "personal_case_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Personal Case Id"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "profile_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Name"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "shi_yao": {
+            "title": "Shi Yao",
+            "type": "integer"
+          },
+          "shi_ying_relation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shi Ying Relation"
+          },
+          "system": {
+            "const": "liuyao",
+            "title": "System",
+            "type": "string"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visibility"
+          },
+          "xun_kong": {
+            "title": "Xun Kong",
+            "type": "string"
+          },
+          "yaos": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Yaos",
+            "type": "array"
+          },
+          "ying_yao": {
+            "title": "Ying Yao",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "system",
+          "method",
+          "question",
+          "cast_time",
+          "month_jian",
+          "day_chen",
+          "xun_kong",
+          "ben_gua",
+          "bian_gua",
+          "shi_yao",
+          "ying_yao",
+          "dong_yao",
+          "yaos"
+        ],
+        "title": "ClientLiuyaoChart",
+        "type": "object"
+      },
+      "ClientOk": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "ClientOk",
+        "type": "object"
+      },
+      "ClientPersonalColor": {
+        "additionalProperties": false,
+        "properties": {
+          "hex": {
+            "title": "Hex",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "hex",
+          "reason"
+        ],
+        "title": "ClientPersonalColor",
+        "type": "object"
+      },
+      "ClientPersonalDay": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalDayContent"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEmptyState"
+              }
+            ],
+            "title": "Content"
+          },
+          "date_label": {
+            "default": "",
+            "title": "Date Label",
+            "type": "string"
+          },
+          "day_key": {
+            "default": "",
+            "title": "Day Key",
+            "type": "string"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "scope": {
+            "default": "general",
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "default": "",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "weekday_label": {
+            "default": "",
+            "title": "Weekday Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ClientPersonalDay",
+        "type": "object"
+      },
+      "ClientPersonalDayContent": {
+        "additionalProperties": false,
+        "properties": {
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoid",
+            "type": "array"
+          },
+          "suitable": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suitable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suitable",
+          "avoid"
+        ],
+        "title": "ClientPersonalDayContent",
+        "type": "object"
+      },
+      "ClientPersonalGeneration": {
+        "additionalProperties": false,
+        "properties": {
+          "inactive_days": {
+            "title": "Inactive Days",
+            "type": "integer"
+          },
+          "manual_required": {
+            "title": "Manual Required",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state",
+          "manual_required",
+          "inactive_days",
+          "message"
+        ],
+        "title": "ClientPersonalGeneration",
+        "type": "object"
+      },
+      "ClientPersonalHome": {
+        "additionalProperties": false,
+        "properties": {
+          "authenticated": {
+            "title": "Authenticated",
+            "type": "boolean"
+          },
+          "current_city": {
+            "title": "Current City",
+            "type": "string"
+          },
+          "daily": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalDay"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEmptyState"
+              }
+            ],
+            "title": "Daily"
+          },
+          "default_profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generation": {
+            "$ref": "#/components/schemas/ClientPersonalGeneration"
+          },
+          "month": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalMonth"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEmptyState"
+              }
+            ],
+            "title": "Month"
+          },
+          "private_quota": {
+            "$ref": "#/components/schemas/ClientPrivateQuota"
+          },
+          "profile_state": {
+            "title": "Profile State",
+            "type": "string"
+          },
+          "profiles": {
+            "items": {
+              "$ref": "#/components/schemas/ClientPersonalProfile"
+            },
+            "title": "Profiles",
+            "type": "array"
+          },
+          "today": {
+            "title": "Today",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authenticated",
+          "today",
+          "current_city",
+          "profile_state",
+          "profiles",
+          "generation",
+          "private_quota"
+        ],
+        "title": "ClientPersonalHome",
+        "type": "object"
+      },
+      "ClientPersonalMonth": {
+        "additionalProperties": false,
+        "properties": {
+          "content": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalMonthContent"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEmptyState"
+              }
+            ],
+            "title": "Content"
+          },
+          "display": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPersonalMonthDisplay"
+              },
+              {
+                "$ref": "#/components/schemas/ClientEmptyState"
+              }
+            ],
+            "title": "Display"
+          },
+          "message": {
+            "default": "",
+            "title": "Message",
+            "type": "string"
+          },
+          "month_key": {
+            "default": "",
+            "title": "Month Key",
+            "type": "string"
+          },
+          "month_label": {
+            "default": "",
+            "title": "Month Label",
+            "type": "string"
+          },
+          "period_label": {
+            "default": "",
+            "title": "Period Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "default": "",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ClientPersonalMonth",
+        "type": "object"
+      },
+      "ClientPersonalMonthContent": {
+        "additionalProperties": false,
+        "properties": {
+          "avoid": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Avoid",
+            "type": "array"
+          },
+          "outfit": {
+            "$ref": "#/components/schemas/ClientPersonalOutfit"
+          },
+          "suitable": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Suitable",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suitable",
+          "avoid",
+          "outfit"
+        ],
+        "title": "ClientPersonalMonthContent",
+        "type": "object"
+      },
+      "ClientPersonalMonthDisplay": {
+        "additionalProperties": false,
+        "properties": {
+          "calendar_label": {
+            "title": "Calendar Label",
+            "type": "string"
+          },
+          "profile_month_label": {
+            "title": "Profile Month Label",
+            "type": "string"
+          },
+          "solar_terms": {
+            "items": {
+              "$ref": "#/components/schemas/ClientPersonalSolarTerm"
+            },
+            "title": "Solar Terms",
+            "type": "array"
+          },
+          "solar_terms_text": {
+            "title": "Solar Terms Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "calendar_label",
+          "profile_month_label",
+          "solar_terms",
+          "solar_terms_text"
+        ],
+        "title": "ClientPersonalMonthDisplay",
+        "type": "object"
+      },
+      "ClientPersonalOutfit": {
+        "additionalProperties": false,
+        "properties": {
+          "bracelet_materials": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Bracelet Materials",
+            "type": "array"
+          },
+          "bracelet_reasons": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Bracelet Reasons",
+            "type": "object"
+          },
+          "colors": {
+            "items": {
+              "$ref": "#/components/schemas/ClientPersonalColor"
+            },
+            "title": "Colors",
+            "type": "array"
+          },
+          "intent_label": {
+            "title": "Intent Label",
+            "type": "string"
+          },
+          "intent_reason": {
+            "title": "Intent Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent_label",
+          "intent_reason",
+          "colors",
+          "bracelet_materials",
+          "bracelet_reasons"
+        ],
+        "title": "ClientPersonalOutfit",
+        "type": "object"
+      },
+      "ClientPersonalProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "day_master": {
+            "additionalProperties": true,
+            "title": "Day Master",
+            "type": "object"
+          },
+          "gender": {
+            "title": "Gender",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "pillars": {
+            "additionalProperties": true,
+            "title": "Pillars",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "is_default",
+          "pillars",
+          "day_master",
+          "gender",
+          "created_at"
+        ],
+        "title": "ClientPersonalProfile",
+        "type": "object"
+      },
+      "ClientPersonalSolarTerm": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "datetime": {
+            "title": "Datetime",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "date",
+          "datetime"
+        ],
+        "title": "ClientPersonalSolarTerm",
+        "type": "object"
+      },
+      "ClientPrivateQuota": {
+        "additionalProperties": false,
+        "properties": {
+          "base": {
+            "title": "Base",
+            "type": "integer"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "max_total": {
+            "title": "Max Total",
+            "type": "integer"
+          },
+          "pending_referrals": {
+            "title": "Pending Referrals",
+            "type": "integer"
+          },
+          "qualified_referrals": {
+            "title": "Qualified Referrals",
+            "type": "integer"
+          },
+          "referral_bonus": {
+            "title": "Referral Bonus",
+            "type": "integer"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          },
+          "reserved": {
+            "title": "Reserved",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "base",
+          "referral_bonus",
+          "total",
+          "used",
+          "reserved",
+          "remaining",
+          "max_total",
+          "pending_referrals",
+          "qualified_referrals"
+        ],
+        "title": "ClientPrivateQuota",
+        "type": "object"
+      },
+      "ClientProfileDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "active_tasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Tasks"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ClientInterpretHistory"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziChart"
+              },
+              {
+                "$ref": "#/components/schemas/ClientLiuyaoChart"
+              }
+            ],
+            "title": "Payload"
+          },
+          "public_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPublicReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "system",
+          "visibility",
+          "name",
+          "input",
+          "is_default",
+          "summary",
+          "payload",
+          "history"
+        ],
+        "title": "ClientProfileDetail",
+        "type": "object"
+      },
+      "ClientProfileListItem": {
+        "additionalProperties": false,
+        "properties": {
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "history_count": {
+            "title": "History Count",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "public_post": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientPublicReference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "task_status": {
+            "default": "",
+            "title": "Task Status",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "system",
+          "visibility",
+          "is_default",
+          "name",
+          "summary",
+          "created_at",
+          "history_count"
+        ],
+        "title": "ClientProfileListItem",
+        "type": "object"
+      },
+      "ClientProfileSaved": {
+        "additionalProperties": false,
+        "properties": {
+          "chart_id": {
+            "title": "Chart Id",
+            "type": "integer"
+          },
+          "history": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientInterpretHistory"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "History"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziChart"
+              },
+              {
+                "$ref": "#/components/schemas/ClientLiuyaoChart"
+              }
+            ],
+            "title": "Payload"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          },
+          "visibility": {
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "chart_id",
+          "system",
+          "visibility",
+          "name",
+          "payload"
+        ],
+        "title": "ClientProfileSaved",
+        "type": "object"
+      },
+      "ClientPublicReference": {
+        "additionalProperties": false,
+        "properties": {
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "status",
+          "url"
+        ],
+        "title": "ClientPublicReference",
+        "type": "object"
+      },
+      "ClientResumeBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientResumeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ClientResumeBatch",
+        "type": "object"
+      },
+      "ClientResumeItem": {
+        "additionalProperties": false,
+        "properties": {
+          "active_task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientInterpretTask"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "chart_session_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Session Id"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "messages": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientChatMessage"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Messages"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziChart"
+              },
+              {
+                "$ref": "#/components/schemas/ClientLiuyaoChart"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientResumeProfile"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "system": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "System"
+          }
+        },
+        "required": [
+          "key",
+          "session_id",
+          "ok"
+        ],
+        "title": "ClientResumeItem",
+        "type": "object"
+      },
+      "ClientResumeProfile": {
+        "additionalProperties": false,
+        "properties": {
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/ClientInterpretHistory"
+            },
+            "title": "History",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "system": {
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "system",
+          "history"
+        ],
+        "title": "ClientResumeProfile",
+        "type": "object"
+      },
+      "ClientSystem": {
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "title": "Family",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "family"
+        ],
+        "title": "ClientSystem",
+        "type": "object"
+      },
+      "ClientVerificationCode": {
+        "additionalProperties": false,
+        "properties": {
+          "expires_in": {
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "retry_after": {
+            "title": "Retry After",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "message",
+          "expires_in",
+          "retry_after"
+        ],
+        "title": "ClientVerificationCode",
+        "type": "object"
+      },
+      "CommentCreate": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "CommentCreate",
+        "type": "object"
+      },
+      "DefaultProfileInput": {
+        "properties": {
+          "profile_id": {
+            "title": "Profile Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_id"
+        ],
+        "title": "DefaultProfileInput",
+        "type": "object"
+      },
+      "FeedbackCreate": {
+        "properties": {
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "contact": {
+            "default": "",
+            "title": "Contact",
+            "type": "string"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "page": {
+            "default": "",
+            "title": "Page",
+            "type": "string"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "rating": {
+            "default": "",
+            "title": "Rating",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "task_id": {
+            "default": "",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "title": "FeedbackCreate",
+        "type": "object"
+      },
+      "ForecastInput": {
+        "description": "岁运全书历史订单输入；新建能力已经下线。",
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "calendar": {
+            "default": "solar",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "day": {
+            "default": 0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "day_boundary": {
+            "default": "zi",
+            "title": "Day Boundary",
+            "type": "string"
+          },
+          "day_pillar": {
+            "default": "",
+            "title": "Day Pillar",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "hour": {
+            "default": 0,
+            "title": "Hour",
+            "type": "integer"
+          },
+          "hour_pillar": {
+            "default": "",
+            "title": "Hour Pillar",
+            "type": "string"
+          },
+          "input_mode": {
+            "default": "birth_time",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "is_leap_month": {
+            "default": false,
+            "title": "Is Leap Month",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "manual_birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Birth Year"
+          },
+          "method": {
+            "default": "coins",
+            "title": "Method",
+            "type": "string"
+          },
+          "minute": {
+            "default": 0,
+            "title": "Minute",
+            "type": "integer"
+          },
+          "month": {
+            "default": 0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "month_pillar": {
+            "default": "",
+            "title": "Month Pillar",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "personal_case_id": {
+            "default": "",
+            "title": "Personal Case Id",
+            "type": "string"
+          },
+          "pillars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pillars"
+          },
+          "public_consent": {
+            "default": false,
+            "title": "Public Consent",
+            "type": "boolean"
+          },
+          "public_consent_version": {
+            "default": "",
+            "title": "Public Consent Version",
+            "type": "string"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "system": {
+            "default": "bazi",
+            "title": "System",
+            "type": "string"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "tz_offset": {
+            "default": 8.0,
+            "title": "Tz Offset",
+            "type": "number"
+          },
+          "use_true_solar": {
+            "default": true,
+            "title": "Use True Solar",
+            "type": "boolean"
+          },
+          "visibility": {
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "yaos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaos"
+          },
+          "year": {
+            "default": 0,
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_pillar": {
+            "default": "",
+            "title": "Year Pillar",
+            "type": "string"
+          }
+        },
+        "title": "ForecastInput",
+        "type": "object"
+      },
+      "ForecastUnlockInput": {
+        "properties": {
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "title": "ForecastUnlockInput",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "InterpretCancelInput": {
+        "properties": {
+          "client_request_id": {
+            "default": "",
+            "title": "Client Request Id",
+            "type": "string"
+          },
+          "task_id": {
+            "default": "",
+            "title": "Task Id",
+            "type": "string"
+          }
+        },
+        "title": "InterpretCancelInput",
+        "type": "object"
+      },
+      "InterpretInput": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "branch_from_client_request_id": {
+            "default": "",
+            "title": "Branch From Client Request Id",
+            "type": "string"
+          },
+          "branch_from_task_id": {
+            "default": "",
+            "title": "Branch From Task Id",
+            "type": "string"
+          },
+          "branch_reason": {
+            "default": "",
+            "title": "Branch Reason",
+            "type": "string"
+          },
+          "calendar": {
+            "default": "solar",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "client_request_id": {
+            "default": "",
+            "title": "Client Request Id",
+            "type": "string"
+          },
+          "day": {
+            "default": 0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "day_boundary": {
+            "default": "zi",
+            "title": "Day Boundary",
+            "type": "string"
+          },
+          "day_pillar": {
+            "default": "",
+            "title": "Day Pillar",
+            "type": "string"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "hour": {
+            "default": 0,
+            "title": "Hour",
+            "type": "integer"
+          },
+          "hour_pillar": {
+            "default": "",
+            "title": "Hour Pillar",
+            "type": "string"
+          },
+          "input_mode": {
+            "default": "birth_time",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "is_leap_month": {
+            "default": false,
+            "title": "Is Leap Month",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "manual_birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Birth Year"
+          },
+          "method": {
+            "default": "coins",
+            "title": "Method",
+            "type": "string"
+          },
+          "minute": {
+            "default": 0,
+            "title": "Minute",
+            "type": "integer"
+          },
+          "month": {
+            "default": 0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "month_branch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month Branch"
+          },
+          "month_pillar": {
+            "default": "",
+            "title": "Month Pillar",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "personal_case_id": {
+            "default": "",
+            "title": "Personal Case Id",
+            "type": "string"
+          },
+          "pillars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pillars"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "public_consent": {
+            "default": false,
+            "title": "Public Consent",
+            "type": "boolean"
+          },
+          "public_consent_version": {
+            "default": "",
+            "title": "Public Consent Version",
+            "type": "string"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "system": {
+            "default": "bazi",
+            "title": "System",
+            "type": "string"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "topic": {
+            "default": "",
+            "title": "Topic",
+            "type": "string"
+          },
+          "tz_offset": {
+            "default": 8.0,
+            "title": "Tz Offset",
+            "type": "number"
+          },
+          "use_true_solar": {
+            "default": true,
+            "title": "Use True Solar",
+            "type": "boolean"
+          },
+          "visibility": {
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "yaos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaos"
+          },
+          "year": {
+            "default": 0,
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_pillar": {
+            "default": "",
+            "title": "Year Pillar",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario"
+        ],
+        "title": "InterpretInput",
+        "type": "object"
+      },
+      "InterpretationCreate": {
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "topic": {
+            "default": "",
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scenario",
+          "answer"
+        ],
+        "title": "InterpretationCreate",
+        "type": "object"
+      },
+      "LifeCaseCreate": {
+        "properties": {
+          "category": {
+            "default": "",
+            "title": "Category",
+            "type": "string"
+          },
+          "context": {
+            "default": "",
+            "title": "Context",
+            "type": "string"
+          },
+          "decision_deadline": {
+            "default": "",
+            "title": "Decision Deadline",
+            "type": "string"
+          },
+          "followup_at": {
+            "default": "",
+            "title": "Followup At",
+            "type": "string"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "question"
+        ],
+        "title": "LifeCaseCreate",
+        "type": "object"
+      },
+      "LifeCasePatch": {
+        "properties": {
+          "followup_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Followup At"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "title": "LifeCasePatch",
+        "type": "object"
+      },
+      "LoginInput": {
+        "properties": {
+          "code": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "method": {
+            "default": "password",
+            "title": "Method",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "title": "LoginInput",
+        "type": "object"
+      },
+      "ProfileCreate": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "calendar": {
+            "default": "solar",
+            "title": "Calendar",
+            "type": "string"
+          },
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "day": {
+            "default": 0,
+            "title": "Day",
+            "type": "integer"
+          },
+          "day_boundary": {
+            "default": "zi",
+            "title": "Day Boundary",
+            "type": "string"
+          },
+          "day_pillar": {
+            "default": "",
+            "title": "Day Pillar",
+            "type": "string"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "hour": {
+            "default": 0,
+            "title": "Hour",
+            "type": "integer"
+          },
+          "hour_pillar": {
+            "default": "",
+            "title": "Hour Pillar",
+            "type": "string"
+          },
+          "input_mode": {
+            "default": "birth_time",
+            "title": "Input Mode",
+            "type": "string"
+          },
+          "is_leap_month": {
+            "default": false,
+            "title": "Is Leap Month",
+            "type": "boolean"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "manual_birth_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manual Birth Year"
+          },
+          "method": {
+            "default": "coins",
+            "title": "Method",
+            "type": "string"
+          },
+          "minute": {
+            "default": 0,
+            "title": "Minute",
+            "type": "integer"
+          },
+          "month": {
+            "default": 0,
+            "title": "Month",
+            "type": "integer"
+          },
+          "month_pillar": {
+            "default": "",
+            "title": "Month Pillar",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "personal_case_id": {
+            "default": "",
+            "title": "Personal Case Id",
+            "type": "string"
+          },
+          "pillars": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pillars"
+          },
+          "public_consent": {
+            "default": false,
+            "title": "Public Consent",
+            "type": "boolean"
+          },
+          "public_consent_version": {
+            "default": "",
+            "title": "Public Consent Version",
+            "type": "string"
+          },
+          "question": {
+            "default": "",
+            "title": "Question",
+            "type": "string"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          },
+          "system": {
+            "default": "bazi",
+            "title": "System",
+            "type": "string"
+          },
+          "timezone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timezone"
+          },
+          "tz_offset": {
+            "default": 8.0,
+            "title": "Tz Offset",
+            "type": "number"
+          },
+          "use_true_solar": {
+            "default": true,
+            "title": "Use True Solar",
+            "type": "boolean"
+          },
+          "visibility": {
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          },
+          "yaos": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Yaos"
+          },
+          "year": {
+            "default": 0,
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_pillar": {
+            "default": "",
+            "title": "Year Pillar",
+            "type": "string"
+          }
+        },
+        "title": "ProfileCreate",
+        "type": "object"
+      },
+      "ProfileRename": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProfileRename",
+        "type": "object"
+      },
+      "PublicUpdateCreate": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verification_status",
+          "body"
+        ],
+        "title": "PublicUpdateCreate",
+        "type": "object"
+      },
+      "ReferralShareLinkCreate": {
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "ReferralShareLinkCreate",
+        "type": "object"
+      },
+      "RegisterInput": {
+        "properties": {
+          "code": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "invite_code": {
+            "default": "",
+            "title": "Invite Code",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "title": "RegisterInput",
+        "type": "object"
+      },
+      "ReportCreate": {
+        "properties": {
+          "comment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Id"
+          },
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "reason"
+        ],
+        "title": "ReportCreate",
+        "type": "object"
+      },
+      "ResidenceCityInput": {
+        "properties": {
+          "city": {
+            "default": "",
+            "title": "City",
+            "type": "string"
+          }
+        },
+        "title": "ResidenceCityInput",
+        "type": "object"
+      },
+      "ResumeBatch": {
+        "properties": {
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ResumeItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "ResumeBatch",
+        "type": "object"
+      },
+      "ResumeItem": {
+        "properties": {
+          "chart_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Id"
+          },
+          "key": {
+            "default": "",
+            "title": "Key",
+            "type": "string"
+          },
+          "limit": {
+            "default": 80,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "session_id": {
+            "default": "",
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "title": "ResumeItem",
+        "type": "object"
+      },
+      "ShareEventCreate": {
+        "properties": {
+          "channel": {
+            "default": "copy",
+            "title": "Channel",
+            "type": "string"
+          },
+          "ref": {
+            "default": "",
+            "title": "Ref",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug"
+        ],
+        "title": "ShareEventCreate",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "VerificationCodeInput": {
+        "properties": {
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "",
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "title": "VerificationCodeInput",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Web、Android 与未来客户端使用的产品状态接口。供应商、模型、提示词、路由、推理、usage 与成本不属于客户端契约。",
+    "title": "玄枢客户端 API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/app/version": {
+      "get": {
+        "description": "Return the Android display client's minimum and latest release gates.",
+        "operationId": "app_version_api_app_version_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAppVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "App Version"
+      }
+    },
+    "/api/auth/code": {
+      "post": {
+        "operationId": "api_auth_code_api_auth_code_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerificationCodeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientVerificationCode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Auth Code"
+      }
+    },
+    "/api/auth/invite-code": {
+      "get": {
+        "description": "给注册浮窗展示一个尚未使用的邀请码，不做预约。",
+        "operationId": "api_auth_invite_code_api_auth_invite_code_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInviteCode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Auth Invite Code"
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "operationId": "api_auth_login_api_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Auth Login"
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "operationId": "api_auth_logout_api_auth_logout_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientOk"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Auth Logout"
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "operationId": "api_auth_me_api_auth_me_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Auth Me"
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "operationId": "api_auth_register_api_auth_register_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Auth Register"
+      }
+    },
+    "/api/chart": {
+      "post": {
+        "operationId": "api_chart_api_chart_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BirthInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ClientBaziChart"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClientLiuyaoChart"
+                    }
+                  ],
+                  "title": "Response Api Chart Api Chart Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Chart"
+      }
+    },
+    "/api/chat-message-feedback": {
+      "post": {
+        "operationId": "api_chat_message_feedback_api_chat_message_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatMessageFeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Chat Message Feedback Api Chat Message Feedback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Chat Message Feedback"
+      }
+    },
+    "/api/client/capabilities": {
+      "get": {
+        "description": "Return only the systems a display client can render.",
+        "operationId": "client_capabilities_api_client_capabilities_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "system",
+            "required": false,
+            "schema": {
+              "default": "bazi",
+              "title": "System",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCapabilities"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Capabilities"
+      }
+    },
+    "/api/community/liuyao/posts": {
+      "get": {
+        "operationId": "api_list_posts_api_community_liuyao_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "question_type",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Question Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "latest",
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Cursor",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_oracle_summary",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Oracle Summary",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityFeed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api List Posts"
+      }
+    },
+    "/api/community/liuyao/posts/{slug}": {
+      "get": {
+        "operationId": "api_get_post_api_community_liuyao_posts__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityPost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Get Post"
+      }
+    },
+    "/api/community/liuyao/posts/{slug}/comments": {
+      "get": {
+        "operationId": "api_list_comments_api_community_liuyao_posts__slug__comments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityComments"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api List Comments"
+      },
+      "post": {
+        "operationId": "api_add_comment_api_community_liuyao_posts__slug__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommentCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Add Comment"
+      }
+    },
+    "/api/community/liuyao/posts/{slug}/like": {
+      "post": {
+        "operationId": "api_like_post_api_community_liuyao_posts__slug__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEngagement"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Like Post"
+      }
+    },
+    "/api/community/liuyao/posts/{slug}/updates": {
+      "post": {
+        "operationId": "api_add_update_api_community_liuyao_posts__slug__updates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicUpdateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Add Update Api Community Liuyao Posts  Slug  Updates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Add Update"
+      }
+    },
+    "/api/community/liuyao/posts/{slug}/view": {
+      "post": {
+        "operationId": "api_record_post_view_api_community_liuyao_posts__slug__view_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEngagement"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Record Post View"
+      }
+    },
+    "/api/community/reports": {
+      "post": {
+        "operationId": "api_report_api_community_reports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReportCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientIdResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Report"
+      }
+    },
+    "/api/community/share-events": {
+      "post": {
+        "operationId": "api_share_event_api_community_share_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareEventCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientOk"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Share Event"
+      }
+    },
+    "/api/feedback": {
+      "post": {
+        "operationId": "api_feedback_api_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Feedback Api Feedback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Feedback"
+      }
+    },
+    "/api/forecast": {
+      "post": {
+        "description": "岁运全书不再接受新建订单；既有订单仍可凭原链接查阅。",
+        "operationId": "api_forecast_api_forecast_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForecastInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Forecast Api Forecast Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Forecast"
+      }
+    },
+    "/api/forecast/{order_id}": {
+      "get": {
+        "operationId": "api_forecast_order_api_forecast__order_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Forecast Order Api Forecast  Order Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Forecast Order"
+      }
+    },
+    "/api/forecast/{order_id}/unlock": {
+      "post": {
+        "description": "凭访问密码解锁既有全书正文（历史邮件查看页专用）。",
+        "operationId": "api_forecast_unlock_api_forecast__order_id__unlock_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "title": "Order Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForecastUnlockInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Forecast Unlock Api Forecast  Order Id  Unlock Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Forecast Unlock"
+      }
+    },
+    "/api/interpret": {
+      "post": {
+        "operationId": "api_interpret_api_interpret_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterpretInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Interpret"
+      }
+    },
+    "/api/interpret/cancel": {
+      "post": {
+        "operationId": "api_cancel_interpret_api_interpret_cancel_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterpretCancelInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Cancel Interpret"
+      }
+    },
+    "/api/interpret/tasks/{task_id}": {
+      "get": {
+        "operationId": "api_interpret_task_api_interpret_tasks__task_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Interpret Task"
+      }
+    },
+    "/api/interpret/tasks/{task_id}/cancel": {
+      "post": {
+        "operationId": "api_cancel_interpret_task_api_interpret_tasks__task_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Cancel Interpret Task"
+      }
+    },
+    "/api/interpret/tasks/{task_id}/events": {
+      "get": {
+        "operationId": "api_interpret_task_events_api_interpret_tasks__task_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Interpret Task Events"
+      }
+    },
+    "/api/location/preview": {
+      "get": {
+        "description": "录入页真太阳时预览：地点 → 经度 + 相对时区标准时的经度修正（分钟）。\n\n只做经度时差（均时差随日期变化，排盘时才精确计算）；未识别时前端提示不做经度修正。",
+        "operationId": "api_location_preview_api_location_preview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "location",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Location",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Location Preview Api Location Preview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Location Preview"
+      }
+    },
+    "/api/personal-home": {
+      "get": {
+        "operationId": "api_personal_home_api_personal_home_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Personal Home"
+      }
+    },
+    "/api/personal-home/cases": {
+      "post": {
+        "operationId": "api_personal_home_create_case_api_personal_home_cases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LifeCaseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Personal Home Create Case Api Personal Home Cases Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Personal Home Create Case"
+      }
+    },
+    "/api/personal-home/cases/{case_id}": {
+      "get": {
+        "operationId": "api_personal_home_case_api_personal_home_cases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Personal Home Case Api Personal Home Cases  Case Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Personal Home Case"
+      },
+      "patch": {
+        "operationId": "api_personal_home_update_case_api_personal_home_cases__case_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LifeCasePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Personal Home Update Case Api Personal Home Cases  Case Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Personal Home Update Case"
+      }
+    },
+    "/api/personal-home/city": {
+      "put": {
+        "operationId": "api_personal_home_city_api_personal_home_city_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResidenceCityInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Personal Home City"
+      }
+    },
+    "/api/personal-home/day": {
+      "post": {
+        "operationId": "api_personal_home_day_api_personal_home_day_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalDay"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Personal Home Day"
+      }
+    },
+    "/api/personal-home/default-profile": {
+      "put": {
+        "operationId": "api_personal_home_default_profile_api_personal_home_default_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DefaultProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Personal Home Default Profile"
+      }
+    },
+    "/api/personal-home/month": {
+      "post": {
+        "operationId": "api_personal_home_month_api_personal_home_month_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalMonth"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Personal Home Month"
+      }
+    },
+    "/api/personal-home/refresh": {
+      "post": {
+        "operationId": "api_personal_home_refresh_api_personal_home_refresh_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPersonalHome"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Personal Home Refresh"
+      }
+    },
+    "/api/profiles": {
+      "get": {
+        "operationId": "api_list_profiles_api_profiles_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientProfileListItem"
+                  },
+                  "title": "Response Api List Profiles Api Profiles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api List Profiles"
+      },
+      "post": {
+        "operationId": "api_create_profile_api_profiles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientProfileSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Create Profile"
+      }
+    },
+    "/api/profiles/{pid}": {
+      "delete": {
+        "operationId": "api_delete_profile_api_profiles__pid__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Delete Profile Api Profiles  Pid  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Delete Profile"
+      },
+      "get": {
+        "operationId": "api_get_profile_api_profiles__pid__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientProfileDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Get Profile"
+      },
+      "put": {
+        "operationId": "api_update_profile_api_profiles__pid__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientProfileSaved"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Update Profile"
+      }
+    },
+    "/api/profiles/{pid}/conversations": {
+      "get": {
+        "operationId": "api_profile_conversations_api_profiles__pid__conversations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Api Profile Conversations Api Profiles  Pid  Conversations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Profile Conversations"
+      }
+    },
+    "/api/profiles/{pid}/interpretations": {
+      "get": {
+        "operationId": "api_history_api_profiles__pid__interpretations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ClientInterpretHistory"
+                  },
+                  "title": "Response Api History Api Profiles  Pid  Interpretations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api History"
+      },
+      "post": {
+        "operationId": "api_create_history_api_profiles__pid__interpretations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InterpretationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Create History Api Profiles  Pid  Interpretations Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Create History"
+      }
+    },
+    "/api/profiles/{pid}/interpretations/{iid}": {
+      "delete": {
+        "operationId": "api_delete_history_api_profiles__pid__interpretations__iid__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "iid",
+            "required": true,
+            "schema": {
+              "title": "Iid",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Delete History Api Profiles  Pid  Interpretations  Iid  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Delete History"
+      }
+    },
+    "/api/profiles/{pid}/name": {
+      "patch": {
+        "operationId": "api_rename_profile_api_profiles__pid__name_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "pid",
+            "required": true,
+            "schema": {
+              "title": "Pid",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileRename"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Rename Profile Api Profiles  Pid  Name Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Rename Profile"
+      }
+    },
+    "/api/referrals/share-link": {
+      "post": {
+        "operationId": "api_referral_share_link_api_referrals_share_link_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReferralShareLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Referral Share Link Api Referrals Share Link Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Referral Share Link"
+      }
+    },
+    "/api/resume": {
+      "post": {
+        "operationId": "api_resume_api_resume_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResumeBatch"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Resume"
+      }
+    },
+    "/api/site-stats": {
+      "get": {
+        "operationId": "api_site_stats_api_site_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Api Site Stats Api Site Stats Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Site Stats"
+      }
+    }
+  }
+}

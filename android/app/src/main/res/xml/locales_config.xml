@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 13+ 的 per-app language：声明后用户可在系统设置里单独给本应用选语言，
+     不必跟随系统。出海市场里这很关键——在韩国用日文手机的人也能选到中文。 -->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="zh-CN" />
+    <locale android:name="zh-TW" />
+    <locale android:name="ko" />
+    <locale android:name="ja" />
+</locale-config>
