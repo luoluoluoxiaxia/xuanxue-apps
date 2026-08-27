@@ -69,7 +69,7 @@
 
             <section class="post-preview-comments">
               <div class="section-title-row">
-                <div><span class="section-heading-copy"><h3>卦友讨论</h3><small data-preview-reading-count></small></span></div>
+                <div><span class="section-heading-copy"><h3>评论</h3></span></div>
                 <span data-preview-comment-count></span>
               </div>
               <div data-preview-comments></div>
@@ -402,23 +402,11 @@
 
   function commentFormMarkup(inputId = "comment-body") {
     return `<form class="comment-form" data-comment-form>
-      <fieldset class="comment-kind-picker">
-        <legend>你想参与什么？</legend>
-        <label><input type="radio" name="kind" value="discussion" checked><span><b>聊故事</b><small>交流经历与看法</small></span></label>
-        <label><input type="radio" name="kind" value="reading"><span><b>解六爻</b><small>留下判断与依据</small></span></label>
-      </fieldset>
-      <label for="${inputId}" data-comment-body-label>写下你的看法</label>
-      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="就故事和解答友善交流；请勿填写姓名、电话、住址等隐私信息"></textarea>
-      <div class="reading-fields" data-reading-fields hidden>
-        <label>断法依据（可选）<textarea name="reasoning" rows="3" maxlength="500" placeholder="例如用神、世应、动爻、日月旺衰，以及你据此判断的过程。"></textarea></label>
-        <label>应期或结果判断（可选）<textarea name="prediction" rows="2" maxlength="300" placeholder="你认为事情会怎样发展，或者大约何时见结果？"></textarea></label>
-        <fieldset class="reading-line-picker"><legend>参考爻位（可多选）</legend>
-          ${["初爻", "二爻", "三爻", "四爻", "五爻", "上爻"].map((label, index) => `<label><input type="checkbox" name="referenced_lines" value="${index + 1}"><span>${label}</span></label>`).join("")}
-        </fieldset>
-      </div>
+      <label class="sr-only" for="${inputId}">发表评论</label>
+      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="说点什么……"></textarea>
       <div class="comment-form-actions">
         <span><b data-comment-length>0</b> / 500 · 公开显示为匿名卦友编号</span>
-        <button type="submit" class="primary-action" data-comment-submit>发布讨论</button>
+        <button type="submit" class="primary-action" data-comment-submit>发布</button>
       </div>
       <p class="form-state" data-comment-state role="status" aria-live="polite"></p>
     </form>`;
@@ -432,20 +420,12 @@
     </div>`;
   }
 
-  function syncDiscussionTotal(increment = 0) {
-    const total = commentSection?.querySelector("[data-discussion-total]");
+  function syncCommentTotal(increment = 0) {
+    const total = commentSection?.querySelector("[data-comment-total]");
     if (!total) return;
     const count = Math.max(0, Number(total.dataset.count || 0) + increment);
     total.dataset.count = String(count);
-    total.textContent = `${count} 条故事讨论`;
-  }
-
-  function syncReadingTotal(increment = 0) {
-    const total = commentSection?.querySelector("[data-reading-total]");
-    if (!total) return;
-    const count = Math.max(0, Number(total.dataset.count || 0) + increment);
-    total.dataset.count = String(count);
-    total.textContent = `${count} 篇卦评`;
+    total.textContent = `${count} 条`;
   }
 
   function appendPublishedComment(comment) {
@@ -458,8 +438,7 @@
       commentComposer?.before(list);
     }
     list.append(renderComment(comment));
-    if (comment.kind === "reading") syncReadingTotal(1);
-    else syncDiscussionTotal(1);
+    syncCommentTotal(1);
   }
 
   function bindCommentLogin(host, onLoggedIn) {
@@ -490,19 +469,6 @@
     const length = form.querySelector("[data-comment-length]");
     const state = form.querySelector("[data-comment-state]");
     const submit = form.querySelector("button[type=submit]");
-    const readingFields = form.querySelector("[data-reading-fields]");
-    const bodyLabel = form.querySelector("[data-comment-body-label]");
-    const syncKind = () => {
-      const reading = form.elements.kind.value === "reading";
-      readingFields.hidden = !reading;
-      bodyLabel.textContent = reading ? "你的六爻判断" : "写下你的看法";
-      input.placeholder = reading
-        ? "先写结论：你认为这件事会怎样发展？"
-        : "就故事和解答友善交流；请勿填写姓名、电话、住址等隐私信息";
-      submit.textContent = reading ? "发布卦评" : "发布讨论";
-    };
-    form.querySelectorAll('input[name="kind"]').forEach(item => item.addEventListener("change", syncKind));
-    syncKind();
     const syncLength = () => { length.textContent = String(input.value.length); };
     input.addEventListener("input", syncLength);
     syncLength();
@@ -522,13 +488,7 @@
             Accept: "application/json",
           }) || { "Content-Type": "application/json", Accept: "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({
-            kind: form.elements.kind.value,
-            body: input.value.trim(),
-            reasoning: String(form.elements.reasoning?.value || "").trim(),
-            prediction: String(form.elements.prediction?.value || "").trim(),
-            referenced_lines: Array.from(form.querySelectorAll('input[name="referenced_lines"]:checked'), item => Number(item.value)),
-          }),
+          body: JSON.stringify({ body: input.value.trim() }),
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw Object.assign(new Error(payload.detail || "评论发布失败，请稍后再试"), { status: response.status });
@@ -536,8 +496,7 @@
         input.value = "";
         syncLength();
         form.reset();
-        syncKind();
-        state.textContent = `已发布${payload.item?.kind === "reading" ? "卦评" : "讨论"}，将显示为 ${payload.item?.author_name || "匿名卦友"}`;
+        state.textContent = `已发布，将显示为 ${payload.item?.author_name || "匿名卦友"}`;
         state.dataset.tone = "success";
         showToast("评论已发布");
       } catch (error) {
@@ -552,7 +511,7 @@
       } finally {
         if (submit.isConnected) {
           submit.disabled = false;
-          submit.textContent = form.elements.kind?.value === "reading" ? "发布卦评" : "发布讨论";
+          submit.textContent = "发布";
         }
       }
     });
@@ -728,36 +687,13 @@
   }
 
   function renderComment(comment) {
-    const isReading = comment.kind === "reading";
-    const item = makeElement("article", `comment${isReading ? " is-reading" : ""}`);
+    const item = makeElement("article", "comment");
     const meta = makeElement("div", "comment-meta");
-    const author = makeElement("span");
-    author.append(
-      makeElement("b", "", comment.author_name || "卦友"),
-      makeElement("em", "comment-kind", comment.kind_label || (isReading ? "六爻卦评" : "故事讨论")),
-    );
     meta.append(
-      author,
+      makeElement("b", "", comment.author_name || "卦友"),
       makeElement("time", "", formatStamp(comment.created_at, true)),
     );
     item.append(meta, makeElement("p", "", comment.body || ""));
-    if (comment.reasoning) {
-      const note = makeElement("div", "reading-note");
-      note.append(makeElement("b", "", "断法依据"), makeElement("p", "", comment.reasoning));
-      item.append(note);
-    }
-    if (comment.prediction) {
-      const note = makeElement("div", "reading-note");
-      note.append(makeElement("b", "", "应期 / 结果判断"), makeElement("p", "", comment.prediction));
-      item.append(note);
-    }
-    if (Array.isArray(comment.referenced_lines) && comment.referenced_lines.length) {
-      const labels = ["", "初爻", "二爻", "三爻", "四爻", "五爻", "上爻"];
-      const lines = makeElement("div", "reading-lines");
-      lines.append(makeElement("span", "", "参考爻位"));
-      comment.referenced_lines.forEach(line => lines.append(makeElement("b", "", labels[Number(line)] || `第${line}爻`)));
-      item.append(lines);
-    }
     (comment.replies || []).forEach(reply => {
       const replyItem = makeElement("div", "comment-reply");
       const replyMeta = makeElement("div", "comment-meta");
@@ -775,7 +711,6 @@
     const host = field("[data-preview-comments]");
     const comments = post.comments || [];
     setField("[data-preview-comment-count]", `${post.comment_count || comments.length} 条`);
-    setField("[data-preview-reading-count]", `${Number(post.reading_count) || 0} 篇六爻卦评`);
     host.replaceChildren();
     if (!comments.length) {
       host.append(makeElement("p", "section-empty", "还没有评论。"));
@@ -790,11 +725,6 @@
     if (!Array.isArray(post.comments)) post.comments = [];
     post.comments.push(comment);
     post.comment_count = Math.max(0, Number(post.comment_count) || 0) + 1;
-    if (comment.kind === "reading") {
-      post.reading_count = Math.max(0, Number(post.reading_count) || 0) + 1;
-    } else {
-      post.discussion_count = Math.max(0, Number(post.discussion_count) || 0) + 1;
-    }
     renderComments(post);
   }
 

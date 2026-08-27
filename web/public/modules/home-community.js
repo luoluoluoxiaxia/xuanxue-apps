@@ -193,10 +193,7 @@
         const published = String(post.published_at || post.created_at || "").slice(0, 10);
         const liked = !!post.viewer_liked;
         const likeCount = Number(post.like_count) || 0;
-        const readingCount = Number(post.reading_count) || 0;
-        const discussionCount = post.discussion_count == null
-          ? Math.max(0, (Number(post.comment_count) || 0) - readingCount)
-          : Math.max(0, Number(post.discussion_count) || 0);
+        const commentCount = Number(post.comment_count) || 0;
         const oracleHtml = lines.length ? `
           <div class="post-card-oracle">
             <div class="post-card-gua-pair${hasChanged ? "" : " is-static"}">
@@ -226,7 +223,7 @@
                   <span>${esc(post.question_type_label || "其他")}</span>
                   <time>${esc(published)}</time>
                   <span class="post-card-views" data-post-viewers="${esc(rawSlug)}">${Number(post.viewer_count) || 0} 人看过</span>
-                  <span class="post-card-comments">${readingCount} 卦评 · ${discussionCount} 故事讨论</span>
+                  <span class="post-card-comments">${commentCount} 评论</span>
                   <button type="button" class="post-like-button${liked ? " is-liked" : ""}" data-like-post="${esc(rawSlug)}" data-like-title="${esc(post.question || post.title || "这条卦帖")}" aria-label="${liked ? "已赞：" : "点赞："}${esc(post.question || post.title || "这条卦帖")}" aria-pressed="${liked ? "true" : "false"}" title="${liked ? "已点赞" : "点赞"}">
                     <span data-like-icon aria-hidden="true">${liked ? "♥" : "♡"}</span><b data-like-count>${likeCount}</b>
                   </button>
