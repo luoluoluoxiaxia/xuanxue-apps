@@ -859,6 +859,8 @@ body[data-screen="landing"] .post-preview-dialog {
 .post-preview-comments { padding: 29px clamp(28px, 3.1vw, 48px) 35px; border-top: 1px solid var(--line); }
 .post-preview-story .post-preview-answer { padding-top: 38px; border-top: 0; }
 .post-preview-comment-composer { margin-top: 18px; }
+.post-preview-comment-composer .comment-gate { display: grid; grid-template-columns: 33px minmax(0, 1fr); }
+.post-preview-comment-composer .comment-login-action { width: 100%; grid-column: 1 / -1; }
 .post-preview-actions {
   display: flex;
   min-height: 72px;
