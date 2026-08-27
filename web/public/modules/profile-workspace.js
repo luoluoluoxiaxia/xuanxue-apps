@@ -344,6 +344,9 @@ async function openProfileLibrary() {
         <span>${baziCount} 份八字 · ${liuyaoCount} 份六爻 · ${historyCount} 条解读${activeCount ? ` · ${activeCount} 份档案正在生成` : ""}</span>
         <em>八字档案可设为默认命盘；同一账户换设备登录后也能继续查看</em>
       </div>
+      <div class="profile-home-actions profile-library-account-actions">
+        <button type="button" data-profile-account>账户与退出</button>
+      </div>
       <div class="archive-system-tabs" role="tablist" aria-label="档案类型">
         <button type="button" id="archive-tab-bazi" role="tab" data-archive-tab="bazi" aria-controls="archive-system-panel" aria-selected="${profileArchiveTab === "bazi"}" tabindex="${profileArchiveTab === "bazi" ? "0" : "-1"}" class="${profileArchiveTab === "bazi" ? "active" : ""}">八字 <span>${baziCount}</span></button>
         <button type="button" id="archive-tab-liuyao" role="tab" data-archive-tab="liuyao" aria-controls="archive-system-panel" aria-selected="${profileArchiveTab === "liuyao"}" tabindex="${profileArchiveTab === "liuyao" ? "0" : "-1"}" class="${profileArchiveTab === "liuyao" ? "active" : ""}">六爻 <span>${liuyaoCount}</span></button>
@@ -362,6 +365,8 @@ async function openProfileLibrary() {
           ? `[data-archive-tab="${options.focusArchiveTab}"]`
           : "";
     openProfileModal("档案列表", profiles.length ? "选择一份继续查看，或整理不再需要的私密档案。" : "完成排盘或起卦后，会自动保存到当前账户。", body, focusSelector);
+    const account = $("#profile-card").querySelector("[data-profile-account]");
+    if (account) account.onclick = () => closeProfileModal(() => Account.open("account"));
     const current = $("#profile-card").querySelector("[data-open-current-profile]");
     if (current) current.onclick = openCurrentProfile;
     $("#profile-card").querySelectorAll("[data-archive-tab]").forEach(tab => {
