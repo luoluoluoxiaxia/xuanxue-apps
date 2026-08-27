@@ -4913,11 +4913,6 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
   }
 }
 
-@media(max-width:820px){
-  .site-content-page,
-  body[data-screen="dash"] .dashboard{top:58px}
-}
-
 @media(max-width:560px){
   .site-content-page .entry-card,
   .site-content-page .cast-card{border-radius:16px}
