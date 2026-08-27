@@ -79,7 +79,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="community.css?v=community-45">
 <link rel="stylesheet" href="account.css?v=account-9">
-<link rel="stylesheet" href="style.css?v=design-144">
+<link rel="stylesheet" href="style.css?v=design-146">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-11">
 <link rel="stylesheet" href="chat.css?v=chat-16">
 <script type="application/ld+json">
@@ -170,32 +170,37 @@
       </button>
       <div class="hero-meta">
         <nav class="hero-links" aria-label="主导航">
-          <button type="button" data-hero-nav="landing" aria-current="page">
+          <button type="button" data-hero-nav="landing" aria-current="page" title="观象台">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><path d="M9 20v-6h6v6"/></svg></span>
             <span>观象台</span>
           </button>
-          <button type="button" data-hero-nav="bazi">
+          <button type="button" data-hero-nav="bazi" title="八字排盘">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16M8 14h2m4 0h2m-8 3h2"/></svg></span>
             <span>八字排盘</span>
           </button>
-          <button type="button" data-hero-nav="liuyao">
+          <button type="button" data-hero-nav="liuyao" title="六爻起卦">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 6h6m2 0h6M5 12h14M5 18h6m2 0h6"/></svg></span>
             <span>六爻起卦</span>
           </button>
-          <button type="button" data-hero-nav="detailed">
+          <button type="button" data-hero-nav="detailed" title="一事详断">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="5"/><circle cx="16" cy="12" r="5"/></svg></span>
             <span>一事详断</span>
           </button>
-          <a class="hero-link-signature" href="#gua-square" data-home-community-nav>
+          <a class="hero-link-signature" href="#gua-square" data-home-community-nav title="卦帖广场">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-5.5z"/><path d="M8 8h8m-8 4h5"/></svg></span>
             <span>卦帖广场</span>
           </a>
-          <button type="button" data-hero-nav="profile">
+          <button type="button" data-hero-nav="profile" title="我的档案">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
             <span>我的档案</span>
           </button>
-          <button type="button" class="account-nav-button" data-account-button>
+          <button type="button" class="account-nav-button" data-account-button title="登录 / 注册">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4"/><path d="m15 8 4 4-4 4m4-4H9"/></svg></span>
             <span data-account-label>登录 / 注册</span>
+          </button>
+          <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-expanded="false" aria-label="展开 Tab 栏" title="展开 Tab 栏">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
+            <span data-sidebar-toggle-label>展开 Tab 栏</span>
           </button>
         </nav>
         <div class="hero-actions-m" aria-label="快捷操作">
@@ -806,7 +811,7 @@
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
 <script src="modules/home-community.js?v=web-modules-4"></script>
-<script src="app.js?v=design-179"></script>
+<script src="app.js?v=design-180"></script>
 <script src="modules/profile-workspace.js?v=web-modules-1"></script>
 <script src="modules/chat-workspace.js?v=web-modules-1"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
