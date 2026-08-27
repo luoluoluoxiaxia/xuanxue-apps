@@ -581,7 +581,6 @@ body[data-screen="landing"] .post-preview-dialog {
 .yao-ledger-row.is-moving .yao-role { color: var(--accent-dark); }
 
 .reading-section,
-.story-section,
 .comments-section { padding: 30px clamp(26px, 3.2vw, 46px) 36px; border-top: 1px solid var(--line); }
 .section-title-row { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 23px; }
 .section-title-row > div { display: flex; align-items: flex-start; gap: 10px; }
@@ -621,11 +620,23 @@ body[data-screen="landing"] .post-preview-dialog {
 .reading-prose td { padding: 8px 9px; border: 1px solid var(--line-strong); text-align: left; }
 .reading-prose th { background: var(--surface-subtle); }
 
+.reading-updates-inline:empty { display: none; }
+.reading-update-inline { margin-top: 23px; padding-top: 21px; border-top: 1px solid var(--line); }
+.reading-update-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.reading-update-meta b { color: var(--accent-dark); font-size: 10px; }
+.reading-update-meta time { color: var(--muted); font-size: 9px; }
+.reading-update-inline > p { margin: 9px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; color: #36363a; font-size: 15px; line-height: 1.9; }
+.story-update-inline-editor { margin-top: 22px; padding-top: 14px; border-top: 1px solid var(--line); }
+.story-update-inline-editor > summary { display: flex; min-height: 38px; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted-strong); cursor: pointer; list-style: none; font-size: 10px; font-weight: 650; }
+.story-update-inline-editor > summary::-webkit-details-marker { display: none; }
+.story-update-inline-editor > summary::after { content: "补充"; margin-left: 2px; color: var(--accent); font-size: 9px; }
+.story-update-inline-editor[open] > summary::after { content: "收起"; }
+.story-update-inline-editor > summary > span { flex: 1 1 auto; }
 .story-status {
   display: inline-flex;
-  min-height: 28px;
+  min-height: 24px;
   align-items: center;
-  padding: 0 10px;
+  padding: 0 8px;
   color: var(--muted-strong);
   background: var(--surface-subtle);
   border: 1px solid var(--line);
@@ -636,18 +647,7 @@ body[data-screen="landing"] .post-preview-dialog {
 .story-status[data-status="verified"] { color: #197a50; background: #edf9f3; border-color: #c9ead9; }
 .story-status[data-status="partial"] { color: #8b5a14; background: #fff7e8; border-color: #f0dfbb; }
 .story-status[data-status="missed"] { color: #a72c38; background: #fff1f3; border-color: #f1ccd2; }
-.story-timeline { position: relative; display: flex; flex-direction: column; }
-.story-update { position: relative; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 11px; padding: 0 0 19px; }
-.story-update:last-child { padding-bottom: 0; }
-.story-update::before { position: absolute; top: 9px; bottom: -1px; left: 4px; width: 1px; content: ""; background: var(--line-strong); }
-.story-update:last-child::before { display: none; }
-.story-update-marker { position: relative; z-index: 1; width: 9px; height: 9px; margin-top: 5px; background: #fff; border: 2px solid var(--accent); border-radius: 50%; }
-.story-update-content { min-width: 0; padding: 0 0 2px; }
-.story-update-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.story-update-meta b { color: var(--accent-dark); font-size: 10px; }
-.story-update-meta time { color: var(--muted); font-size: 9px; }
-.story-update-content > p { margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.78; }
-.story-update-form { display: grid; gap: 11px; margin-top: 20px; padding: 16px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: 14px; }
+.story-update-form { display: grid; gap: 11px; margin-top: 10px; padding: 16px; background: var(--surface-subtle); border: 1px solid var(--line); border-radius: 14px; }
 .story-update-form-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .story-update-form-head > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .story-update-form-head b { color: var(--text); font-size: 12px; }
@@ -856,9 +856,9 @@ body[data-screen="landing"] .post-preview-dialog {
 }
 .preview-meta { display: flex; gap: 13px; margin-top: 10px; color: var(--muted); font-size: 10px; }
 .post-preview-answer,
-.post-preview-updates,
 .post-preview-comments { padding: 29px clamp(28px, 3.1vw, 48px) 35px; border-top: 1px solid var(--line); }
 .post-preview-story .post-preview-answer { padding-top: 38px; border-top: 0; }
+.post-preview-comment-composer { margin-top: 18px; }
 .post-preview-actions {
   display: flex;
   min-height: 72px;
@@ -1144,7 +1144,6 @@ body.share-card-open { overflow: hidden; }
   .yao-ledger { grid-column: 1; grid-row: 3; }
   .public-post-head,
   .reading-section,
-  .story-section,
   .comments-section { padding-right: 19px; padding-left: 19px; }
   .story-update-form-head { flex-direction: column; }
   .story-update-form-head label { width: 100%; }
@@ -1175,7 +1174,6 @@ body.share-card-open { overflow: hidden; }
   .post-preview-close { top: 10px; right: 10px; }
   .post-preview-head,
   .post-preview-answer,
-  .post-preview-updates,
   .post-preview-comments { padding-right: 19px; padding-left: 19px; }
   .post-preview-head { padding-top: 58px; }
   .post-preview-context .post-preview-head { padding: 58px 19px 23px; }
