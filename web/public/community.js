@@ -64,14 +64,7 @@
                 <div><span class="section-heading-copy"><h3>解答</h3><small data-preview-disclosure></small></span></div>
               </div>
               <article class="reading-prose" data-preview-answer></article>
-            </section>
-
-            <section class="post-preview-updates">
-              <div class="section-title-row">
-                <div><span class="section-heading-copy"><h3>故事后续</h3><small>事情怎样发展，现实最终怎样回答。</small></span></div>
-                <span data-preview-story-status></span>
-              </div>
-              <div data-preview-updates></div>
+              <div class="reading-updates-inline" data-preview-updates></div>
             </section>
 
             <section class="post-preview-comments">
@@ -80,6 +73,7 @@
                 <span data-preview-comment-count></span>
               </div>
               <div data-preview-comments></div>
+              <div class="comment-composer post-preview-comment-composer" data-preview-comment-composer></div>
             </section>
           </div>
           <div class="post-preview-actions">
@@ -406,15 +400,15 @@
   const commentComposer = document.querySelector("[data-comment-composer]");
   const commentSection = document.querySelector(".comments-section");
 
-  function commentFormMarkup() {
+  function commentFormMarkup(inputId = "comment-body") {
     return `<form class="comment-form" data-comment-form>
       <fieldset class="comment-kind-picker">
         <legend>你想参与什么？</legend>
         <label><input type="radio" name="kind" value="discussion" checked><span><b>聊故事</b><small>交流经历与看法</small></span></label>
         <label><input type="radio" name="kind" value="reading"><span><b>解六爻</b><small>留下判断与依据</small></span></label>
       </fieldset>
-      <label for="comment-body" data-comment-body-label>写下你的看法</label>
-      <textarea id="comment-body" name="body" rows="4" maxlength="500" required placeholder="就故事和解答友善交流；请勿填写姓名、电话、住址等隐私信息"></textarea>
+      <label for="${inputId}" data-comment-body-label>写下你的看法</label>
+      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="就故事和解答友善交流；请勿填写姓名、电话、住址等隐私信息"></textarea>
       <div class="reading-fields" data-reading-fields hidden>
         <label>断法依据（可选）<textarea name="reasoning" rows="3" maxlength="500" placeholder="例如用神、世应、动爻、日月旺衰，以及你据此判断的过程。"></textarea></label>
         <label>应期或结果判断（可选）<textarea name="prediction" rows="2" maxlength="300" placeholder="你认为事情会怎样发展，或者大约何时见结果？"></textarea></label>
@@ -468,28 +462,28 @@
     else syncDiscussionTotal(1);
   }
 
-  function bindCommentLogin() {
-    commentComposer?.querySelector("[data-comment-login]")?.addEventListener("click", async event => {
+  function bindCommentLogin(host, onLoggedIn) {
+    host?.querySelector("[data-comment-login]")?.addEventListener("click", async event => {
       const button = event.currentTarget;
       button.disabled = true;
       const loggedIn = await window.XuanxueAccount?.requireLogin({
         mode: "login",
         message: "登录后即可用匿名卦友编号参与公开讨论；页面不会展示邮箱。",
       });
-      if (loggedIn) renderCommentComposer();
+      if (loggedIn) onLoggedIn();
       else button.disabled = false;
     });
   }
 
-  function renderCommentGate() {
-    if (!commentComposer) return;
-    commentComposer.dataset.writeReady = "false";
-    commentComposer.innerHTML = commentGateMarkup();
-    bindCommentLogin();
+  function renderCommentGate(host, onLoggedIn) {
+    if (!host) return;
+    host.dataset.writeReady = "false";
+    host.innerHTML = commentGateMarkup();
+    bindCommentLogin(host, onLoggedIn);
   }
 
-  function bindCommentForm() {
-    const form = commentComposer?.querySelector("[data-comment-form]");
+  function bindCommentForm(host, slug, onPublished, onAuthExpired) {
+    const form = host?.querySelector("[data-comment-form]");
     if (!form || form.dataset.commentBound === "true") return;
     form.dataset.commentBound = "true";
     const input = form.elements.body;
@@ -521,7 +515,7 @@
       state.dataset.tone = "";
       try {
         await window.XuanxueAccount?.ready();
-        const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(pageSlug)}/comments`, {
+        const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/comments`, {
           method: "POST",
           headers: window.XuanxueAccount?.csrfHeaders({
             "Content-Type": "application/json",
@@ -538,7 +532,7 @@
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw Object.assign(new Error(payload.detail || "评论发布失败，请稍后再试"), { status: response.status });
-        appendPublishedComment(payload.item);
+        onPublished(payload.item);
         input.value = "";
         syncLength();
         form.reset();
@@ -549,7 +543,7 @@
       } catch (error) {
         if (error?.status === 401 || error?.status === 403) {
           await window.XuanxueAccount?.refresh();
-          renderCommentGate();
+          onAuthExpired();
           showToast("登录状态已失效，请重新登录后评论", "error");
           return;
         }
@@ -564,25 +558,41 @@
     });
   }
 
-  function renderCommentComposer() {
-    if (!commentComposer) return;
-    commentComposer.dataset.writeReady = "true";
-    commentComposer.innerHTML = commentFormMarkup();
-    bindCommentForm();
-    requestAnimationFrame(() => commentComposer.querySelector("textarea")?.focus());
+  function renderCommentComposer(host, slug, onPublished, onAuthExpired, { focus = true, inputId = "comment-body" } = {}) {
+    if (!host) return;
+    host.dataset.writeReady = "true";
+    host.innerHTML = commentFormMarkup(inputId);
+    bindCommentForm(host, slug, onPublished, onAuthExpired);
+    if (focus) requestAnimationFrame(() => host.querySelector("textarea")?.focus());
+  }
+
+  function renderDetailCommentGate() {
+    renderCommentGate(commentComposer, renderDetailCommentComposer);
+  }
+
+  function renderDetailCommentComposer() {
+    renderCommentComposer(
+      commentComposer,
+      pageSlug,
+      appendPublishedComment,
+      renderDetailCommentGate,
+    );
   }
 
   if (commentComposer) {
-    if (commentComposer.dataset.writeReady === "true") bindCommentForm();
-    else bindCommentLogin();
+    if (commentComposer.dataset.writeReady === "true") {
+      bindCommentForm(commentComposer, pageSlug, appendPublishedComment, renderDetailCommentGate);
+    } else {
+      bindCommentLogin(commentComposer, renderDetailCommentComposer);
+    }
     window.XuanxueAccount?.ready().then(account => {
-      if (account.authenticated && commentComposer.dataset.writeReady !== "true") renderCommentComposer();
+      if (account.authenticated && commentComposer.dataset.writeReady !== "true") renderDetailCommentComposer();
     });
     document.addEventListener("xuanshu:authchange", event => {
       if (event.detail?.authenticated) {
-        if (commentComposer.dataset.writeReady !== "true") renderCommentComposer();
+        if (commentComposer.dataset.writeReady !== "true") renderDetailCommentComposer();
       } else if (commentComposer.dataset.writeReady === "true") {
-        renderCommentGate();
+        renderDetailCommentGate();
       }
     });
   }
@@ -632,7 +642,7 @@
         state.dataset.tone = "error";
       } finally {
         submit.disabled = false;
-        submit.textContent = "发布故事进展";
+        submit.textContent = "发布事情进展";
       }
     });
   }
@@ -640,17 +650,14 @@
   function appendStoryUpdate(update) {
     const timeline = document.querySelector("[data-story-timeline]");
     if (!timeline || !update) return;
-    timeline.querySelector("[data-story-empty]")?.remove();
-    const article = makeElement("article", "story-update");
+    const article = makeElement("article", "reading-update-inline");
     article.dataset.storyUpdate = "";
-    const content = makeElement("div", "story-update-content");
-    const meta = makeElement("div", "story-update-meta");
+    const meta = makeElement("div", "reading-update-meta");
     meta.append(
-      makeElement("b", "", update.verification_status_label || "故事进展"),
+      makeElement("b", "", `卦主后续 · ${update.verification_status_label || "待观察"}`),
       makeElement("time", "", formatStamp(update.created_at, true)),
     );
-    content.append(meta, makeElement("p", "", update.body || ""));
-    article.append(makeElement("div", "story-update-marker"), content);
+    article.append(meta, makeElement("p", "", update.body || ""));
     timeline.append(article);
     const status = document.querySelector("[data-story-status]");
     if (status) {
@@ -779,29 +786,72 @@
     host.append(list);
   }
 
+  function appendPreviewComment(post, comment) {
+    if (!Array.isArray(post.comments)) post.comments = [];
+    post.comments.push(comment);
+    post.comment_count = Math.max(0, Number(post.comment_count) || 0) + 1;
+    if (comment.kind === "reading") {
+      post.reading_count = Math.max(0, Number(post.reading_count) || 0) + 1;
+    } else {
+      post.discussion_count = Math.max(0, Number(post.discussion_count) || 0) + 1;
+    }
+    renderComments(post);
+  }
+
+  function renderPreviewCommentGate(post) {
+    const host = field("[data-preview-comment-composer]");
+    renderCommentGate(host, () => {
+      post.comments_write_ready = true;
+      renderPreviewCommentComposer(post, { focus: true });
+    });
+  }
+
+  function renderPreviewCommentComposer(post, { focus = false } = {}) {
+    const host = field("[data-preview-comment-composer]");
+    renderCommentComposer(
+      host,
+      post.slug,
+      comment => appendPreviewComment(post, comment),
+      () => {
+        post.comments_write_ready = false;
+        renderPreviewCommentGate(post);
+      },
+      { focus, inputId: "preview-comment-body" },
+    );
+  }
+
+  function renderPreviewCommentEntry(post) {
+    const host = field("[data-preview-comment-composer]");
+    if (!host) return;
+    if (!post.comments_enabled) {
+      host.dataset.writeReady = "false";
+      host.innerHTML = '<p class="section-empty">这条卦帖暂未开放评论。</p>';
+      return;
+    }
+    if (post.comments_write_ready) renderPreviewCommentComposer(post);
+    else renderPreviewCommentGate(post);
+  }
+
+  document.addEventListener("xuanshu:authchange", event => {
+    if (!activePreview || !previewDialog.open) return;
+    activePreview.comments_write_ready = !!event.detail?.authenticated;
+    renderPreviewCommentEntry(activePreview);
+  });
+
   function renderUpdates(post) {
     const host = field("[data-preview-updates]");
     const updates = post.updates || [];
-    setField("[data-preview-story-status]", post.verification_status_label || "待观察");
     host.replaceChildren();
-    if (!updates.length) {
-      host.append(makeElement("p", "section-empty", "卦主还没有更新故事后续。"));
-      return;
-    }
-    const timeline = makeElement("div", "story-timeline");
     updates.forEach(update => {
-      const article = makeElement("article", "story-update");
-      const content = makeElement("div", "story-update-content");
-      const meta = makeElement("div", "story-update-meta");
+      const article = makeElement("article", "reading-update-inline");
+      const meta = makeElement("div", "reading-update-meta");
       meta.append(
-        makeElement("b", "", update.verification_status_label || "故事进展"),
+        makeElement("b", "", `卦主后续 · ${update.verification_status_label || "待观察"}`),
         makeElement("time", "", formatStamp(update.created_at, true)),
       );
-      content.append(meta, makeElement("p", "", update.body || ""));
-      article.append(makeElement("div", "story-update-marker"), content);
-      timeline.append(article);
+      article.append(meta, makeElement("p", "", update.body || ""));
+      host.append(article);
     });
-    host.append(timeline);
   }
 
   function renderPreview(post) {
@@ -846,6 +896,7 @@
     window.XuanxueChatRenderer?.renderMarkdownElements(answer.parentElement);
     renderUpdates(post);
     renderComments(post);
+    renderPreviewCommentEntry(post);
 
     const fullPage = field("[data-preview-open-page]");
     fullPage.href = canonicalFor(post.slug);
