@@ -222,7 +222,7 @@
                   <span>${esc(post.question_type_label || "其他")}</span>
                   <time>${esc(published)}</time>
                   <span class="post-card-views" data-post-viewers="${esc(rawSlug)}">${Number(post.viewer_count) || 0} 人看过</span>
-                  <span class="post-card-comments">${Number(post.comment_count) || 0} 讨论</span>
+                  <span class="post-card-comments">${Number(post.reading_count) || 0} 卦评 · ${Number(post.discussion_count) || 0} 故事讨论</span>
                   <button type="button" class="post-like-button${liked ? " is-liked" : ""}" data-like-post="${esc(rawSlug)}" data-like-title="${esc(post.question || post.title || "这条卦帖")}" aria-label="${liked ? "已赞：" : "点赞："}${esc(post.question || post.title || "这条卦帖")}" aria-pressed="${liked ? "true" : "false"}" title="${liked ? "已点赞" : "点赞"}">
                     <span data-like-icon aria-hidden="true">${liked ? "♥" : "♡"}</span><b data-like-count>${likeCount}</b>
                   </button>

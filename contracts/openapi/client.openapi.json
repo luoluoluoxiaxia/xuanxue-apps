@@ -1137,6 +1137,16 @@
             "title": "Id",
             "type": "integer"
           },
+          "kind": {
+            "default": "discussion",
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "default": "故事讨论",
+            "title": "Kind Label",
+            "type": "string"
+          },
           "parent_id": {
             "anyOf": [
               {
@@ -1147,6 +1157,23 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "prediction": {
+            "default": "",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "reasoning": {
+            "default": "",
+            "title": "Reasoning",
+            "type": "string"
+          },
+          "referenced_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Referenced Lines",
+            "type": "array"
           },
           "replies": {
             "items": {
@@ -1282,6 +1309,10 @@
             "title": "Created At",
             "type": "string"
           },
+          "discussion_count": {
+            "title": "Discussion Count",
+            "type": "integer"
+          },
           "index_enabled": {
             "title": "Index Enabled",
             "type": "boolean"
@@ -1341,6 +1372,10 @@
             "title": "Question Type Label",
             "type": "string"
           },
+          "reading_count": {
+            "title": "Reading Count",
+            "type": "integer"
+          },
           "review_status": {
             "title": "Review Status",
             "type": "string"
@@ -1365,6 +1400,42 @@
             "title": "Updated At",
             "type": "string"
           },
+          "updates": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientCommunityUpdate"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updates"
+          },
+          "verification_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Status"
+          },
+          "verification_status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Status Label"
+          },
           "view_count": {
             "title": "View Count",
             "type": "integer"
@@ -1388,6 +1459,8 @@
           "ai_disclosure",
           "comments_enabled",
           "comment_count",
+          "reading_count",
+          "discussion_count",
           "like_count",
           "view_count",
           "viewer_count",
@@ -1401,6 +1474,45 @@
           "updated_at"
         ],
         "title": "ClientCommunityPost",
+        "type": "object"
+      },
+      "ClientCommunityUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "verification_status": {
+            "title": "Verification Status",
+            "type": "string"
+          },
+          "verification_status_label": {
+            "title": "Verification Status Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "verification_status",
+          "verification_status_label",
+          "body",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClientCommunityUpdate",
         "type": "object"
       },
       "ClientEmptyState": {
@@ -2897,6 +3009,24 @@
         "title": "ClientSystem",
         "type": "object"
       },
+      "ClientUpdateCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/ClientCommunityUpdate"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "item"
+        ],
+        "title": "ClientUpdateCreated",
+        "type": "object"
+      },
       "ClientVerificationCode": {
         "additionalProperties": false,
         "properties": {
@@ -2932,6 +3062,11 @@
             "title": "Body",
             "type": "string"
           },
+          "kind": {
+            "default": "discussion",
+            "title": "Kind",
+            "type": "string"
+          },
           "parent_id": {
             "anyOf": [
               {
@@ -2942,6 +3077,23 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "prediction": {
+            "default": "",
+            "title": "Prediction",
+            "type": "string"
+          },
+          "reasoning": {
+            "default": "",
+            "title": "Reasoning",
+            "type": "string"
+          },
+          "referenced_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Referenced Lines",
+            "type": "array"
           }
         },
         "required": [
@@ -4823,9 +4975,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Api Add Update Api Community Liuyao Posts  Slug  Updates Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ClientUpdateCreated"
                 }
               }
             },

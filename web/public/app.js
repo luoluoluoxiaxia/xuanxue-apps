@@ -1513,7 +1513,7 @@ function syncCastEntryMode() {
   if (title) title.innerHTML = combined ? "命卦同参<br>只断一事" : "一事一卦<br>据问而断";
   if (guide) guide.textContent = combined
     ? "本人默认命盘已经带入。写清现实问题，再完成六爻；问题与结论只保存在你的账户中。"
-    : "先把现实问题写清楚，再自下而上完成六爻。公开问题经审核后会进入卦帖广场，供浏览、评论与分享。";
+    : "先把现实问题写清楚，再自下而上完成六爻。公开问题经审核后会进入卦帖广场；卦主可以继续讲故事，卦友也可以留下自己的六爻判断。";
   if (cardTitle) cardTitle.textContent = combined ? "一事 · 详断" : "六爻 · 起卦";
   if (cardCopy) cardCopy.textContent = combined
     ? "默认命盘已带入；写下所问，再围绕这件事完成六爻。"
