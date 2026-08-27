@@ -291,6 +291,12 @@
         button.title = "登录或注册账户";
       }
     });
+    document.querySelectorAll("[data-account-profile-button]").forEach(button => {
+      const label = button.querySelector("[data-account-profile-label]") || button;
+      label.textContent = state.authenticated ? "我的档案" : "登录 / 注册";
+      button.dataset.authenticated = state.authenticated ? "true" : "false";
+      button.title = state.authenticated ? "我的档案" : "登录 / 注册";
+    });
   }
 
   function ensureDialog() {

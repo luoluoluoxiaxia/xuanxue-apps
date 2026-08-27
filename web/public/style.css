@@ -5603,7 +5603,6 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
     content:"";
   }
   .landing .hero-links button[data-hero-nav="profile"]{margin-top:auto}
-  .landing .hero-links button.account-nav-button{display:none}
   .landing .hero-links button.sidebar-toggle{display:flex}
   .landing .hero-link-icon{display:grid;width:21px;height:21px;flex:0 0 21px;place-items:center;color:currentColor}
   .landing .hero-link-icon svg{
@@ -5658,7 +5657,6 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
     overflow:visible;
     clip-path:none;
   }
-  .landing .hero-nav[data-sidebar-expanded="true"] .account-nav-button{display:flex}
   .landing .hero-nav[data-sidebar-expanded="true"] .sidebar-toggle{display:flex;color:var(--home-muted);background:transparent}
   .landing .hero-nav[data-sidebar-expanded="true"] .sidebar-toggle svg{transform:rotate(180deg)}
   .landing .hero-actions-m{display:none}
