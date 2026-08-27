@@ -777,6 +777,45 @@ function currentScreenNavTarget() {
   return "landing";
 }
 
+function setupSidebarToggle() {
+  const nav = $(".hero-nav");
+  const toggle = $("[data-sidebar-toggle]");
+  if (!nav || !toggle) return;
+  const label = toggle.querySelector("[data-sidebar-toggle-label]");
+  const close = () => {
+    nav.removeAttribute("data-sidebar-expanded");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.setAttribute("aria-label", "展开 Tab 栏");
+    toggle.setAttribute("title", "展开 Tab 栏");
+    if (label) label.textContent = "展开 Tab 栏";
+  };
+  toggle.addEventListener("click", event => {
+    event.stopPropagation();
+    const open = nav.dataset.sidebarExpanded !== "true";
+    if (!open) {
+      close();
+      return;
+    }
+    nav.dataset.sidebarExpanded = "true";
+    toggle.setAttribute("aria-expanded", "true");
+    toggle.setAttribute("aria-label", "收起 Tab 栏");
+    toggle.setAttribute("title", "收起 Tab 栏");
+    if (label) label.textContent = "收起 Tab 栏";
+  });
+  nav.querySelector("[data-account-button]")?.addEventListener("click", close);
+  nav.querySelectorAll("[data-hero-nav], [data-home-community-nav]").forEach(item => item.addEventListener("click", close));
+  document.addEventListener("click", event => {
+    if (nav.dataset.sidebarExpanded === "true" && !nav.contains(event.target)) close();
+  });
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && nav.dataset.sidebarExpanded === "true") {
+      close();
+      toggle.focus();
+    }
+  });
+  window.matchMedia("(min-width: 1121px)").addEventListener("change", close);
+}
+
 // PAGE FOCUS HANDOFF · 页面切换后把键盘与读屏焦点交给新主区域（design-148）
 function focusScreenMain(screen, preferredTarget = "") {
   const target = preferredTarget
@@ -3451,6 +3490,7 @@ async function init() {
   loadSiteStats();
   setupHomeCommunityFeed();
   setupHomeActionDock();
+  setupSidebarToggle();
   const query = new URLSearchParams(location.search);
   const start = query.get("start");
   const detailedEntryRequested = start === "liuyao" && query.get("flow") === "detailed";
