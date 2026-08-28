@@ -5492,9 +5492,9 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
 }
 
 /* ============================================================
-   HOME COLLAPSED SIDE TABS · 窄屏保留左侧图标导航（design-146）
+   HOME COLLAPSED SIDE TABS · 窄屏保留左侧图标导航（design-147）
    ============================================================ */
-.landing .sidebar-toggle{display:none}
+.landing .hero-links button.sidebar-toggle{display:none}
 @media(max-width:1120px){
   .landing .hero{
     --home-sidebar:72px;
