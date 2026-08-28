@@ -597,7 +597,7 @@ function clearDeletedProfileFromWorkspace(pid) {
   });
   if (Number(activeProfileId) !== Number(pid)) return false;
   stopAllPendingWork();
-  sessionStore[state.system] = null;
+  sessionStore[currentWorkspaceKey()] = null;
   lastInput = null;
   lastPayload = null;
   activeChartId = null;
@@ -717,6 +717,8 @@ function openCurrentProfile() {
 }
 
 async function openSavedProfile(pid, options = {}) {
+  const previousWorkspace = currentWorkspaceKey();
+  const previousSession = lastPayload ? snapshotSession() : null;
   if (!options?.preservePersonalCase) clearPersonalCaseContext();
   const historyMode = state.screen === "landing" ? "push" : "replace";
   const focusPage = state.screen !== "dash";
@@ -750,10 +752,8 @@ async function openSavedProfile(pid, options = {}) {
         throw new Error(resumedConversation?.error || "这段对话暂时无法恢复");
       }
     }
-    const previousSystem = state.system;
-    const previousSession = lastPayload ? snapshotSession() : null;
-    if (previousSession && previousSystem !== loadedSystem) {
-      sessionStore[previousSystem] = previousSession;
+    if (previousSession && previousWorkspace !== loadedSystem) {
+      sessionStore[previousWorkspace] = previousSession;
     }
     state.system = loadedSystem;
     lastInput = resumedConversation?.input || data.input;
