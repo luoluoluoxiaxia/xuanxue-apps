@@ -486,8 +486,8 @@ function toggleBigText() {
   toast(bigText ? "已开启大字模式" : "已恢复标准字号");
 }
 
-/* ---------- 双会话并存：命 ⇄ 卦 随切随回，各自保留话题与对话 ---------- */
-const sessionStore = { bazi: null, liuyao: null };
+/* ---------- 三工作区并存：命 / 卦 / 详断随切随回，生成任务继续在后台运行 ---------- */
+const sessionStore = { bazi: null, liuyao: null, detailed: null };
 const accountProfileIndex = { bazi: null, liuyao: null };
 let accountProfileIndexRequest = null;
 let accountProfileIndexGeneration = 0;
@@ -555,16 +555,29 @@ async function refreshAccountArchiveState() {
     refreshAccountProfileIndex({ force: true }),
   ]);
 }
-function snapshotSession() {
+function currentWorkspaceKey(screen = state.screen) {
+  if (detailedWorkspaceActive() || pendingCombinedEntry) return "detailed";
+  if (screen === "birth") return "bazi";
+  if (screen === "cast") return "liuyao";
+  return state.system === "liuyao" ? "liuyao" : "bazi";
+}
+function snapshotSession(workspaceScreen = state.screen) {
+  const workspaceKey = currentWorkspaceKey(workspaceScreen);
   return {
+    system: state.system,
+    workspaceScreen,
     lastInput, lastPayload, activeChartId, profileName, calendarLabel,
     activeProfileId, activeHistory,
     threads: state.threads, sessionIds: state.sessionIds,
     riskAcceptedTabs: state.riskAcceptedTabs, pendingFork: state.pendingFork,
     activeTab: state.activeTab,
+    activePersonalCaseId, activePersonalCase, activeDetailedBaziProfile,
+    pendingCombinedEntry,
+    castDraft: workspaceKey === "liuyao" || workspaceKey === "detailed" ? snapshotCastDraft() : null,
   };
 }
 function restoreSession(snap) {
+  state.system = snap.system === "liuyao" ? "liuyao" : "bazi";
   lastInput = snap.lastInput;
   lastPayload = snap.lastPayload;
   activeChartId = snap.activeChartId;
@@ -577,32 +590,84 @@ function restoreSession(snap) {
   state.riskAcceptedTabs = normalizedRiskAcceptance(snap.riskAcceptedTabs);
   state.pendingFork = snap.pendingFork;
   state.activeTab = snap.activeTab;
+  activePersonalCaseId = snap.activePersonalCaseId || "";
+  activePersonalCase = snap.activePersonalCase || null;
+  activeDetailedBaziProfile = snap.activeDetailedBaziProfile || null;
+  detailedBaziProfileRequest = null;
+  pendingCombinedEntry = !!snap.pendingCombinedEntry;
+  if (snap.castDraft) restoreCastDraft(snap.castDraft);
+}
+function stashCurrentWorkspace(workspaceScreen = state.screen) {
+  if (!lastPayload && workspaceScreen !== "birth" && workspaceScreen !== "cast") return;
+  sessionStore[currentWorkspaceKey(workspaceScreen)] = snapshotSession(workspaceScreen);
+}
+function restoreWorkspaceScreen(snap, target) {
+  restoreSession(snap);
+  threadScrollLock = { key: state.activeTab, locked: false };
+  if (snap.lastPayload) {
+    enterDashboard({ historyMode: state.screen === "landing" ? "push" : "replace", focusPage: true });
+    saveResumeCookie();
+    return true;
+  }
+  if (snap.workspaceScreen === "birth" && target === "bazi") {
+    showScreen("birth", { historyMode: "push", focusPage: true });
+    return true;
+  }
+  if (snap.workspaceScreen === "cast" && (target === "liuyao" || target === "detailed")) {
+    syncCastEntryMode();
+    syncCastMethod();
+    showScreen("cast", { historyMode: "push", focusPage: true });
+    return true;
+  }
+  return false;
 }
 async function switchToSystem(target) {
-  if (state.system === target) return true;
+  const current = currentWorkspaceKey();
+  if (current === target && lastPayload) {
+    enterDashboard({ historyMode: state.screen === "landing" ? "push" : "replace", focusPage: true });
+    return true;
+  }
   const snap = sessionStore[target];
-  if (!snap || !snap.lastPayload) return false;
-  sessionStore[state.system] = snapshotSession();
-  restoreSession(snap);
-  state.system = target;
-  threadScrollLock = { key: state.activeTab, locked: false };
-  enterDashboard();
-  saveResumeCookie();
-  return true;
+  if (!snap) return false;
+  if (current !== target) stashCurrentWorkspace();
+  return restoreWorkspaceScreen(snap, target);
 }
 
 async function openSystemWorkspace(target) {
-  clearPersonalCaseContext();
-  if (state.system === target) return;
   if (await switchToSystem(target)) return;
+  stashCurrentWorkspace();
   const saved = accountProfileFor(target);
   if (saved?.id) {
     toast(target === "liuyao" ? "正在打开账户卦档…" : "正在打开账户命盘…");
     await openSavedProfile(Number(saved.id));
     return;
   }
+  clearPersonalCaseContext();
   if (target === "liuyao") openCastModal({ clearQuestion: true, fresh: true });
   else openBirthModal();
+}
+
+async function openDetailedWorkspace() {
+  const current = currentWorkspaceKey();
+  if (current === "detailed") {
+    if (lastPayload) {
+      enterDashboard({ historyMode: state.screen === "landing" ? "push" : "replace", focusPage: true });
+      return true;
+    }
+    if (pendingCombinedEntry) {
+      syncCastEntryMode();
+      syncCastMethod();
+      showScreen("cast", { historyMode: "push", focusPage: true });
+      return true;
+    }
+  }
+  const snap = sessionStore.detailed;
+  if (snap) {
+    stashCurrentWorkspace();
+    if (restoreWorkspaceScreen(snap, "detailed")) return true;
+  }
+  stashCurrentWorkspace();
+  return !!(await PersonalHome?.openDetailed());
 }
 
 /* ---------- 手机版看盘抽屉 ---------- */
@@ -735,6 +800,10 @@ function replaceHomeLocation({ start = "", flow = "", hash = "", screen = "landi
     if (flow) url.searchParams.set("flow", flow);
     else url.searchParams.delete("flow");
     url.searchParams.delete("view");
+    if (screen === "landing") {
+      url.searchParams.delete("personal_case");
+      url.searchParams.delete("resume_case");
+    }
     url.hash = hash;
     const href = `${url.pathname}${url.search}${url.hash}`;
     const previousRoute = currentHomeRoute();
@@ -839,6 +908,7 @@ function focusScreenMain(screen, preferredTarget = "") {
 
 function showScreen(screen, { preserveEntryLocation = false, historyMode = "replace", routeHash = "", focusPage = false, focusTarget = "" } = {}) {
   const previousScreen = state.screen;
+  if (screen === "landing" && previousScreen !== "landing") stashCurrentWorkspace(previousScreen);
   state.screen = screen;
   if (screen !== "dash") closeChartDrawer();
   if (!preserveEntryLocation) {
@@ -1495,6 +1565,41 @@ let clientCastPendingCoins = null;
 let clientCastRevealAt = 0;
 let clientCastRevealTimer = null;
 let clientCastFaceTimer = null;
+function snapshotCastDraft() {
+  return {
+    question: $("#cast-question")?.value || "",
+    method: castMethodValue(),
+    visibility: document.querySelector('input[name="cast-visibility"]:checked')?.value || "public",
+    clientCastYaos: clientCastYaos.slice(),
+    clientCastCoins: clientCastCoins.map(coins => Array.isArray(coins) ? coins.slice() : coins),
+    manualYaos: manualYaos.slice(),
+    completedAt: clientCastCompletedAt,
+  };
+}
+function restoreCastDraft(draft = {}) {
+  clearClientCastPending();
+  const question = $("#cast-question");
+  if (question) question.value = String(draft.question || "");
+  const method = draft.method === "manual" ? "manual" : "client_coins";
+  const methodSelect = $("#cast-method");
+  if (methodSelect) methodSelect.value = method;
+  clientCastYaos = Array.isArray(draft.clientCastYaos) ? draft.clientCastYaos.slice(0, 6) : [];
+  clientCastCoins = Array.isArray(draft.clientCastCoins)
+    ? draft.clientCastCoins.slice(0, 6).map(coins => Array.isArray(coins) ? coins.slice(0, 3) : coins)
+    : [];
+  manualYaos = Array.from({ length: 6 }, (_, index) => {
+    const value = Array.isArray(draft.manualYaos) ? draft.manualYaos[index] : undefined;
+    return [6, 7, 8, 9].includes(value) ? value : undefined;
+  });
+  clientCastCompletedAt = String(draft.completedAt || "");
+  const visibilityValue = draft.visibility === "private" ? "private" : "public";
+  const visibility = document.querySelector(`input[name="cast-visibility"][value="${visibilityValue}"]`);
+  if (visibility) visibility.checked = true;
+  clearCastError();
+  syncCastEntryMode();
+  syncCoinFaces(null, false);
+  syncCastMethod();
+}
 function clearCastQuestionError() {
   const field = $("#cast-question");
   const error = $("#cast-question-error");
@@ -2233,8 +2338,8 @@ function renderPillarChips(pillars = {}) {
    进入工作台 + 渲染顶栏 / 命盘 / 当前阶段
    ============================================================ */
 function enterDashboard({ preserveEntryLocation = false, historyMode = "replace", focusPage = false } = {}) {
-  sessionStore[state.system] = snapshotSession();
   showScreen("dash", { preserveEntryLocation, historyMode, focusPage });
+  sessionStore[currentWorkspaceKey("dash")] = snapshotSession("dash");
   document.body.dataset.system = state.system;
   const detailed = detailedWorkspaceActive();
   document.body.dataset.workspace = detailed ? "detailed" : state.system;
@@ -3245,7 +3350,6 @@ function bind() {
   });
   document.addEventListener("xuanshu:showpersonalhome", event => {
     event.preventDefault();
-    clearPersonalCaseContext();
     showScreen("landing", {
       historyMode: event.detail?.historyMode === "replace" ? "replace" : "push",
       focusPage: true,
@@ -3280,17 +3384,15 @@ function bind() {
     b.onclick = async () => {
       const target = b.dataset.heroNav || "landing";
       if (target === "bazi") {
-        if (state.screen === "dash") await openSystemWorkspace("bazi");
-        else openBirthModal();
+        await openSystemWorkspace("bazi");
         return;
       }
       if (target === "liuyao") {
-        if (state.screen === "dash") await openSystemWorkspace("liuyao");
-        else openCastModal({ clearQuestion: true, fresh: true });
+        await openSystemWorkspace("liuyao");
         return;
       }
       if (target === "detailed") {
-        await PersonalHome?.openDetailed();
+        await openDetailedWorkspace();
         return;
       }
       if (target === "profile") {
@@ -3298,7 +3400,6 @@ function bind() {
           .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
         return;
       }
-      clearPersonalCaseContext();
       showScreen("landing", { historyMode: "push", focusPage: true });
     };
   });
@@ -3349,7 +3450,6 @@ function bind() {
   initCastModal();
 
   $("#home-btn").onclick = () => {
-    clearPersonalCaseContext();
     showScreen("landing", { historyMode: "push", focusPage: true });
   };
   $("#session-bazi-btn").onclick = async () => {

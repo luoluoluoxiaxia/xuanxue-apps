@@ -90,6 +90,7 @@ function pushUser(key, text) { state.threads[key].push({ kind: "user", text }); 
 function pushAI(key, opts = {}) {
   const detailed = detailedWorkspaceActive();
   const msg = { kind: "ai", id: "m" + Date.now() + Math.random().toString(36).slice(2, 6),
+    workspaceKey: currentWorkspaceKey(), profileId: activeProfileId || null,
     threadKey: key,
     scenario: "", title: "", status: detailed ? "正在合参命盘与卦象" : opts.scenario === "divination" ? "正在分析卦象" : "正在分析命盘", waitText: "", waitIndex: 0, waitTimer: null,
     taskId: "", pollTimer: null, eventSource: null, pollFailures: 0, typeFrame: null, typeLastAt: 0,
@@ -101,6 +102,54 @@ function pushAI(key, opts = {}) {
     rawScenario: opts.scenario || "", rawTopic: opts.topic || "", rawQuestion: opts.question || "" };
   state.threads[key].push(msg);
   return msg;
+}
+
+function messageWorkspaceSnapshot(msg) {
+  const stored = msg?.workspaceKey ? sessionStore[msg.workspaceKey] : null;
+  if (stored?.threads && Object.values(stored.threads).some(messages => messages.includes(msg))) return stored;
+  return Object.values(sessionStore).find(snap => snap?.threads
+    && Object.values(snap.threads).some(messages => messages.includes(msg))) || null;
+}
+
+function messageWorkspaceIsActive(msg) {
+  return !!msg && (state.threads[msg.threadKey] || []).includes(msg);
+}
+
+function applyMessageProfileId(msg, profileId) {
+  const pid = Number(profileId || 0) || null;
+  msg.profileId = pid;
+  if (messageWorkspaceIsActive(msg)) {
+    activeProfileId = pid;
+    renderProfileFab();
+    return;
+  }
+  const snapshot = messageWorkspaceSnapshot(msg);
+  if (snapshot) snapshot.activeProfileId = pid;
+}
+
+function applyMessageChartId(msg, chartId) {
+  const cid = Number(chartId || 0) || null;
+  msg.chartId = cid;
+  if (messageWorkspaceIsActive(msg)) activeChartId = cid;
+  else {
+    const snapshot = messageWorkspaceSnapshot(msg);
+    if (snapshot) snapshot.activeChartId = cid;
+  }
+}
+
+async function refreshMessageProfileHistory(msg) {
+  const profileId = Number(msg?.profileId || 0);
+  if (!profileId) return;
+  const response = await fetch(`/api/profiles/${profileId}/interpretations`);
+  if (!response.ok) throw new Error(await response.text());
+  const history = await response.json();
+  if (messageWorkspaceIsActive(msg)) {
+    activeHistory = history;
+    renderProfileFab();
+    return;
+  }
+  const snapshot = messageWorkspaceSnapshot(msg);
+  if (snapshot) snapshot.activeHistory = history;
 }
 
 function waitingKey(status = "") {
@@ -163,7 +212,7 @@ function updateWaitingNode(msg) {
   return true;
 }
 function refreshWaitingNode(msg) {
-  if (!updateWaitingNode(msg) && !shouldDeferThreadRender()) scheduleRender();
+  if (!updateWaitingNode(msg) && messageWorkspaceIsActive(msg) && !shouldDeferThreadRender()) scheduleRender();
 }
 function startWaitingTicker(msg) {
   stopWaitingTicker(msg);
@@ -828,7 +877,7 @@ async function requestInterpret(key, opts) {
     const task = await resp.json();
     if (!msg.streaming || msg.stopped) return;
     if (!task.task_id) throw new Error("后端没有返回解读任务 ID");
-    if (task.chart_id) activeChartId = task.chart_id;
+    if (task.chart_id) applyMessageChartId(msg, task.chart_id);
     saveResumeCookie();
     msg.taskId = task.task_id;
     applyInterpretTask(msg, task);
@@ -898,13 +947,12 @@ function applyInterpretTask(msg, task) {
   if (!task || !msg.streaming) return;
   if (task.public_post) msg.publicPost = task.public_post;
   if (task.task_id) msg.taskId = task.task_id;
-  if (task.chart_id) msg.chartId = task.chart_id;
+  if (task.chart_id) applyMessageChartId(msg, task.chart_id);
   if (task.chart_session_id) msg.chartSessionId = task.chart_session_id;
   if (task.profile_id) {
-    activeProfileId = task.profile_id;
-    renderProfileFab();
+    applyMessageProfileId(msg, task.profile_id);
   }
-  const archiveSyncKey = `${task.profile_id || activeProfileId || 0}:${task.status || ""}`;
+  const archiveSyncKey = `${task.profile_id || msg.profileId || 0}:${task.status || ""}`;
   if (archiveSyncKey !== msg.archiveSyncKey && (task.profile_id || isTerminalTask(task))) {
     msg.archiveSyncKey = archiveSyncKey;
     refreshAccountArchiveState();
@@ -916,9 +964,9 @@ function applyInterpretTask(msg, task) {
   }
   if (task.status === "done") {
     msg.serverDone = true;
-    if (activeProfileId && !msg.historySyncStarted) {
+    if (msg.profileId && !msg.historySyncStarted) {
       msg.historySyncStarted = true;
-      refreshProfileHistory().catch(() => {});
+      refreshMessageProfileHistory(msg).catch(() => {});
     }
     syncComposerState();
     if (msg.streamable || msg.streamedBody) {
@@ -988,7 +1036,7 @@ function commitTypewriterFrame(msg, target) {
   msg.body = target.slice(0, msg.displayIndex || 0);
   msg.typePendingChars = 0;
   msg.typeSkippedTicks = 0;
-  if (!updateStreamingAnswerNode(msg) && msg.threadKey === state.activeTab && !shouldDeferThreadRender()) {
+  if (!updateStreamingAnswerNode(msg) && messageWorkspaceIsActive(msg) && msg.threadKey === state.activeTab && !shouldDeferThreadRender()) {
     scheduleRender();
   }
 }
@@ -1090,7 +1138,7 @@ function startAnswerTypewriter(msg, answer) {
     finishInterpretMessage(msg, { body: "" });
     return;
   }
-  renderThread();
+  if (messageWorkspaceIsActive(msg)) renderThread();
   startStreamingTypewriter(msg);
 }
 
@@ -1106,7 +1154,7 @@ function revealCompletedAnswer(msg) {
 
 function focusCompletedAnswer(msg) {
   window.requestAnimationFrame(() => {
-    if (state.screen !== "dash" || msg.threadKey !== state.activeTab) return;
+    if (!messageWorkspaceIsActive(msg) || state.screen !== "dash" || msg.threadKey !== state.activeTab) return;
     const target = Array.from(document.querySelectorAll(".msg-ai")).find(item => item.dataset.id === msg.id);
     target?.focus({ preventScroll: true });
   });
@@ -1114,7 +1162,8 @@ function focusCompletedAnswer(msg) {
 
 async function finishInterpretMessage(msg, { body = "", error = "" } = {}) {
   const active = document.activeElement;
-  const shouldFocusAnswer = !error && !msg.stopped && msg.threadKey === state.activeTab
+  const activeWorkspace = messageWorkspaceIsActive(msg);
+  const shouldFocusAnswer = activeWorkspace && !error && !msg.stopped && msg.threadKey === state.activeTab
     && (!active || active === document.body || active === $("#send-btn") || !!active.closest?.("#chat-thread"));
   if (msg.requestAbort) msg.requestAbort = null;
   stopTaskPolling(msg);
@@ -1129,10 +1178,10 @@ async function finishInterpretMessage(msg, { body = "", error = "" } = {}) {
   else msg.followups = suggestedFollowups(msg.threadKey || state.activeTab, msg);
   state.streaming = !!activeStreamingMessage();
   syncComposerState();
-  renderThread();
+  if (activeWorkspace) renderThread();
   if (shouldFocusAnswer) focusCompletedAnswer(msg);
-  if (!msg.error && activeProfileId) {
-    try { await refreshProfileHistory(); } catch (_) {}
+  if (!msg.error && msg.profileId) {
+    try { await refreshMessageProfileHistory(msg); } catch (_) {}
   }
   if (!msg.error) Account?.refresh().then(syncCastUI).catch(() => {});
   renderTabs();
