@@ -3060,7 +3060,7 @@ body[data-screen="landing"] .landing{
 @media(min-width:1121px){
   body[data-screen="landing"]{height:auto;overflow:auto}
   .landing .hero{
-    --home-sidebar:220px;
+    --home-sidebar:184px;
     --home-right-edge:max(18px,calc(100vw - var(--home-sidebar) - 1500px));
     grid-template-columns:var(--home-sidebar) minmax(0,1fr);
     grid-template-rows:auto auto minmax(0,1fr) 46px;
@@ -3543,7 +3543,7 @@ body[data-screen="landing"] .landing{
   z-index:40;
   top:0;
   right:0;
-  left:var(--home-sidebar,220px);
+  left:var(--home-sidebar,184px);
   display:grid;
   grid-template-columns:repeat(3,minmax(0,1fr));
   gap:8px;
@@ -5627,7 +5627,7 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
     white-space:nowrap;
   }
   .landing .hero-nav[data-sidebar-expanded="true"]{
-    width:220px;
+    width:184px;
     align-items:stretch;
     padding:18px 14px 14px;
     box-shadow:14px 0 36px rgba(17,17,19,.12);
@@ -5668,7 +5668,7 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
   .landing .hero-footer{grid-column:2;grid-row:4;width:100%;margin:0;padding-left:14px}
 }
 
-/* MODAL-LOCKED SIDE TAB · body 滚动锁定时侧栏仍锚定视口（design-151） */
+/* MODAL-LOCKED SIDE TAB · body 滚动锁定时侧栏仍锚定视口（design-152） */
 html.modal-open .landing .hero-nav{
   position:fixed;
   top:0;
