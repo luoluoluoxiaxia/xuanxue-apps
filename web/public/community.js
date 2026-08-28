@@ -141,6 +141,19 @@
     return (includeTime ? text.slice(0, 16) : text.slice(0, 10)).replace("T", " ");
   }
 
+  function formatRelativeStamp(value) {
+    const stamp = new Date(String(value || ""));
+    if (Number.isNaN(stamp.getTime())) return formatStamp(value, true);
+    const elapsed = Math.max(0, Date.now() - stamp.getTime());
+    const minutes = Math.floor(elapsed / 60000);
+    if (minutes < 1) return "刚刚";
+    if (minutes < 60) return `${minutes} 分钟前`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} 小时前`;
+    if (hours < 48) return "昨天";
+    return formatStamp(value);
+  }
+
   function showToast(message, tone = "success") {
     if (!toast) return;
     window.clearTimeout(toastTimer);
@@ -153,6 +166,301 @@
       toast.classList.remove("is-visible");
       toastHideTimer = window.setTimeout(() => { toast.hidden = true; }, 180);
     }, 2400);
+  }
+
+  function ensureNotificationDialog() {
+    let dialog = document.querySelector("[data-community-notifications-dialog]");
+    if (dialog || !body) return dialog;
+    dialog = document.createElement("dialog");
+    dialog.className = "community-notifications-dialog";
+    dialog.dataset.communityNotificationsDialog = "";
+    dialog.setAttribute("aria-labelledby", "community-notifications-title");
+    dialog.innerHTML = `
+      <div class="community-notifications-shell">
+        <header class="community-notifications-head">
+          <div><h2 id="community-notifications-title">消息</h2><p>赞、评论和回复都会留在这里</p></div>
+          <div class="community-notifications-head-actions">
+            <button type="button" data-notification-mark-all>全部已读</button>
+            <button type="button" data-notification-close aria-label="关闭消息">×</button>
+          </div>
+        </header>
+        <section class="community-notification-summary" aria-label="互动汇总">
+          <button type="button" data-notification-jump="like"><b data-notification-like-total>0</b><span>收到的赞</span></button>
+          <button type="button" data-notification-jump="comment"><b data-notification-comment-total>0</b><span>评论与回复</span></button>
+          <button type="button" data-notification-jump="unread"><b data-notification-unread-total>0</b><span>未读消息</span></button>
+        </section>
+        <div class="community-notification-list" data-notification-list></div>
+        <button type="button" class="community-notification-more" data-notification-more hidden>继续加载</button>
+      </div>`;
+    body.append(dialog);
+    return dialog;
+  }
+
+  function setupCommunityNotifications() {
+    const buttons = [...document.querySelectorAll("[data-community-notifications]")];
+    if (!buttons.length) return;
+    const dialog = ensureNotificationDialog();
+    if (!dialog) return;
+    const list = dialog.querySelector("[data-notification-list]");
+    const more = dialog.querySelector("[data-notification-more]");
+    const markAll = dialog.querySelector("[data-notification-mark-all]");
+    let nextCursor = null;
+    let loading = false;
+    let opener = null;
+
+    const setText = (selector, value) => {
+      const element = dialog.querySelector(selector);
+      if (element) element.textContent = String(Number(value) || 0);
+    };
+    const syncBadge = unread => {
+      const count = Math.max(0, Number(unread) || 0);
+      buttons.forEach(button => {
+        const badge = button.querySelector("[data-notification-badge]");
+        if (!badge) return;
+        badge.textContent = count > 99 ? "99+" : String(count);
+        badge.hidden = count === 0;
+        button.setAttribute("aria-label", count ? `消息，${count} 条未读` : "消息");
+      });
+    };
+    const renderSummary = summary => {
+      const safe = summary || {};
+      setText("[data-notification-like-total]", safe.received_like_count);
+      setText("[data-notification-comment-total]", safe.received_comment_count);
+      setText("[data-notification-unread-total]", safe.unread_count);
+      markAll.disabled = !Number(safe.unread_count);
+      syncBadge(safe.unread_count);
+    };
+    const renderState = (message, retry = false) => {
+      const state = document.createElement("div");
+      state.className = "community-notification-state";
+      const copy = document.createElement("p");
+      copy.textContent = message;
+      state.append(copy);
+      if (retry) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.textContent = "重新加载";
+        button.addEventListener("click", () => fetchNotifications().catch(error => renderState(error.message || "消息暂时没有加载出来", true)));
+        state.append(button);
+      }
+      list.replaceChildren(state);
+    };
+    const notificationIcon = kind => kind === "post_like" ? "♥" : kind === "comment_reply" ? "↩" : "评";
+    const groupNotificationItems = items => {
+      const grouped = [];
+      const likesByPost = new Map();
+      items.forEach(item => {
+        if (item.kind !== "post_like") {
+          grouped.push({ ...item, notification_ids: [Number(item.id)] });
+          return;
+        }
+        const key = String(item.post_slug || item.target_url || item.id);
+        const existing = likesByPost.get(key);
+        if (existing) {
+          existing.notification_ids.push(Number(item.id));
+          existing.like_actor_count += 1;
+          existing.has_unread ||= !item.read_at;
+          return;
+        }
+        const group = {
+          ...item,
+          notification_ids: [Number(item.id)],
+          like_actor_count: 1,
+          has_unread: !item.read_at,
+        };
+        likesByPost.set(key, group);
+        grouped.push(group);
+      });
+      return grouped;
+    };
+    const renderItem = item => {
+      const notificationIds = (item.notification_ids || [Number(item.id)]).filter(Number.isFinite);
+      const isUnread = Boolean(item.has_unread || !item.read_at);
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `community-notification-item${isUnread ? " is-unread" : ""}`;
+      button.dataset.notificationIds = notificationIds.join(",");
+      button.dataset.notificationKind = item.kind || "";
+      button.dataset.notificationTarget = String(item.target_url || "");
+      const icon = document.createElement("span");
+      icon.className = "community-notification-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = notificationIcon(item.kind);
+      const copy = document.createElement("span");
+      copy.className = "community-notification-copy";
+      const title = document.createElement("b");
+      title.textContent = item.kind === "post_like" && Number(item.like_actor_count) > 1
+        ? `${item.like_actor_count} 位卦友赞了你的卦帖`
+        : `${item.actor_name || "有位卦友"} ${item.kind_label || "与你互动了"}`;
+      const post = document.createElement("small");
+      post.textContent = item.post_title || "相关卦帖";
+      copy.append(title);
+      if (item.body_excerpt) {
+        const excerpt = document.createElement("p");
+        excerpt.textContent = item.body_excerpt;
+        copy.append(excerpt);
+      }
+      copy.append(post);
+      const time = document.createElement("time");
+      time.dateTime = String(item.created_at || "");
+      time.title = formatStamp(item.created_at, true);
+      time.textContent = formatRelativeStamp(item.created_at);
+      button.setAttribute("aria-label", `${title.textContent}${item.body_excerpt ? `，${item.body_excerpt}` : ""}，${post.textContent}，${time.textContent}${isUnread ? "，未读" : ""}`);
+      button.append(icon, copy, time);
+      button.addEventListener("click", async () => {
+        await markNotifications(notificationIds).catch(() => {});
+        try { sessionStorage.setItem("xuanshu:return-to-notifications", location.href); } catch (_) {}
+        const targetUrl = item.target_url || `/gua/${encodeURIComponent(item.post_slug || "")}`;
+        dialog.close();
+        const target = new URL(targetUrl, location.href);
+        if (target.pathname === location.pathname && target.search === location.search) {
+          const returnControl = document.querySelector("[data-notification-return]");
+          if (returnControl) returnControl.hidden = false;
+        }
+        location.assign(targetUrl);
+      });
+      return button;
+    };
+    const fetchNotifications = async ({ append = false } = {}) => {
+      if (loading) return;
+      loading = true;
+      if (!append) renderState("正在读取消息…");
+      try {
+        const params = new URLSearchParams({ limit: "30" });
+        if (append && nextCursor) params.set("before_id", String(nextCursor));
+        const response = await fetch(`/api/community/notifications?${params}`, {
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw Object.assign(new Error(payload.detail || "消息暂时没有加载出来"), { status: response.status });
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        if (!append) list.replaceChildren();
+        groupNotificationItems(items).forEach(item => list.append(renderItem(item)));
+        if (!append && !items.length) renderState("还没有新互动。有人点赞或评论后，会显示在这里。");
+        nextCursor = payload.next_cursor || null;
+        more.hidden = !nextCursor;
+        renderSummary(payload.summary);
+      } finally {
+        loading = false;
+      }
+    };
+    async function markNotifications(ids = [], markAllNotifications = false) {
+      await window.XuanxueAccount?.ready();
+      const response = await fetch("/api/community/notifications/read", {
+        method: "POST",
+        headers: window.XuanxueAccount?.csrfHeaders({
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        }) || { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ ids, mark_all: markAllNotifications }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "消息状态更新失败");
+      syncBadge(payload.unread_count);
+      return payload;
+    }
+    const refreshBadge = async () => {
+      const account = await window.XuanxueAccount?.ready();
+      if (!account?.authenticated) {
+        syncBadge(0);
+        return;
+      }
+      try {
+        const response = await fetch("/api/community/notifications?limit=1", {
+          headers: { Accept: "application/json" }, credentials: "same-origin",
+        });
+        if (!response.ok) throw new Error();
+        const payload = await response.json();
+        renderSummary(payload.summary);
+      } catch (_) {}
+    };
+    const openNotifications = async event => {
+      opener = event?.currentTarget || document.activeElement;
+      const account = await window.XuanxueAccount?.ready();
+      if (!account?.authenticated) {
+        const loggedIn = await window.XuanxueAccount?.requireLogin({
+          mode: "login",
+          message: "登录后查看谁赞了、评论了或回复了你的卦帖。",
+        });
+        if (!loggedIn) return;
+      }
+      if (!dialog.open) dialog.showModal();
+      body.classList.add("community-notifications-open");
+      await fetchNotifications().catch(error => renderState(error.message || "消息暂时没有加载出来", true));
+      dialog.querySelector("[data-notification-close]")?.focus({ preventScroll: true });
+    };
+
+    buttons.forEach(button => button.addEventListener("click", openNotifications));
+    dialog.querySelector("[data-notification-close]")?.addEventListener("click", () => dialog.close());
+    dialog.addEventListener("click", event => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("close", () => {
+      body.classList.remove("community-notifications-open");
+      if (opener?.isConnected) opener.focus({ preventScroll: true });
+    });
+    markAll.addEventListener("click", async () => {
+      markAll.disabled = true;
+      try {
+        await markNotifications([], true);
+        list.querySelectorAll(".is-unread").forEach(item => item.classList.remove("is-unread"));
+        setText("[data-notification-unread-total]", 0);
+      } catch (error) {
+        showToast(error.message || "消息状态更新失败", "error");
+      } finally {
+        markAll.disabled = !list.querySelector(".is-unread");
+      }
+    });
+    more.addEventListener("click", () => fetchNotifications({ append: true }).catch(error => showToast(error.message, "error")));
+    dialog.querySelectorAll("[data-notification-jump]").forEach(button => button.addEventListener("click", () => {
+      const kind = button.dataset.notificationJump;
+      const selector = kind === "like"
+        ? '[data-notification-kind="post_like"]'
+        : kind === "comment"
+          ? '[data-notification-kind="post_comment"], [data-notification-kind="comment_reply"]'
+          : ".community-notification-item.is-unread";
+      const target = list.querySelector(selector);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      target.focus({ preventScroll: true });
+    }));
+    document.addEventListener("xuanshu:authchange", event => {
+      if (!event.detail?.authenticated && dialog.open) dialog.close();
+      refreshBadge();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) refreshBadge();
+    });
+    window.setInterval(refreshBadge, 60000);
+    refreshBadge();
+    try {
+      if (sessionStorage.getItem("xuanshu:open-notifications") === "true") {
+        sessionStorage.removeItem("xuanshu:open-notifications");
+        window.setTimeout(() => buttons[0]?.click(), 0);
+      }
+    } catch (_) {}
+  }
+
+  setupCommunityNotifications();
+
+  const notificationReturn = document.querySelector("[data-notification-return]");
+  if (notificationReturn) {
+    let returnTarget = "";
+    try { returnTarget = sessionStorage.getItem("xuanshu:return-to-notifications") || ""; } catch (_) {}
+    notificationReturn.hidden = !returnTarget;
+    notificationReturn.addEventListener("click", () => {
+      try { sessionStorage.removeItem("xuanshu:return-to-notifications"); } catch (_) {}
+      const origin = new URL(returnTarget || "/#gua-square", location.href);
+      if (origin.pathname === location.pathname && origin.search === location.search) {
+        notificationReturn.hidden = true;
+        document.querySelector("[data-community-notifications]")?.click();
+        return;
+      }
+      try { sessionStorage.setItem("xuanshu:open-notifications", "true"); } catch (_) {}
+      location.assign(origin.href);
+    });
   }
 
   async function track(slug, channel) {
@@ -402,6 +710,10 @@
 
   function commentFormMarkup(inputId = "comment-body") {
     return `<form class="comment-form" data-comment-form>
+      <div class="comment-reply-context" data-comment-reply-context hidden>
+        <span data-comment-reply-label></span>
+        <button type="button" data-comment-reply-cancel>取消回复</button>
+      </div>
       <label class="sr-only" for="${inputId}">发表评论</label>
       <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="说点什么……"></textarea>
       <div class="comment-form-actions">
@@ -437,8 +749,54 @@
       list.className = "comment-list";
       commentComposer?.before(list);
     }
-    list.append(renderComment(comment));
+    const parent = comment.parent_id ? list.querySelector(`#comment-${comment.parent_id}`) : null;
+    if (parent) parent.append(renderCommentReply(comment));
+    else list.append(renderComment(comment));
     syncCommentTotal(1);
+    bindReplyActions(commentSection, commentComposer, renderDetailCommentComposer);
+  }
+
+  function clearCommentReply(form) {
+    if (!form) return;
+    form.removeAttribute("data-reply-parent-id");
+    const context = form.querySelector("[data-comment-reply-context]");
+    if (context) context.hidden = true;
+    const input = form.elements.body;
+    if (input) input.placeholder = "说点什么……";
+  }
+
+  function beginCommentReply(host, parentId, authorName) {
+    const form = host?.querySelector("[data-comment-form]");
+    if (!form) return;
+    form.dataset.replyParentId = String(parentId || "");
+    const context = form.querySelector("[data-comment-reply-context]");
+    const label = form.querySelector("[data-comment-reply-label]");
+    if (context) context.hidden = false;
+    if (label) label.textContent = `回复 ${authorName || "卦友"}`;
+    const input = form.elements.body;
+    input.placeholder = `回复 ${authorName || "卦友"}`;
+    input.focus({ preventScroll: true });
+  }
+
+  function bindReplyActions(scope, composerHost, ensureComposer) {
+    scope?.querySelectorAll("[data-comment-reply]").forEach(button => {
+      if (button.dataset.replyBound === "true") return;
+      button.dataset.replyBound = "true";
+      button.addEventListener("click", async () => {
+        let account = await window.XuanxueAccount?.ready();
+        if (!account?.authenticated) {
+          const loggedIn = await window.XuanxueAccount?.requireLogin({
+            mode: "login",
+            message: "登录后即可用匿名卦友编号回复这条评论。",
+          });
+          if (!loggedIn) return;
+          account = await window.XuanxueAccount?.ready();
+        }
+        if (!account?.authenticated) return;
+        if (!composerHost?.querySelector("[data-comment-form]")) ensureComposer?.();
+        beginCommentReply(composerHost, Number(button.dataset.commentReply), button.dataset.commentAuthor || "卦友");
+      });
+    });
   }
 
   function bindCommentLogin(host, onLoggedIn) {
@@ -469,6 +827,7 @@
     const length = form.querySelector("[data-comment-length]");
     const state = form.querySelector("[data-comment-state]");
     const submit = form.querySelector("button[type=submit]");
+    form.querySelector("[data-comment-reply-cancel]")?.addEventListener("click", () => clearCommentReply(form));
     const syncLength = () => { length.textContent = String(input.value.length); };
     input.addEventListener("input", syncLength);
     syncLength();
@@ -488,12 +847,16 @@
             Accept: "application/json",
           }) || { "Content-Type": "application/json", Accept: "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ body: input.value.trim() }),
+          body: JSON.stringify({
+            body: input.value.trim(),
+            parent_id: Number(form.dataset.replyParentId) || null,
+          }),
         });
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw Object.assign(new Error(payload.detail || "评论发布失败，请稍后再试"), { status: response.status });
         onPublished(payload.item);
         input.value = "";
+        clearCommentReply(form);
         syncLength();
         form.reset();
         state.textContent = `已发布，将显示为 ${payload.item?.author_name || "匿名卦友"}`;
@@ -554,6 +917,7 @@
         renderDetailCommentGate();
       }
     });
+    bindReplyActions(commentSection, commentComposer, renderDetailCommentComposer);
   }
 
   const storyForm = document.querySelector("[data-story-update-form]");
@@ -686,24 +1050,42 @@
     });
   }
 
+  function renderCommentReply(reply) {
+    const replyItem = makeElement("div", "comment-reply");
+    if (reply.id) {
+      replyItem.id = `comment-${reply.id}`;
+      replyItem.dataset.commentId = String(reply.id);
+    }
+    const replyMeta = makeElement("div", "comment-meta");
+    replyMeta.append(
+      makeElement("b", "", reply.author_name || "卦友"),
+      makeElement("time", "", formatStamp(reply.created_at, true)),
+    );
+    const replyAction = makeElement("button", "comment-reply-action", "回复");
+    replyAction.type = "button";
+    replyAction.dataset.commentReply = String(reply.id || "");
+    replyAction.dataset.commentAuthor = reply.author_name || "卦友";
+    replyItem.append(replyMeta, makeElement("p", "", reply.body || ""), replyAction);
+    return replyItem;
+  }
+
   function renderComment(comment) {
     const item = makeElement("article", "comment");
+    if (comment.id) {
+      item.id = `comment-${comment.id}`;
+      item.dataset.commentId = String(comment.id);
+    }
     const meta = makeElement("div", "comment-meta");
     meta.append(
       makeElement("b", "", comment.author_name || "卦友"),
       makeElement("time", "", formatStamp(comment.created_at, true)),
     );
-    item.append(meta, makeElement("p", "", comment.body || ""));
-    (comment.replies || []).forEach(reply => {
-      const replyItem = makeElement("div", "comment-reply");
-      const replyMeta = makeElement("div", "comment-meta");
-      replyMeta.append(
-        makeElement("b", "", reply.author_name || "卦友"),
-        makeElement("time", "", formatStamp(reply.created_at, true)),
-      );
-      replyItem.append(replyMeta, makeElement("p", "", reply.body || ""));
-      item.append(replyItem);
-    });
+    const replyAction = makeElement("button", "comment-reply-action", "回复");
+    replyAction.type = "button";
+    replyAction.dataset.commentReply = String(comment.id || "");
+    replyAction.dataset.commentAuthor = comment.author_name || "卦友";
+    item.append(meta, makeElement("p", "", comment.body || ""), replyAction);
+    (comment.replies || []).forEach(reply => item.append(renderCommentReply(reply)));
     return item;
   }
 
@@ -719,11 +1101,20 @@
     const list = makeElement("div", "comment-list");
     comments.forEach(comment => list.append(renderComment(comment)));
     host.append(list);
+    bindReplyActions(host, field("[data-preview-comment-composer]"), () => renderPreviewCommentComposer(post, { focus: false }));
   }
 
   function appendPreviewComment(post, comment) {
     if (!Array.isArray(post.comments)) post.comments = [];
-    post.comments.push(comment);
+    const parent = comment.parent_id
+      ? post.comments.find(item => Number(item.id) === Number(comment.parent_id))
+      : null;
+    if (parent) {
+      if (!Array.isArray(parent.replies)) parent.replies = [];
+      parent.replies.push(comment);
+    } else {
+      post.comments.push(comment);
+    }
     post.comment_count = Math.max(0, Number(post.comment_count) || 0) + 1;
     renderComments(post);
   }

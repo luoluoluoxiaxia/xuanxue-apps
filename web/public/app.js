@@ -803,6 +803,7 @@ function setupSidebarToggle() {
     if (label) label.textContent = "收起 Tab 栏";
   });
   nav.querySelector("[data-account-button]")?.addEventListener("click", close);
+  nav.querySelector("[data-community-notifications]")?.addEventListener("click", close);
   nav.querySelectorAll("[data-hero-nav], [data-home-community-nav]").forEach(item => item.addEventListener("click", close));
   document.addEventListener("click", event => {
     if (nav.dataset.sidebarExpanded === "true" && !nav.contains(event.target)) close();

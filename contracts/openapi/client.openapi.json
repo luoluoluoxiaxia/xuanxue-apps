@@ -1257,6 +1257,167 @@
         "title": "ClientCommunityFeed",
         "type": "object"
       },
+      "ClientCommunityNotification": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_name": {
+            "title": "Actor Name",
+            "type": "string"
+          },
+          "body_excerpt": {
+            "default": "",
+            "title": "Body Excerpt",
+            "type": "string"
+          },
+          "comment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Id"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "kind_label": {
+            "title": "Kind Label",
+            "type": "string"
+          },
+          "post_slug": {
+            "title": "Post Slug",
+            "type": "string"
+          },
+          "post_title": {
+            "title": "Post Title",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "target_url": {
+            "title": "Target Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "kind_label",
+          "actor_name",
+          "post_slug",
+          "post_title",
+          "target_url",
+          "created_at"
+        ],
+        "title": "ClientCommunityNotification",
+        "type": "object"
+      },
+      "ClientCommunityNotificationRead": {
+        "additionalProperties": false,
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "unread_count"
+        ],
+        "title": "ClientCommunityNotificationRead",
+        "type": "object"
+      },
+      "ClientCommunityNotificationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "received_comment_count": {
+            "title": "Received Comment Count",
+            "type": "integer"
+          },
+          "received_like_count": {
+            "title": "Received Like Count",
+            "type": "integer"
+          },
+          "unread_comment_count": {
+            "title": "Unread Comment Count",
+            "type": "integer"
+          },
+          "unread_count": {
+            "title": "Unread Count",
+            "type": "integer"
+          },
+          "unread_like_count": {
+            "title": "Unread Like Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread_count",
+          "unread_like_count",
+          "unread_comment_count",
+          "received_like_count",
+          "received_comment_count"
+        ],
+        "title": "ClientCommunityNotificationSummary",
+        "type": "object"
+      },
+      "ClientCommunityNotifications": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCommunityNotification"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ClientCommunityNotificationSummary"
+          }
+        },
+        "required": [
+          "items",
+          "summary"
+        ],
+        "title": "ClientCommunityNotifications",
+        "type": "object"
+      },
       "ClientCommunityPost": {
         "additionalProperties": false,
         "properties": {
@@ -3882,6 +4043,25 @@
         "title": "LoginInput",
         "type": "object"
       },
+      "NotificationReadInput": {
+        "properties": {
+          "ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 100,
+            "title": "Ids",
+            "type": "array"
+          },
+          "mark_all": {
+            "default": false,
+            "title": "Mark All",
+            "type": "boolean"
+          }
+        },
+        "title": "NotificationReadInput",
+        "type": "object"
+      },
       "ProfileCreate": {
         "properties": {
           "as_of": {
@@ -5032,6 +5212,94 @@
           }
         },
         "summary": "Api Record Post View"
+      }
+    },
+    "/api/community/notifications": {
+      "get": {
+        "operationId": "api_list_notifications_api_community_notifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before_id",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Before Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityNotifications"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api List Notifications"
+      }
+    },
+    "/api/community/notifications/read": {
+      "post": {
+        "operationId": "api_mark_notifications_read_api_community_notifications_read_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationReadInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityNotificationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Mark Notifications Read"
       }
     },
     "/api/community/reports": {

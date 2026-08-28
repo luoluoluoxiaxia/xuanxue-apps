@@ -77,9 +77,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="community.css?v=community-45">
+<link rel="stylesheet" href="community.css?v=community-47">
 <link rel="stylesheet" href="account.css?v=account-9">
-<link rel="stylesheet" href="style.css?v=design-147">
+<link rel="stylesheet" href="style.css?v=design-148">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-12">
 <link rel="stylesheet" href="chat.css?v=chat-16">
 <script type="application/ld+json">
@@ -190,6 +190,11 @@
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 5.5A2.5 2.5 0 0 1 7.5 3h9A2.5 2.5 0 0 1 19 5.5v9a2.5 2.5 0 0 1-2.5 2.5H10l-5 4v-5.5z"/><path d="M8 8h8m-8 4h5"/></svg></span>
             <span>卦帖广场</span>
           </a>
+          <button type="button" data-community-notifications title="消息" aria-haspopup="dialog">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg></span>
+            <span>消息</span>
+            <b class="community-notification-badge" data-notification-badge hidden>0</b>
+          </button>
           <button type="button" data-hero-nav="profile" data-account-profile-button title="登录 / 注册">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
             <span data-account-profile-label>登录 / 注册</span>
@@ -357,8 +362,8 @@
           <div class="home-community-filter-group" aria-label="排序方式">
             <span>排序</span>
             <div class="home-community-filter-options">
-              <button type="button" data-home-community-view="latest" aria-pressed="true">最新</button>
-              <button type="button" data-home-community-view="popular" aria-pressed="false">热门</button>
+              <button type="button" data-home-community-view="popular" aria-pressed="true">热门</button>
+              <button type="button" data-home-community-view="latest" aria-pressed="false">最新</button>
               <button type="button" data-home-community-view="featured" aria-pressed="false">精选</button>
             </div>
           </div>
@@ -806,11 +811,11 @@
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-4"></script>
-<script src="app.js?v=design-180"></script>
+<script src="modules/home-community.js?v=web-modules-5"></script>
+<script src="app.js?v=design-181"></script>
 <script src="modules/profile-workspace.js?v=web-modules-2"></script>
 <script src="modules/chat-workspace.js?v=web-modules-1"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
-<script src="community.js?v=community-21"></script>
+<script src="community.js?v=community-24"></script>
 </body>
 </html>
