@@ -149,7 +149,7 @@
     let homeCommunityDone = false;
     let homeCommunityObserver = null;
     let homeCommunityLoadVersion = 0;
-    let homeCommunityView = "latest";
+    let homeCommunityView = "popular";
     let homeCommunityType = "";
     let homeCommunityRefreshFrame = null;
     const homeCommunitySlugs = new Set();
@@ -257,7 +257,7 @@
         homeCommunitySlugs.clear();
         if (sentinel) sentinel.hidden = false;
         renderHomeCommunityPlaceholder(
-          homeCommunityType || homeCommunityView !== "latest" ? "正在筛选卦帖" : "正在翻阅卦帖",
+          homeCommunityType || homeCommunityView !== "popular" ? "正在筛选卦帖" : "正在翻阅卦帖",
           "找到内容后会直接显示在首页广场。",
           "loading",
         );
@@ -293,8 +293,8 @@
         homeCommunityDone = !homeCommunityCursor;
         if (!homeCommunityLoadedCount) {
           renderHomeCommunityPlaceholder(
-            homeCommunityType || homeCommunityView !== "latest" ? "这个筛选下还没有卦帖" : "广场刚刚开卷",
-            homeCommunityType || homeCommunityView !== "latest"
+            homeCommunityType || homeCommunityView !== "popular" ? "这个筛选下还没有卦帖" : "广场刚刚开卷",
+            homeCommunityType || homeCommunityView !== "popular"
               ? "换个分类或排序看看。"
               : "审核通过的公开问题会自动进入这里。",
           );
@@ -349,7 +349,7 @@
       });
       $$('[data-home-community-view]').forEach(button => {
         button.addEventListener("click", () => {
-          const next = button.dataset.homeCommunityView || "latest";
+          const next = button.dataset.homeCommunityView || "popular";
           if (!HOME_COMMUNITY_VIEWS.has(next) || next === homeCommunityView) return;
           homeCommunityView = next;
           syncHomeCommunityFilters();
