@@ -5667,3 +5667,12 @@ body[data-screen="dash"] #new-session-btn{min-height:40px}
   .landing .home-community-card{width:100%;max-width:none;margin:0}
   .landing .hero-footer{grid-column:2;grid-row:4;width:100%;margin:0;padding-left:14px}
 }
+
+/* MODAL-LOCKED SIDE TAB · body 滚动锁定时侧栏仍锚定视口（design-151） */
+html.modal-open .landing .hero-nav{
+  position:fixed;
+  top:0;
+  left:0;
+  height:100svh;
+  min-height:0;
+}
