@@ -1670,9 +1670,11 @@ function syncCastEntryMode() {
     ? "默认命盘已带入；写下所问，再围绕这件事完成六爻。"
     : "静心，默念所问之事。一事一卦，卦成不改。";
   if (hint) {
-    const quota = Account?.snapshot()?.privateQuota;
+    const account = Account?.snapshot?.() || {};
+    const quota = account.privateQuota;
+    const wallet = account.creditWallet;
     hint.textContent = combined
-      ? `默认命盘已带入 · 本次使用 1 次私密额度${quota ? ` · 今日剩余 ${quota.remaining}/${quota.total}` : ""}；仅账户可见。`
+      ? `默认命盘已带入${quota ? ` · 今日免费 ${quota.remaining}/${quota.total} 分` : ""}${wallet ? ` · 充值积分 ${Number(wallet.balance || 0)} 分` : ""}；完整回答后按实际消耗结算，仅账户可见。`
       : "写清时间范围和现实背景；请勿填写姓名、电话、住址或证件号。";
   }
 }
@@ -1836,9 +1838,18 @@ function syncCastUI() {
   const banner = $("#cast-complete-banner");
   const visibility = document.querySelector('input[name="cast-visibility"]:checked')?.value || "public";
   const isPrivate = visibility === "private";
-  const quota = Account?.snapshot()?.privateQuota;
+  const account = Account?.snapshot?.() || {};
+  const quota = account.privateQuota;
+  const wallet = account.creditWallet;
+  const creditBalance = Number(wallet?.balance || 0);
   const quotaLabel = document.querySelector("[data-private-quota-label]");
-  if (quotaLabel) quotaLabel.textContent = quota ? `今日剩余 ${quota.remaining}/${quota.total}` : "登录后每日 1 次";
+  if (quotaLabel) {
+    quotaLabel.textContent = quota
+      ? Number(quota.remaining || 0) > 0
+        ? `今日免费 ${quota.remaining}/${quota.total} 分`
+        : `今日免费已用 · 充值 ${creditBalance} 分`
+      : "登录后每日赠送 10 分";
+  }
   if (!submit) return;
   const manual = castMethodValue() === "manual";
   const done = castComplete();
@@ -1851,10 +1862,14 @@ function syncCastUI() {
   }
   if (done) {
     submit.hidden = false;
-    const privateExhausted = isPrivate && quota && Number(quota.remaining || 0) <= 0;
-    submit.disabled = !!privateExhausted;
+    const privateExhausted = (
+      isPrivate
+      && quota
+      && !quota.can_start_answer
+    );
+    submit.disabled = false;
     submit.textContent = isPrivate
-      ? (privateExhausted ? "今 日 私 密 次 数 已 用 完" : "开 始 私 密 解 读")
+      ? (privateExhausted ? "积 分 暂 不 可 用 · 查 看 账 户" : "开 始 私 密 解 读")
       : "开 始 公 开 解 读";
     if (manualHint) manualHint.hidden = true;
     if (reset) reset.textContent = manual ? "重新起卦" : "重新摇一次";
@@ -2010,12 +2025,13 @@ async function submitCast(ev) {
     mode: "register",
     message: visibility === "private"
       ? "私密提问只保存在你的账户中，请先登录或注册。"
-      : "登录后即可免费公开提问；分享任意公开问题还能永久增加每日私密额度。",
+      : "登录后即可免费公开提问；分享任意公开问题还能永久增加每日免费积分。",
   });
   if (!loggedIn) return;
   const privateQuota = Account?.snapshot()?.privateQuota;
-  if (visibility === "private" && privateQuota && Number(privateQuota.remaining || 0) <= 0) {
-    showCastError("今日私密提问次数已用完；你可以改为公开提问，或分享公开卦帖邀请新用户永久提升每日上限。");
+  if (visibility === "private" && privateQuota && !privateQuota.can_start_answer) {
+    showCastError("今日免费积分与充值积分已用完；明日北京时间 0 点刷新，或到账户充值后继续。");
+    Account?.open?.("topup", "可用积分已经用完。选择套餐并完成付款后，就能继续刚才的私密解读。");
     syncCastUI();
     return;
   }

@@ -134,7 +134,7 @@
         <h2>今日与本月尚未更新</h2>
         <p>${escapeHtml(generation.message || "本次未自动生成，需要时点一下即可更新。")}</p>
         <button type="button" class="ph-primary" data-ph-refresh>更新今日与本月</button>
-        <em>点击后才开始准备，不消耗私密提问次数。</em>`;
+        <em>点击后才开始准备，不消耗 AI 回答积分。</em>`;
       return;
     }
     if (generation.state === "failed") {
@@ -480,9 +480,9 @@
       return false;
     }
     const quota = payload.private_quota || {};
-    const remaining = Number(quota.remaining || 0);
-    if (remaining <= 0) {
-      toast("今日私密次数已用完，北京时间 0 点重置", "warn");
+    if (!quota.can_start_answer) {
+      toast("今日免费积分与充值积分已用完；明日北京时间 0 点刷新，或充值后继续", "warn");
+      Account.open("topup", "可用积分已经用完。充值到账后，可以继续进入一事详断。");
       return false;
     }
     document.dispatchEvent(new CustomEvent("xuanshu:startdetailed", {

@@ -176,6 +176,7 @@
     user: null,
     csrfToken: "",
     privateQuota: null,
+    creditWallet: null,
     archiveSummary: null,
   };
   let dialog = null;
@@ -184,8 +185,12 @@
   let initialLoad = null;
   let cooldownTimer = null;
   let accountScrollPosition = null;
+  let checkoutPollToken = 0;
+  let checkoutChannel = null;
   const codeCooldownUntil = { register: 0, login: 0 };
   const ACCOUNT_OVERLAY_ID = "account-dialog";
+  const CHECKOUT_CONTEXT_KEY = "xuanshu-checkout-context-v1";
+  const CHECKOUT_CHANNEL_NAME = "xuanshu-checkout-events-v1";
 
   function escapeHtml(value) {
     return String(value ?? "")
@@ -215,6 +220,7 @@
     state.user = state.authenticated ? payload.user : null;
     state.csrfToken = state.authenticated ? String(payload.csrf_token || "") : "";
     state.privateQuota = state.authenticated ? payload.private_quota : null;
+    state.creditWallet = state.authenticated ? payload.credit_wallet : null;
     state.archiveSummary = state.authenticated ? payload.archive_summary : null;
     if (state.authenticated) document.querySelector("[data-invite-prompt]")?.remove();
     syncButtons();
@@ -228,12 +234,19 @@
       user: state.user ? { ...state.user } : null,
       csrfToken: state.csrfToken,
       privateQuota: state.privateQuota ? { ...state.privateQuota } : null,
+      creditWallet: state.creditWallet ? {
+        ...state.creditWallet,
+        packs: Array.isArray(state.creditWallet.packs)
+          ? state.creditWallet.packs.map(pack => ({ ...pack }))
+          : [],
+      } : null,
       archiveSummary: state.archiveSummary ? { ...state.archiveSummary } : null,
     };
   }
 
   async function refresh(options = {}) {
     const restoreFocus = options?.restoreFocus === true;
+    const rerender = options?.render !== false;
     let refreshFailed = false;
     try {
       const response = await fetch("/api/auth/me", {
@@ -246,7 +259,7 @@
       refreshFailed = true;
       if (!state.loaded) apply({ authenticated: false });
     }
-    if (dialog?.open) {
+    if (dialog?.open && rerender) {
       if (refreshFailed && state.authenticated) {
         renderAccount("暂时无法更新账户数据，当前显示上次同步结果。", "warn");
       } else {
@@ -278,12 +291,14 @@
         label.textContent = name.length > 12 ? `${name.slice(0, 10)}…` : name;
         button.dataset.authenticated = "true";
         const quota = state.privateQuota;
+        const wallet = state.creditWallet;
         const archives = Number(state.archiveSummary?.total || 0);
         const active = Number(state.archiveSummary?.active || 0);
         button.title = [
           archives ? `${archives} 份云端档案` : "暂无云端档案",
           active ? `${active} 份档案正在生成` : "",
-          quota ? `今日私密剩余 ${quota.remaining}/${quota.total}` : "",
+          quota ? `今日免费积分 ${quota.remaining}/${quota.total}` : "",
+          wallet ? `充值积分 ${Number(wallet.balance || 0)}` : "",
         ].filter(Boolean).join(" · ");
       } else {
         label.textContent = "登录 / 注册";
@@ -306,7 +321,7 @@
     dialog.setAttribute("aria-labelledby", "account-dialog-title");
     dialog.innerHTML = `
       <button type="button" class="account-dialog-close" data-account-close aria-label="关闭">×</button>
-      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b><em>公开免费 · 私密有额</em></span></div>
+      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b><em>每日免费 · 积分续用</em></span></div>
       <div class="account-dialog-body" data-account-body></div>`;
     document.body.append(dialog);
     body = dialog.querySelector("[data-account-body]");
@@ -368,10 +383,19 @@
 
   function openNow(mode = "login", message = "") {
     ensureDialog();
-    if (state.authenticated) renderAccount();
+    if (state.authenticated) {
+      renderAccount(message, mode === "topup" ? "warn" : message ? "success" : "");
+    }
     else renderAuth(mode === "register" ? "register" : "login_password", message);
     if (!dialog.open) dialog.showModal();
     lockPageScroll();
+    if (state.authenticated && mode === "topup") {
+      requestAnimationFrame(() => {
+        const target = body.querySelector("[data-account-wallet]");
+        target?.scrollIntoView({ block: "center", inline: "nearest" });
+        target?.querySelector("[data-credit-topup]:not(:disabled)")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function open(mode = "login", message = "") {
@@ -468,7 +492,7 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">邮件恢复前，点“领取邀请码”即可注册。公开提问不限次数；私密提问每日有专属额度。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">邮件恢复前，点“领取邀请码”即可注册。公开提问不限次数；私密 AI 回答每天赠送积分。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
         <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
@@ -635,7 +659,13 @@
 
   function quotaComposition(quota) {
     if (!quota) return "";
-    return `基础 ${quota.base} + 有效邀请 ${quota.referral_bonus}`;
+    return `每日 ${quota.base} 分${Number(quota.referral_bonus || 0) ? ` + 邀请加成 ${quota.referral_bonus} 分` : ""}`;
+  }
+
+  function packEstimate(pack) {
+    return Number(pack?.credits || 0) >= 660
+      ? "约 75–115 次 AI 回答 · 赠 60 分"
+      : "约 30–57 次 AI 回答";
   }
 
   function renderAccount(message = "", tone = "") {
@@ -644,6 +674,8 @@
       return;
     }
     const quota = state.privateQuota || {};
+    const wallet = state.creditWallet || {};
+    const packs = Array.isArray(wallet.packs) ? wallet.packs : [];
     const archives = state.archiveSummary || {};
     const archiveTotal = Number(archives.total || 0);
     body.innerHTML = `
@@ -674,24 +706,40 @@
               <button type="button" data-account-start-liuyao>起六爻 <span>→</span></button>
             </div>`}
       </section>
-      <section class="account-quota-card" aria-label="今日私密提问额度">
+      <section class="account-quota-card" aria-label="今日免费积分">
         <div class="account-quota-main">
-          <span>今日私密提问</span>
+          <span>今日免费积分</span>
           <strong><b>${Number(quota.remaining || 0)}</b><i>/ ${Number(quota.total || 0)}</i></strong>
-          <em>北京时间 0 点重置</em>
+          <em>北京时间 0 点刷新 · 当日有效</em>
         </div>
         <div class="account-quota-detail">
-          <span><b>每日总上限</b><em>${quotaComposition(quota)}</em></span>
-          <span><b>今日已用</b><em>${Number(quota.used || 0)} 次${Number(quota.reserved || 0) ? ` · 生成中 ${Number(quota.reserved)} 次` : ""}</em></span>
+          <span><b>积分来源</b><em>${quotaComposition(quota)}</em></span>
+          <span><b>今日结算</b><em>已用 ${Number(quota.used || 0)} 分</em></span>
         </div>
+      </section>
+      <section class="account-wallet-card" data-account-wallet aria-label="玄枢算力积分余额">
+        <div class="account-wallet-balance">
+          <span>充值积分</span>
+          <strong><b>${Number(wallet.balance || 0)}</b><i>分</i></strong>
+          <em>不会过期 · 每次完整回答后按实际消耗结算</em>
+        </div>
+        <div class="account-wallet-packs">
+          ${packs.map(pack => `
+            <button type="button" data-credit-topup="${escapeHtml(pack.sku)}"${Number(pack.credits || 0) >= 660 ? ' class="featured"' : ""} ${wallet.topup_enabled && pack.available ? "" : "disabled"}>
+              ${Number(pack.credits || 0) >= 660 ? '<small>多 60 分</small>' : ""}
+              <span><b>${Number(pack.credits || 0)} 分 · $${(Number(pack.unit_amount || 0) / 100).toFixed(0)}</b><em>${packEstimate(pack)}</em></span>
+              <i>${wallet.topup_enabled && pack.available ? "选择" : "暂未开放"}</i>
+            </button>`).join("")}
+        </div>
+        <p>只要还有 1 分就能开始一次完整回答；本次积分不足也不会中途截断，结算最多扣到 0。确认套餐后再前往 Stripe 付款。</p>
       </section>
       <section class="account-referral-card">
         <div><span>分享带来的每日加成</span><strong>+${Number(quota.referral_bonus || 0)}</strong></div>
-        <p>登录后分享站内任意公开问题。新用户经你的链接注册并完成首次提问，你的每日私密总上限永久 +1。</p>
+        <p>登录后分享站内任意公开问题。新用户经你的链接注册并完成首次提问，你每天都会永久多获得 ${Number(quota.base || 10)} 积分。</p>
         <div class="account-referral-stats">
           <span><b>${Number(quota.pending_referrals || 0)}</b><em>待完成首问</em></span>
           <span><b>${Number(quota.qualified_referrals || 0)}</b><em>已生效邀请</em></span>
-          <span><b>${Number(quota.max_total || 10)}</b><em>每日最高</em></span>
+          <span><b>${Number(quota.max_total || 100)}</b><em>每日最高积分</em></span>
         </div>
         <a href="/#gua-square" data-account-community>去卦帖广场分享任意问题 <span>→</span></a>
       </section>
@@ -724,8 +772,417 @@
         if (document.dispatchEvent(openEvent)) window.location.assign("/#gua-square");
       });
     });
+    body.querySelectorAll("[data-credit-topup]").forEach(button => {
+      button.addEventListener("click", () => renderCheckoutReview(button.dataset.creditTopup));
+    });
     body.querySelector("[data-account-refresh]").addEventListener("click", () => refresh({ restoreFocus: true }));
     body.querySelector("[data-account-logout]").addEventListener("click", logout);
+  }
+
+  function creditPack(sku) {
+    return (state.creditWallet?.packs || []).find(pack => pack.sku === String(sku || "")) || null;
+  }
+
+  function cleanReturnUrl(value = location.href) {
+    try {
+      const url = new URL(value, location.origin);
+      if (url.origin !== location.origin) return "/";
+      url.searchParams.delete("checkout");
+      url.searchParams.delete("session_id");
+      url.searchParams.delete("order_id");
+      return `${url.pathname}${url.search}${url.hash}` || "/";
+    } catch (_) {
+      return "/";
+    }
+  }
+
+  function readCheckoutContext() {
+    try {
+      const parsed = JSON.parse(sessionStorage.getItem(CHECKOUT_CONTEXT_KEY) || "null");
+      if (!parsed || typeof parsed !== "object") return null;
+      if (Date.now() - Number(parsed.started_at || 0) > 24 * 60 * 60 * 1000) {
+        sessionStorage.removeItem(CHECKOUT_CONTEXT_KEY);
+        return null;
+      }
+      return {
+        order_id: String(parsed.order_id || ""),
+        checkout_session_id: String(parsed.checkout_session_id || ""),
+        sku: String(parsed.sku || ""),
+        credits: Math.max(0, Number(parsed.credits || 0)),
+        amount_total: Math.max(0, Number(parsed.amount_total || 0)),
+        return_url: cleanReturnUrl(parsed.return_url || "/"),
+        started_at: Number(parsed.started_at || Date.now()),
+      };
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeCheckoutContext(value) {
+    try {
+      sessionStorage.setItem(CHECKOUT_CONTEXT_KEY, JSON.stringify(value));
+    } catch (_) {}
+  }
+
+  function clearCheckoutContext() {
+    try { sessionStorage.removeItem(CHECKOUT_CONTEXT_KEY); } catch (_) {}
+  }
+
+  function publishCheckoutEvent(detail) {
+    try { checkoutChannel?.postMessage(detail); } catch (_) {}
+  }
+
+  function initCheckoutChannel() {
+    if (checkoutChannel || typeof BroadcastChannel !== "function") return;
+    try {
+      checkoutChannel = new BroadcastChannel(CHECKOUT_CHANNEL_NAME);
+      checkoutChannel.addEventListener("message", event => {
+        const detail = event?.data;
+        const context = readCheckoutContext();
+        if (!detail || !context || (detail.order_id && detail.order_id !== context.order_id)) return;
+        if (detail.type === "cancelled") {
+          checkoutPollToken += 1;
+          if (!dialog?.open) open("account");
+          renderCheckoutStatus("cancelled", context);
+          clearCheckoutContext();
+        } else if (detail.type === "returned" && detail.session_id === context.checkout_session_id) {
+          if (!dialog?.open) open("account");
+          pollCheckoutStatus(detail.session_id, context, { attempts: 24, intervalMs: 1250 });
+        }
+      });
+    } catch (_) {
+      checkoutChannel = null;
+    }
+  }
+
+  function focusCheckoutTitle() {
+    requestAnimationFrame(() => body.querySelector("#account-dialog-title")?.focus({ preventScroll: true }));
+  }
+
+  function checkoutSteps(active = "confirm") {
+    const steps = [
+      ["confirm", "确认套餐"],
+      ["pay", "Stripe 付款"],
+      ["credit", "自动到账"],
+    ];
+    const activeIndex = Math.max(0, steps.findIndex(([key]) => key === active));
+    return `<ol class="checkout-steps" aria-label="充值进度">${steps.map(([key, label], index) => `
+      <li class="${index < activeIndex ? "done" : index === activeIndex ? "active" : ""}"${index === activeIndex ? ' aria-current="step"' : ""}>
+        <b>${index + 1}</b><span>${label}</span>
+      </li>`).join("")}</ol>`;
+  }
+
+  function renderCheckoutReview(sku, message = "") {
+    checkoutPollToken += 1;
+    const pack = creditPack(sku);
+    if (!pack || !pack.available || !state.creditWallet?.topup_enabled) {
+      renderAccount("这个积分包目前无法购买，请稍后再试。", "error");
+      return;
+    }
+    const dollars = (Number(pack.unit_amount || 0) / 100).toFixed(0);
+    body.innerHTML = `
+      <div class="checkout-head">
+        <button type="button" data-checkout-back>返回账户</button>
+        <span>积分充值</span>
+        <h2 id="account-dialog-title" tabindex="-1">确认充值套餐</h2>
+        <p>金额确认无误后，再前往 Stripe 安全付款。</p>
+      </div>
+      ${checkoutSteps("confirm")}
+      ${message ? `<p class="account-context-note error" role="alert">${escapeHtml(message)}</p>` : ""}
+      <section class="checkout-summary" aria-label="订单摘要">
+        <div class="checkout-summary-main">
+          <span>本次到账</span>
+          <strong>${Number(pack.credits || 0)}<i>积分</i></strong>
+          <em>${escapeHtml(packEstimate(pack))}</em>
+        </div>
+        <div class="checkout-summary-price">
+          <span>应付金额</span>
+          <strong>$${dollars}<i>USD</i></strong>
+          <em>一次性付款</em>
+        </div>
+      </section>
+      <div class="checkout-assurances" aria-label="付款说明">
+        <p><b>付款前不会扣款</b><span>通常会在新标签打开 Stripe 托管结账页。</span></p>
+        <p><b>卡号不经过玄枢</b><span>支付信息由 Stripe 直接处理。</span></p>
+        <p><b>付款成功自动到账</b><span>返回玄枢后会自动核验，不需要上传截图。</span></p>
+      </div>
+      <p class="checkout-fx-note">价格以美元结算；发卡行可能按自身规则换算币种或收取费用。</p>
+      <div class="checkout-actions">
+        <button type="button" class="primary" data-checkout-confirm>前往 Stripe 付款 · $${dollars}</button>
+        <button type="button" data-checkout-back>再看看其他套餐</button>
+      </div>`;
+    body.querySelectorAll("[data-checkout-back]").forEach(button => {
+      button.addEventListener("click", () => {
+        renderAccount();
+        requestAnimationFrame(() => body.querySelector(`[data-credit-topup="${CSS.escape(pack.sku)}"]`)?.focus({ preventScroll: true }));
+      });
+    });
+    body.querySelector("[data-checkout-confirm]")?.addEventListener("click", () => startCreditCheckout(pack.sku));
+    focusCheckoutTitle();
+  }
+
+  async function startCreditCheckout(sku) {
+    const pack = creditPack(sku);
+    const button = body.querySelector("[data-checkout-confirm]");
+    if (!pack || !button || button.disabled) return;
+    button.disabled = true;
+    button.textContent = "正在打开 Stripe…";
+    body.setAttribute("aria-busy", "true");
+    let checkoutTab = null;
+    try { checkoutTab = window.open("about:blank", "xuanshu-stripe-checkout"); } catch (_) {}
+    const suffix = globalThis.crypto?.randomUUID?.()
+      || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    try {
+      const response = await fetch("/api/billing/checkout-sessions", {
+        method: "POST",
+        headers: csrfHeaders({
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "Idempotency-Key": `credit-${suffix}`,
+        }),
+        credentials: "same-origin",
+        body: JSON.stringify({ sku }),
+      });
+      const payload = await readJson(response);
+      if (!payload.url || !payload.checkout_session_id) throw new Error("Stripe 未返回结账地址");
+      const context = {
+        order_id: payload.order_id,
+        checkout_session_id: payload.checkout_session_id,
+        sku: pack.sku,
+        credits: Number(pack.credits || 0),
+        amount_total: Number(pack.unit_amount || 0),
+        return_url: cleanReturnUrl(),
+        started_at: Date.now(),
+      };
+      writeCheckoutContext(context);
+      if (checkoutTab && !checkoutTab.closed) {
+        try {
+          checkoutTab.sessionStorage.setItem(CHECKOUT_CONTEXT_KEY, JSON.stringify(context));
+          checkoutTab.opener = null;
+          checkoutTab.location.replace(payload.url);
+          body.removeAttribute("aria-busy");
+          pollCheckoutStatus(payload.checkout_session_id, context, {
+            initialKind: "paying",
+            checkoutUrl: payload.url,
+            attempts: 90,
+            intervalMs: 1500,
+          });
+          return;
+        } catch (_) {
+          try { checkoutTab.close(); } catch (_) {}
+        }
+      }
+      window.location.assign(payload.url);
+    } catch (reason) {
+      try { checkoutTab?.close(); } catch (_) {}
+      body.removeAttribute("aria-busy");
+      renderCheckoutReview(pack.sku, reason?.message || "暂时无法打开 Stripe 结账页");
+    }
+  }
+
+  function checkoutDisplayData(context = null, status = null) {
+    const sku = String(status?.sku || context?.sku || "");
+    const pack = creditPack(sku);
+    return {
+      sku,
+      credits: Number(status?.credits || context?.credits || pack?.credits || 0),
+      amount_total: Number(status?.amount_total || context?.amount_total || pack?.unit_amount || 0),
+      return_url: cleanReturnUrl(context?.return_url || "/"),
+    };
+  }
+
+  function renderCheckoutStatus(kind, context = null, status = null) {
+    const display = checkoutDisplayData(context, status);
+    const dollars = (display.amount_total / 100).toFixed(0);
+    const balance = Number(status?.wallet?.balance ?? state.creditWallet?.balance ?? 0);
+    const content = {
+      pending: {
+        eyebrow: "到账核验",
+        title: "正在确认到账",
+        description: "已经从 Stripe 返回。系统正在等待签名确认，确认后会自动增加积分。",
+      },
+      paying: {
+        eyebrow: "Stripe 安全付款",
+        title: "付款页已在新标签打开",
+        description: "当前排盘、卦象和未发送的问题会保留在这个标签页。完成付款后，这里会自动显示到账结果。",
+      },
+      delayed: {
+        eyebrow: "到账核验",
+        title: "还在确认中",
+        description: "Stripe 的通知偶尔会慢一点，不需要重复付款。你可以留在这里继续检查，或稍后刷新账户。",
+      },
+      paid: {
+        eyebrow: "充值完成",
+        title: `${display.credits} 积分已到账`,
+        description: `充值积分余额现在是 ${balance} 分，可以继续使用私密 AI 回答。`,
+      },
+      cancelled: {
+        eyebrow: "付款已取消",
+        title: "没有产生本次充值",
+        description: "本次没有增加积分；玄枢也不会因为取消结账而产生站内扣款。",
+      },
+      expired: {
+        eyebrow: "付款链接已过期",
+        title: "请重新选择套餐",
+        description: "过期的 Stripe 结账页不能继续使用，也不会增加积分。",
+      },
+      error: {
+        eyebrow: "暂时无法核验",
+        title: "到账状态没有更新",
+        description: "当前网络可能不稳定。不要重复付款，可以重新检查或到账户查看余额。",
+      },
+    }[kind] || {};
+    const progressStep = kind === "paid" ? "credit" : kind === "pending" || kind === "delayed" ? "credit" : "pay";
+    const showOrder = display.credits > 0 && display.amount_total > 0;
+    const checkoutChildTab = window.name === "xuanshu-stripe-checkout";
+    body.innerHTML = `
+      <div class="checkout-status-head" aria-live="polite">
+        <span>${escapeHtml(content.eyebrow || "充值状态")}</span>
+        <h2 id="account-dialog-title" tabindex="-1">${escapeHtml(content.title || "充值状态")}</h2>
+        <p>${escapeHtml(content.description || "")}</p>
+        ${kind === "pending" ? '<progress aria-label="正在核验 Stripe 付款结果"></progress>' : ""}
+      </div>
+      ${checkoutSteps(progressStep)}
+      ${showOrder ? `<section class="checkout-status-order${kind === "paid" ? "" : " compact"}" aria-label="本次充值">
+        <span><b>${display.credits} 积分</b><em>本次套餐</em></span>
+        <span><b>$${dollars} USD</b><em>一次性付款</em></span>
+        ${kind === "paid" ? `<span><b>${balance} 分</b><em>充值积分余额</em></span>` : ""}
+      </section>` : ""}
+      <div class="checkout-status-note">
+        <b>付款结果只以 Stripe 签名通知为准</b>
+        <span>返回页面本身不会直接加分，避免重复到账或伪造支付结果。</span>
+      </div>
+      <div class="checkout-actions">
+        ${kind === "paid" ? `<button type="button" class="primary" data-checkout-resume>${checkoutChildTab ? "关闭此页，返回原页面" : "继续使用玄枢"}</button><button type="button" data-checkout-account>查看账户余额</button>` : ""}
+        ${kind === "paying" ? '<button type="button" class="primary" data-checkout-reopen>重新打开 Stripe 付款页</button><button type="button" data-checkout-account>留在账户等待</button>' : ""}
+        ${kind === "pending" ? '<button type="button" data-checkout-account>先到账户等待</button>' : ""}
+        ${kind === "delayed" || kind === "error" ? '<button type="button" class="primary" data-checkout-refresh>重新检查到账</button><button type="button" data-checkout-account>查看账户余额</button>' : ""}
+        ${kind === "cancelled" || kind === "expired" ? `${display.sku ? '<button type="button" class="primary" data-checkout-retry>重新确认这个套餐</button>' : ""}${checkoutChildTab ? '<button type="button" data-checkout-resume>关闭此页，返回原页面</button>' : '<button type="button" data-checkout-account>返回账户</button>'}` : ""}
+      </div>`;
+    body.querySelector("[data-checkout-account]")?.addEventListener("click", () => {
+      renderAccount(kind === "paid" ? "积分已经安全到账。" : "可以稍后刷新账户查看最新余额。", kind === "paid" ? "success" : "");
+      requestAnimationFrame(() => body.querySelector("[data-account-wallet]")?.scrollIntoView({ block: "center" }));
+    });
+    body.querySelector("[data-checkout-resume]")?.addEventListener("click", () => {
+      if (checkoutChildTab) {
+        window.close();
+        return;
+      }
+      const target = display.return_url;
+      close(() => {
+        const current = cleanReturnUrl();
+        if (target && target !== current) window.location.assign(target);
+      });
+    });
+    body.querySelector("[data-checkout-reopen]")?.addEventListener("click", () => {
+      const url = String(status?.checkout_url || "");
+      if (!url) {
+        renderCheckoutStatus("delayed", context, status);
+        return;
+      }
+      const reopened = window.open("about:blank", "xuanshu-stripe-checkout");
+      if (!reopened) {
+        renderCheckoutStatus("error", context, status);
+        return;
+      }
+      try {
+        if (context) reopened.sessionStorage.setItem(CHECKOUT_CONTEXT_KEY, JSON.stringify(context));
+        reopened.opener = null;
+        reopened.location.replace(url);
+      } catch (_) {
+        try { reopened.close(); } catch (_) {}
+        renderCheckoutStatus("error", context, status);
+      }
+    });
+    body.querySelector("[data-checkout-retry]")?.addEventListener("click", () => renderCheckoutReview(display.sku));
+    body.querySelector("[data-checkout-refresh]")?.addEventListener("click", () => {
+      const sessionId = String(status?.checkout_session_id || context?.checkout_session_id || "");
+      if (sessionId) pollCheckoutStatus(sessionId, context, true);
+      else renderAccount("没有找到这笔充值，请到账户确认余额。", "error");
+    });
+    focusCheckoutTitle();
+  }
+
+  async function pollCheckoutStatus(sessionId, context = null, options = {}) {
+    const token = ++checkoutPollToken;
+    const manual = options === true || options?.manual === true;
+    const attempts = Number(options?.attempts || (manual ? 8 : 12));
+    const intervalMs = Number(options?.intervalMs || 1250);
+    const initialKind = String(options?.initialKind || "pending");
+    renderCheckoutStatus(initialKind, context, {
+      checkout_session_id: sessionId,
+      checkout_url: String(options?.checkoutUrl || ""),
+    });
+    let lastStatus = null;
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      if (token !== checkoutPollToken) return;
+      if (attempt) await new Promise(resolve => setTimeout(resolve, intervalMs));
+      try {
+        const response = await fetch(`/api/billing/checkout-sessions/${encodeURIComponent(sessionId)}`, {
+          headers: { Accept: "application/json" },
+          credentials: "same-origin",
+        });
+        lastStatus = await readJson(response);
+        if (lastStatus.status === "paid") {
+          await refresh({ render: false }).catch(() => {});
+          renderCheckoutStatus("paid", context, lastStatus);
+          clearCheckoutContext();
+          return;
+        }
+        if (lastStatus.status === "expired") {
+          renderCheckoutStatus("expired", context, lastStatus);
+          clearCheckoutContext();
+          return;
+        }
+      } catch (_) {
+        if (attempt === attempts - 1) {
+          renderCheckoutStatus("error", context, lastStatus || { checkout_session_id: sessionId });
+          return;
+        }
+      }
+    }
+    renderCheckoutStatus("delayed", context, lastStatus || { checkout_session_id: sessionId });
+  }
+
+  function clearCheckoutQuery() {
+    const url = new URL(location.href);
+    url.searchParams.delete("checkout");
+    url.searchParams.delete("session_id");
+    url.searchParams.delete("order_id");
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
+  function handleCheckoutReturn() {
+    const params = new URLSearchParams(location.search);
+    const checkout = params.get("checkout");
+    if (checkout !== "success" && checkout !== "cancelled") return;
+    const sessionId = String(params.get("session_id") || "");
+    const orderId = String(params.get("order_id") || "");
+    const stored = readCheckoutContext();
+    const context = stored && (!orderId || !stored.order_id || stored.order_id === orderId) ? stored : null;
+    clearCheckoutQuery();
+    if (checkout === "cancelled") {
+      publishCheckoutEvent({ type: "cancelled", order_id: orderId || context?.order_id || "" });
+    } else if (sessionId) {
+      publishCheckoutEvent({ type: "returned", order_id: context?.order_id || "", session_id: sessionId });
+    }
+    ready().then(() => {
+      if (!state.authenticated) {
+        open("login", "请先登录，再查看这笔充值是否到账。");
+        return;
+      }
+      open("account");
+      if (checkout === "cancelled") {
+        renderCheckoutStatus("cancelled", context);
+        clearCheckoutContext();
+        return;
+      }
+      if (!sessionId) {
+        renderCheckoutStatus("error", context);
+        return;
+      }
+      pollCheckoutStatus(sessionId, context);
+    });
   }
 
   async function logout() {
@@ -788,18 +1245,20 @@
       prompt.dataset.invitePrompt = "";
       prompt.innerHTML = `
         <button type="button" data-invite-dismiss aria-label="关闭">×</button>
-        <span><b>朋友分享了一条真实卦帖</b><em>注册后可免费公开提问，私密提问每日有专属额度。</em></span>
+        <span><b>朋友分享了一条真实卦帖</b><em>注册后可免费公开提问，私密 AI 回答每天赠送积分。</em></span>
         <button type="button" data-invite-register>注册后提问</button>`;
       document.body.append(prompt);
       prompt.querySelector("[data-invite-dismiss]").addEventListener("click", () => prompt.remove());
-      prompt.querySelector("[data-invite-register]").addEventListener("click", () => open("register", "完成注册后，你的首次有效提问会为分享者增加每日私密额度。"));
+      prompt.querySelector("[data-invite-register]").addEventListener("click", () => open("register", "完成注册后，你的首次有效提问会为分享者增加每日免费积分。"));
     });
   }
 
   function init() {
     bindAccountButtons();
+    initCheckoutChannel();
     ready();
     showInvitePrompt();
+    handleCheckoutReturn();
     document.addEventListener("click", event => {
       const button = event.target.closest?.("[data-account-button]");
       if (button) bindAccountButtons(document);

@@ -46,11 +46,26 @@ function canStartInterpret(key = state.activeTab) {
   return false;
 }
 
+function privateCreditsUnavailable() {
+  if (lastInput?.visibility !== "private") return false;
+  const quota = Account?.snapshot?.()?.privateQuota;
+  return !!quota && !quota.can_start_answer;
+}
+
+function showPrivateCreditGate() {
+  toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", "warn");
+  Account?.open?.("topup", "可用积分已经用完。充值到账后，可以继续当前这份命盘或卦象的私密解读。");
+}
+
 function startThread(key = state.activeTab) {
   const t = tabOf(key);
   if (!t || state.streaming) return;
   if ((state.threads[key] || []).length) return;
   if (!canStartInterpret(key)) return;
+  if (privateCreditsUnavailable()) {
+    showPrivateCreditGate();
+    return;
+  }
   let q;
   if (state.system === "liuyao") {
     q = (lastPayload && lastPayload.question) || "请为我详断此卦。";
@@ -99,7 +114,8 @@ function pushAI(key, opts = {}) {
     body: "", streaming: true, streamable: true, streamedBody: false, followups: [], error: "",
     feedbackReaction: "", feedbackSaved: false, feedbackPending: false, feedbackError: "", publicPost: null,
     createdAt: Date.now(), completedAt: 0, finishWhenStreamCaughtUp: false, serverDone: false,
-    rawScenario: opts.scenario || "", rawTopic: opts.topic || "", rawQuestion: opts.question || "" };
+    rawScenario: opts.scenario || "", rawTopic: opts.topic || "", rawQuestion: opts.question || "",
+    credits: null };
   state.threads[key].push(msg);
   return msg;
 }
@@ -640,6 +656,7 @@ function renderThread() {
         : "";
       const byline = `<span class="ai-byline">${detailedWorkspaceActive() ? "复合推演" : "推演"}${m.scenario ? ` · ${esc(m.scenario)}` : ""}</span>`;
       html += `${byline}${elapsed}<div class="ai-body">${waiting}${renderBody(m.body)}${m.streaming ? `<span class="ai-cursor"></span>` : ""}${streamStatus}</div>`;
+      if (!m.streaming && m.credits) html += answerCreditsHtml(m.credits);
       html += aiFeedbackHtml(m);
       if (m.publicPost) {
         if (m.publicPost.status === "published") {
@@ -734,6 +751,19 @@ function renderBody(text) {
   return ChatRenderer.renderBody(text);
 }
 
+function answerCreditsHtml(credits) {
+  if (!credits || Number(credits.required_credits || 0) <= 0) return "";
+  const required = Number(credits.required_credits || 0);
+  const daily = Number(credits.daily_free_spent || 0);
+  const paid = Number(credits.paid_spent || 0);
+  const covered = Number(credits.platform_covered || 0);
+  if (covered > 0) {
+    return `<div class="ai-credit-settlement covered" role="status"><b>本次回答已完整送达</b><span>可用积分已经扣到 0；本次不足部分由体验保护覆盖。</span></div>`;
+  }
+  const sources = [daily ? `今日免费 ${daily}` : "", paid ? `充值积分 ${paid}` : ""].filter(Boolean).join(" + ");
+  return `<div class="ai-credit-settlement"><b>本次消耗 ${required} 分</b><span>${sources || "未扣充值积分"} · 今日免费剩余 ${Number(credits.daily_remaining || 0)} 分 · 充值剩余 ${Number(credits.paid_balance_after || 0)} 分</span></div>`;
+}
+
 /* ---------- 路由：用户问题 → scenario ---------- */
 function pickScenario(text) {
   if (state.system === "liuyao") return { scenario: "divination" };
@@ -745,6 +775,10 @@ function askText(text) {
   if (!text || state.streaming) return;
   const key = state.activeTab;
   if (!canStartInterpret(key)) return;
+  if (privateCreditsUnavailable()) {
+    showPrivateCreditGate();
+    return;
+  }
   pushUser(key, text);
   requestThreadScrollBottom();
   renderTabs();
@@ -800,6 +834,10 @@ async function requestInterpret(key, opts) {
       : "登录后即可开始 AI 解读；公开六爻不限次数。",
   });
   if (!loggedIn) return;
+  if (privateCreditsUnavailable()) {
+    showPrivateCreditGate();
+    return;
+  }
   state.streaming = true;
   syncComposerState();
   const msg = pushAI(key, opts);
@@ -959,6 +997,7 @@ function applyInterpretTask(msg, task) {
   }
   if (task.session_id) msg.sessionId = task.session_id;
   if (task.streamable) msg.streamable = true;
+  if (task.credits) msg.credits = { ...task.credits };
   if (msg.streamable && Object.prototype.hasOwnProperty.call(task, "answer") && !isTerminalTask(task)) {
     applyStreamingAnswer(msg, task.answer || "");
   }
