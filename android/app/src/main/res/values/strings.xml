@@ -16,6 +16,7 @@
     <string name="auth_login_code_send">发送登录验证码</string>
     <string name="auth_code_sending">正在发送…</string>
     <string name="auth_code_resend">重新发送验证码</string>
+    <string name="auth_code_resend_after">%1$d 秒后重发</string>
     <string name="auth_code_sent_hint">验证码已发送，邀请码会在提交注册时自动领取并核销。</string>
     <string name="auth_login_code_sent_hint">验证码已发送。历史账户会在验证后恢复原有档案，并使旧会话与旧密码失效。</string>
     <string name="auth_code_required">请输入 6 位邮箱验证码</string>

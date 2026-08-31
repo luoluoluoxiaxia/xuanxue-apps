@@ -58,6 +58,14 @@ data class VerificationCodeRequest(
 )
 
 @Serializable
+data class VerificationCodeResponse(
+    val ok: Boolean = false,
+    val message: String = "",
+    @SerialName("expires_in") val expiresIn: Int = 0,
+    @SerialName("retry_after") val retryAfter: Int = 0,
+)
+
+@Serializable
 data class RegisterRequest(
     val email: String,
     val password: String,

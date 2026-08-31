@@ -143,7 +143,9 @@ fun LoginScreen(
         if (registerMode || codeLoginMode) {
             val verificationPurpose = if (registerMode) "register" else "login"
             val codeSent = state.verificationCodeSent &&
-                state.verificationCodePurpose == verificationPurpose
+                state.verificationCodePurpose == verificationPurpose &&
+                state.verificationCodeEmail == email.trim().lowercase()
+            val retryAfter = if (codeSent) state.verificationCodeRetryAfter else 0
             GoldTextField(
                 value = verificationCode,
                 onValueChange = { value ->
@@ -158,12 +160,16 @@ fun LoginScreen(
             )
             TextButton(
                 onClick = ::sendCode,
-                enabled = !state.submitting && !state.sendingCode,
+                enabled = !state.submitting && !state.sendingCode && retryAfter == 0,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
                     text = when {
                         state.sendingCode -> stringResource(R.string.auth_code_sending)
+                        retryAfter > 0 -> stringResource(
+                            R.string.auth_code_resend_after,
+                            retryAfter,
+                        )
                         codeSent -> stringResource(R.string.auth_code_resend)
                         registerMode -> stringResource(R.string.auth_code_send)
                         else -> stringResource(R.string.auth_login_code_send)

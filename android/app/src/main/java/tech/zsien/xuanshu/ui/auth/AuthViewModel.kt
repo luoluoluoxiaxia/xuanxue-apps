@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tech.zsien.xuanshu.XuanshuApplication
 import tech.zsien.xuanshu.core.network.model.AccountResponse
@@ -25,6 +27,8 @@ data class AuthUiState(
     val sendingCode: Boolean = false,
     val verificationCodeSent: Boolean = false,
     val verificationCodePurpose: String? = null,
+    val verificationCodeEmail: String? = null,
+    val verificationCodeRetryAfter: Int = 0,
     val user: AccountUser? = null,
     val quota: PrivateQuota? = null,
     val error: String? = null,
@@ -39,6 +43,7 @@ class AuthViewModel(
 
     private val _state = MutableStateFlow(AuthUiState())
     val state: StateFlow<AuthUiState> = _state.asStateFlow()
+    private var verificationCooldownJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -62,24 +67,52 @@ class AuthViewModel(
     }
 
     fun sendVerificationCode(email: String, purpose: String) {
+        val normalizedEmail = email.trim().lowercase()
+        verificationCooldownJob?.cancel()
         _state.update {
             it.copy(
                 sendingCode = true,
                 verificationCodeSent = false,
                 verificationCodePurpose = null,
+                verificationCodeEmail = null,
+                verificationCodeRetryAfter = 0,
                 error = null,
             )
         }
         viewModelScope.launch {
-            repository.requestVerificationCode(email.trim(), purpose)
-                .onSuccess {
+            repository.requestVerificationCode(normalizedEmail, purpose)
+                .onSuccess { response ->
+                    val retryAfter = response.retryAfter.coerceIn(0, 3_600)
                     _state.update {
                         it.copy(
                             sendingCode = false,
                             verificationCodeSent = true,
                             verificationCodePurpose = purpose,
+                            verificationCodeEmail = normalizedEmail,
+                            verificationCodeRetryAfter = retryAfter,
                             error = null,
                         )
+                    }
+                    if (retryAfter > 0) {
+                        verificationCooldownJob = viewModelScope.launch {
+                            repeat(retryAfter) {
+                                delay(1_000)
+                                _state.update { current ->
+                                    if (
+                                        current.verificationCodePurpose == purpose &&
+                                        current.verificationCodeEmail == normalizedEmail
+                                    ) {
+                                        current.copy(
+                                            verificationCodeRetryAfter =
+                                                (current.verificationCodeRetryAfter - 1)
+                                                    .coerceAtLeast(0),
+                                        )
+                                    } else {
+                                        current
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 .onFailure { e ->
@@ -95,6 +128,7 @@ class AuthViewModel(
     }
 
     fun logout() {
+        verificationCooldownJob?.cancel()
         viewModelScope.launch {
             repository.logout()
             _state.value = AuthUiState(restoring = false)
@@ -117,10 +151,12 @@ class AuthViewModel(
     }
 
     private fun applyAccount(response: AccountResponse) {
+        verificationCooldownJob?.cancel()
         _state.update {
             it.copy(
                 submitting = false,
                 sendingCode = false,
+                verificationCodeRetryAfter = 0,
                 user = response.user,
                 quota = response.privateQuota,
                 error = null,

@@ -18,6 +18,7 @@ import tech.zsien.xuanshu.core.network.model.ProfileItem
 import tech.zsien.xuanshu.core.network.model.OkResponse
 import tech.zsien.xuanshu.core.network.model.RegisterRequest
 import tech.zsien.xuanshu.core.network.model.VerificationCodeRequest
+import tech.zsien.xuanshu.core.network.model.VerificationCodeResponse
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -39,7 +40,7 @@ interface XuanshuApi {
     suspend fun me(): AccountResponse
 
     @POST("api/auth/code")
-    suspend fun requestVerificationCode(@Body body: VerificationCodeRequest): OkResponse
+    suspend fun requestVerificationCode(@Body body: VerificationCodeRequest): VerificationCodeResponse
 
     @GET("api/auth/invite-code")
     suspend fun inviteCode(): InviteCodeResponse

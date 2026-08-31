@@ -7,6 +7,7 @@ import tech.zsien.xuanshu.core.network.model.LoginRequest
 import tech.zsien.xuanshu.core.network.model.OkResponse
 import tech.zsien.xuanshu.core.network.model.RegisterRequest
 import tech.zsien.xuanshu.core.network.model.VerificationCodeRequest
+import tech.zsien.xuanshu.core.network.model.VerificationCodeResponse
 
 class AccountRepository(
     private val api: XuanshuApi,
@@ -21,7 +22,10 @@ class AccountRepository(
         persist(api.login(LoginRequest(email = email, method = "code", code = code)))
     }
 
-    suspend fun requestVerificationCode(email: String, purpose: String): Result<OkResponse> = apiCall {
+    suspend fun requestVerificationCode(
+        email: String,
+        purpose: String,
+    ): Result<VerificationCodeResponse> = apiCall {
         api.requestVerificationCode(
             VerificationCodeRequest(email = email, purpose = purpose),
         )
