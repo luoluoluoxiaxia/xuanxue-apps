@@ -18,6 +18,8 @@
     <!-- ホーム -->
     <string name="home_greeting">本日の鑑定回数</string>
     <string name="home_quota">非公開の質問 残り %1$d / %2$d</string>
+    <string name="home_account_credits">アカウントポイント %1$d</string>
+    <string name="home_account_credits_hint">登録特典と購入ポイントに有効期限はありません</string>
     <string name="home_account">アカウント %1$s</string>
     <string name="home_start_bazi">四柱推命の命式を出す</string>
     <string name="home_start_liuyao">六爻で占う</string>

@@ -30,6 +30,8 @@
     <!-- 首页 -->
     <string name="home_greeting">今日可问</string>
     <string name="home_quota">私密提问剩余 %1$d / %2$d</string>
+    <string name="home_account_credits">账户积分 %1$d 分</string>
+    <string name="home_account_credits_hint">注册赠送与充值积分都不会过期</string>
     <string name="home_account">账号 %1$s</string>
     <string name="home_start_bazi">排八字命盘</string>
 

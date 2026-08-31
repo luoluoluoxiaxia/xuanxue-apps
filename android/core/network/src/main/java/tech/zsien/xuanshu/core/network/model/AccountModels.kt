@@ -15,6 +15,7 @@ data class AccountResponse(
     val user: AccountUser? = null,
     @SerialName("csrf_token") val csrfToken: String = "",
     @SerialName("private_quota") val privateQuota: PrivateQuota? = null,
+    @SerialName("credit_wallet") val creditWallet: CreditWallet? = null,
     @SerialName("session_token") val sessionToken: String = "",
     @SerialName("session_expires_in") val sessionExpiresIn: Long = 0L,
 )
@@ -40,6 +41,13 @@ data class PrivateQuota(
     @SerialName("max_total") val maxTotal: Int = 0,
     @SerialName("pending_referrals") val pendingReferrals: Int = 0,
     @SerialName("qualified_referrals") val qualifiedReferrals: Int = 0,
+)
+
+@Serializable
+data class CreditWallet(
+    val balance: Int = 0,
+    @SerialName("welcome_credits") val welcomeCredits: Int = 0,
+    @SerialName("available_credits") val availableCredits: Int = 0,
 )
 
 @Serializable

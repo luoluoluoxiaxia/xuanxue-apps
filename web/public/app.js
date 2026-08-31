@@ -1675,7 +1675,7 @@ function syncCastEntryMode() {
     const quota = account.privateQuota;
     const wallet = account.creditWallet;
     hint.textContent = combined
-      ? `默认命盘已带入${quota ? ` · 今日免费 ${quota.remaining}/${quota.total} 分` : ""}${wallet ? ` · 充值积分 ${Number(wallet.balance || 0)} 分` : ""}；完整回答后按实际消耗结算，仅账户可见。`
+      ? `默认命盘已带入${quota ? ` · 今日免费 ${quota.remaining}/${quota.total} 分` : ""}${wallet ? ` · 账户积分 ${Number(wallet.balance || 0)} 分` : ""}；完整回答后按实际消耗结算，仅账户可见。`
       : "写清时间范围和现实背景；请勿填写姓名、电话、住址或证件号。";
   }
 }
@@ -2031,7 +2031,7 @@ async function submitCast(ev) {
   if (!loggedIn) return;
   const answerQuota = Account?.snapshot()?.privateQuota;
   if (answerQuota && !answerQuota.can_start_answer) {
-    showCastError("今日免费积分与充值积分已用完；明日北京时间 0 点刷新，或到账户充值后继续。");
+    showCastError("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或到账户充值后继续。");
     Account?.open?.("topup", "可用积分已经用完。选择套餐并完成付款后，就能继续刚才的 AI 解读。");
     syncCastUI();
     return;

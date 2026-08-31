@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,13 @@ fun LoginScreen(
     var registerMode by rememberSaveable { mutableStateOf(false) }
     var codeLoginMode by rememberSaveable { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(state.error) {
+        if (state.error?.contains("邮箱验证") == true) {
+            registerMode = false
+            codeLoginMode = true
+        }
+    }
 
     fun submitLogin() {
         localError = null
