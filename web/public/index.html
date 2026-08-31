@@ -8,7 +8,7 @@
   try {
     const query = new URLSearchParams(location.search);
     const start = query.get("start");
-    const detailedEntry = start === "liuyao" && query.get("flow") === "detailed";
+    const detailedEntry = false;
     const route = history.state?.xuanshuHomeRoute;
     let resumeSystem = "";
     let resumeDetailed = false;

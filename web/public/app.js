@@ -341,6 +341,7 @@ let activePersonalCase = null;
 let activeDetailedBaziProfile = null;
 let detailedBaziProfileRequest = null;
 let pendingCombinedEntry = false;
+const DETAILED_PUBLIC_ENTRY_ENABLED = false;
 
 function setActivePersonalCase(item) {
   activePersonalCase = item && typeof item === "object" ? item : null;
@@ -3381,6 +3382,7 @@ function bind() {
   });
   document.addEventListener("xuanshu:startdetailed", event => {
     event.preventDefault();
+    if (!DETAILED_PUBLIC_ENTRY_ENABLED) return;
     openCastModal({
       clearQuestion: true,
       fresh: true,
@@ -3611,7 +3613,9 @@ async function init() {
   setupSidebarToggle();
   const query = new URLSearchParams(location.search);
   const start = query.get("start");
-  const detailedEntryRequested = start === "liuyao" && query.get("flow") === "detailed";
+  const detailedEntryRequested = DETAILED_PUBLIC_ENTRY_ENABLED
+    && start === "liuyao"
+    && query.get("flow") === "detailed";
   const directEntryRequested = start === "liuyao" || start === "bazi";
   // 只有从工作台本身刷新时才恢复上次盘面。
   // 首页和直接访问 `/` 即使存在恢复 Cookie，也必须停留在首页。

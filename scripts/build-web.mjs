@@ -76,6 +76,9 @@ for (const hiddenEntry of [
 ]) {
   if (html.includes(hiddenEntry)) fail(`hidden detailed-reading entry is public: ${hiddenEntry}`);
 }
+if (!html.includes("const detailedEntry = false;")) {
+  fail("hidden detailed-reading direct entry is enabled");
+}
 const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
 const expectedOrder = [
   "chat-render.js",
@@ -112,6 +115,11 @@ for (const source of scriptSources) {
 const core = readFileSync(join(publicDir, "modules", "core.js"), "utf8");
 if (!core.includes('location?.protocol === "https:" ? "; Secure" : ""')) {
   fail("resume cookies must be Secure on HTTPS");
+}
+
+const app = readFileSync(join(publicDir, "app.js"), "utf8");
+if (!app.includes("const DETAILED_PUBLIC_ENTRY_ENABLED = false;")) {
+  fail("hidden detailed-reading app entry is enabled");
 }
 
 const community = readFileSync(join(publicDir, "community.js"), "utf8");
