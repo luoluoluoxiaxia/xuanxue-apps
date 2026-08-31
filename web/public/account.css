@@ -159,6 +159,7 @@ body.account-dialog-open {
 
 .account-context-note.success { border-color: #cfe8dc; background: #eff9f4; color: var(--account-success); }
 .account-context-note.error { border-color: #ffd2d9; background: var(--account-accent-soft); color: var(--account-accent-strong); }
+.account-context-note.warn { border-color: #f0dfb7; background: #fff9e8; color: #76581f; }
 
 .account-archive-card {
   display: grid;
@@ -404,6 +405,232 @@ body.account-dialog-open {
 .account-quota-detail b { color: var(--account-ink); font: 600 11px/1.2 "Noto Sans SC", sans-serif; }
 .account-quota-detail em { color: var(--account-muted); font: normal 11px/1.4 "Noto Sans SC", sans-serif; }
 
+.account-wallet-card {
+  display: grid;
+  grid-template-columns: minmax(150px, .8fr) minmax(260px, 1.2fr);
+  gap: 16px 20px;
+  margin-top: 15px;
+  padding: 19px 20px;
+  border: 1px solid #ded7ff;
+  border-radius: 17px;
+  background: linear-gradient(135deg, #f7f5ff 0%, #fff 74%);
+}
+.account-wallet-balance { display: grid; align-content: center; gap: 5px; min-width: 0; }
+.account-wallet-balance > span { color: #5a526f; font: 600 12px/1.2 "Noto Sans SC", sans-serif; }
+.account-wallet-balance strong { display: flex; align-items: baseline; gap: 6px; color: #635bff; }
+.account-wallet-balance strong b { font: 700 36px/1 "Space Mono", monospace; }
+.account-wallet-balance strong i { font: normal 500 14px/1 "Noto Sans SC", sans-serif; }
+.account-wallet-balance > em { color: var(--account-muted); font: normal 10px/1.5 "Noto Sans SC", sans-serif; }
+.account-wallet-packs { display: grid; grid-template-columns: repeat(2, minmax(104px, 1fr)); gap: 8px; }
+.account-wallet-packs button {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid #d7d1ff;
+  border-radius: 11px;
+  background: #fff;
+  color: var(--account-ink);
+  cursor: pointer;
+  padding: 10px 11px;
+  text-align: left;
+}
+.account-wallet-packs button:hover:not(:disabled) { border-color: #8d86ff; background: #f8f7ff; }
+.account-wallet-packs button:focus-visible { outline: 3px solid rgba(99, 91, 255, .2); outline-offset: 2px; }
+.account-wallet-packs button.featured { border-color: #9f98ff; box-shadow: 0 8px 24px rgba(99, 91, 255, .09); }
+.account-wallet-packs button:disabled { cursor: not-allowed; opacity: .55; }
+.account-wallet-packs small {
+  position: absolute;
+  top: -8px;
+  right: 8px;
+  border-radius: 999px;
+  background: #635bff;
+  color: #fff;
+  padding: 3px 6px;
+  font: 600 8px/1 "Noto Sans SC", sans-serif;
+}
+.account-wallet-packs span { display: grid; gap: 3px; }
+.account-wallet-packs b { font: 650 11px/1.1 "Noto Sans SC", sans-serif; }
+.account-wallet-packs em { color: var(--account-muted); font: normal 9px/1.4 "Noto Sans SC", sans-serif; }
+.account-wallet-packs i { color: #635bff; font: normal 600 10px/1 "Noto Sans SC", sans-serif; }
+.account-wallet-card > p {
+  grid-column: 1 / -1;
+  margin: -3px 0 0;
+  color: var(--account-muted);
+  font: 400 10px/1.55 "Noto Sans SC", sans-serif;
+}
+
+.checkout-head,
+.checkout-status-head { display: grid; gap: 8px; }
+.checkout-head > button {
+  justify-self: start;
+  margin: -4px 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #635bff;
+  cursor: pointer;
+  font: 600 11px/1.3 "Noto Sans SC", sans-serif;
+}
+.checkout-head > button:hover { color: #4e46dc; }
+.checkout-head > button:focus-visible { outline: 3px solid rgba(99, 91, 255, .2); outline-offset: 4px; }
+.checkout-head > span,
+.checkout-status-head > span {
+  color: var(--account-accent-strong);
+  font: 650 11px/1.2 "Noto Sans SC", sans-serif;
+  letter-spacing: .12em;
+}
+.checkout-head h2,
+.checkout-status-head h2 {
+  margin: 0;
+  color: var(--account-ink);
+  font: 700 28px/1.25 "Noto Serif SC", serif;
+}
+.checkout-head h2:focus,
+.checkout-status-head h2:focus { outline: none; }
+.checkout-head p,
+.checkout-status-head p {
+  margin: 0;
+  color: var(--account-muted);
+  font: 400 12px/1.65 "Noto Sans SC", sans-serif;
+}
+.checkout-status-head progress {
+  width: 100%;
+  height: 5px;
+  margin-top: 5px;
+  accent-color: #635bff;
+}
+
+.checkout-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+  margin: 24px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.checkout-steps li {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  color: #a2a0aa;
+  font: 500 10px/1.2 "Noto Sans SC", sans-serif;
+}
+.checkout-steps li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 11px;
+  left: calc(50% + 17px);
+  width: calc(100% - 34px);
+  height: 1px;
+  background: #e2e0e8;
+}
+.checkout-steps b {
+  display: grid;
+  z-index: 1;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1px solid #dddbe4;
+  border-radius: 50%;
+  background: #fff;
+  font: 600 10px/1 "Space Mono", monospace;
+}
+.checkout-steps li.active { color: #4f4780; font-weight: 650; }
+.checkout-steps li.active b { border-color: #635bff; background: #635bff; color: #fff; }
+.checkout-steps li.done { color: #6e687c; }
+.checkout-steps li.done b { border-color: #bbb5ff; background: #f0eeff; color: #635bff; }
+.checkout-steps li.done::after { background: #bbb5ff; }
+
+.checkout-summary {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid #dcd7ff;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #f6f4ff 0%, #fff 72%);
+}
+.checkout-summary-main,
+.checkout-summary-price { display: grid; align-content: center; gap: 6px; }
+.checkout-summary-price { min-width: 118px; padding-left: 20px; border-left: 1px solid #e4e0ff; text-align: right; }
+.checkout-summary span { color: #66606f; font: 600 11px/1.2 "Noto Sans SC", sans-serif; }
+.checkout-summary strong { color: #635bff; font: 700 34px/1 "Space Mono", monospace; }
+.checkout-summary strong i { margin-left: 6px; font: normal 600 12px/1 "Noto Sans SC", sans-serif; }
+.checkout-summary-price strong { color: var(--account-ink); font-size: 28px; }
+.checkout-summary em { color: var(--account-muted); font: normal 10px/1.5 "Noto Sans SC", sans-serif; }
+
+.checkout-assurances {
+  display: grid;
+  gap: 1px;
+  margin-top: 15px;
+  overflow: hidden;
+  border: 1px solid var(--account-line);
+  border-radius: 14px;
+  background: var(--account-line);
+}
+.checkout-assurances p {
+  display: grid;
+  grid-template-columns: 132px 1fr;
+  gap: 12px;
+  margin: 0;
+  padding: 12px 14px;
+  background: #fff;
+}
+.checkout-assurances b { color: var(--account-ink); font: 600 11px/1.5 "Noto Sans SC", sans-serif; }
+.checkout-assurances span { color: var(--account-muted); font: 400 10px/1.55 "Noto Sans SC", sans-serif; }
+.checkout-fx-note { margin: 12px 2px 0; color: #8a8790; font: 400 9px/1.5 "Noto Sans SC", sans-serif; }
+
+.checkout-status-order {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #dedae9;
+  border-radius: 15px;
+  background: #dedae9;
+}
+.checkout-status-order.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.checkout-status-order span { display: grid; gap: 6px; padding: 16px 12px; background: #faf9ff; text-align: center; }
+.checkout-status-order b { color: var(--account-ink); font: 650 15px/1.2 "Space Mono", monospace; }
+.checkout-status-order em { color: var(--account-muted); font: normal 9px/1.3 "Noto Sans SC", sans-serif; }
+.checkout-status-note {
+  display: grid;
+  gap: 4px;
+  margin-top: 14px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #f5f5f6;
+}
+.checkout-status-note b { color: #54525a; font: 600 10px/1.4 "Noto Sans SC", sans-serif; }
+.checkout-status-note span { color: var(--account-muted); font: 400 9px/1.5 "Noto Sans SC", sans-serif; }
+
+.checkout-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-top: 20px;
+}
+.checkout-actions button {
+  min-height: 43px;
+  border: 1px solid var(--account-line);
+  border-radius: 11px;
+  background: #fff;
+  color: #54525a;
+  cursor: pointer;
+  padding: 11px 14px;
+  font: 600 11px/1.2 "Noto Sans SC", sans-serif;
+}
+.checkout-actions button:hover:not(:disabled) { border-color: #bbb5ff; background: #f7f5ff; color: #5149d8; }
+.checkout-actions button.primary { border-color: #635bff; background: #635bff; color: #fff; }
+.checkout-actions button.primary:hover:not(:disabled) { border-color: #5048e5; background: #5048e5; color: #fff; }
+.checkout-actions button:disabled { cursor: wait; opacity: .68; }
+.checkout-actions button:only-child { grid-column: 1 / -1; }
+.checkout-actions button:focus-visible { outline: 3px solid rgba(99, 91, 255, .2); outline-offset: 2px; }
+
 .account-referral-card {
   margin-top: 15px;
   padding: 19px;
@@ -458,6 +685,17 @@ body.account-dialog-open {
   .account-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 19px; }
   .account-dialog-body { padding: 22px 18px 20px; }
   .account-quota-card { grid-template-columns: 1fr; gap: 13px; }
+  .account-wallet-card { grid-template-columns: 1fr; }
+  .account-wallet-packs { grid-template-columns: 1fr; }
+  .checkout-summary { grid-template-columns: 1fr; gap: 16px; padding: 18px; }
+  .checkout-summary-price { min-width: 0; padding: 16px 0 0; border-top: 1px solid #e4e0ff; border-left: 0; text-align: left; }
+  .checkout-assurances p { grid-template-columns: 1fr; gap: 3px; }
+  .checkout-actions { grid-template-columns: 1fr; }
+  .checkout-actions .primary { order: -1; }
+  .checkout-status-order { grid-template-columns: 1fr; }
+  .checkout-status-order.compact { grid-template-columns: 1fr; }
+  .checkout-status-order span { grid-template-columns: 1fr 1fr; align-items: baseline; text-align: left; }
+  .checkout-status-order em { text-align: right; }
   .account-archive-card { grid-template-columns: minmax(0, 1fr) auto; gap: 11px; }
   .account-archive-detail { grid-column: 1 / -1; grid-row: 2; }
   .account-archive-copy > em { white-space: normal; }

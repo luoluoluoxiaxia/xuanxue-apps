@@ -31,7 +31,27 @@
     "updated_at": {"type": ["string", "null"]},
     "completed_at": {"type": ["string", "null"]},
     "personal_case_id": {"type": "string"},
-    "public_post": {"type": "object"}
+    "public_post": {"type": "object"},
+    "credits": {
+      "type": "object",
+      "required": [
+        "required_credits",
+        "daily_free_spent",
+        "paid_spent",
+        "platform_covered",
+        "daily_remaining",
+        "paid_balance_after"
+      ],
+      "properties": {
+        "required_credits": {"type": "integer", "minimum": 0},
+        "daily_free_spent": {"type": "integer", "minimum": 0},
+        "paid_spent": {"type": "integer", "minimum": 0},
+        "platform_covered": {"type": "integer", "minimum": 0},
+        "daily_remaining": {"type": "integer", "minimum": 0},
+        "paid_balance_after": {"type": "integer", "minimum": 0}
+      },
+      "additionalProperties": false
+    }
   },
   "additionalProperties": false
 }

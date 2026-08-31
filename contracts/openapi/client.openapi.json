@@ -287,6 +287,16 @@
             "title": "Authenticated",
             "type": "boolean"
           },
+          "credit_wallet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientCreditWallet"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "csrf_token": {
             "default": "",
             "title": "Csrf Token",
@@ -368,6 +378,45 @@
           "created_at"
         ],
         "title": "ClientAccountUser",
+        "type": "object"
+      },
+      "ClientAnswerCredits": {
+        "additionalProperties": false,
+        "properties": {
+          "daily_free_spent": {
+            "title": "Daily Free Spent",
+            "type": "integer"
+          },
+          "daily_remaining": {
+            "title": "Daily Remaining",
+            "type": "integer"
+          },
+          "paid_balance_after": {
+            "title": "Paid Balance After",
+            "type": "integer"
+          },
+          "paid_spent": {
+            "title": "Paid Spent",
+            "type": "integer"
+          },
+          "platform_covered": {
+            "title": "Platform Covered",
+            "type": "integer"
+          },
+          "required_credits": {
+            "title": "Required Credits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "required_credits",
+          "daily_free_spent",
+          "paid_spent",
+          "platform_covered",
+          "daily_remaining",
+          "paid_balance_after"
+        ],
+        "title": "ClientAnswerCredits",
         "type": "object"
       },
       "ClientAppVersion": {
@@ -1100,6 +1149,97 @@
         "title": "ClientChatMessage",
         "type": "object"
       },
+      "ClientCheckoutSession": {
+        "additionalProperties": false,
+        "properties": {
+          "checkout_session_id": {
+            "title": "Checkout Session Id",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "checkout_session_id",
+          "url",
+          "status"
+        ],
+        "title": "ClientCheckoutSession",
+        "type": "object"
+      },
+      "ClientCheckoutSessionInput": {
+        "additionalProperties": false,
+        "properties": {
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sku"
+        ],
+        "title": "ClientCheckoutSessionInput",
+        "type": "object"
+      },
+      "ClientCheckoutStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_total": {
+            "title": "Amount Total",
+            "type": "integer"
+          },
+          "checkout_session_id": {
+            "title": "Checkout Session Id",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/ClientCreditWallet"
+          }
+        },
+        "required": [
+          "order_id",
+          "checkout_session_id",
+          "status",
+          "sku",
+          "currency",
+          "amount_total",
+          "credits",
+          "wallet"
+        ],
+        "title": "ClientCheckoutStatus",
+        "type": "object"
+      },
       "ClientCommentCreated": {
         "additionalProperties": false,
         "properties": {
@@ -1676,6 +1816,180 @@
         "title": "ClientCommunityUpdate",
         "type": "object"
       },
+      "ClientCreditLedgerEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "balance_after": {
+            "title": "Balance After",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "entry_type": {
+            "title": "Entry Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "reference_id": {
+            "title": "Reference Id",
+            "type": "string"
+          },
+          "reference_type": {
+            "title": "Reference Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amount",
+          "balance_after",
+          "entry_type",
+          "reference_type",
+          "reference_id",
+          "created_at"
+        ],
+        "title": "ClientCreditLedgerEntry",
+        "type": "object"
+      },
+      "ClientCreditPack": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "estimated_margin_percent": {
+            "title": "Estimated Margin Percent",
+            "type": "number"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "unit_amount": {
+            "title": "Unit Amount",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sku",
+          "currency",
+          "unit_amount",
+          "credits",
+          "estimated_margin_percent",
+          "available"
+        ],
+        "title": "ClientCreditPack",
+        "type": "object"
+      },
+      "ClientCreditWallet": {
+        "additionalProperties": false,
+        "properties": {
+          "answer_in_progress": {
+            "default": false,
+            "title": "Answer In Progress",
+            "type": "boolean"
+          },
+          "available_credits": {
+            "default": 0,
+            "title": "Available Credits",
+            "type": "integer"
+          },
+          "balance": {
+            "title": "Balance",
+            "type": "integer"
+          },
+          "can_start_answer": {
+            "default": false,
+            "title": "Can Start Answer",
+            "type": "boolean"
+          },
+          "cost_budget_usd_per_credit": {
+            "title": "Cost Budget Usd Per Credit",
+            "type": "number"
+          },
+          "daily_bonus": {
+            "default": 0,
+            "title": "Daily Bonus",
+            "type": "integer"
+          },
+          "daily_grant": {
+            "default": 0,
+            "title": "Daily Grant",
+            "type": "integer"
+          },
+          "daily_remaining": {
+            "default": 0,
+            "title": "Daily Remaining",
+            "type": "integer"
+          },
+          "daily_total": {
+            "default": 0,
+            "title": "Daily Total",
+            "type": "integer"
+          },
+          "daily_used": {
+            "default": 0,
+            "title": "Daily Used",
+            "type": "integer"
+          },
+          "lifetime_credited": {
+            "title": "Lifetime Credited",
+            "type": "integer"
+          },
+          "lifetime_spent": {
+            "title": "Lifetime Spent",
+            "type": "integer"
+          },
+          "minimum_start_credits": {
+            "default": 1,
+            "title": "Minimum Start Credits",
+            "type": "integer"
+          },
+          "packs": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCreditPack"
+            },
+            "title": "Packs",
+            "type": "array"
+          },
+          "topup_enabled": {
+            "default": false,
+            "title": "Topup Enabled",
+            "type": "boolean"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "balance",
+          "lifetime_credited",
+          "lifetime_spent",
+          "updated_at",
+          "cost_budget_usd_per_credit"
+        ],
+        "title": "ClientCreditWallet",
+        "type": "object"
+      },
       "ClientEmptyState": {
         "additionalProperties": false,
         "description": "Serialize an intentionally empty display slot as ``{}``.",
@@ -1879,6 +2193,16 @@
               }
             ],
             "title": "Created At"
+          },
+          "credits": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientAnswerCredits"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "error": {
             "default": "",
@@ -2629,8 +2953,23 @@
       "ClientPrivateQuota": {
         "additionalProperties": false,
         "properties": {
+          "answer_in_progress": {
+            "default": false,
+            "title": "Answer In Progress",
+            "type": "boolean"
+          },
           "base": {
             "title": "Base",
+            "type": "integer"
+          },
+          "can_start_answer": {
+            "default": false,
+            "title": "Can Start Answer",
+            "type": "boolean"
+          },
+          "credit_balance": {
+            "default": 0,
+            "title": "Credit Balance",
             "type": "integer"
           },
           "date": {
@@ -2640,6 +2979,11 @@
           "max_total": {
             "title": "Max Total",
             "type": "integer"
+          },
+          "paid_available": {
+            "default": false,
+            "title": "Paid Available",
+            "type": "boolean"
           },
           "pending_referrals": {
             "title": "Pending Referrals",
@@ -3215,6 +3559,27 @@
           "retry_after"
         ],
         "title": "ClientVerificationCode",
+        "type": "object"
+      },
+      "ClientWallet": {
+        "additionalProperties": false,
+        "properties": {
+          "ledger": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCreditLedgerEntry"
+            },
+            "title": "Ledger",
+            "type": "array"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/ClientCreditWallet"
+          }
+        },
+        "required": [
+          "wallet",
+          "ledger"
+        ],
+        "title": "ClientWallet",
         "type": "object"
       },
       "CommentCreate": {
@@ -4743,6 +5108,101 @@
           }
         },
         "summary": "Api Auth Register"
+      }
+    },
+    "/api/billing/checkout-sessions": {
+      "post": {
+        "operationId": "api_create_checkout_session_api_billing_checkout_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClientCheckoutSessionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCheckoutSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Create Checkout Session"
+      }
+    },
+    "/api/billing/checkout-sessions/{session_id}": {
+      "get": {
+        "operationId": "api_checkout_session_status_api_billing_checkout_sessions__session_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCheckoutStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Checkout Session Status"
+      }
+    },
+    "/api/billing/wallet": {
+      "get": {
+        "operationId": "api_credit_wallet_api_billing_wallet_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientWallet"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Credit Wallet"
       }
     },
     "/api/chart": {

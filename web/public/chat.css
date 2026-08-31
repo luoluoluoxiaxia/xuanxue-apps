@@ -34,6 +34,13 @@
   animation:xz-scan 1.4s linear infinite;
 }
 .ai-stream-status{margin-top:10px;color:var(--weak,#6C665A);font-size:12px;line-height:1.7}
+.ai-credit-settlement{
+  display:flex;align-items:baseline;flex-wrap:wrap;gap:5px 10px;margin-top:13px;padding:9px 11px;
+  border:1px solid rgba(212,175,93,.24);background:rgba(212,175,93,.055);
+  color:var(--weak,#6C665A);font-size:11px;line-height:1.55;
+}
+.ai-credit-settlement b{color:var(--gold-dim,#C9B584);font-weight:700}
+.ai-credit-settlement.covered{border-color:rgba(212,175,93,.32);background:rgba(212,175,93,.075)}
 .ai-elapsed{
   position:absolute;top:0;right:0;min-width:88px;text-align:right;color:var(--weak,#6C665A);
   font-family:var(--mono,'Space Mono',monospace);font-size:11px;line-height:1.4;white-space:nowrap;font-variant-numeric:tabular-nums;
