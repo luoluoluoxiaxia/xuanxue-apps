@@ -664,8 +664,8 @@
 
   function packEstimate(pack) {
     return Number(pack?.credits || 0) >= 660
-      ? "约 75–115 次 AI 回答 · 赠 60 分"
-      : "约 30–57 次 AI 回答";
+      ? "约 33–44 次一事详断 · 普通回答约 75–115 次 · 赠 60 分"
+      : "约 15–20 次一事详断 · 普通回答约 30–57 次";
   }
 
   function renderAccount(message = "", tone = "") {
