@@ -41,23 +41,65 @@ import tech.zsien.xuanshu.ui.theme.XuanshuColors
 fun LoginScreen(
     state: AuthUiState,
     onLogin: (String, String) -> Unit,
-    onRegister: (String, String) -> Unit,
+    onLoginWithCode: (String, String) -> Unit,
+    onSendVerificationCode: (String, String) -> Unit,
+    onRegister: (String, String, String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     // 旋转屏幕或进程重建后不该把已输入的邮箱丢掉。
     var email by rememberSaveable { mutableStateOf("") }
     // 密码只保留在当前进程内，不能进入可恢复的 saved state。
     var password by remember { mutableStateOf("") }
+    var verificationCode by remember { mutableStateOf("") }
+    var registerMode by rememberSaveable { mutableStateOf(false) }
+    var codeLoginMode by rememberSaveable { mutableStateOf(false) }
     var localError by remember { mutableStateOf<String?>(null) }
 
-    fun validated(action: (String, String) -> Unit) {
+    fun submitLogin() {
         localError = null
         when {
             email.isBlank() -> localError = "EMAIL"
             password.isBlank() -> localError = "PASSWORD"
             else -> {
-                action(email, password)
+                onLogin(email, password)
                 password = ""
+            }
+        }
+    }
+
+    fun sendCode() {
+        localError = null
+        if (email.isBlank()) {
+            localError = "EMAIL"
+            return
+        }
+        onSendVerificationCode(email, if (registerMode) "register" else "login")
+    }
+
+    fun submitCodeLogin() {
+        localError = null
+        when {
+            email.isBlank() -> localError = "EMAIL"
+            verificationCode.length != 6 || verificationCode.any { !it.isDigit() } ->
+                localError = "CODE"
+            else -> {
+                onLoginWithCode(email, verificationCode)
+                verificationCode = ""
+            }
+        }
+    }
+
+    fun submitRegistration() {
+        localError = null
+        when {
+            email.isBlank() -> localError = "EMAIL"
+            password.isBlank() -> localError = "PASSWORD"
+            verificationCode.length != 6 || verificationCode.any { !it.isDigit() } ->
+                localError = "CODE"
+            else -> {
+                onRegister(email, password, verificationCode)
+                password = ""
+                verificationCode = ""
             }
         }
     }
@@ -98,21 +140,67 @@ fun LoginScreen(
             ),
         )
 
-        GoldTextField(
-            value = password,
-            onValueChange = { password = it },
-            label = stringResource(R.string.auth_password),
-            enabled = !state.submitting,
-            visualTransformation = PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done,
-            ),
-        )
+        if (registerMode || codeLoginMode) {
+            val verificationPurpose = if (registerMode) "register" else "login"
+            val codeSent = state.verificationCodeSent &&
+                state.verificationCodePurpose == verificationPurpose
+            GoldTextField(
+                value = verificationCode,
+                onValueChange = { value ->
+                    verificationCode = value.filter(Char::isDigit).take(6)
+                },
+                label = stringResource(R.string.auth_verification_code),
+                enabled = !state.submitting && !state.sendingCode,
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+            TextButton(
+                onClick = ::sendCode,
+                enabled = !state.submitting && !state.sendingCode,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = when {
+                        state.sendingCode -> stringResource(R.string.auth_code_sending)
+                        codeSent -> stringResource(R.string.auth_code_resend)
+                        registerMode -> stringResource(R.string.auth_code_send)
+                        else -> stringResource(R.string.auth_login_code_send)
+                    },
+                    color = XuanshuColors.GoldDim,
+                )
+            }
+            if (codeSent) {
+                Text(
+                    text = stringResource(
+                        if (registerMode) R.string.auth_code_sent_hint
+                        else R.string.auth_login_code_sent_hint,
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = XuanshuColors.Muted,
+                )
+            }
+        }
+
+        if (!codeLoginMode) {
+            GoldTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = stringResource(R.string.auth_password),
+                enabled = !state.submitting,
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Password,
+                    imeAction = ImeAction.Done,
+                ),
+            )
+        }
 
         val message = when (localError) {
             "EMAIL" -> stringResource(R.string.auth_email_required)
             "PASSWORD" -> stringResource(R.string.auth_password_required)
+            "CODE" -> stringResource(R.string.auth_code_required)
             else -> state.error
         }
         // 固定高度占位，出错时按钮不会被顶下去
@@ -124,7 +212,13 @@ fun LoginScreen(
         )
 
         Button(
-            onClick = { validated(onLogin) },
+            onClick = {
+                when {
+                    registerMode -> submitRegistration()
+                    codeLoginMode -> submitCodeLogin()
+                    else -> submitLogin()
+                }
+            },
             enabled = !state.submitting,
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
@@ -147,18 +241,53 @@ fun LoginScreen(
                 )
             }
             Text(
-                text = stringResource(R.string.auth_login),
+                text = stringResource(
+                    when {
+                        registerMode -> R.string.auth_register_submit
+                        codeLoginMode -> R.string.auth_code_login_submit
+                        else -> R.string.auth_login
+                    },
+                ),
                 style = MaterialTheme.typography.labelLarge,
             )
         }
 
+        if (!registerMode) {
+            TextButton(
+                onClick = {
+                    codeLoginMode = !codeLoginMode
+                    localError = null
+                    password = ""
+                    verificationCode = ""
+                },
+                enabled = !state.submitting,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = stringResource(
+                        if (codeLoginMode) R.string.auth_password_login
+                        else R.string.auth_code_login,
+                    ),
+                    color = XuanshuColors.GoldDim,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+
         TextButton(
-            onClick = { validated(onRegister) },
+            onClick = {
+                registerMode = !registerMode
+                codeLoginMode = false
+                localError = null
+                verificationCode = ""
+            },
             enabled = !state.submitting,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                text = stringResource(R.string.auth_register),
+                text = stringResource(
+                    if (registerMode) R.string.auth_back_to_login else R.string.auth_register,
+                ),
                 color = XuanshuColors.GoldDim,
                 style = MaterialTheme.typography.labelMedium,
             )

@@ -3661,6 +3661,7 @@
           },
           "contact": {
             "default": "",
+            "maxLength": 200,
             "title": "Contact",
             "type": "string"
           },
@@ -3677,11 +3678,14 @@
             "title": "Input"
           },
           "message": {
+            "maxLength": 4000,
+            "minLength": 1,
             "title": "Message",
             "type": "string"
           },
           "page": {
             "default": "",
+            "maxLength": 200,
             "title": "Page",
             "type": "string"
           },
@@ -3698,16 +3702,19 @@
           },
           "rating": {
             "default": "",
+            "maxLength": 30,
             "title": "Rating",
             "type": "string"
           },
           "session_id": {
             "default": "",
+            "maxLength": 64,
             "title": "Session Id",
             "type": "string"
           },
           "task_id": {
             "default": "",
+            "maxLength": 64,
             "title": "Task Id",
             "type": "string"
           }

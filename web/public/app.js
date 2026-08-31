@@ -2713,7 +2713,10 @@ async function submitFeedback(ev) {
   try {
     const r = await fetch("/api/feedback", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Xuanshu-Interaction": "same-origin-v1",
+      },
       body: JSON.stringify({
         rating: feedbackRating,
         message,

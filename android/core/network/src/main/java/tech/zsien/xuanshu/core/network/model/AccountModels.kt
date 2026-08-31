@@ -65,7 +65,7 @@ data class RegisterRequest(
     @SerialName("invite_code") val inviteCode: String? = null,
 )
 
-/** 邮件不可用期间的注册通道：一次性邀请码，用掉即失效。 */
+/** 注册资格凭证：仍须同时验证邮箱，一次性邀请码在成功注册后失效。 */
 @Serializable
 data class InviteCodeResponse(
     val code: String = "",

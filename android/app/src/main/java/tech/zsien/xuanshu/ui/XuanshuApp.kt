@@ -49,6 +49,8 @@ fun XuanshuApp(
         else -> LoginScreen(
             state = state,
             onLogin = viewModel::login,
+            onLoginWithCode = viewModel::loginWithCode,
+            onSendVerificationCode = viewModel::sendVerificationCode,
             onRegister = viewModel::register,
         )
     }

@@ -121,6 +121,19 @@ const app = readFileSync(join(publicDir, "app.js"), "utf8");
 if (!app.includes("const DETAILED_PUBLIC_ENTRY_ENABLED = false;")) {
   fail("hidden detailed-reading app entry is enabled");
 }
+if (!app.includes('"X-Xuanshu-Interaction": "same-origin-v1"')) {
+  fail("feedback submissions must carry same-origin interaction proof");
+}
+
+const account = readFileSync(join(publicDir, "account.js"), "utf8");
+for (const requiredAuthBoundary of [
+  "注册同时验证邀请码和邮箱所有权",
+  "{ email, password, code, invite_code: inviteCode }",
+]) {
+  if (!account.includes(requiredAuthBoundary)) {
+    fail(`account registration boundary missing ${requiredAuthBoundary}`);
+  }
+}
 
 const community = readFileSync(join(publicDir, "community.js"), "utf8");
 if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 2) {

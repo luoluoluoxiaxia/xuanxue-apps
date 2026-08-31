@@ -22,6 +22,9 @@ data class AuthUiState(
     /** 启动时先恢复本地令牌，恢复完成前不该闪一下登录页。 */
     val restoring: Boolean = true,
     val submitting: Boolean = false,
+    val sendingCode: Boolean = false,
+    val verificationCodeSent: Boolean = false,
+    val verificationCodePurpose: String? = null,
     val user: AccountUser? = null,
     val quota: PrivateQuota? = null,
     val error: String? = null,
@@ -54,8 +57,41 @@ class AuthViewModel(
         submit { repository.login(email.trim(), password) }
     }
 
-    fun register(email: String, password: String) {
-        submit { repository.registerWithInviteCode(email.trim(), password) }
+    fun loginWithCode(email: String, code: String) {
+        submit { repository.loginWithCode(email.trim(), code.trim()) }
+    }
+
+    fun sendVerificationCode(email: String, purpose: String) {
+        _state.update {
+            it.copy(
+                sendingCode = true,
+                verificationCodeSent = false,
+                verificationCodePurpose = null,
+                error = null,
+            )
+        }
+        viewModelScope.launch {
+            repository.requestVerificationCode(email.trim(), purpose)
+                .onSuccess {
+                    _state.update {
+                        it.copy(
+                            sendingCode = false,
+                            verificationCodeSent = true,
+                            verificationCodePurpose = purpose,
+                            error = null,
+                        )
+                    }
+                }
+                .onFailure { e ->
+                    _state.update {
+                        it.copy(sendingCode = false, error = e.message ?: "验证码发送失败")
+                    }
+                }
+        }
+    }
+
+    fun register(email: String, password: String, code: String) {
+        submit { repository.registerWithInviteCode(email.trim(), password, code.trim()) }
     }
 
     fun logout() {
@@ -84,6 +120,7 @@ class AuthViewModel(
         _state.update {
             it.copy(
                 submitting = false,
+                sendingCode = false,
                 user = response.user,
                 quota = response.privateQuota,
                 error = null,
