@@ -66,13 +66,14 @@
 
   function syncScreen(screen = document.body.dataset.screen || "landing") {
     const active = shouldShow(screen);
+    const community = screen === "landing" && location.hash === "#gua-square";
     const workbench = $("#personal-workbench");
     if (workbench) workbench.hidden = !active;
-    $$('[data-home-action-panel], [data-home-action-dock]').forEach(node => {
-      node.hidden = screen !== "landing" || active;
+    $$('[data-home-action-panel]').forEach(node => {
+      node.hidden = screen !== "landing" || active || community;
     });
     const square = $("#gua-square");
-    if (square) square.hidden = screen !== "landing" || active;
+    if (square) square.hidden = screen !== "landing" || active || !community;
     const footer = document.querySelector(".landing .hero-footer");
     if (footer) footer.hidden = active;
     document.body.dataset.homeExperience = active ? "personal" : "public";

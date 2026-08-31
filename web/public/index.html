@@ -34,6 +34,7 @@
           : route?.screen === "dash"
             ? (route.system === "bazi" || route.system === "liuyao" ? route.system : resumeSystem)
             : "landing";
+    if (navTarget === "community") document.documentElement.dataset.communityView = "true";
     if (start === "bazi" || start === "liuyao") document.documentElement.dataset.entryStart = start;
     if (!navTarget || navTarget === "landing") return;
     const syncInitialNavSelection = () => {
@@ -79,7 +80,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="community.css?v=community-48">
 <link rel="stylesheet" href="account.css?v=account-9">
-<link rel="stylesheet" href="style.css?v=design-152">
+<link rel="stylesheet" href="style.css?v=design-153">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-12">
 <link rel="stylesheet" href="chat.css?v=chat-16">
 <script type="application/ld+json">
@@ -318,39 +319,15 @@
     </dialog>
 
     <main id="home-main" class="hero-body" data-home-action-panel aria-labelledby="home-page-title" tabindex="-1">
-      <h1 id="home-page-title" class="sr-only-label">玄枢 · 免费八字排盘与六爻起卦 AI 解读</h1>
-      <div class="hero-main">
-        <div class="algorithm-grid" aria-label="选择法门">
-          <button type="button" class="algorithm-card primary" data-start-liuyao>
-            <span class="algo-k">问眼前</span>
-            <span class="algo-title">六爻起卦</span>
-            <span class="algo-body">适合感情、工作、选择、失物等具体问题。</span>
-            <span class="algo-action">去起一卦 <span>→</span></span>
-          </button>
-          <button type="button" class="algorithm-card" data-start-bazi>
-            <span class="algo-k">看长期</span>
-            <span class="algo-title">八字排盘</span>
-            <span class="algo-body">看命局、事业、财运、关系与大运流年。</span>
-            <span class="algo-action">去排命盘 <span>→</span></span>
-          </button>
-        </div>
-        <div class="hero-cta" aria-hidden="true">
-          <button type="button" id="btn-start" class="btn-gold">八字排盘</button>
-          <button type="button" id="btn-liuyao" class="btn-outline-dark">六爻起卦</button>
-        </div>
-      </div>
+      <section class="home-observatory-page">
+        <span class="home-observatory-kicker">观象台</span>
+        <h1 id="home-page-title">你的命盘与近况</h1>
+        <p>登录后，在这里查看每日与本月提示。</p>
+        <button type="button" class="home-observatory-login" data-account-button><span data-account-label>登录 / 注册</span></button>
+      </section>
     </main>
 
-    <nav class="home-action-dock" data-home-action-dock aria-label="快捷选择" aria-hidden="true">
-      <button type="button" class="home-action-dock-item is-liuyao" data-start-liuyao>
-        <b>六爻起卦</b><span>问眼前</span>
-      </button>
-      <button type="button" class="home-action-dock-item is-bazi" data-start-bazi>
-        <b>八字排盘</b><span>看长期</span>
-      </button>
-    </nav>
-
-    <aside id="gua-square" class="home-community" aria-labelledby="home-community-title">
+    <aside id="gua-square" class="home-community" aria-labelledby="home-community-title" tabindex="-1">
       <div class="home-community-card">
         <div class="home-community-head">
           <span class="home-community-kicker"><i></i>公开卦帖</span>
@@ -805,14 +782,14 @@
 <script src="regions.js?v=20260629"></script>
 <script src="account.js?v=account-17"></script>
 <script src="share-card.js?v=share-card-5"></script>
-<script src="personal-home.js?v=personal-workbench-10"></script>
+<script src="personal-home.js?v=personal-workbench-11"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
 <script src="modules/chat-copy.js?v=web-modules-1"></script>
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-5"></script>
-<script src="app.js?v=design-184"></script>
+<script src="modules/home-community.js?v=web-modules-6"></script>
+<script src="app.js?v=design-185"></script>
 <script src="modules/profile-workspace.js?v=web-modules-3"></script>
 <script src="modules/chat-workspace.js?v=web-modules-2"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
