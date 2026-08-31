@@ -101,7 +101,7 @@ fun CreditHistoryScreen(
             FilterRow(state = state, onFilter = onFilter)
 
             when {
-                state.loading && state.activity == null && state.orders == null -> {
+                state.loading -> {
                     Column(
                         modifier = Modifier.fillMaxWidth().weight(1f),
                         horizontalAlignment = Alignment.CenterHorizontally,
