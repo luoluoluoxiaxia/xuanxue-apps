@@ -70,6 +70,12 @@ for (const path of files.filter(path => /\.(?:js|mjs)$/.test(path))) {
 }
 
 const html = readFileSync(join(publicDir, "index.html"), "utf8");
+for (const hiddenEntry of [
+  'data-hero-nav="detailed"',
+  "data-open-detailed",
+]) {
+  if (html.includes(hiddenEntry)) fail(`hidden detailed-reading entry is public: ${hiddenEntry}`);
+}
 const scriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]);
 const expectedOrder = [
   "chat-render.js",
