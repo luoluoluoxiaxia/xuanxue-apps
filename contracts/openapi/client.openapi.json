@@ -1886,6 +1886,10 @@
           "unit_amount": {
             "title": "Unit Amount",
             "type": "integer"
+          },
+          "usage_estimate": {
+            "title": "Usage Estimate",
+            "type": "string"
           }
         },
         "required": [
@@ -1893,6 +1897,7 @@
           "currency",
           "unit_amount",
           "credits",
+          "usage_estimate",
           "estimated_margin_percent",
           "available"
         ],

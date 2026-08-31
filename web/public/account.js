@@ -663,9 +663,7 @@
   }
 
   function packEstimate(pack) {
-    return Number(pack?.credits || 0) >= 660
-      ? "约 75–115 次 AI 回答 · 赠 60 分"
-      : "约 30–57 次 AI 回答";
+    return String(pack?.usage_estimate || "按每次回答的实际消耗结算");
   }
 
   function renderAccount(message = "", tone = "") {
@@ -685,7 +683,7 @@
         ${message ? `<p class="account-context-note ${escapeHtml(tone)}">${escapeHtml(message)}</p>` : ""}
       </div>
       <a class="account-personal-home-link" href="/">
-        <span><b>打开观象台</b><em>本月宜忌 · 穿搭 · 一事详断</em></span><i>→</i>
+        <span><b>打开观象台</b><em>本月宜忌 · 穿搭 · 八字六爻</em></span><i>→</i>
       </a>
       <section class="account-archive-card${archiveTotal ? "" : " empty"}" aria-label="云端档案">
         <div class="account-archive-copy">
