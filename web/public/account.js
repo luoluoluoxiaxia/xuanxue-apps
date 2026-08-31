@@ -492,7 +492,7 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">邮件恢复前，点“领取邀请码”即可注册。公开提问不限次数；私密 AI 回答每天赠送积分。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">邮件恢复前，点“领取邀请码”即可注册。所有 AI 回答统一使用每日赠送或充值积分；公开只决定是否进入社区。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
         <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
@@ -1243,7 +1243,7 @@
       prompt.dataset.invitePrompt = "";
       prompt.innerHTML = `
         <button type="button" data-invite-dismiss aria-label="关闭">×</button>
-        <span><b>朋友分享了一条真实卦帖</b><em>注册后可免费公开提问，私密 AI 回答每天赠送积分。</em></span>
+        <span><b>朋友分享了一条真实卦帖</b><em>注册后每天领取免费积分；公开问题的 AI 解答也按同一规则结算。</em></span>
         <button type="button" data-invite-register>注册后提问</button>`;
       document.body.append(prompt);
       prompt.querySelector("[data-invite-dismiss]").addEventListener("click", () => prompt.remove());
