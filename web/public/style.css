@@ -5668,3 +5668,46 @@ html[data-community-view="true"] .landing .home-community{
   border-radius:0;
   box-shadow:none;
 }
+
+/* DASHBOARD LINE WORKSPACE · 右侧整体通过分隔线组织（design-154） */
+body[data-screen="dash"] .conversation{
+  background:#fff;
+  border:0;
+  border-left:1px solid var(--shell-line);
+  border-radius:0;
+  box-shadow:none;
+}
+body[data-screen="dash"] .conv-head{
+  background:#fff;
+  border-bottom:1px solid var(--shell-line);
+}
+body[data-screen="dash"] .chat-thread{background:#fff}
+body[data-screen="dash"] .chat-empty{
+  width:min(680px,calc(100% - 40px));
+  max-width:680px;
+  padding:24px 28px;
+  background:transparent;
+  border:0;
+  border-radius:0;
+}
+body[data-screen="dash"] .composer{
+  background:#fff;
+  border-top:1px solid var(--shell-line);
+}
+body[data-screen="dash"] .composer-box{
+  background:#fff;
+  border:1px solid var(--shell-line-strong);
+  border-radius:12px;
+}
+body[data-screen="dash"] .composer-box:focus-within{
+  background:#fff;
+  border-color:rgba(255,36,66,.3);
+  box-shadow:none;
+}
+@media(min-width:1024px){
+  body[data-screen="dash"] .workspace{
+    gap:16px;
+    padding:0 0 0 16px;
+  }
+  body[data-screen="dash"] .chart-rail{padding:16px 0}
+}
