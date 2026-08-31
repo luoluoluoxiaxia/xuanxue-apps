@@ -4727,6 +4727,7 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
 .profile-fab-state{color:var(--shell-accent-dark);border-color:var(--shell-line-strong)}
 .chart-mask{background:rgba(17,17,19,.25);backdrop-filter:blur(5px)}
 
+/* DASHBOARD SIDEBAR SEAM · 桌面导航与命盘页面共用同一条起始边（design-156） */
 @media(min-width:1121px){
   body[data-screen="birth"] .landing .hero-footer,
   body[data-screen="cast"] .landing .hero-footer,
@@ -4734,7 +4735,7 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
     position:fixed;
     right:0;
     bottom:0;
-    left:220px;
+    left:184px;
     z-index:50;
     width:auto;
     height:58px;
@@ -4746,7 +4747,7 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
     top:0;
     right:0;
     bottom:58px;
-    left:220px;
+    left:184px;
   }
 }
 
@@ -5177,7 +5178,8 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
   outline-offset:3px;
   transform:translateY(0);
 }
-:is(#home-main,#dashboard,#birth-modal,#cast-modal)[tabindex="-1"]:focus{outline:none}
+/* PAGE ROOT FOCUS SEAM · 整页切换不显示浏览器默认外框（design-157） */
+:is(#home-main,#personal-workbench,#gua-square,#dashboard,#birth-modal,#cast-modal)[tabindex="-1"]:focus{outline:none}
 .landing .home-community-all,
 .landing .home-community-empty-action,
 .landing .home-community-more,
@@ -5710,4 +5712,192 @@ body[data-screen="dash"] .composer-box:focus-within{
     padding:0 0 0 16px;
   }
   body[data-screen="dash"] .chart-rail{padding:16px 0}
+}
+
+/* DASHBOARD LINE CHART RAIL · 左侧盘面改为连续栏与内部网格线（design-155） */
+body[data-screen="dash"] .session-switcher{
+  gap:18px;
+  padding:0;
+  background:transparent;
+  border-radius:0;
+}
+body[data-screen="dash"] .session-btn{
+  position:relative;
+  padding:0 3px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+}
+body[data-screen="dash"] .session-btn.active{
+  color:var(--shell-text-strong);
+  background:transparent;
+  box-shadow:none;
+}
+body[data-screen="dash"] .session-btn.active::after{
+  content:"";
+  position:absolute;
+  right:3px;
+  bottom:-5px;
+  left:3px;
+  height:2px;
+  background:var(--shell-accent);
+  border-radius:99px;
+}
+body[data-screen="dash"] .chart-rail{
+  gap:0;
+  background:#fff;
+}
+body[data-screen="dash"] .natal-chart,
+body[data-screen="dash"] .stage-card{
+  padding:0;
+  overflow:visible;
+  background:transparent;
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+}
+body[data-screen="dash"] .stage-card{
+  border-top:1px solid var(--shell-line);
+}
+body[data-screen="dash"] .nc-head,
+body[data-screen="dash"] .stage-head{padding:20px 20px 16px}
+body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed){
+  gap:0;
+  padding:0 20px 16px;
+}
+body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed) .pillar{
+  padding:12px 4px 13px;
+  background:transparent;
+  border:0;
+  border-right:1px solid var(--shell-line);
+  border-radius:0;
+  box-shadow:none;
+  transform:none;
+  transition:background .16s,color .16s;
+}
+body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed) .pillar:last-child{border-right:0}
+body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed) .pillar:hover{
+  background:var(--shell-subtle);
+  border-color:var(--shell-line);
+  box-shadow:none;
+  transform:none;
+}
+body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed) .pillar.dm{
+  background:linear-gradient(180deg,var(--shell-accent-soft),rgba(255,244,246,.42));
+  border-color:var(--shell-line);
+  box-shadow:inset 0 2px 0 var(--shell-accent);
+}
+body[data-screen="dash"] .basic-hint{padding:0 20px 18px}
+body[data-screen="dash"] .natal-facts{
+  margin:0 20px;
+  padding:16px 0;
+  border-top:1px solid var(--shell-line);
+}
+body[data-screen="dash"] .natal-facts-grid{
+  overflow:visible;
+  background:transparent;
+  border:0;
+  border-radius:0;
+}
+body[data-screen="dash"] .natal-fact{padding:9px 8px}
+body[data-screen="dash"] .wuxing-bar{
+  gap:8px;
+  margin:0 20px;
+  padding:16px 0 20px;
+  border-top:1px solid var(--shell-line);
+}
+body[data-screen="dash"] .wx-complete-list{gap:0}
+body[data-screen="dash"] .wuxing-item{
+  padding:8px 0;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--shell-line);
+  border-radius:0;
+}
+body[data-screen="dash"] .wuxing-item:last-child{border-bottom:0}
+body[data-screen="dash"] .stage-rows.stage-rows-horizontal{
+  gap:0;
+  padding:0 20px 20px;
+}
+body[data-screen="dash"] .stage-rows-horizontal .stage-row{
+  min-height:122px;
+  padding:12px;
+  background:transparent;
+  border:0;
+  border-right:1px solid var(--shell-line);
+  border-radius:0;
+  box-shadow:none;
+}
+body[data-screen="dash"] .stage-rows-horizontal .stage-row:last-child{border-right:0}
+body[data-screen="dash"] .stage-rows-horizontal .stage-row:hover{
+  background:var(--shell-subtle);
+  border-color:var(--shell-line);
+  box-shadow:none;
+}
+body[data-screen="dash"] .stage-rows-horizontal .stage-row.cur{
+  background:linear-gradient(180deg,var(--shell-accent-soft),rgba(255,244,246,.42));
+  border-color:var(--shell-line);
+  box-shadow:inset 0 2px 0 var(--shell-accent);
+}
+body[data-screen="dash"] .dayun-timeline{padding:0 20px 20px}
+body[data-screen="dash"] .dayun-strip-main,
+body[data-screen="dash"] .liunian-strip{gap:0}
+body[data-screen="dash"] .dayun-strip-main .dayun-step-full,
+body[data-screen="dash"] .liunian-year-card{
+  background:transparent;
+  border:0;
+  border-right:1px solid var(--shell-line);
+  border-radius:0;
+  box-shadow:none;
+}
+body[data-screen="dash"] .dayun-strip-main .dayun-step-full:last-child,
+body[data-screen="dash"] .liunian-year-card:last-child{border-right:0}
+body[data-screen="dash"] .dayun-strip-main .dayun-step-full.selected,
+body[data-screen="dash"] .liunian-year-card.selected{
+  background:linear-gradient(180deg,var(--shell-accent-soft),rgba(255,244,246,.42));
+  border-color:var(--shell-line);
+  box-shadow:inset 0 2px 0 var(--shell-accent);
+}
+body[data-screen="dash"] .liunian-inline-detail{
+  padding:10px 0 0;
+  background:transparent;
+  border:0;
+  border-top:1px solid var(--shell-line);
+  border-radius:0;
+}
+body[data-screen="dash"] .pillars-grid.is-liuyao{padding:0 20px 18px}
+body[data-screen="dash"] .liuyao-focus-card{
+  margin-bottom:10px;
+  padding:14px 16px;
+  background:linear-gradient(90deg,var(--shell-accent-soft),rgba(255,244,246,.18));
+  border:0;
+  border-left:2px solid var(--shell-accent);
+  border-radius:0;
+}
+body[data-screen="dash"] .ly-row{
+  padding:10px 6px;
+  background:transparent;
+  border:0;
+  border-bottom:1px solid var(--shell-line);
+  border-radius:0;
+}
+body[data-screen="dash"] .ly-row:hover{background:var(--shell-subtle);border-color:var(--shell-line)}
+body[data-screen="dash"] .ly-row.moving{
+  background:linear-gradient(90deg,var(--shell-accent-soft),transparent);
+  border-color:var(--shell-line);
+}
+body[data-screen="dash"] .liuyao-question-card{
+  margin-top:14px;
+  padding:12px 0 0;
+  background:transparent;
+  border:0;
+  border-top:1px solid var(--shell-line);
+  border-radius:0;
+}
+@media(min-width:1024px){
+  body[data-screen="dash"] .workspace{
+    gap:0;
+    padding:0;
+  }
+  body[data-screen="dash"] .chart-rail{padding:0}
 }
