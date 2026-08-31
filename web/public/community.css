@@ -677,13 +677,20 @@ body[data-screen="landing"] .post-preview-dialog {
   font-size: 11px;
 }
 .comment-list { display: flex; flex-direction: column; gap: 0; }
-.comment { padding: 17px 0; border-bottom: 1px solid var(--line); }
+.comment { padding: 20px 0 22px; border-bottom: 1px solid var(--line); }
 .comment:first-child { padding-top: 0; }
-.comment-meta { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 9px; }
+.comment-meta { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-start; gap: 4px 10px; color: var(--muted); font-size: 9px; }
 .comment-meta b { color: var(--text); font-size: 11px; }
-.comment p { margin: 7px 0 0; white-space: pre-wrap; font-size: 12px; line-height: 1.72; }
-.comment-reply { margin: 12px 0 0 18px; padding: 11px 12px; background: var(--surface-subtle); border-left: 2px solid var(--accent); border-radius: 0 9px 9px 0; }
-.comment-reply-action { min-height: 30px; margin-top: 4px; padding: 0; color: var(--muted); background: transparent; border: 0; cursor: pointer; font-size: 9.5px; font-weight: 650; }
+.comment-meta time { font-variant-numeric: tabular-nums; }
+.comment p { max-width: 760px; margin: 7px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.72; }
+.comment-reply {
+  width: min(760px, calc(100% - 24px));
+  margin: 13px 0 0 24px;
+  padding: 3px 0 3px 15px;
+  background: transparent;
+  border-left: 1px solid var(--line-strong);
+}
+.comment-reply-action { display: inline-flex; min-width: 40px; min-height: 40px; align-items: center; margin-top: 1px; padding: 0; color: var(--muted-strong); background: transparent; border: 0; cursor: pointer; font-size: 9.5px; font-weight: 650; }
 .comment-reply-action:hover { color: var(--accent-dark); }
 .comment-composer { margin-top: 16px; }
 .comment-form {
@@ -1130,6 +1137,7 @@ body.share-card-open { overflow: hidden; }
   .post-head-actions .secondary-action,
   .post-head-actions .text-action { min-height: 42px; padding: 0 12px; }
   .reading-prose { font-size: 14px; line-height: 1.86; }
+  .comment-reply { width: calc(100% - 16px); margin-left: 16px; padding-left: 12px; }
   .comments-conversion { margin-top: 23px; }
   .post-back { min-height: 40px; align-items: center; margin-bottom: 14px; }
   .comments-conversion a { min-height: 40px; align-items: center; }
@@ -1295,6 +1303,7 @@ body.share-card-open { overflow: hidden; }
 }
 
 /* COMMUNITY NOTIFICATIONS · 赞、评论与回复汇总（community-47） */
+/* COMMUNITY THREADS · 回复改为轻量嵌套对话（community-48） */
 [data-community-notifications] { position: relative; }
 .community-notification-badge {
   position: absolute;
