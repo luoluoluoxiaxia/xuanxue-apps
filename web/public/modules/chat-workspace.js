@@ -46,15 +46,14 @@ function canStartInterpret(key = state.activeTab) {
   return false;
 }
 
-function privateCreditsUnavailable() {
-  if (lastInput?.visibility !== "private") return false;
+function answerCreditsUnavailable() {
   const quota = Account?.snapshot?.()?.privateQuota;
   return !!quota && !quota.can_start_answer;
 }
 
-function showPrivateCreditGate() {
+function showAnswerCreditGate() {
   toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", "warn");
-  Account?.open?.("topup", "可用积分已经用完。充值到账后，可以继续当前这份命盘或卦象的私密解读。");
+  Account?.open?.("topup", "可用积分已经用完。充值到账后，可以继续当前这份命盘或卦象的 AI 解读。");
 }
 
 function startThread(key = state.activeTab) {
@@ -62,8 +61,8 @@ function startThread(key = state.activeTab) {
   if (!t || state.streaming) return;
   if ((state.threads[key] || []).length) return;
   if (!canStartInterpret(key)) return;
-  if (privateCreditsUnavailable()) {
-    showPrivateCreditGate();
+  if (answerCreditsUnavailable()) {
+    showAnswerCreditGate();
     return;
   }
   let q;
@@ -775,8 +774,8 @@ function askText(text) {
   if (!text || state.streaming) return;
   const key = state.activeTab;
   if (!canStartInterpret(key)) return;
-  if (privateCreditsUnavailable()) {
-    showPrivateCreditGate();
+  if (answerCreditsUnavailable()) {
+    showAnswerCreditGate();
     return;
   }
   pushUser(key, text);
@@ -831,11 +830,11 @@ async function requestInterpret(key, opts) {
     mode: "register",
     message: state.system === "liuyao" && lastInput?.visibility === "private"
       ? "这是一条私密问题，请先登录后继续解读。"
-      : "登录后即可开始 AI 解读；公开六爻不限次数。",
+      : "登录后即可使用每日免费积分开始 AI 解读。",
   });
   if (!loggedIn) return;
-  if (privateCreditsUnavailable()) {
-    showPrivateCreditGate();
+  if (answerCreditsUnavailable()) {
+    showAnswerCreditGate();
     return;
   }
   state.streaming = true;
