@@ -1983,6 +1983,11 @@
           "updated_at": {
             "title": "Updated At",
             "type": "string"
+          },
+          "welcome_credits": {
+            "default": 0,
+            "title": "Welcome Credits",
+            "type": "integer"
           }
         },
         "required": [

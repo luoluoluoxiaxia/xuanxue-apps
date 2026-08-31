@@ -82,6 +82,21 @@ fun HomeScreen(
                             modifier = Modifier.padding(bottom = 7.dp),
                         )
                     }
+                    state.wallet?.let { wallet ->
+                        Text(
+                            text = stringResource(
+                                R.string.home_account_credits,
+                                wallet.balance,
+                            ),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = XuanshuColors.Gold,
+                        )
+                        Text(
+                            text = stringResource(R.string.home_account_credits_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = XuanshuColors.Muted,
+                        )
+                    }
                 }
             }
         }

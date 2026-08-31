@@ -298,7 +298,7 @@
           archives ? `${archives} 份云端档案` : "暂无云端档案",
           active ? `${active} 份档案正在生成` : "",
           quota ? `今日免费积分 ${quota.remaining}/${quota.total}` : "",
-          wallet ? `充值积分 ${Number(wallet.balance || 0)}` : "",
+          wallet ? `账户积分 ${Number(wallet.balance || 0)}` : "",
         ].filter(Boolean).join(" · ");
       } else {
         label.textContent = "登录 / 注册";
@@ -321,7 +321,7 @@
     dialog.setAttribute("aria-labelledby", "account-dialog-title");
     dialog.innerHTML = `
       <button type="button" class="account-dialog-close" data-account-close aria-label="关闭">×</button>
-      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b><em>每日免费 · 积分续用</em></span></div>
+      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b><em>每日免费 · 注册赠积分</em></span></div>
       <div class="account-dialog-body" data-account-body></div>`;
     document.body.append(dialog);
     body = dialog.querySelector("[data-account-body]");
@@ -451,7 +451,7 @@
       ? "注册同时验证邀请码和邮箱所有权；邀请码仅在成功注册时核销。公开卦帖不会展示邮箱。"
       : isCodeLogin
         ? "验证码 10 分钟内有效且只能使用一次；若收件箱里没有，请检查垃圾箱。公开卦帖不会展示邮箱。"
-        : "忘记密码或暂时不方便输入？可切换验证码登录。公开卦帖不会展示邮箱。";
+        : "老账号首次登录请切换验证码登录，完成一次邮箱验证后继续使用；公开卦帖不会展示邮箱。";
     body.innerHTML = `
       <div class="account-auth-head">
         <span>账户让你的私密问题与邀请奖励长期保留</span>
@@ -494,7 +494,7 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">先领取一次性邀请码，再向填写的邮箱发送验证码；两项都通过后才会创建账户。所有 AI 回答统一使用每日赠送或充值积分。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">先领取一次性邀请码，再向填写的邮箱发送验证码；两项都通过后才会创建账户。注册赠送积分会自动进入永久账户余额。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
         <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
@@ -643,7 +643,14 @@
       const payload = await readJson(response);
       const shouldResume = pendingLogin.length > 0;
       apply(payload);
-      renderAccount(isRegister ? "邮箱已验证，账户已创建，邀请码已经核销。" : "已登录。", "success");
+      const welcomeCredits = Number(state.creditWallet?.welcome_credits || 0);
+      const walletBalance = Number(state.creditWallet?.balance || 0);
+      const successMessage = isRegister
+        ? `邮箱已验证，账户已创建，${welcomeCredits} 积分已到账。`
+        : isCodeLogin
+          ? `邮箱验证完成，已登录。账户积分余额 ${walletBalance} 分。`
+          : "已登录。";
+      renderAccount(successMessage, "success");
       if (shouldResume) {
         await close();
         resolvePending(true);
@@ -652,6 +659,10 @@
         requestAnimationFrame(() => body.querySelector("[data-account-archives], [data-account-start-bazi]")?.focus({ preventScroll: true }));
       }
     } catch (reason) {
+      if (!isRegister && !isCodeLogin && String(reason?.message || "").includes("邮箱验证")) {
+        renderAuth("login_code", reason.message, email);
+        return;
+      }
       error.textContent = reason?.message || "操作失败，请稍后再试";
       error.hidden = false;
       submit.disabled = false;
@@ -719,9 +730,9 @@
       </section>
       <section class="account-wallet-card" data-account-wallet aria-label="玄枢算力积分余额">
         <div class="account-wallet-balance">
-          <span>充值积分</span>
+          <span>账户积分</span>
           <strong><b>${Number(wallet.balance || 0)}</b><i>分</i></strong>
-          <em>不会过期 · 每次完整回答后按实际消耗结算</em>
+          <em>注册赠送与充值积分都不会过期 · 完整回答后结算</em>
         </div>
         <div class="account-wallet-packs">
           ${packs.map(pack => `
@@ -1014,7 +1025,7 @@
       paid: {
         eyebrow: "充值完成",
         title: `${display.credits} 积分已到账`,
-        description: `充值积分余额现在是 ${balance} 分，可以继续使用私密 AI 回答。`,
+        description: `账户积分余额现在是 ${balance} 分，可以继续使用私密 AI 回答。`,
       },
       cancelled: {
         eyebrow: "付款已取消",
@@ -1046,7 +1057,7 @@
       ${showOrder ? `<section class="checkout-status-order${kind === "paid" ? "" : " compact"}" aria-label="本次充值">
         <span><b>${display.credits} 积分</b><em>本次套餐</em></span>
         <span><b>$${dollars} USD</b><em>一次性付款</em></span>
-        ${kind === "paid" ? `<span><b>${balance} 分</b><em>充值积分余额</em></span>` : ""}
+        ${kind === "paid" ? `<span><b>${balance} 分</b><em>账户积分余额</em></span>` : ""}
       </section>` : ""}
       <div class="checkout-status-note">
         <b>付款结果只以 Stripe 签名通知为准</b>
