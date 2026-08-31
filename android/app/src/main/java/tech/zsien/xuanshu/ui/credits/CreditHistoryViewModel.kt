@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import tech.zsien.xuanshu.XuanshuApplication
 import tech.zsien.xuanshu.core.network.model.CreditActivityPage
@@ -46,6 +47,8 @@ class CreditHistoryViewModel(
 
     private val _state = MutableStateFlow(CreditHistoryUiState())
     val state: StateFlow<CreditHistoryUiState> = _state.asStateFlow()
+    private var loadJob: Job? = null
+    private var loadGeneration = 0L
 
     init {
         load(page = 1)
@@ -76,26 +79,36 @@ class CreditHistoryViewModel(
     private fun load(page: Int) {
         val tab = _state.value.tab
         val filter = _state.value.filter
+        val generation = ++loadGeneration
+        loadJob?.cancel()
         _state.update { it.copy(loading = true, error = null) }
-        viewModelScope.launch {
-            val result = if (tab == CreditHistoryTab.ACTIVITY) {
-                repository.creditActivity(page, filter).map { payload ->
-                    _state.update {
-                        it.copy(loading = false, activity = payload, error = null)
+        loadJob = viewModelScope.launch {
+            if (tab == CreditHistoryTab.ACTIVITY) {
+                repository.creditActivity(page, filter)
+                    .onSuccess { payload ->
+                        if (generation != loadGeneration) return@onSuccess
+                        _state.update {
+                            it.copy(loading = false, activity = payload, error = null)
+                        }
                     }
-                }
+                    .onFailure { applyFailure(generation, it) }
             } else {
-                repository.paymentOrders(page, filter).map { payload ->
-                    _state.update {
-                        it.copy(loading = false, orders = payload, error = null)
+                repository.paymentOrders(page, filter)
+                    .onSuccess { payload ->
+                        if (generation != loadGeneration) return@onSuccess
+                        _state.update {
+                            it.copy(loading = false, orders = payload, error = null)
+                        }
                     }
-                }
+                    .onFailure { applyFailure(generation, it) }
             }
-            result.onFailure { reason ->
-                _state.update {
-                    it.copy(loading = false, error = reason.message ?: "积分明细加载失败")
-                }
-            }
+        }
+    }
+
+    private fun applyFailure(generation: Long, reason: Throwable) {
+        if (generation != loadGeneration) return
+        _state.update {
+            it.copy(loading = false, error = reason.message ?: "积分明细加载失败")
         }
     }
 

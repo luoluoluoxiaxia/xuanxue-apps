@@ -186,6 +186,7 @@
   let cooldownTimer = null;
   let accountScrollPosition = null;
   let checkoutPollToken = 0;
+  let creditHistoryRequestToken = 0;
   let checkoutChannel = null;
   const codeCooldownUntil = { register: 0, login: 0 };
   const ACCOUNT_OVERLAY_ID = "account-dialog";
@@ -917,6 +918,7 @@
       renderAuth("login_password", "请先登录，再查看积分明细。");
       return;
     }
+    const requestToken = ++creditHistoryRequestToken;
     const normalizedTab = tab === "orders" ? "orders" : "activity";
     body.innerHTML = creditHistoryShell(normalizedTab);
     bindCreditHistoryFrame(normalizedTab);
@@ -929,6 +931,7 @@
         cache: "no-store",
       });
       const payload = await readJson(response);
+      if (requestToken !== creditHistoryRequestToken) return;
       const content = body.querySelector("[data-credit-history-content]");
       if (!content) return;
       content.innerHTML = normalizedTab === "orders"
@@ -941,6 +944,7 @@
         button.addEventListener("click", () => renderCreditHistory(normalizedTab, Number(button.dataset.creditPage || 1), filter));
       });
     } catch (reason) {
+      if (requestToken !== creditHistoryRequestToken) return;
       const content = body.querySelector("[data-credit-history-content]");
       if (!content) return;
       content.innerHTML = `<div class="credit-history-empty error"><b>暂时无法读取积分明细</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-credit-retry>重新加载</button></div>`;
