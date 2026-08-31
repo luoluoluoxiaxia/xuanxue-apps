@@ -3,8 +3,10 @@ package tech.zsien.xuanshu.data
 import tech.zsien.xuanshu.core.network.XuanshuApi
 import tech.zsien.xuanshu.core.network.apiCall
 import tech.zsien.xuanshu.core.network.model.AccountResponse
+import tech.zsien.xuanshu.core.network.model.CreditActivityPage
 import tech.zsien.xuanshu.core.network.model.LoginRequest
 import tech.zsien.xuanshu.core.network.model.OkResponse
+import tech.zsien.xuanshu.core.network.model.PaymentOrderPage
 import tech.zsien.xuanshu.core.network.model.RegisterRequest
 import tech.zsien.xuanshu.core.network.model.VerificationCodeRequest
 import tech.zsien.xuanshu.core.network.model.VerificationCodeResponse
@@ -51,6 +53,14 @@ class AccountRepository(
     }
 
     suspend fun refresh(): Result<AccountResponse> = apiCall { api.me() }
+
+    suspend fun creditActivity(page: Int, kind: String): Result<CreditActivityPage> = apiCall {
+        api.creditActivity(page = page, kind = kind)
+    }
+
+    suspend fun paymentOrders(page: Int, status: String): Result<PaymentOrderPage> = apiCall {
+        api.paymentOrders(page = page, status = status)
+    }
 
     suspend fun logout(): Result<Unit> = apiCall {
         // 令牌可能已经失效，服务端拒绝也无所谓——本地会话必须清干净。

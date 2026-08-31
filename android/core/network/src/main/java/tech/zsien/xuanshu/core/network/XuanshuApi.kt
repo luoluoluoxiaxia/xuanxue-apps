@@ -4,6 +4,7 @@ import tech.zsien.xuanshu.core.network.model.AccountResponse
 import tech.zsien.xuanshu.core.network.model.AppVersion
 import tech.zsien.xuanshu.core.network.model.ChartRequest
 import tech.zsien.xuanshu.core.network.model.ChartResponse
+import tech.zsien.xuanshu.core.network.model.CreditActivityPage
 import tech.zsien.xuanshu.core.network.model.InterpretRequest
 import tech.zsien.xuanshu.core.network.model.InterpretTask
 import tech.zsien.xuanshu.core.network.model.InviteCodeResponse
@@ -15,6 +16,7 @@ import tech.zsien.xuanshu.core.network.model.CommunityPost
 import tech.zsien.xuanshu.core.network.model.InterpretHistoryItem
 import tech.zsien.xuanshu.core.network.model.LoginRequest
 import tech.zsien.xuanshu.core.network.model.ProfileItem
+import tech.zsien.xuanshu.core.network.model.PaymentOrderPage
 import tech.zsien.xuanshu.core.network.model.OkResponse
 import tech.zsien.xuanshu.core.network.model.RegisterRequest
 import tech.zsien.xuanshu.core.network.model.VerificationCodeRequest
@@ -53,6 +55,18 @@ interface XuanshuApi {
 
     @POST("api/auth/logout")
     suspend fun logout(): OkResponse
+
+    @GET("api/billing/activity")
+    suspend fun creditActivity(
+        @Query("page") page: Int = 1,
+        @Query("kind") kind: String = "all",
+    ): CreditActivityPage
+
+    @GET("api/billing/orders")
+    suspend fun paymentOrders(
+        @Query("page") page: Int = 1,
+        @Query("status") status: String = "all",
+    ): PaymentOrderPage
 
     @POST("api/chart")
     suspend fun chart(@Body body: ChartRequest): ChartResponse
