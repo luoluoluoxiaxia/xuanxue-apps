@@ -3632,6 +3632,7 @@ async function init() {
   const dashboardRefreshRequested = currentHomeRoute()?.screen === "dash";
   const communityRequested = !query.get("view") && start !== "liuyao" && start !== "bazi" && location.hash === HOME_COMMUNITY_HASH;
   const archivesRequested = query.get("view") === "archives";
+  const creditsRequested = query.get("view") === "credits";
   const routeSystem = currentHomeRoute()?.system;
   const resumeState = dashboardRefreshRequested ? readResumeCookie() : null;
   const resumeSystem = resumeState?.system || "";
@@ -3654,7 +3655,7 @@ async function init() {
   } else {
     showScreen("landing", { preserveEntryLocation: true });
   }
-  if (archivesRequested) setPrimaryNavCurrent("profile");
+  if (archivesRequested || creditsRequested) setPrimaryNavCurrent("profile");
   else if (communityRequested) setPrimaryNavCurrent("community");
   else if (personalCaseId) setPrimaryNavCurrent("detailed");
   else if (dashboardRefreshRequested && (dashboardNavSystem === "bazi" || dashboardNavSystem === "liuyao")) setPrimaryNavCurrent(dashboardNavSystem);
@@ -3706,6 +3707,12 @@ async function init() {
     if (accountState?.authenticated) await openProfileLibrary({ includeCurrent: !!lastPayload, startup: true });
     else Account.requireLogin({ mode: "login", message: "登录后即可查看这个账户在其它设备保存的档案。" })
       .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, startup: true }); });
+    return;
+  }
+  if (creditsRequested) {
+    if (accountState?.authenticated) Account.open("credits");
+    else Account.requireLogin({ mode: "login", message: "登录后即可查看完整积分明细和充值记录。" })
+      .then(ok => { if (ok) Account.open("credits"); });
     return;
   }
   if (resumedWorkspace) {
