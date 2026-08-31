@@ -2706,6 +2706,13 @@ async function submitFeedback(ev) {
     $("#feedback-message").focus();
     return;
   }
+  if (message.length > 4000) {
+    const er = $("#feedback-error");
+    er.textContent = "反馈内容最多 4000 个字";
+    er.hidden = false;
+    $("#feedback-message").focus();
+    return;
+  }
   const btn = $("#feedback-submit");
   btn.disabled = true;
   btn.textContent = "提交中…";
@@ -2713,7 +2720,10 @@ async function submitFeedback(ev) {
   try {
     const r = await fetch("/api/feedback", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "X-Xuanshu-Interaction": "same-origin-v1",
+      },
       body: JSON.stringify({
         rating: feedbackRating,
         message,

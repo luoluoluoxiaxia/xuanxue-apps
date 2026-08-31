@@ -446,9 +446,9 @@
   function renderAuth(mode, message = "", emailValue = "") {
     const isRegister = mode === "register";
     const isCodeLogin = mode === "login_code";
-    const usesCode = isCodeLogin;
+    const usesCode = isRegister || isCodeLogin;
     const privacyNote = isRegister
-      ? "邀请码只在成功注册时核销，一码一用；公开卦帖不会展示邮箱。"
+      ? "注册同时验证邀请码和邮箱所有权；邀请码仅在成功注册时核销。公开卦帖不会展示邮箱。"
       : isCodeLogin
         ? "验证码 10 分钟内有效且只能使用一次；若收件箱里没有，请检查垃圾箱。公开卦帖不会展示邮箱。"
         : "忘记密码或暂时不方便输入？可切换验证码登录。公开卦帖不会展示邮箱。";
@@ -481,7 +481,9 @@
               <strong data-registration-code-value></strong>
               <em data-registration-code-remaining></em>
             </aside>
-          </div>` : usesCode ? `
+          </div>
+          <div class="account-code-group"><label for="account-code-input"><span>邮箱验证码</span></label><span class="account-code-field"><input id="account-code-input" type="text" name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="6 位验证码"><button type="button" data-code-send>发送验证码</button></span></div>
+          <p class="account-code-status" data-code-status role="status" aria-live="polite" hidden></p>` : usesCode ? `
           <div class="account-code-group"><label for="account-code-input"><span>邮箱验证码</span></label><span class="account-code-field"><input id="account-code-input" type="text" name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="6 位验证码"><button type="button" data-code-send>发送验证码</button></span></div>
           <p class="account-code-status" data-code-status role="status" aria-live="polite" hidden></p>` : ""}
         ${isCodeLogin ? "" : `
@@ -492,7 +494,7 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">邮件恢复前，点“领取邀请码”即可注册。所有 AI 回答统一使用每日赠送或充值积分；公开只决定是否进入社区。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">先领取一次性邀请码，再向填写的邮箱发送验证码；两项都通过后才会创建账户。所有 AI 回答统一使用每日赠送或充值积分。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
         <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
@@ -628,7 +630,7 @@
     try {
       const endpoint = isRegister ? "register" : "login";
       const requestBody = isRegister
-        ? { email, password, invite_code: inviteCode }
+        ? { email, password, code, invite_code: inviteCode }
         : isCodeLogin
           ? { email, code, method: "code" }
           : { email, password, method: "password" };
@@ -641,7 +643,7 @@
       const payload = await readJson(response);
       const shouldResume = pendingLogin.length > 0;
       apply(payload);
-      renderAccount(isRegister ? "账户已创建，邀请码已经核销。" : "已登录。", "success");
+      renderAccount(isRegister ? "邮箱已验证，账户已创建，邀请码已经核销。" : "已登录。", "success");
       if (shouldResume) {
         await close();
         resolvePending(true);

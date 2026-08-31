@@ -4,7 +4,10 @@ import tech.zsien.xuanshu.core.network.XuanshuApi
 import tech.zsien.xuanshu.core.network.apiCall
 import tech.zsien.xuanshu.core.network.model.AccountResponse
 import tech.zsien.xuanshu.core.network.model.LoginRequest
+import tech.zsien.xuanshu.core.network.model.OkResponse
 import tech.zsien.xuanshu.core.network.model.RegisterRequest
+import tech.zsien.xuanshu.core.network.model.VerificationCodeRequest
+import tech.zsien.xuanshu.core.network.model.VerificationCodeResponse
 
 class AccountRepository(
     private val api: XuanshuApi,
@@ -15,10 +18,36 @@ class AccountRepository(
         persist(api.login(LoginRequest(email = email, method = "password", password = password)))
     }
 
-    /** 邮件通道不可用期间，用一次性邀请码注册。 */
-    suspend fun registerWithInviteCode(email: String, password: String): Result<AccountResponse> = apiCall {
+    suspend fun loginWithCode(email: String, code: String): Result<AccountResponse> = apiCall {
+        persist(api.login(LoginRequest(email = email, method = "code", code = code)))
+    }
+
+    suspend fun requestVerificationCode(
+        email: String,
+        purpose: String,
+    ): Result<VerificationCodeResponse> = apiCall {
+        api.requestVerificationCode(
+            VerificationCodeRequest(email = email, purpose = purpose),
+        )
+    }
+
+    /** 邀请资格与邮箱所有权必须同时验证。 */
+    suspend fun registerWithInviteCode(
+        email: String,
+        password: String,
+        code: String,
+    ): Result<AccountResponse> = apiCall {
         val invite = api.inviteCode()
-        persist(api.register(RegisterRequest(email = email, password = password, inviteCode = invite.code)))
+        persist(
+            api.register(
+                RegisterRequest(
+                    email = email,
+                    password = password,
+                    code = code,
+                    inviteCode = invite.code,
+                ),
+            ),
+        )
     }
 
     suspend fun refresh(): Result<AccountResponse> = apiCall { api.me() }

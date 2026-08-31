@@ -58,6 +58,14 @@ data class VerificationCodeRequest(
 )
 
 @Serializable
+data class VerificationCodeResponse(
+    val ok: Boolean = false,
+    val message: String = "",
+    @SerialName("expires_in") val expiresIn: Int = 0,
+    @SerialName("retry_after") val retryAfter: Int = 0,
+)
+
+@Serializable
 data class RegisterRequest(
     val email: String,
     val password: String,
@@ -65,7 +73,7 @@ data class RegisterRequest(
     @SerialName("invite_code") val inviteCode: String? = null,
 )
 
-/** 邮件不可用期间的注册通道：一次性邀请码，用掉即失效。 */
+/** 注册资格凭证：仍须同时验证邮箱，一次性邀请码在成功注册后失效。 */
 @Serializable
 data class InviteCodeResponse(
     val code: String = "",
