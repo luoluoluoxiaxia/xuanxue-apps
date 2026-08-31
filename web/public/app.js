@@ -916,17 +916,22 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
     const flow = screen === "cast" && combinedCastActive() ? "detailed" : "";
     replaceHomeLocation({ start, flow, hash: routeHash, screen, historyMode, fromScreen: previousScreen });
   }
+  const communityLanding = screen === "landing" && location.hash === HOME_COMMUNITY_HASH;
+  if (communityLanding) document.documentElement.dataset.communityView = "true";
+  else delete document.documentElement.dataset.communityView;
   // 观象台同时承担全站导航壳；排盘、起卦和问答只切换右侧内容。
   $("#landing").hidden = false;
-  $$('[data-home-action-panel], [data-home-action-dock]').forEach(el => { el.hidden = screen !== "landing"; });
-  $("#gua-square").hidden = screen !== "landing";
   $("#personal-workbench").hidden = true;
   $("#dashboard").hidden = screen !== "dash";
   $("#birth-modal").hidden = screen !== "birth";
   $("#cast-modal").hidden = screen !== "cast";
   document.body.dataset.screen = screen;
   if (screen !== "dash") document.body.removeAttribute("data-workspace");
-  PersonalHome?.syncScreen(screen);
+  const personalHomeVisible = !!PersonalHome?.syncScreen(screen);
+  $$('[data-home-action-panel]').forEach(el => {
+    el.hidden = screen !== "landing" || communityLanding || personalHomeVisible;
+  });
+  $("#gua-square").hidden = screen !== "landing" || personalHomeVisible || !communityLanding;
   const skipLink = $("#skip-to-main");
   if (skipLink) {
     const mainTarget = screen === "birth"
@@ -935,9 +940,11 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
         ? "cast-modal"
         : screen === "dash"
           ? "dashboard"
-          : PersonalHome?.isVisible()
-            ? "personal-workbench"
-            : "home-main";
+          : communityLanding
+            ? "gua-square"
+            : PersonalHome?.isVisible()
+              ? "personal-workbench"
+              : "home-main";
     skipLink.setAttribute("href", `#${mainTarget}`);
   }
   const navTarget = screen === "birth"
@@ -976,7 +983,6 @@ const {
   restoreHomeRouteFromLocation,
   scrollHomeCommunityIntoView,
   setMode,
-  setupHomeActionDock,
   setupHomeCommunityFeed,
 } = HomeCommunity;
 
@@ -3366,9 +3372,6 @@ function bind() {
       historyMode: event.detail?.historyMode === "replace" ? "replace" : "push",
     });
   });
-  $("#btn-start").onclick = openBirthModal;
-  $$("[data-start-bazi]").forEach(b => { b.onclick = openBirthModal; });
-  $$("[data-start-liuyao]").forEach(b => { b.onclick = openCastModal; });
   $$("[data-home-community-nav]").forEach(link => {
     link.addEventListener("click", event => {
       event.preventDefault();
@@ -3443,7 +3446,6 @@ function bind() {
   syncBirthInputMode();
 
   // 六爻起卦
-  if ($("#btn-liuyao")) $("#btn-liuyao").onclick = openCastModal;
   if ($("#cast-close")) $("#cast-close").onclick = closeCastModal;
   if ($("#cast-close-x")) $("#cast-close-x").onclick = closeCastModal;
   if ($("#cast-form")) $("#cast-form").addEventListener("submit", submitCast);
@@ -3590,7 +3592,6 @@ async function openPersonalCase(caseId, { resumeResult = false } = {}) {
 async function init() {
   loadSiteStats();
   setupHomeCommunityFeed();
-  setupHomeActionDock();
   setupSidebarToggle();
   const query = new URLSearchParams(location.search);
   const start = query.get("start");

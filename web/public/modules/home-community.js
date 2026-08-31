@@ -386,29 +386,6 @@
       });
     }
 
-    function setupHomeActionDock() {
-      const panel = $("[data-home-action-panel]");
-      const dock = $("[data-home-action-dock]");
-      if (!panel || !dock) return;
-      let queued = false;
-      const update = () => {
-        queued = false;
-        const show = document.body.dataset.screen === "landing" && window.scrollY > 48 && panel.getBoundingClientRect().bottom < 72;
-        dock.classList.toggle("is-visible", show);
-        dock.setAttribute("aria-hidden", show ? "false" : "true");
-        dock.inert = !show;
-      };
-      const schedule = () => {
-        if (queued) return;
-        queued = true;
-        requestAnimationFrame(update);
-      };
-      window.addEventListener("scroll", schedule, { passive: true });
-      window.addEventListener("resize", schedule, { passive: true });
-      update();
-    }
-
-
     return Object.freeze({
       closeEntryScreen,
       loadSiteStats,
@@ -417,7 +394,6 @@
       restoreHomeRouteFromLocation,
       scrollHomeCommunityIntoView,
       setMode,
-      setupHomeActionDock,
       setupHomeCommunityFeed,
     });
   }
