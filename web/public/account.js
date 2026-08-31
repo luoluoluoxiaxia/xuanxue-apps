@@ -384,7 +384,8 @@
   function openNow(mode = "login", message = "") {
     ensureDialog();
     if (state.authenticated) {
-      renderAccount(message, mode === "topup" ? "warn" : message ? "success" : "");
+      if (mode === "credits") renderCreditHistory("activity", 1, "all");
+      else renderAccount(message, mode === "topup" ? "warn" : message ? "success" : "");
     }
     else renderAuth(mode === "register" ? "register" : "login_password", message);
     if (!dialog.open) dialog.showModal();
@@ -743,6 +744,9 @@
             </button>`).join("")}
         </div>
         <p>只要还有 1 分就能开始一次完整回答；本次积分不足也不会中途截断，结算最多扣到 0。确认套餐后再前往 Stripe 付款。</p>
+        <button type="button" class="account-wallet-history" data-credit-history>
+          <span><b>积分明细</b><em>每次获得、回答消耗和体验保护都有记录</em></span><i>查看 →</i>
+        </button>
       </section>
       <section class="account-referral-card">
         <div><span>分享带来的每日加成</span><strong>+${Number(quota.referral_bonus || 0)}</strong></div>
@@ -786,8 +790,162 @@
     body.querySelectorAll("[data-credit-topup]").forEach(button => {
       button.addEventListener("click", () => renderCheckoutReview(button.dataset.creditTopup));
     });
+    body.querySelector("[data-credit-history]")?.addEventListener("click", () => {
+      renderCreditHistory("activity", 1, "all");
+    });
     body.querySelector("[data-account-refresh]").addEventListener("click", () => refresh({ restoreFocus: true }));
     body.querySelector("[data-account-logout]").addEventListener("click", logout);
+  }
+
+  function creditDate(value) {
+    const text = String(value || "").trim();
+    if (!text) return "";
+    const [day, time = ""] = text.replace("T", " ").split(" ");
+    return `${day} ${time.slice(0, 5)}`.trim();
+  }
+
+  function signedCredits(value) {
+    const amount = Number(value || 0);
+    if (amount > 0) return `+${amount}`;
+    return String(amount);
+  }
+
+  function creditHistoryShell(tab) {
+    return `
+      <div class="credit-history-head">
+        <button type="button" data-credit-back>← 返回账户</button>
+        <span>积分中心</span>
+        <h2 id="account-dialog-title" tabindex="-1">积分明细</h2>
+        <p>账户积分长期有效；今日免费积分按北京时间每天刷新。每次完整回答后才会产生结算记录。</p>
+      </div>
+      <div class="credit-history-tabs" role="tablist" aria-label="积分记录类型">
+        <button type="button" role="tab" data-credit-tab="activity" aria-selected="${tab === "activity"}">积分流水</button>
+        <button type="button" role="tab" data-credit-tab="orders" aria-selected="${tab === "orders"}">充值记录</button>
+      </div>
+      <div class="credit-history-content" data-credit-history-content aria-live="polite">
+        <div class="credit-history-loading" role="status"><span></span><b>正在读取明细…</b></div>
+      </div>`;
+  }
+
+  function bindCreditHistoryFrame(tab) {
+    body.querySelector("[data-credit-back]")?.addEventListener("click", () => renderAccount());
+    body.querySelectorAll("[data-credit-tab]").forEach(button => {
+      button.addEventListener("click", () => {
+        const nextTab = button.dataset.creditTab || "activity";
+        if (nextTab !== tab) renderCreditHistory(nextTab, 1, "all");
+      });
+    });
+  }
+
+  function creditPagination(payload, { tab, filter }) {
+    const pagination = payload?.pagination || {};
+    if (Number(pagination.page_count || 1) <= 1) return "";
+    return `
+      <nav class="credit-history-pages" aria-label="明细翻页">
+        <button type="button" data-credit-page="${Number(pagination.page || 1) - 1}" ${Number(pagination.page || 1) <= 1 ? "disabled" : ""}>上一页</button>
+        <span>第 ${Number(pagination.page || 1)} / ${Number(pagination.page_count || 1)} 页 · 共 ${Number(pagination.total || 0)} 条</span>
+        <button type="button" data-credit-page="${Number(pagination.page || 1) + 1}" ${Number(pagination.page || 1) >= Number(pagination.page_count || 1) ? "disabled" : ""}>下一页</button>
+      </nav>`;
+  }
+
+  function activityRow(item) {
+    const amount = Number(item?.amount || 0);
+    const isCredit = amount > 0;
+    const detail = [];
+    if (String(item?.entry_type || "") === "answer_usage") {
+      if (Number(item.required_credits || 0) !== Math.abs(amount)) {
+        detail.push(`本次计价 ${Number(item.required_credits || 0)} 分`);
+      }
+      detail.push(`今日免费剩余 ${Number(item.daily_remaining || 0)} 分`);
+    }
+    detail.push(`账户余额 ${Number(item?.balance_after || 0)} 分`);
+    return `
+      <li class="credit-history-row ${isCredit ? "income" : "expense"}">
+        <span class="credit-history-icon" aria-hidden="true">${isCredit ? "+" : "−"}</span>
+        <span class="credit-history-copy">
+          <b>${escapeHtml(item?.title || "积分变动")}</b>
+          <em>${escapeHtml(item?.description || "积分余额已更新")}</em>
+          <small>${escapeHtml(detail.join(" · "))}</small>
+        </span>
+        <span class="credit-history-value"><b>${signedCredits(amount)}</b><em>${escapeHtml(creditDate(item?.created_at))}</em></span>
+      </li>`;
+  }
+
+  function renderActivityHistory(payload, filter) {
+    const summary = payload?.summary || {};
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    const filters = [["all", "全部"], ["credit", "获得"], ["usage", "消耗"]];
+    return `
+      <section class="credit-history-summary" aria-label="积分汇总">
+        <span><em>账户余额</em><b>${Number(summary.account_balance || 0)}</b><small>长期有效</small></span>
+        <span><em>累计获得</em><b>${Number(summary.lifetime_credited || 0)}</b><small>赠送与充值</small></span>
+        <span><em>累计回答</em><b>${Number(summary.answer_count || 0)}</b><small>完整结算</small></span>
+      </section>
+      <div class="credit-history-filters" role="group" aria-label="筛选积分流水">
+        ${filters.map(([value, label]) => `<button type="button" data-credit-filter="${value}" aria-pressed="${filter === value}">${label}</button>`).join("")}
+      </div>
+      ${items.length ? `<ol class="credit-history-list">${items.map(activityRow).join("")}</ol>` : `
+        <div class="credit-history-empty"><b>这里还没有${filter === "credit" ? "获得" : filter === "usage" ? "消耗" : "积分"}记录</b><span>完成注册、充值或收到一次完整 AI 回答后，会自动出现在这里。</span></div>`}
+      ${creditPagination(payload, { tab: "activity", filter })}`;
+  }
+
+  function orderRow(item) {
+    const labels = { paid: "已到账", pending: "待支付", expired: "已失效" };
+    const status = String(item?.status || "pending");
+    const currency = String(item?.currency || "usd").toUpperCase();
+    return `
+      <li class="credit-order-row ${escapeHtml(status)}">
+        <span><b>${Number(item?.credits || 0)} 积分</b><em>${currency} ${(Number(item?.amount_total || 0) / 100).toFixed(2)}</em></span>
+        <span><b>${escapeHtml(labels[status] || "处理中")}</b><em>${escapeHtml(creditDate(item?.paid_at || item?.expired_at || item?.created_at))}</em></span>
+      </li>`;
+  }
+
+  function renderOrderHistory(payload, filter) {
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    const filters = [["all", "全部"], ["paid", "已到账"], ["pending", "待支付"], ["expired", "已失效"]];
+    return `
+      <div class="credit-history-filters" role="group" aria-label="筛选充值记录">
+        ${filters.map(([value, label]) => `<button type="button" data-credit-filter="${value}" aria-pressed="${filter === value}">${label}</button>`).join("")}
+      </div>
+      ${items.length ? `<ol class="credit-order-list">${items.map(orderRow).join("")}</ol>` : `
+        <div class="credit-history-empty"><b>没有符合条件的充值记录</b><span>只有 Stripe 签名确认成功后，订单才会显示“已到账”。</span></div>`}
+      ${creditPagination(payload, { tab: "orders", filter })}`;
+  }
+
+  async function renderCreditHistory(tab = "activity", page = 1, filter = "all") {
+    if (!state.authenticated) {
+      renderAuth("login_password", "请先登录，再查看积分明细。");
+      return;
+    }
+    const normalizedTab = tab === "orders" ? "orders" : "activity";
+    body.innerHTML = creditHistoryShell(normalizedTab);
+    bindCreditHistoryFrame(normalizedTab);
+    requestAnimationFrame(() => body.querySelector("#account-dialog-title")?.focus({ preventScroll: true }));
+    try {
+      const parameter = normalizedTab === "orders" ? "status" : "kind";
+      const response = await fetch(`/api/billing/${normalizedTab}?page=${Math.max(1, Number(page || 1))}&${parameter}=${encodeURIComponent(filter)}`, {
+        headers: { Accept: "application/json" },
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const payload = await readJson(response);
+      const content = body.querySelector("[data-credit-history-content]");
+      if (!content) return;
+      content.innerHTML = normalizedTab === "orders"
+        ? renderOrderHistory(payload, filter)
+        : renderActivityHistory(payload, filter);
+      content.querySelectorAll("[data-credit-filter]").forEach(button => {
+        button.addEventListener("click", () => renderCreditHistory(normalizedTab, 1, button.dataset.creditFilter || "all"));
+      });
+      content.querySelectorAll("[data-credit-page]").forEach(button => {
+        button.addEventListener("click", () => renderCreditHistory(normalizedTab, Number(button.dataset.creditPage || 1), filter));
+      });
+    } catch (reason) {
+      const content = body.querySelector("[data-credit-history-content]");
+      if (!content) return;
+      content.innerHTML = `<div class="credit-history-empty error"><b>暂时无法读取积分明细</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-credit-retry>重新加载</button></div>`;
+      content.querySelector("[data-credit-retry]")?.addEventListener("click", () => renderCreditHistory(normalizedTab, page, filter));
+    }
   }
 
   function creditPack(sku) {

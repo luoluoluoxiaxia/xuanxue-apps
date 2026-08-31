@@ -461,6 +461,132 @@ body.account-dialog-open {
   color: var(--account-muted);
   font: 400 10px/1.55 "Noto Sans SC", sans-serif;
 }
+.account-wallet-history {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 2px;
+  padding: 11px 12px;
+  border: 1px solid #ded9ff;
+  border-radius: 11px;
+  background: rgba(255,255,255,.82);
+  color: var(--account-ink);
+  cursor: pointer;
+  text-align: left;
+}
+.account-wallet-history:hover { border-color: #aaa3ff; background: #f8f7ff; }
+.account-wallet-history:focus-visible { outline: 3px solid rgba(99,91,255,.2); outline-offset: 2px; }
+.account-wallet-history span { display: grid; gap: 3px; }
+.account-wallet-history b { font: 600 11px/1.3 "Noto Sans SC", sans-serif; }
+.account-wallet-history em { color: var(--account-muted); font: normal 9px/1.45 "Noto Sans SC", sans-serif; }
+.account-wallet-history i { color: #635bff; font: normal 600 10px/1 "Noto Sans SC", sans-serif; white-space: nowrap; }
+
+.credit-history-head { display: grid; gap: 8px; }
+.credit-history-head > button {
+  justify-self: start;
+  margin: -4px 0 7px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #635bff;
+  cursor: pointer;
+  font: 600 11px/1.3 "Noto Sans SC", sans-serif;
+}
+.credit-history-head > button:focus-visible { outline: 3px solid rgba(99,91,255,.2); outline-offset: 4px; }
+.credit-history-head > span { color: var(--account-accent-strong); font: 650 11px/1.2 "Noto Sans SC", sans-serif; letter-spacing: .12em; }
+.credit-history-head h2 { margin: 0; color: var(--account-ink); font: 700 28px/1.25 "Noto Serif SC", serif; }
+.credit-history-head h2:focus { outline: none; }
+.credit-history-head p { margin: 0; color: var(--account-muted); font: 400 11px/1.65 "Noto Sans SC", sans-serif; }
+.credit-history-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 20px 0 16px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f3f2f6;
+}
+.credit-history-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: #77727e;
+  cursor: pointer;
+  font: 600 11px/1 "Noto Sans SC", sans-serif;
+}
+.credit-history-tabs button[aria-selected="true"] { background: #fff; color: #635bff; box-shadow: 0 3px 12px rgba(35,31,54,.08); }
+.credit-history-tabs button:focus-visible { outline: 3px solid rgba(99,91,255,.2); outline-offset: 1px; }
+.credit-history-content { min-height: 300px; }
+.credit-history-loading { display: grid; justify-items: center; gap: 10px; padding: 70px 20px; color: var(--account-muted); font: 500 11px/1.4 "Noto Sans SC", sans-serif; }
+.credit-history-loading span { width: 24px; height: 24px; border: 2px solid #ddd9ff; border-top-color: #635bff; border-radius: 50%; animation: account-credit-spin .8s linear infinite; }
+@keyframes account-credit-spin { to { transform: rotate(360deg); } }
+.credit-history-summary {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  overflow: hidden;
+  border: 1px solid #e4e0ff;
+  border-radius: 14px;
+  background: #e4e0ff;
+  gap: 1px;
+}
+.credit-history-summary > span { display: grid; gap: 5px; padding: 15px 13px; background: linear-gradient(145deg,#f8f7ff,#fff); }
+.credit-history-summary em { color: var(--account-muted); font: normal 9px/1.2 "Noto Sans SC", sans-serif; }
+.credit-history-summary b { color: #635bff; font: 700 24px/1 "Space Mono", monospace; }
+.credit-history-summary small { color: #8a8593; font: 400 8px/1.3 "Noto Sans SC", sans-serif; }
+.credit-history-filters { display: flex; flex-wrap: wrap; gap: 7px; margin: 15px 0 10px; }
+.credit-history-filters button {
+  min-width: 52px;
+  min-height: 31px;
+  padding: 0 12px;
+  border: 1px solid #e1dee7;
+  border-radius: 999px;
+  background: #fff;
+  color: #77727e;
+  cursor: pointer;
+  font: 550 10px/1 "Noto Sans SC", sans-serif;
+}
+.credit-history-filters button[aria-pressed="true"] { border-color: #8f88ff; background: #f2f0ff; color: #554ddd; }
+.credit-history-filters button:focus-visible { outline: 3px solid rgba(99,91,255,.18); outline-offset: 2px; }
+.credit-history-list,
+.credit-order-list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid #efedf2; }
+.credit-history-row {
+  display: grid;
+  grid-template-columns: 32px minmax(0,1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 14px 2px;
+  border-bottom: 1px solid #efedf2;
+}
+.credit-history-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: #f1efff; color: #635bff; font: 700 16px/1 "Space Mono", monospace; }
+.credit-history-row.expense .credit-history-icon { background: #f3f2f4; color: #77727e; }
+.credit-history-copy { display: grid; gap: 4px; min-width: 0; }
+.credit-history-copy b { color: var(--account-ink); font: 600 11px/1.3 "Noto Sans SC", sans-serif; }
+.credit-history-copy em { overflow: hidden; color: #706b77; font: normal 9px/1.45 "Noto Sans SC", sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+.credit-history-copy small { color: #a09ba5; font: 400 8px/1.4 "Noto Sans SC", sans-serif; }
+.credit-history-value { display: grid; justify-items: end; gap: 6px; min-width: 84px; }
+.credit-history-value b { color: #635bff; font: 700 16px/1 "Space Mono", monospace; }
+.credit-history-row.expense .credit-history-value b { color: #4f4b54; }
+.credit-history-value em { color: #a19ca6; font: normal 8px/1 "Space Mono", monospace; }
+.credit-order-row { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; padding: 15px 3px; border-bottom: 1px solid #efedf2; }
+.credit-order-row > span { display: grid; gap: 5px; }
+.credit-order-row > span:last-child { justify-items: end; }
+.credit-order-row b { color: var(--account-ink); font: 600 11px/1.2 "Noto Sans SC", sans-serif; }
+.credit-order-row > span:last-child b { color: #9b7b15; }
+.credit-order-row.paid > span:last-child b { color: #188252; }
+.credit-order-row.expired > span:last-child b { color: #8b8790; }
+.credit-order-row em { color: var(--account-muted); font: normal 9px/1.3 "Noto Sans SC", sans-serif; }
+.credit-history-pages { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 15px; }
+.credit-history-pages button,
+.credit-history-empty button { min-height: 34px; padding: 0 12px; border: 1px solid #dcd8e4; border-radius: 9px; background: #fff; color: #635bff; cursor: pointer; font: 600 10px/1 "Noto Sans SC", sans-serif; }
+.credit-history-pages button:disabled { cursor: default; opacity: .42; }
+.credit-history-pages span { color: #97929c; text-align: center; font: 400 9px/1.3 "Noto Sans SC", sans-serif; }
+.credit-history-empty { display: grid; justify-items: center; gap: 8px; padding: 58px 18px; border: 1px dashed #dedbe3; border-radius: 14px; text-align: center; }
+.credit-history-empty b { color: var(--account-ink); font: 600 12px/1.3 "Noto Sans SC", sans-serif; }
+.credit-history-empty span { max-width: 320px; color: var(--account-muted); font: 400 10px/1.6 "Noto Sans SC", sans-serif; }
+.credit-history-empty button { margin-top: 5px; }
 
 .checkout-head,
 .checkout-status-head { display: grid; gap: 8px; }
@@ -707,6 +833,13 @@ body.account-dialog-open {
   .account-invite-prompt { bottom: 10px; gap: 10px; padding: 12px; }
   .account-invite-prompt em { display: none; }
   .account-invite-prompt > button:first-child { position: absolute; top: -9px; right: 2px; border-radius: 50%; background: #f0f0f2; }
+  .credit-history-summary { grid-template-columns: 1fr 1fr; }
+  .credit-history-summary > span:last-child { grid-column: 1 / -1; }
+  .credit-history-row { grid-template-columns: 30px minmax(0,1fr); }
+  .credit-history-value { grid-column: 2; grid-row: 2; display: flex; justify-content: space-between; width: 100%; }
+  .credit-history-copy em { white-space: normal; }
+  .credit-history-pages { grid-template-columns: 1fr 1fr; }
+  .credit-history-pages span { grid-column: 1 / -1; grid-row: 1; }
 }
 
 /* ACCOUNT AUTH TOUCH UX · 密码可见性与手机触控热区（account-6） */

@@ -1816,6 +1816,194 @@
         "title": "ClientCommunityUpdate",
         "type": "object"
       },
+      "ClientCreditActivityItem": {
+        "additionalProperties": false,
+        "properties": {
+          "account_amount": {
+            "title": "Account Amount",
+            "type": "integer"
+          },
+          "amount": {
+            "title": "Amount",
+            "type": "integer"
+          },
+          "balance_after": {
+            "title": "Balance After",
+            "type": "integer"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "daily_free_spent": {
+            "title": "Daily Free Spent",
+            "type": "integer"
+          },
+          "daily_remaining": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Remaining"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "entry_type": {
+            "title": "Entry Type",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "paid_spent": {
+            "title": "Paid Spent",
+            "type": "integer"
+          },
+          "platform_covered": {
+            "title": "Platform Covered",
+            "type": "integer"
+          },
+          "reference_id": {
+            "title": "Reference Id",
+            "type": "string"
+          },
+          "reference_type": {
+            "title": "Reference Type",
+            "type": "string"
+          },
+          "required_credits": {
+            "title": "Required Credits",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "direction",
+          "category",
+          "entry_type",
+          "reference_type",
+          "reference_id",
+          "title",
+          "description",
+          "amount",
+          "account_amount",
+          "required_credits",
+          "daily_free_spent",
+          "paid_spent",
+          "platform_covered",
+          "balance_after",
+          "created_at"
+        ],
+        "title": "ClientCreditActivityItem",
+        "type": "object"
+      },
+      "ClientCreditActivityPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientCreditActivityItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/ClientPagination"
+          },
+          "summary": {
+            "$ref": "#/components/schemas/ClientCreditActivitySummary"
+          },
+          "wallet": {
+            "$ref": "#/components/schemas/ClientCreditWallet"
+          }
+        },
+        "required": [
+          "wallet",
+          "summary",
+          "items",
+          "kind",
+          "pagination"
+        ],
+        "title": "ClientCreditActivityPage",
+        "type": "object"
+      },
+      "ClientCreditActivitySummary": {
+        "additionalProperties": false,
+        "properties": {
+          "account_balance": {
+            "title": "Account Balance",
+            "type": "integer"
+          },
+          "account_spent": {
+            "title": "Account Spent",
+            "type": "integer"
+          },
+          "answer_count": {
+            "title": "Answer Count",
+            "type": "integer"
+          },
+          "daily_free_spent": {
+            "title": "Daily Free Spent",
+            "type": "integer"
+          },
+          "lifetime_credited": {
+            "title": "Lifetime Credited",
+            "type": "integer"
+          },
+          "lifetime_spent": {
+            "title": "Lifetime Spent",
+            "type": "integer"
+          },
+          "platform_covered": {
+            "title": "Platform Covered",
+            "type": "integer"
+          },
+          "required_credits": {
+            "title": "Required Credits",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "account_balance",
+          "lifetime_credited",
+          "lifetime_spent",
+          "answer_count",
+          "required_credits",
+          "daily_free_spent",
+          "account_spent",
+          "platform_covered"
+        ],
+        "title": "ClientCreditActivitySummary",
+        "type": "object"
+      },
       "ClientCreditLedgerEntry": {
         "additionalProperties": false,
         "properties": {
@@ -2513,6 +2701,132 @@
           "ok"
         ],
         "title": "ClientOk",
+        "type": "object"
+      },
+      "ClientPagination": {
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_count": {
+            "title": "Page Count",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "page",
+          "page_size",
+          "page_count",
+          "total"
+        ],
+        "title": "ClientPagination",
+        "type": "object"
+      },
+      "ClientPaymentOrderItem": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_total": {
+            "title": "Amount Total",
+            "type": "integer"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "expired_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expired At"
+          },
+          "order_id": {
+            "title": "Order Id",
+            "type": "string"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "sku": {
+            "title": "Sku",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "order_id",
+          "sku",
+          "currency",
+          "amount_total",
+          "credits",
+          "status",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ClientPaymentOrderItem",
+        "type": "object"
+      },
+      "ClientPaymentOrderPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientPaymentOrderItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/ClientPagination"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "status",
+          "pagination"
+        ],
+        "title": "ClientPaymentOrderPage",
         "type": "object"
       },
       "ClientPersonalColor": {
@@ -5127,6 +5441,56 @@
         "summary": "Api Auth Register"
       }
     },
+    "/api/billing/activity": {
+      "get": {
+        "operationId": "api_credit_activity_api_billing_activity_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCreditActivityPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Credit Activity"
+      }
+    },
     "/api/billing/checkout-sessions": {
       "post": {
         "operationId": "api_create_checkout_session_api_billing_checkout_sessions_post",
@@ -5202,6 +5566,56 @@
           }
         },
         "summary": "Api Checkout Session Status"
+      }
+    },
+    "/api/billing/orders": {
+      "get": {
+        "operationId": "api_payment_orders_api_billing_orders_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientPaymentOrderPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Payment Orders"
       }
     },
     "/api/billing/wallet": {

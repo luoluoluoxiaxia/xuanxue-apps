@@ -35,6 +35,7 @@ fun HomeScreen(
     onStartLiuyao: () -> Unit,
     onOpenArchive: () -> Unit,
     onOpenCommunity: () -> Unit,
+    onOpenCredits: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -148,6 +149,14 @@ fun HomeScreen(
         TextButton(onClick = onOpenArchive, modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = stringResource(R.string.home_archive),
+                color = XuanshuColors.GoldDim,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
+
+        TextButton(onClick = onOpenCredits, modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = stringResource(R.string.home_credit_history),
                 color = XuanshuColors.GoldDim,
                 style = MaterialTheme.typography.labelMedium,
             )

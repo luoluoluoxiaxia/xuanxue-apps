@@ -32,6 +32,23 @@
     <string name="home_quota">私密提问剩余 %1$d / %2$d</string>
     <string name="home_account_credits">账户积分 %1$d 分</string>
     <string name="home_account_credits_hint">注册赠送与充值积分都不会过期</string>
+    <string name="home_credit_history">积分明细与充值记录</string>
+    <string name="credits_title">积分明细</string>
+    <string name="credits_activity">积分流水</string>
+    <string name="credits_orders">充值记录</string>
+    <string name="credits_balance">账户余额</string>
+    <string name="credits_received">累计获得</string>
+    <string name="credits_answers">累计回答</string>
+    <string name="credits_spent">消耗</string>
+    <string name="credits_all">全部</string>
+    <string name="credits_paid">已到账</string>
+    <string name="credits_pending">待支付</string>
+    <string name="credits_expired">已失效</string>
+    <string name="credits_empty">这里还没有符合条件的记录</string>
+    <string name="credits_balance_after">账户余额 %1$d 分</string>
+    <string name="credits_previous">上一页</string>
+    <string name="credits_next">下一页</string>
+    <string name="credits_unit">积分</string>
     <string name="home_account">账号 %1$s</string>
     <string name="home_start_bazi">排八字命盘</string>
 
