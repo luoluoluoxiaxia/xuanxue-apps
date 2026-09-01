@@ -320,7 +320,9 @@
         const target = new URL(targetUrl, location.href);
         if (target.pathname === location.pathname && target.search === location.search) {
           const returnControl = document.querySelector("[data-notification-return]");
+          const communityReturn = document.querySelector("[data-community-return]");
           if (returnControl) returnControl.hidden = false;
+          if (communityReturn) communityReturn.hidden = true;
         }
         location.assign(targetUrl);
       });
@@ -452,14 +454,17 @@
 
   const notificationReturn = document.querySelector("[data-notification-return]");
   if (notificationReturn) {
+    const communityReturn = document.querySelector("[data-community-return]");
     let returnTarget = "";
     try { returnTarget = sessionStorage.getItem("xuanshu:return-to-notifications") || ""; } catch (_) {}
     notificationReturn.hidden = !returnTarget;
+    if (communityReturn) communityReturn.hidden = Boolean(returnTarget);
     notificationReturn.addEventListener("click", () => {
       try { sessionStorage.removeItem("xuanshu:return-to-notifications"); } catch (_) {}
       const origin = new URL(returnTarget || "/#gua-square", location.href);
       if (origin.pathname === location.pathname && origin.search === location.search) {
         notificationReturn.hidden = true;
+        if (communityReturn) communityReturn.hidden = false;
         document.querySelector("[data-community-notifications]")?.click();
         return;
       }
