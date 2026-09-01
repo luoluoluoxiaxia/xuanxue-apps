@@ -27,6 +27,7 @@ const ChatRenderer = window.XuanxueChatRenderer;
 if (!ChatRenderer) throw new Error("XuanxueChatRenderer is not loaded");
 const Account = window.XuanxueAccount;
 const PersonalHome = window.XuanxuePersonalHome;
+const CreditLedger = window.XuanxueCreditLedger;
 const LocationPickerModule = window.XuanxueLocationPicker;
 if (!LocationPickerModule) throw new Error("XuanxueLocationPicker is not loaded");
 const ChartDomain = window.XuanxueChartDomain;
@@ -887,7 +888,11 @@ function replaceHomeLocation({ start = "", flow = "", hash = "", screen = "landi
     else url.searchParams.delete("start");
     if (flow) url.searchParams.set("flow", flow);
     else url.searchParams.delete("flow");
-    url.searchParams.delete("view");
+    if (screen === "credits") url.searchParams.set("view", "credits");
+    else {
+      url.searchParams.delete("view");
+      url.searchParams.delete("month");
+    }
     if (screen === "landing") {
       url.searchParams.delete("personal_case");
       url.searchParams.delete("resume_case");
@@ -930,6 +935,7 @@ function currentScreenNavTarget() {
   if (state.screen === "birth") return "bazi";
   if (state.screen === "cast") return combinedCastActive() ? "detailed" : "liuyao";
   if (state.screen === "dash") return detailedWorkspaceActive() ? "detailed" : state.system;
+  if (state.screen === "credits") return "credits";
   if (location.hash === HOME_COMMUNITY_HASH) return "community";
   return "landing";
 }
@@ -984,9 +990,11 @@ function focusScreenMain(screen, preferredTarget = "") {
         ? $("#cast-modal")
         : screen === "dash"
           ? $("#dashboard")
-          : PersonalHome?.isVisible()
-            ? $("#personal-workbench")
-            : $("#home-main");
+          : screen === "credits"
+            ? $("#credit-ledger-page")
+            : PersonalHome?.isVisible()
+              ? $("#personal-workbench")
+              : $("#home-main");
   if (!target) return;
   if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
   window.requestAnimationFrame(() => {
@@ -1010,6 +1018,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
   // 观象台同时承担全站导航壳；排盘、起卦和问答只切换右侧内容。
   $("#landing").hidden = false;
   $("#personal-workbench").hidden = true;
+  if (screen === "credits") CreditLedger?.activate();
+  else CreditLedger?.deactivate();
   $("#dashboard").hidden = screen !== "dash";
   $("#birth-modal").hidden = screen !== "birth";
   $("#cast-modal").hidden = screen !== "cast";
@@ -1028,6 +1038,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
         ? "cast-modal"
         : screen === "dash"
           ? "dashboard"
+          : screen === "credits"
+            ? "credit-ledger-page"
           : communityLanding
             ? "gua-square"
             : PersonalHome?.isVisible()
@@ -1041,6 +1053,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
       ? (combinedCastActive() ? "detailed" : "liuyao")
       : screen === "dash"
         ? (detailedWorkspaceActive() ? "detailed" : state.system)
+        : screen === "credits"
+          ? "credits"
         : "landing";
   setPrimaryNavCurrent(navTarget);
   const activePage = screen === "birth" ? $("#birth-modal") : screen === "cast" ? $("#cast-modal") : null;
@@ -3493,6 +3507,10 @@ function bind() {
     event.preventDefault();
     openHomeCommunity();
   });
+  document.addEventListener("xuanshu:opencredits", event => {
+    event.preventDefault();
+    showScreen("credits", { historyMode: "push", focusPage: true });
+  });
   document.addEventListener("xuanshu:startbazi", event => {
     event.preventDefault();
     openBirthModal();
@@ -3549,6 +3567,11 @@ function bind() {
       if (target === "profile") {
         Account.requireLogin({ mode: "login", message: "登录后可跨设备查看私密问题与档案。" })
           .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
+        return;
+      }
+      if (target === "credits") {
+        Account.requireLogin({ mode: "login", message: "登录后查看消费明细。" })
+          .then(ok => { if (ok) showScreen("credits", { historyMode: "push", focusPage: true }); });
         return;
       }
       showScreen("landing", { historyMode: "push", focusPage: true });
@@ -3782,10 +3805,13 @@ async function init() {
     const entryBack = start === "bazi" ? $("#birth-close") : $("#cast-close");
     if (entryBack) entryBack.textContent = "← 返回观象台";
     showScreen(start === "bazi" ? "birth" : "cast", { preserveEntryLocation: true });
+  } else if (creditsRequested) {
+    showScreen("credits", { preserveEntryLocation: true });
   } else {
     showScreen("landing", { preserveEntryLocation: true });
   }
-  if (archivesRequested || creditsRequested) setPrimaryNavCurrent("profile");
+  if (creditsRequested) setPrimaryNavCurrent("credits");
+  else if (archivesRequested) setPrimaryNavCurrent("profile");
   else if (communityRequested) setPrimaryNavCurrent("community");
   else if (personalCaseId) setPrimaryNavCurrent("detailed");
   else if (dashboardRefreshRequested && (dashboardNavSystem === "bazi" || dashboardNavSystem === "liuyao")) setPrimaryNavCurrent(dashboardNavSystem);
@@ -3818,7 +3844,7 @@ async function init() {
     }
   }
   renderProfileFab();
-  if (dashboardRefreshRequested && !resumedWorkspace && !archivesRequested) setPrimaryNavCurrent("landing");
+  if (dashboardRefreshRequested && !resumedWorkspace && !archivesRequested && !creditsRequested) setPrimaryNavCurrent("landing");
   if (communityRequested) return;
   if (detailedEntryRequested) {
     if (accountState?.authenticated) {
@@ -3840,9 +3866,9 @@ async function init() {
     return;
   }
   if (creditsRequested) {
-    if (accountState?.authenticated) Account.open("credits");
-    else Account.requireLogin({ mode: "login", message: "登录后查看积分与充值记录。" })
-      .then(ok => { if (ok) Account.open("credits"); });
+    if (accountState?.authenticated) CreditLedger?.activate();
+    else Account.requireLogin({ mode: "login", message: "登录后查看消费明细。" })
+      .then(ok => { if (ok) showScreen("credits", { historyMode: "replace", focusPage: true }); });
     return;
   }
   if (resumedWorkspace) {

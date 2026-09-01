@@ -790,7 +790,10 @@
       button.addEventListener("click", () => renderCheckoutReview(button.dataset.creditTopup));
     });
     body.querySelector("[data-credit-history]")?.addEventListener("click", () => {
-      renderCreditHistory("activity", 1, "all");
+      close(() => {
+        const openEvent = new CustomEvent("xuanshu:opencredits", { cancelable: true });
+        if (document.dispatchEvent(openEvent)) window.location.assign("/?view=credits");
+      });
     });
     body.querySelector("[data-account-refresh]").addEventListener("click", () => refresh({ restoreFocus: true }));
     body.querySelector("[data-account-logout]").addEventListener("click", logout);
