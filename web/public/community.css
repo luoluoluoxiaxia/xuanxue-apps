@@ -1466,7 +1466,8 @@ body.share-card-open { overflow: hidden; }
 .comment-reply:target { background: linear-gradient(90deg, var(--accent-soft), rgba(255, 255, 255, .3)); outline: 2px solid rgba(255, 36, 66, .12); outline-offset: 3px; }
 #post-engagement:target { padding: 8px; background: var(--accent-soft); border-radius: 16px; }
 .post-back-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.notification-return { padding: 0; color: var(--accent-dark); background: transparent; border: 0; cursor: pointer; font: inherit; }
+.post-back[hidden] { display: none; }
+.notification-return { padding: 0; color: var(--muted-strong); background: transparent; border: 0; cursor: pointer; font-family: inherit; }
 .notification-return:hover { text-decoration: underline; }
 
 @media (max-width: 560px) {
