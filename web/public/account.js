@@ -1266,7 +1266,7 @@
   }
 
   async function shareTarget(slug) {
-    const canonical = `${location.origin}/gua/${encodeURIComponent(slug)}?ref=post_share`;
+    const canonical = `${location.origin}/?post=${encodeURIComponent(slug)}&ref=post_share#gua-square`;
     await ready();
     if (!state.authenticated) return { url: canonical, attributed: false };
     try {

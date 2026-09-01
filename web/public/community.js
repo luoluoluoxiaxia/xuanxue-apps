@@ -3,7 +3,6 @@
 
   const body = document.body;
   const pageSlug = body?.dataset.postSlug || "";
-  const pageUrl = body?.dataset.postUrl || (pageSlug ? `/gua/${pageSlug}` : "");
   const pageKind = body?.dataset.postKind || "ai";
   const pageSystem = body?.dataset.postSystem || "liuyao";
   const pageCanManage = body?.dataset.canManage === "true";
@@ -27,7 +26,7 @@
             <div class="preview-meta"><time data-preview-date></time><span data-preview-viewers></span></div>
           </header>
 
-          <section class="post-oracle-panel post-preview-oracle" aria-label="卦象">
+          <section class="post-oracle-panel post-preview-oracle" data-preview-liuyao aria-label="卦象">
             <div class="gua-board">
               <div class="gua-pair">
                 <div class="gua-figure">
@@ -59,13 +58,25 @@
               </details>
             </div>
           </section>
+          <section class="post-oracle-panel post-preview-bazi" data-preview-bazi aria-label="脱敏八字命盘" hidden>
+            <div class="bazi-public-board">
+              <div class="bazi-public-heading"><span>命盘机械信息</span><em>已隐藏出生时间、地点与身份信息</em></div>
+              <div class="bazi-public-pillars" data-preview-bazi-pillars aria-label="四柱"></div>
+              <div class="bazi-public-facts">
+                <span><small>日主</small><b data-preview-bazi-day-master></b></span>
+                <span><small>生肖</small><b data-preview-bazi-shengxiao></b></span>
+                <span><small>旬空</small><b data-preview-bazi-xun-kong></b></span>
+              </div>
+              <div class="bazi-public-elements" data-preview-bazi-elements aria-label="五行数量"></div>
+            </div>
+          </section>
         </section>
 
         <section class="post-preview-story">
           <div class="post-preview-scroll">
-            <section class="post-preview-answer">
+            <section class="post-preview-answer" data-preview-answer-section>
               <div class="section-title-row">
-                <div><span class="section-heading-copy"><h3>解答</h3><small data-preview-disclosure></small></span></div>
+                <div><span class="section-heading-copy"><h3 data-preview-answer-title>解答</h3><small data-preview-disclosure></small></span></div>
               </div>
               <article class="reading-prose" data-preview-answer></article>
               <div class="reading-updates-inline" data-preview-updates></div>
@@ -73,7 +84,7 @@
 
             <section class="post-preview-comments">
               <div class="section-title-row">
-                <div><span class="section-heading-copy"><h3>评论</h3></span></div>
+                <div><span class="section-heading-copy"><h3 data-preview-comments-title>评论</h3></span></div>
                 <span data-preview-comment-count></span>
               </div>
               <div data-preview-comments></div>
@@ -81,11 +92,11 @@
             </section>
           </div>
           <div class="post-preview-actions">
-            <a class="primary-action" href="/?start=liuyao">我也要起卦</a>
+            <a class="primary-action" href="/?start=liuyao" data-preview-start-action>我也要起卦</a>
+            <button type="button" class="preview-action-button follow-post-action" data-preview-follow hidden><span data-follow-label>关注进展</span><b data-follow-count hidden>0</b></button>
             <button type="button" class="preview-action-button post-like-action" data-preview-like data-like-post="" aria-pressed="false"><span data-like-icon aria-hidden="true">♡</span><b data-like-count>0</b></button>
             <button type="button" class="preview-action-button" data-preview-share>分享</button>
             <button type="button" class="preview-action-button" data-preview-copy>复制标题+链接</button>
-            <a class="preview-open-page" data-preview-open-page href="/#gua-square">完整页面 ↗</a>
           </div>
         </section>
       </div>
@@ -121,14 +132,15 @@
 
   window.XuanxueChatRenderer?.renderMarkdownElements(document);
 
-  function canonicalFor(slug) {
-    if (slug === pageSlug && pageUrl) return `${location.origin}${pageUrl}`;
-    return `${location.origin}/gua/${slug}`;
+  function canonicalFor(slug, ref = "") {
+    const params = new URLSearchParams({ post: String(slug || "") });
+    if (ref) params.set("ref", ref);
+    return `${location.origin}/?${params.toString()}#gua-square`;
   }
 
   async function shareTarget(slug) {
     return await window.XuanxueAccount?.shareTarget(slug) || {
-      url: `${canonicalFor(slug)}?ref=post_share`,
+      url: canonicalFor(slug, "post_share"),
       attributed: false,
     };
   }
@@ -314,16 +326,8 @@
       button.append(icon, copy, time);
       button.addEventListener("click", async () => {
         await markNotifications(notificationIds).catch(() => {});
-        try { sessionStorage.setItem("xuanshu:return-to-notifications", location.href); } catch (_) {}
-        const targetUrl = item.target_url || `/gua/${encodeURIComponent(item.post_slug || "")}`;
+        const targetUrl = item.target_url || `/?post=${encodeURIComponent(item.post_slug || "")}#gua-square`;
         dialog.close();
-        const target = new URL(targetUrl, location.href);
-        if (target.pathname === location.pathname && target.search === location.search) {
-          const returnControl = document.querySelector("[data-notification-return]");
-          const communityReturn = document.querySelector("[data-community-return]");
-          if (returnControl) returnControl.hidden = false;
-          if (communityReturn) communityReturn.hidden = true;
-        }
         location.assign(targetUrl);
       });
       return button;
@@ -442,36 +446,9 @@
     });
     window.setInterval(refreshBadge, 60000);
     refreshBadge();
-    try {
-      if (sessionStorage.getItem("xuanshu:open-notifications") === "true") {
-        sessionStorage.removeItem("xuanshu:open-notifications");
-        window.setTimeout(() => buttons[0]?.click(), 0);
-      }
-    } catch (_) {}
   }
 
   setupCommunityNotifications();
-
-  const notificationReturn = document.querySelector("[data-notification-return]");
-  if (notificationReturn) {
-    const communityReturn = document.querySelector("[data-community-return]");
-    let returnTarget = "";
-    try { returnTarget = sessionStorage.getItem("xuanshu:return-to-notifications") || ""; } catch (_) {}
-    notificationReturn.hidden = !returnTarget;
-    if (communityReturn) communityReturn.hidden = Boolean(returnTarget);
-    notificationReturn.addEventListener("click", () => {
-      try { sessionStorage.removeItem("xuanshu:return-to-notifications"); } catch (_) {}
-      const origin = new URL(returnTarget || "/#gua-square", location.href);
-      if (origin.pathname === location.pathname && origin.search === location.search) {
-        notificationReturn.hidden = true;
-        if (communityReturn) communityReturn.hidden = false;
-        document.querySelector("[data-community-notifications]")?.click();
-        return;
-      }
-      try { sessionStorage.setItem("xuanshu:open-notifications", "true"); } catch (_) {}
-      location.assign(origin.href);
-    });
-  }
 
   async function track(slug, channel) {
     if (!slug) return;
@@ -769,7 +746,7 @@
   const commentComposer = document.querySelector("[data-comment-composer]");
   const commentSection = document.querySelector(".comments-section");
 
-  function bindAcceptActions(scope = document) {
+  function bindAcceptActions(scope = document, slug = pageSlug, system = pageSystem) {
     scope?.querySelectorAll("[data-accept-comment]").forEach(button => {
       if (button.dataset.acceptBound === "true") return;
       button.dataset.acceptBound = "true";
@@ -779,7 +756,7 @@
         button.disabled = true;
         button.textContent = "正在采纳…";
         try {
-          const response = await fetch(`/api/community/posts/${encodeURIComponent(pageSlug)}/resolve`, {
+          const response = await fetch(`/api/community/posts/${encodeURIComponent(slug)}/resolve`, {
             method: "POST",
             headers: window.XuanxueAccount?.csrfHeaders({
               "Content-Type": "application/json",
@@ -797,7 +774,7 @@
           const metaLabel = accepted?.querySelector(".comment-meta span");
           if (metaLabel && !metaLabel.textContent.includes("已采纳")) metaLabel.textContent += " · 已采纳";
           const badge = document.querySelector("[data-help-status]");
-          if (badge) badge.textContent = `${pageSystem === "bazi" ? "八字" : "六爻"} · ${payload.help_status_label || "已解决"}`;
+          if (badge) badge.textContent = `${system === "bazi" ? "八字" : "六爻"} · ${payload.help_status_label || "已解决"}`;
           const briefTitle = document.querySelector("[data-help-brief] h2");
           if (briefTitle) briefTitle.textContent = "已采纳";
           showToast("已采纳");
@@ -810,8 +787,8 @@
     });
   }
 
-  function commentFormMarkup(inputId = "comment-body") {
-    const readingLabel = pageSystem === "liuyao" ? "断卦回复" : "命盘判断";
+  function commentFormMarkup(inputId = "comment-body", system = pageSystem) {
+    const readingLabel = system === "liuyao" ? "断卦回复" : "命盘判断";
     return `<form class="comment-form" data-comment-form>
       <div class="comment-reply-context" data-comment-reply-context hidden>
         <span data-comment-reply-label></span>
@@ -990,10 +967,10 @@
     });
   }
 
-  function renderCommentComposer(host, slug, onPublished, onAuthExpired, { focus = true, inputId = "comment-body" } = {}) {
+  function renderCommentComposer(host, slug, onPublished, onAuthExpired, { focus = true, inputId = "comment-body", system = pageSystem } = {}) {
     if (!host) return;
     host.dataset.writeReady = "true";
-    host.innerHTML = commentFormMarkup(inputId);
+    host.innerHTML = commentFormMarkup(inputId, system);
     bindCommentForm(host, slug, onPublished, onAuthExpired);
     if (focus) requestAnimationFrame(() => host.querySelector("textarea")?.focus());
   }
@@ -1161,6 +1138,33 @@
     });
   }
 
+  function renderBaziChart(chart) {
+    const pillars = chart.pillars || {};
+    const details = chart.pillars_detail || {};
+    const pillarHost = field("[data-preview-bazi-pillars]");
+    pillarHost.replaceChildren();
+    [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]].forEach(([key, label]) => {
+      const item = makeElement("span", key === "day" ? "is-day" : "");
+      item.append(
+        makeElement("small", "", label),
+        makeElement("b", "", pillars[key] || "—"),
+        makeElement("em", "", details[key]?.na_yin || "—"),
+      );
+      pillarHost.append(item);
+    });
+    setField("[data-preview-bazi-day-master]", chart.day_master || "—");
+    setField("[data-preview-bazi-shengxiao]", chart.shengxiao || "—");
+    setField("[data-preview-bazi-xun-kong]", chart.xun_kong || "—");
+    const elements = chart.wuxing_count || {};
+    const elementHost = field("[data-preview-bazi-elements]");
+    elementHost.replaceChildren();
+    ["木", "火", "土", "金", "水"].forEach(element => {
+      const item = makeElement("span");
+      item.append(makeElement("b", "", element), makeElement("i", "", String(Number(elements[element]) || 0)));
+      elementHost.append(item);
+    });
+  }
+
   function renderCommentReply(reply) {
     const replyItem = makeElement("div", `comment-reply${reply.accepted ? " is-accepted" : ""}`);
     if (reply.id) {
@@ -1199,7 +1203,7 @@
     }
   }
 
-  function renderComment(comment) {
+  function renderComment(comment, context = {}) {
     const item = makeElement("article", `comment${comment.accepted ? " is-accepted" : ""}`);
     if (comment.id) {
       item.id = `comment-${comment.id}`;
@@ -1218,7 +1222,9 @@
     item.append(meta, makeElement("p", "", comment.body || ""));
     appendCommentReading(item, comment);
     item.append(replyAction);
-    if (pageKind === "help" && pageCanManage && !comment.accepted) {
+    const postKind = context.post_kind || pageKind;
+    const canManage = context.can_manage ?? pageCanManage;
+    if (postKind === "help" && canManage && !comment.accepted) {
       const accept = makeElement("button", "comment-accept-action", "采纳");
       accept.type = "button";
       accept.dataset.acceptComment = String(comment.id || "");
@@ -1234,14 +1240,14 @@
     setField("[data-preview-comment-count]", `${post.comment_count || comments.length} 条`);
     host.replaceChildren();
     if (!comments.length) {
-      host.append(makeElement("p", "section-empty", "暂无评论。"));
+      host.append(makeElement("p", "section-empty", post.post_kind === "help" ? "暂无回答。" : "暂无评论。"));
       return;
     }
     const list = makeElement("div", "comment-list");
-    comments.forEach(comment => list.append(renderComment(comment)));
+    comments.forEach(comment => list.append(renderComment(comment, post)));
     host.append(list);
     bindReplyActions(host, field("[data-preview-comment-composer]"), () => renderPreviewCommentComposer(post, { focus: false }));
-    bindAcceptActions(host);
+    bindAcceptActions(host, post.slug, post.system);
   }
 
   function appendPreviewComment(post, comment) {
@@ -1277,7 +1283,7 @@
         post.comments_write_ready = false;
         renderPreviewCommentGate(post);
       },
-      { focus, inputId: "preview-comment-body" },
+      { focus, inputId: "preview-comment-body", system: post.system },
     );
   }
 
@@ -1316,37 +1322,64 @@
   }
 
   function renderPreview(post) {
-    const oracle = post.oracle || {};
-    const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
-    setField("[data-preview-oracle-meta]", oracle.palace_label || [oracle.moving_label, oracle.shi_ying_label].filter(Boolean).join(" · "));
-    setField("[data-preview-ben-name]", oracle.ben_name || "本卦");
-    setField("[data-preview-bian-name]", oracle.bian_name || "无变卦");
-    renderGuaLines(field("[data-preview-ben-lines]"), lines, false);
-    const changedLines = field("[data-preview-bian-lines]");
-    const quiet = field("[data-preview-quiet]");
-    const bianFigure = field("[data-preview-bian-figure]");
-    if (oracle.has_changed) {
-      renderGuaLines(changedLines, lines, true);
-      changedLines.hidden = false;
-      quiet.hidden = true;
-      bianFigure.classList.remove("is-quiet");
+    const isHelp = post.post_kind === "help";
+    const isBazi = post.system === "bazi";
+    const liuyaoPanel = field("[data-preview-liuyao]");
+    const baziPanel = field("[data-preview-bazi]");
+    liuyaoPanel.hidden = isBazi;
+    baziPanel.hidden = !isBazi;
+    if (isBazi) {
+      renderBaziChart(post.chart || {});
     } else {
-      changedLines.replaceChildren();
-      changedLines.hidden = true;
-      quiet.hidden = false;
-      bianFigure.classList.add("is-quiet");
+      const oracle = post.oracle || {};
+      const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
+      setField("[data-preview-oracle-meta]", oracle.palace_label || [oracle.moving_label, oracle.shi_ying_label].filter(Boolean).join(" · "));
+      setField("[data-preview-ben-name]", oracle.ben_name || "本卦");
+      setField("[data-preview-bian-name]", oracle.bian_name || "无变卦");
+      renderGuaLines(field("[data-preview-ben-lines]"), lines, false);
+      const changedLines = field("[data-preview-bian-lines]");
+      const quiet = field("[data-preview-quiet]");
+      const bianFigure = field("[data-preview-bian-figure]");
+      if (oracle.has_changed) {
+        renderGuaLines(changedLines, lines, true);
+        changedLines.hidden = false;
+        quiet.hidden = true;
+        bianFigure.classList.remove("is-quiet");
+      } else {
+        changedLines.replaceChildren();
+        changedLines.hidden = true;
+        quiet.hidden = false;
+        bianFigure.classList.add("is-quiet");
+      }
+      setField("[data-preview-moving]", oracle.moving_label || "—");
+      setField("[data-preview-shiying]", oracle.shi_ying_label || "—");
+      setField("[data-preview-month]", oracle.month_jian || "—");
+      setField("[data-preview-day]", oracle.day_chen || "—");
+      setField("[data-preview-method]", `${oracle.method_label || ""}${oracle.xun_kong ? ` · 空亡 ${oracle.xun_kong}` : ""}`);
+      renderLedger(lines);
     }
-    setField("[data-preview-moving]", oracle.moving_label || "—");
-    setField("[data-preview-shiying]", oracle.shi_ying_label || "—");
-    setField("[data-preview-month]", oracle.month_jian || "—");
-    setField("[data-preview-day]", oracle.day_chen || "—");
-    setField("[data-preview-method]", `${oracle.method_label || ""}${oracle.xun_kong ? ` · 空亡 ${oracle.xun_kong}` : ""}`);
-    renderLedger(lines);
 
     setField("[data-preview-category]", post.question_type_label || "其他");
     setField("[data-preview-question]", post.question || post.title || "六爻卦帖");
     setField("[data-preview-date]", formatStamp(post.published_at || post.created_at));
     setField("[data-preview-viewers]", `${Number(post.viewer_count) || 0} 人看过`);
+    setField("[data-preview-answer-title]", "解答");
+    setField("[data-preview-comments-title]", isHelp ? "回答与讨论" : "评论");
+    const answerSection = field("[data-preview-answer-section]");
+    if (answerSection) answerSection.hidden = isHelp;
+    const startAction = field("[data-preview-start-action]");
+    if (startAction) {
+      startAction.href = isHelp ? `/?start=${post.system}&community=help` : `/?start=${post.system}`;
+      startAction.textContent = isHelp ? "发起求助" : (isBazi ? "我也要排盘" : "我也要起卦");
+    }
+    const previewFollow = field("[data-preview-follow]");
+    previewFollow.hidden = !isHelp;
+    previewFollow.setAttribute("aria-pressed", post.viewer_following ? "true" : "false");
+    previewFollow.classList.toggle("is-following", !!post.viewer_following);
+    previewFollow.querySelector("[data-follow-label]").textContent = post.viewer_following ? "已关注" : "关注进展";
+    const followCount = previewFollow.querySelector("[data-follow-count]");
+    followCount.textContent = String(Number(post.follow_count) || 0);
+    followCount.hidden = !Number(post.follow_count);
     const previewViewers = field("[data-preview-viewers]");
     previewViewers.title = `共 ${Number(post.view_count) || 0} 次浏览`;
     setField("[data-preview-disclosure]", post.ai_disclosure || "AI 生成解读，仅供传统文化研究与娱乐参考");
@@ -1359,8 +1392,6 @@
     renderComments(post);
     renderPreviewCommentEntry(post);
 
-    const fullPage = field("[data-preview-open-page]");
-    fullPage.href = canonicalFor(post.slug);
     const previewLike = field("[data-preview-like]");
     previewLike.dataset.likePost = post.slug;
     previewLike.dataset.likeTitle = post.question || post.title || "这条卦帖";
@@ -1375,7 +1406,7 @@
 
   async function loadPreview(slug) {
     if (previewCache.has(slug)) return previewCache.get(slug);
-    const request = fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}`, {
+    const request = fetch(`/api/community/posts/${encodeURIComponent(slug)}`, {
       headers: { Accept: "application/json" },
     }).then(async response => {
       if (!response.ok) {
@@ -1414,6 +1445,10 @@
       if (view) Object.assign(post, view);
       if (requestId !== activeRequest || !previewDialog.open) return;
       renderPreview(post);
+      const targetId = new URLSearchParams(location.search).get("target") || "";
+      if (/^comment-\d+$/.test(targetId)) {
+        requestAnimationFrame(() => document.getElementById(targetId)?.scrollIntoView({ block: "center" }));
+      }
     } catch (error) {
       if (requestId !== activeRequest || !previewDialog.open) return;
       previewLoading.hidden = true;
@@ -1435,8 +1470,17 @@
     return openPreviewNow({ ...payload, opener: link });
   }
 
+  function clearSharedPreviewLocation() {
+    const url = new URL(location.href);
+    if (!url.searchParams.has("post")) return;
+    url.searchParams.delete("post");
+    url.searchParams.delete("target");
+    history.replaceState(history.state, "", `${url.pathname}${url.search}${url.hash}`);
+  }
+
   function closePreviewNow() {
     if (previewDialog.open) previewDialog.close();
+    clearSharedPreviewLocation();
   }
 
   function closePreview() {
@@ -1500,4 +1544,51 @@
       activePreview,
     );
   });
+  field("[data-preview-follow]").addEventListener("click", async event => {
+    if (!activePreview || activePreview.post_kind !== "help") return;
+    const button = event.currentTarget;
+    let account = await window.XuanxueAccount?.ready();
+    if (!account?.authenticated) {
+      const loggedIn = await window.XuanxueAccount?.requireLogin({
+        mode: "login",
+        message: "登录后关注；新回答会提醒。",
+      });
+      if (!loggedIn) return;
+      account = await window.XuanxueAccount?.ready();
+    }
+    if (!account?.authenticated) return;
+    const following = button.getAttribute("aria-pressed") !== "true";
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/community/posts/${encodeURIComponent(activePreview.slug)}/follow`, {
+        method: "POST",
+        headers: window.XuanxueAccount?.csrfHeaders({
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-Xuanshu-Interaction": "same-origin-v1",
+        }),
+        credentials: "same-origin",
+        body: JSON.stringify({ following }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "关注失败");
+      activePreview.viewer_following = !!payload.following;
+      activePreview.follow_count = Number(payload.follow_count) || 0;
+      button.setAttribute("aria-pressed", payload.following ? "true" : "false");
+      button.classList.toggle("is-following", !!payload.following);
+      button.querySelector("[data-follow-label]").textContent = payload.following ? "已关注" : "关注进展";
+      const count = button.querySelector("[data-follow-count]");
+      count.textContent = String(activePreview.follow_count);
+      count.hidden = !activePreview.follow_count;
+      showToast(payload.following ? "已关注，有新回答会提醒你" : "已取消关注");
+    } catch (error) {
+      showToast(error.message || "关注失败", "error");
+    } finally {
+      button.disabled = false;
+    }
+  });
+  const sharedPostSlug = new URLSearchParams(location.search).get("post") || "";
+  if (sharedPostSlug) {
+    window.setTimeout(() => openPreviewNow({ slug: sharedPostSlug, href: canonicalFor(sharedPostSlug) }), 0);
+  }
 })();

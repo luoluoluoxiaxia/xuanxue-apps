@@ -338,7 +338,7 @@ async function openProfileLibrary() {
             ${defaultAction}
             ${p.visibility === "public"
               ? publicSlug
-                ? `<a class="profile-action-link" href="/gua/${encodeURIComponent(publicSlug)}" data-community-post data-post-slug="${esc(publicSlug)}">查看公开卦帖</a>`
+                ? `<a class="profile-action-link" href="/?post=${encodeURIComponent(publicSlug)}#gua-square" data-community-post data-post-slug="${esc(publicSlug)}">查看公开卦帖</a>`
                 : `<span class="saved-retained">公开档案随卦帖保留</span>`
               : `<button type="button" class="danger" data-request-delete-profile="${p.id}">删除</button>`}
           </div>`;
@@ -707,7 +707,7 @@ function currentArchiveCardHtml(currentProfile = null) {
         ${currentProfile
           ? currentProfile.visibility === "public"
             ? publicSlug
-              ? `<a class="profile-action-link" href="/gua/${encodeURIComponent(publicSlug)}" data-community-post data-post-slug="${esc(publicSlug)}">查看公开卦帖</a>`
+              ? `<a class="profile-action-link" href="/?post=${encodeURIComponent(publicSlug)}#gua-square" data-community-post data-post-slug="${esc(publicSlug)}">查看公开卦帖</a>`
               : `<span class="saved-retained">公开档案随卦帖保留</span>`
             : `<button type="button" class="danger" data-request-delete-profile="${Number(currentProfile.id)}">删除</button>`
           : ""}

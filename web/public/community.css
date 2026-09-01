@@ -858,7 +858,11 @@ body[data-screen="landing"] .post-preview-dialog {
 }
 .post-preview-context .post-preview-head { padding: 34px 34px 25px; }
 .post-preview-context .post-preview-head h2 { margin-top: 0; font-size: clamp(25px, 2vw, 31px); }
-.post-preview-context .post-preview-oracle { width: calc(100% - 60px); min-height: 0; margin: 0 auto 34px; padding: 18px 20px; background: transparent; }
+.post-preview-context .post-preview-oracle,
+.post-preview-context .post-preview-bazi { width: calc(100% - 60px); min-height: 0; margin: 0 auto 34px; background: transparent; }
+.post-preview-context .post-preview-oracle { padding: 18px 20px; }
+.post-preview-context .post-preview-bazi { padding: 0; }
+.post-preview-bazi .bazi-public-board { gap: 15px; padding: 20px 18px; }
 .post-preview-context .gua-board { grid-template-columns: 1fr; grid-template-rows: auto; gap: 8px; }
 .post-preview-context .gua-pair { grid-column: 1; grid-row: 1; width: 100%; margin: 0; }
 .post-preview-context .oracle-facts { grid-column: 1; grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
@@ -895,8 +899,6 @@ body[data-screen="landing"] .post-preview-dialog {
   backdrop-filter: blur(14px);
 }
 .post-preview-actions .primary-action { min-height: 42px; }
-.preview-open-page { margin-left: auto; padding: 9px 0 9px 12px; color: var(--muted-strong); font-size: 11px; white-space: nowrap; }
-.preview-open-page:hover { color: var(--accent); }
 .post-preview-loading,
 .post-preview-error {
   position: absolute;
@@ -1200,12 +1202,13 @@ body.share-card-open { overflow: hidden; }
   .post-preview-comments { padding-right: 19px; padding-left: 19px; }
   .post-preview-head { padding-top: 58px; }
   .post-preview-context .post-preview-head { padding: 58px 19px 23px; }
-  .post-preview-context .post-preview-oracle { width: calc(100% - 38px); margin: 0 auto 24px; padding: 16px 14px 14px; }
+  .post-preview-context .post-preview-oracle,
+  .post-preview-context .post-preview-bazi { width: calc(100% - 38px); margin: 0 auto 24px; }
+  .post-preview-context .post-preview-oracle { padding: 16px 14px 14px; }
   .post-preview-head h2 { font-size: 26px; }
   .post-preview-actions { min-height: 66px; padding: 9px 12px; overflow-x: auto; }
   .post-preview-actions .primary-action,
   .preview-action-button { min-height: 40px; flex: 0 0 auto; padding: 0 14px; }
-  .preview-open-page { flex: 0 0 auto; }
   .share-card-dialog { width: 100vw; height: 100dvh; border-radius: 0; }
   .share-card-close { top: 10px; right: 10px; }
   .share-card-head { padding: 17px 58px 14px 16px; }
@@ -1465,11 +1468,6 @@ body.share-card-open { overflow: hidden; }
 .comment:target,
 .comment-reply:target { background: linear-gradient(90deg, var(--accent-soft), rgba(255, 255, 255, .3)); outline: 2px solid rgba(255, 36, 66, .12); outline-offset: 3px; }
 #post-engagement:target { padding: 8px; background: var(--accent-soft); border-radius: 16px; }
-.post-back-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; }
-.post-back[hidden] { display: none; }
-.notification-return { padding: 0; color: var(--muted-strong); background: transparent; border: 0; cursor: pointer; font-family: inherit; }
-.notification-return:hover { text-decoration: underline; }
-
 @media (max-width: 560px) {
   .community-notifications-dialog { width: 100%; max-width: none; max-height: calc(100vh - 28px); margin: auto 0 0; border-width: 1px 0 0; border-radius: 22px 22px 0 0; }
   .community-notifications-shell { max-height: calc(100vh - 28px); }

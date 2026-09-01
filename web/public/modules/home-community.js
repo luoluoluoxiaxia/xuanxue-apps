@@ -214,8 +214,8 @@
         const commentCount = Number(post.comment_count) || 0;
         const isHelp = post.post_kind === "help";
         const isBazi = post.system === "bazi";
-        const postUrl = String(post.url || (isHelp ? `/community/${slug}` : `/gua/${slug}`));
-        const previewAttrs = !isHelp && !isBazi ? ` data-community-post data-post-slug="${esc(rawSlug)}"` : "";
+        const postUrl = String(post.url || `/?post=${slug}#gua-square`);
+        const previewAttrs = ` data-community-post data-post-slug="${esc(rawSlug)}"`;
         const oracleHtml = lines.length ? `
           <div class="post-card-oracle">
             <div class="post-card-gua-pair${hasChanged ? "" : " is-static"}">

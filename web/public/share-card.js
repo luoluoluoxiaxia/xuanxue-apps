@@ -52,7 +52,7 @@
   }
 
   function canonicalFor(slug) {
-    return location.origin + "/gua/" + encodeURIComponent(slug) + "?ref=post_card";
+    return location.origin + "/?post=" + encodeURIComponent(slug) + "&ref=post_card#gua-square";
   }
 
   function safeTitle(value) {
