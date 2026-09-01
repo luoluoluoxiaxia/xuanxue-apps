@@ -327,7 +327,7 @@ async function openProfileLibrary() {
     const archiveEmpty = visibleProfiles.length || currentCard
       ? ""
       : `<div class="profile-empty profile-empty-actionable">
-            <span>${profileArchiveTab === "bazi" ? "还没有八字档案。完成一次排盘后，会自动保存到这里。" : "还没有六爻档案。完成一次起卦后，会自动保存到这里。"}</span>
+            <span>${profileArchiveTab === "bazi" ? "还没有八字档案。" : "还没有六爻档案。"}</span>
             <div class="profile-empty-actions">
               ${profileArchiveTab === "bazi"
                 ? `<button type="button" class="primary" data-empty-open-bazi>去排八字</button>`
@@ -342,7 +342,6 @@ async function openProfileLibrary() {
       <div class="saved-library-summary" role="status">
         <b>${profiles.length} 份云端档案</b>
         <span>${baziCount} 份八字 · ${liuyaoCount} 份六爻 · ${historyCount} 条解读${activeCount ? ` · ${activeCount} 份档案正在生成` : ""}</span>
-        <em>八字档案可设为默认命盘；同一账户换设备登录后也能继续查看</em>
       </div>
       <div class="profile-home-actions profile-library-account-actions">
         <button type="button" data-profile-account>账户与退出</button>
@@ -364,7 +363,7 @@ async function openProfileLibrary() {
         : options.focusArchiveTab
           ? `[data-archive-tab="${options.focusArchiveTab}"]`
           : "";
-    openProfileModal("档案列表", profiles.length ? "选择一份继续查看，或整理不再需要的私密档案。" : "完成排盘或起卦后，会自动保存到当前账户。", body, focusSelector);
+    openProfileModal("档案", profiles.length ? "选择档案继续查看。" : "", body, focusSelector);
     const account = $("#profile-card").querySelector("[data-profile-account]");
     if (account) account.onclick = () => closeProfileModal(() => Account.open("account"));
     const current = $("#profile-card").querySelector("[data-open-current-profile]");

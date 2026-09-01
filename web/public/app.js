@@ -1262,13 +1262,13 @@ function syncBirthEntryCopy() {
   if (title) title.textContent = editing ? "修改出生信息" : "出生信息";
   if (copy) copy.textContent = editing
     ? "当前命盘资料已回填；提交后会更新此档案并按新信息重新排盘。"
-    : "公历或农历均可，临近时辰边界时会单独提示。";
+    : "支持公历、农历；临界时辰会提示。";
   if (submit && !submit.disabled) submit.textContent = editing ? "更 新 并 重 新 排 盘" : "生 成 命 盘";
   if (foot) foot.textContent = editing
     ? "更新后从新盘重新开始解读，原有解读不再挂在当前档案下"
     : manual
       ? "选择生年候选后匹配出生锚点，不需要城市"
-      : "先生成命盘，解读由你手动开始";
+      : "";
 }
 function syncBirthInputMode() {
   const manual = isManualPillarsMode();
@@ -1757,19 +1757,19 @@ function syncCastEntryMode() {
   if (kicker) kicker.textContent = combined ? "命 盘 与 卦 象 · 一 事 详 断" : "问 眼 前 · 六 爻 起 卦";
   if (title) title.innerHTML = combined ? "命卦同参<br>只断一事" : "一事一卦<br>据问而断";
   if (guide) guide.textContent = combined
-    ? "本人默认命盘已经带入。写清现实问题，再完成六爻；问题与结论只保存在你的账户中。"
-    : "先把现实问题写清楚，再自下而上完成六爻。公开问题经审核后会进入卦帖广场；卦主可以继续讲故事，卦友也可以留下自己的六爻判断。";
+    ? "默认命盘已带入；完成六爻后开始私密解读。"
+    : "写下问题，完成六爻，再选择社区求助或 AI 解读。";
   if (cardTitle) cardTitle.textContent = combined ? "一事 · 详断" : "六爻 · 起卦";
   if (cardCopy) cardCopy.textContent = combined
-    ? "默认命盘已带入；写下所问，再围绕这件事完成六爻。"
-    : "静心，默念所问之事。一事一卦，卦成不改。";
+    ? "默认命盘已带入，写下所问。"
+    : "写下一个具体问题，再完成六爻。";
   if (hint) {
     const account = Account?.snapshot?.() || {};
     const quota = account.privateQuota;
     const wallet = account.creditWallet;
     hint.textContent = combined
-      ? `默认命盘已带入${quota ? ` · 今日免费 ${quota.remaining}/${quota.total} 分` : ""}${wallet ? ` · 账户积分 ${Number(wallet.balance || 0)} 分` : ""}；完整回答后按实际消耗结算，仅账户可见。`
-      : "写清时间范围和现实背景；请勿填写姓名、电话、住址或证件号。";
+      ? `仅自己可见${quota ? ` · 今日免费 ${quota.remaining}/${quota.total} 分` : ""}${wallet ? ` · 账户积分 ${Number(wallet.balance || 0)} 分` : ""}`
+      : "写清时间范围；不要填写姓名、电话、住址或证件号。";
   }
 }
 
@@ -1971,15 +1971,15 @@ function syncCastUI() {
     if (manualHint) manualHint.hidden = true;
     if (reset) reset.textContent = manual ? "重新起卦" : "重新摇一次";
     if (note) note.textContent = isHelp
-      ? "只发布脱敏卦象和所问，不调用 AI，也不扣积分"
-      : "入局后可围绕所问开始断卦，并继续追问";
+      ? "公开脱敏卦象，不调用 AI，不扣积分"
+      : "围绕这件事继续追问";
     return;
   }
   if (manual) {
     submit.hidden = true;
     if (manualHint) manualHint.hidden = false;
     if (reset) reset.textContent = "重新起卦";
-    if (note) note.textContent = "已在他处摇好卦？按记录逐爻录入即可";
+    if (note) note.textContent = "按记录逐爻录入";
     return;
   }
   submit.hidden = false;
@@ -1993,7 +1993,7 @@ function syncCastUI() {
   if (reset) reset.textContent = "重新起卦";
   if (note) note.textContent = completed
     ? `已完成 ${completed}/6 · 下一爻继续自下而上点亮`
-    : "随机只在你的浏览器里发生 · 自下而上，六掷成卦";
+    : "本机随机 · 自下而上六掷";
 }
 function clientCastWaitingMs() {
   return Math.max(0, clientCastRevealAt - Date.now());

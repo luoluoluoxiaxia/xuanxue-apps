@@ -79,8 +79,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="community.css?v=community-49">
-<link rel="stylesheet" href="account.css?v=account-13">
-<link rel="stylesheet" href="style.css?v=design-158">
+<link rel="stylesheet" href="account.css?v=account-14">
+<link rel="stylesheet" href="style.css?v=design-159">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-13">
 <link rel="stylesheet" href="chat.css?v=chat-17">
 <script type="application/ld+json">
@@ -326,8 +326,8 @@
           <span class="home-community-kicker"><i></i>社区共学</span>
           <button type="button" class="home-community-all" data-home-community-filter-toggle aria-expanded="false" aria-controls="home-community-filters">分类筛选 <span aria-hidden="true">⌄</span></button>
         </div>
-        <h2 id="home-community-title">玄枢社区 <span>带着命盘与卦象，一起讨论真实问题</span></h2>
-        <p class="home-community-intro">可以看 AI 解读，也可以不走 AI、免费向社区求助。</p>
+        <h2 id="home-community-title">玄枢社区 <span>命盘与卦象的真实讨论</span></h2>
+        <p class="home-community-intro">看解读，或带着命盘向社区求助。</p>
         <div id="home-community-filters" class="home-community-filters" aria-label="筛选社区帖子" hidden>
           <div class="home-community-filter-group" aria-label="排序方式">
             <span>排序</span>
@@ -367,8 +367,8 @@
           <div class="home-community-empty">
             <span class="home-community-empty-mark" aria-hidden="true">问</span>
             <span>
-              <b>社区刚刚开卷</b>
-              <em>还没有匹配的帖子。你可以排盘后直接向社区求助，不调用 AI，也不扣积分。</em>
+              <b>还没有帖子</b>
+              <em>排盘后即可发起求助。</em>
               <a class="home-community-empty-action" href="/?start=liuyao&community=help">发起求助 <span aria-hidden="true">→</span></a>
             </span>
           </div>
@@ -516,12 +516,7 @@
       <aside class="entry-guide">
         <div class="entry-kicker">第 一 步 · 录 生 辰</div>
         <h2 id="birth-page-title">录入生辰<br>以定四柱</h2>
-        <p>时间态用于真太阳时与节气换月；已知四柱态则直接以干支入盘，并用近年匹配定位流年流月。</p>
-        <ol class="entry-steps">
-          <li class="active"><b>序 · 录入生辰</b><span>此刻</span></li>
-          <li><b>盘 · 四柱与行运即时排出</b><span>约一息之间</span></li>
-          <li><b>问 · 择话题起解读，随问随答</b><span>由你手动开始</span></li>
-        </ol>
+        <p>按出生时间或四柱排盘；生成后再选择 AI 解读或社区求助。</p>
       </aside>
 
       <form id="birth-form" class="bm-body entry-card">
@@ -530,7 +525,7 @@
             <h2 id="birth-form-title">出生信息</h2>
             <span class="entry-step-mark">第 1 步 / 共 3 步</span>
           </div>
-          <p id="birth-form-copy">公历或农历均可，临近时辰边界时会单独提示。</p>
+          <p id="birth-form-copy">支持公历、农历；临界时辰会提示。</p>
           <div class="entry-tabs" role="tablist" aria-label="录入方式">
             <button type="button" role="tab" data-input-mode-btn="birth_time" aria-selected="true" aria-controls="birth-time-section">按出生时间</button>
             <button type="button" role="tab" data-input-mode-btn="manual_pillars" aria-selected="false" aria-controls="manual-pillars-section" tabindex="-1">已知四柱</button>
@@ -564,7 +559,7 @@
             <label>时<input type="text" id="f-hour" inputmode="numeric" placeholder="0–23" aria-describedby="birth-time-hint"></label>
             <label>分<input type="text" id="f-minute" inputmode="numeric" placeholder="0"></label>
           </div>
-          <span id="birth-time-hint" class="bm-hint bm-time-hint">出生小时必填；分钟可留空，按 00 分处理。不确定时辰可先填 12，并在解读时注明。</span>
+          <span id="birth-time-hint" class="bm-hint bm-time-hint">小时必填，分钟留空按 00 分；时辰不确定可先填 12。</span>
         </div>
 
         <div id="manual-pillars-section" role="tabpanel" hidden>
@@ -618,7 +613,7 @@
         <div id="birth-error" class="bm-error" role="alert" aria-live="assertive" hidden></div>
         <div class="bm-foot">
           <button type="submit" id="birth-submit" class="btn-gold btn-cta">生 成 命 盘</button>
-          <span class="bm-foot-note" id="birth-foot-note">先生成命盘，解读由你手动开始</span>
+          <span class="bm-foot-note" id="birth-foot-note"></span>
         </div>
       </form>
     </div>
@@ -639,12 +634,7 @@
       <aside class="entry-guide cast-guide">
         <div class="entry-kicker">问 眼 前 · 六 爻 起 卦</div>
         <h2 id="cast-page-title">一事一卦<br>据问而断</h2>
-        <p>先把现实问题写清楚，再自下而上完成六爻。你可以直接向社区求助，也可以选择 AI 解读；求助帖由真实用户一起讨论。</p>
-        <ol class="entry-steps">
-          <li class="active"><b>问 · 写下具体问题</b><span>此刻</span></li>
-          <li><b>卦 · 本机摇钱或手动录入</b><span>六爻成卦</span></li>
-          <li><b>断 · 看卦并继续追问</b><span>在同一工作区完成</span></li>
-        </ol>
+        <p>写下问题，完成六爻，再选择社区求助或 AI 解读。</p>
       </aside>
       <div class="cast-center">
         <form id="cast-form" class="cast-card" novalidate>
@@ -652,7 +642,7 @@
           <div class="cast-head-row">
             <div>
               <h2>六爻 · 起卦</h2>
-              <p>静心，默念所问之事。一事一卦，卦成不改。</p>
+              <p>写下一个具体问题，再完成六爻。</p>
             </div>
             <button type="button" id="cast-close-x" class="modal-close" aria-label="返回">×</button>
           </div>
@@ -661,33 +651,31 @@
               <label class="wide cast-question-label">
                 <span class="cast-question-title"><b>你想问什么</b><em>只问一件具体事情</em></span>
                 <textarea id="cast-question" rows="4" aria-label="要问的事" aria-describedby="cast-question-hint cast-question-error" placeholder="例如：本月能否签下这个合同？"></textarea>
-                <span id="cast-question-hint" class="cast-question-hint">写清时间范围和现实背景；请勿填写姓名、电话、住址或证件号。</span>
+                <span id="cast-question-hint" class="cast-question-hint">写清时间范围；不要填写姓名、电话、住址或证件号。</span>
                 <span id="cast-question-error" class="cast-question-error" role="alert" hidden></span>
               </label>
               <fieldset class="cast-visibility" aria-label="提问可见性">
-                <legend>谁可以看到这次问题</legend>
+                <legend>回答方式</legend>
                 <div class="cast-visibility-options">
                   <label class="cast-visibility-option cast-visibility-help">
                     <input type="radio" name="cast-visibility" value="help" checked>
                     <span>
-                      <b>向社区求助 <i>不扣积分</i></b>
-                      <em>只发布脱敏卦象和你的问题，不调用 AI；由真实用户回答。</em>
-                      <small>发布后可关注回复、参与讨论，并采纳一个回答结帖。请勿填写个人身份信息。</small>
+                      <b>社区求助 <i>不扣积分</i></b>
+                      <em>选择即同意公开脱敏卦象和问题，由社区回答。</em>
                     </span>
                   </label>
                   <label class="cast-visibility-option cast-visibility-public">
                     <input type="radio" name="cast-visibility" value="public">
                     <span>
-                      <b>公开提问 <i>积分规则相同</i></b>
-                      <em>匿名进入社区，可被浏览、评论和分享；AI 解答照常使用积分。</em>
-                      <small>选择公开即同意：经 Pro 审核后发布问题、卦象与首轮 AI 解答；后续追问不公开。请勿填写个人身份信息。</small>
+                      <b>公开 AI 解读 <i>消耗积分</i></b>
+                      <em>选择即同意公开问题、卦象和首轮 AI 解答。</em>
                     </span>
                   </label>
                   <label class="cast-visibility-option">
                     <input type="radio" name="cast-visibility" value="private">
                     <span>
-                      <b>私密提问 <i data-private-quota-label>每日赠送 10 分</i></b>
-                      <em>仅登录账户可见，不进入社区，也不生成分享链接。</em>
+                      <b>私密 AI 解读 <i data-private-quota-label>每日赠送 10 分</i></b>
+                      <em>仅自己可见，不进入社区。</em>
                     </span>
                   </label>
                 </div>
@@ -715,7 +703,7 @@
                 <span class="coin-face c2"><img class="front" src="assets/qianlong_coin_front_transparent_512.png" alt=""><img class="back" src="assets/qianlong_coin_back_transparent_512.png" alt=""><i class="coin-tag"></i></span>
                 <span class="coin-face c3"><img class="front" src="assets/qianlong_coin_front_transparent_512.png" alt=""><img class="back" src="assets/qianlong_coin_back_transparent_512.png" alt=""><i class="coin-tag"></i></span>
               </div>
-              <div class="coin-caption">字面「乾隆通宝」· 背面满文「宝泉」 ｜ 一背少阳 · 二背少阴 · 三背老阳 ○ · 三字老阴 ✕</div>
+              <div class="coin-caption">字 / 背：一背少阳 · 二背少阴 · 三背老阳 ○ · 三字老阴 ✕</div>
               <div id="cast-rows" class="cast-rows" role="tabpanel" aria-label="六爻录入" aria-live="polite"></div>
               <div id="cast-complete-banner" class="cast-complete-banner" hidden>
                 <div><span>卦 成</span><b>六爻已齐</b></div>
@@ -811,7 +799,7 @@
 
 <script src="chat-render.js?v=chat-1"></script>
 <script src="regions.js?v=20260629"></script>
-<script src="account.js?v=account-22"></script>
+<script src="account.js?v=account-23"></script>
 <script src="share-card.js?v=share-card-5"></script>
 <script src="personal-home.js?v=personal-workbench-13"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
@@ -819,9 +807,9 @@
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-7"></script>
-<script src="app.js?v=design-189"></script>
-<script src="modules/profile-workspace.js?v=web-modules-4"></script>
+<script src="modules/home-community.js?v=web-modules-8"></script>
+<script src="app.js?v=design-190"></script>
+<script src="modules/profile-workspace.js?v=web-modules-5"></script>
 <script src="modules/chat-workspace.js?v=web-modules-4"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
 <script src="community.js?v=community-25"></script>
