@@ -6073,6 +6073,7 @@ body[data-screen="dash"] .liuyao-question-card{
     display:block;
     min-height:100svh;
     padding:0 0 calc(68px + env(safe-area-inset-bottom));
+    background:#fff;
   }
   .landing .hero::before{inset:0 0 calc(68px + env(safe-area-inset-bottom))}
   .landing .hero-nav,
