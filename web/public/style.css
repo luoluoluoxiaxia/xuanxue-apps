@@ -5957,3 +5957,216 @@ body[data-screen="dash"] .liuyao-question-card{
   }
   body[data-screen="dash"] .chart-rail{padding:0}
 }
+
+/* ============================================================
+   COMMUNITY-FIRST HOME · 登录前先看见真实讨论（design-160）
+   ============================================================ */
+.landing .home-community-pulse{
+  width:min(780px,100%);
+  margin-top:34px;
+  padding-top:24px;
+  border-top:1px solid var(--home-line);
+}
+@media(min-width:621px){
+  .landing .home-observatory-page{min-height:calc(100svh - 46px);justify-content:flex-start}
+}
+.landing .home-community-pulse>header{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:18px;
+}
+.landing .home-community-pulse>header span{
+  display:block;
+  margin-bottom:5px;
+  color:var(--home-accent-dark);
+  font-size:10px;
+  font-weight:750;
+  letter-spacing:.1em;
+}
+.landing .home-community-pulse h2{
+  margin:0;
+  color:var(--home-text);
+  font:760 22px/1.25 var(--sans);
+  letter-spacing:-.025em;
+}
+.landing .home-community-pulse>header a{
+  display:inline-flex;
+  min-height:38px;
+  align-items:center;
+  gap:8px;
+  color:var(--home-accent-dark);
+  font-size:11px;
+  font-weight:700;
+}
+.landing .home-community-pulse>header a i{font-style:normal;transition:transform .18s ease}
+.landing .home-community-pulse>header a:hover i{transform:translateX(3px)}
+.landing .home-community-pulse-list{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:9px;
+  margin-top:14px;
+}
+.landing .home-community-pulse-list>p{
+  grid-column:1 / -1;
+  margin:0;
+  color:var(--home-muted);
+  font-size:11px;
+}
+.landing .home-community-pulse-list a{
+  position:relative;
+  display:grid;
+  min-width:0;
+  min-height:84px;
+  grid-template-columns:minmax(0,1fr) 16px;
+  grid-template-rows:auto minmax(0,1fr);
+  gap:6px 8px;
+  padding:12px 13px;
+  color:var(--home-text);
+  background:var(--home-subtle);
+  border:1px solid var(--home-line);
+  border-radius:14px;
+}
+.landing .home-community-pulse-list a:hover{background:#fff;border-color:rgba(255,36,66,.16)}
+.landing .home-community-pulse-list span{
+  grid-column:1;
+  grid-row:1;
+  color:var(--home-accent-dark);
+  font-size:10px;
+  font-weight:700;
+}
+.landing .home-community-pulse-list b{
+  grid-column:1;
+  grid-row:2;
+  display:-webkit-box;
+  overflow:hidden;
+  font-size:12px;
+  line-height:1.5;
+  -webkit-box-orient:vertical;
+  -webkit-line-clamp:2;
+}
+.landing .home-community-pulse-list i{
+  grid-column:2;
+  grid-row:1 / span 2;
+  align-self:center;
+  color:var(--home-accent);
+  font-style:normal;
+}
+.landing .home-community-pulse-help{
+  display:inline-flex;
+  min-height:38px;
+  align-items:center;
+  margin-top:10px;
+  color:var(--home-muted);
+  font-size:10.5px;
+  font-weight:650;
+}
+.landing .post-card-head{align-items:flex-start}
+.landing .post-card-labels{min-width:0;margin-bottom:8px}
+.landing .post-card-author{flex:0 1 auto;color:rgba(38,38,38,.48)}
+
+/* ============================================================
+   MOBILE BOTTOM NAV · 手机端不再挤占左侧正文（design-160）
+   ============================================================ */
+@media(max-width:620px){
+  .landing .hero{
+    display:block;
+    min-height:100svh;
+    padding:0 0 calc(68px + env(safe-area-inset-bottom));
+  }
+  .landing .hero::before{inset:0 0 calc(68px + env(safe-area-inset-bottom))}
+  .landing .hero-nav,
+  html.modal-open .landing .hero-nav{
+    position:fixed;
+    z-index:70;
+    top:auto;
+    right:0;
+    bottom:0;
+    left:0;
+    display:flex;
+    width:100%;
+    height:calc(64px + env(safe-area-inset-bottom));
+    min-height:0;
+    flex-direction:row;
+    align-items:flex-start;
+    padding:6px 6px env(safe-area-inset-bottom);
+    background:rgba(255,255,255,.97);
+    border:0;
+    border-top:1px solid var(--home-line);
+    box-shadow:0 -8px 24px rgba(17,17,19,.055);
+    backdrop-filter:blur(18px);
+  }
+  .landing .hero-nav .brand{display:none}
+  .landing .hero-meta{
+    display:block;
+    width:100%;
+    min-width:0;
+    flex:none;
+    margin:0;
+  }
+  .landing .hero-meta::before{display:none}
+  .landing .hero-links{
+    display:flex;
+    width:100%;
+    min-width:0;
+    flex-direction:row;
+    align-items:stretch;
+    justify-content:space-around;
+    gap:0;
+  }
+  .landing .hero-links button,
+  .landing .hero-links a.hero-link-signature{
+    display:flex;
+    width:auto;
+    min-width:0;
+    min-height:52px;
+    flex:1 1 0;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:3px;
+    padding:0 2px;
+    color:var(--home-muted);
+    background:transparent;
+    border:0;
+    border-radius:10px;
+  }
+  .landing .hero-links button[data-hero-nav="credits"],
+  .landing .hero-links button.sidebar-toggle{display:none}
+  .landing .hero-links button[data-hero-nav="profile"]{margin:0}
+  .landing .hero-links button[aria-current="page"]::before,
+  .landing .hero-links a.hero-link-signature[aria-current="page"]::before{display:none}
+  .landing .hero-links button:hover,
+  .landing .hero-links a.hero-link-signature:hover,
+  .landing .hero-links button[aria-current="page"],
+  .landing .hero-links a.hero-link-signature[aria-current="page"]{
+    color:var(--home-accent-dark);
+    background:var(--home-pink);
+  }
+  .landing .hero-link-icon{width:19px;height:19px;flex:0 0 19px}
+  .landing .hero-links>button>span:not(.hero-link-icon),
+  .landing .hero-links>a>span:not(.hero-link-icon){
+    position:static;
+    width:auto;
+    height:auto;
+    max-width:100%;
+    padding:0;
+    overflow:hidden;
+    clip-path:none;
+    font-size:10px;
+    line-height:1.1;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .landing .community-notification-badge{top:3px;right:calc(50% - 20px)}
+  .landing .hero-actions-m{display:none}
+  .landing .hero-body,
+  .landing .home-community,
+  .landing .hero-footer{width:100%;margin:0}
+  .landing .home-observatory-page{min-height:auto;padding:30px 20px 24px}
+  .landing .home-community-pulse{margin-top:28px;padding-top:20px}
+  .landing .home-community-pulse-list{grid-template-columns:1fr}
+  .landing .home-community-pulse-list a{min-height:72px}
+  .landing .home-community-card{padding:24px 18px 28px}
+  .landing .hero-footer{padding-bottom:12px}
+}

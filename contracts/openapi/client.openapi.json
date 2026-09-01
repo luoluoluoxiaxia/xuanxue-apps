@@ -1590,6 +1590,11 @@
             "title": "Answer Excerpt",
             "type": "string"
           },
+          "author_name": {
+            "default": "卦友",
+            "title": "Author Name",
+            "type": "string"
+          },
           "can_manage": {
             "default": false,
             "title": "Can Manage",
