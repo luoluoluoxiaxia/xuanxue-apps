@@ -3570,7 +3570,7 @@ function bind() {
         return;
       }
       if (target === "credits") {
-        Account.requireLogin({ mode: "login", message: "登录后查看消费明细。" })
+        Account.requireLogin({ mode: "login", message: "登录后管理积分。" })
           .then(ok => { if (ok) showScreen("credits", { historyMode: "push", focusPage: true }); });
         return;
       }
@@ -3867,7 +3867,7 @@ async function init() {
   }
   if (creditsRequested) {
     if (accountState?.authenticated) CreditLedger?.activate();
-    else Account.requireLogin({ mode: "login", message: "登录后查看消费明细。" })
+    else Account.requireLogin({ mode: "login", message: "登录后管理积分。" })
       .then(ok => { if (ok) showScreen("credits", { historyMode: "replace", focusPage: true }); });
     return;
   }
