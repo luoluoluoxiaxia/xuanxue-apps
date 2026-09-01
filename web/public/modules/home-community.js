@@ -62,7 +62,10 @@
         Account?.ready().then(account => {
           if (account?.authenticated) openProfileLibrary({ includeCurrent: !!lastPayload, preserveEntryLocation: true });
           else Account.requireLogin({ mode: "login", message: "登录后查看跨设备档案。" })
-            .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, preserveEntryLocation: true }); });
+            .then(ok => {
+              if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, preserveEntryLocation: true });
+              else renderProfileSignedOut({ preserveEntryLocation: true });
+            });
         }).catch(() => {});
         return;
       }

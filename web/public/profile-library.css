@@ -338,6 +338,16 @@ body[data-screen="archives"] .landing .hero-footer {
   border-bottom: 1px solid var(--pl-line);
 }
 
+.profile-library-page .profile-empty b {
+  color: var(--pl-ink);
+  font-size: 14px;
+}
+
+.profile-library-page .profile-empty span {
+  color: var(--pl-muted);
+  font-size: 11px;
+}
+
 .profile-library-page .bazi-archive-detail {
   gap: 0;
 }

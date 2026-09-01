@@ -3877,7 +3877,10 @@ async function init() {
   if (archivesRequested) {
     if (accountState?.authenticated) await openProfileLibrary({ includeCurrent: !!lastPayload, startup: true });
     else Account.requireLogin({ mode: "login", message: "登录后查看跨设备档案。" })
-      .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, startup: true }); });
+      .then(ok => {
+        if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, startup: true });
+        else renderProfileSignedOut({ preserveEntryLocation: true, startup: true });
+      });
     return;
   }
   if (creditsRequested) {
