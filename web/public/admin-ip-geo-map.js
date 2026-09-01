@@ -5,6 +5,7 @@
   const chartNode = root.querySelector("[data-admin-ip-map-chart]");
   const stateNode = root.querySelector("[data-admin-ip-map-state]");
   const dataNode = document.getElementById(root.dataset.dataId || "");
+  const periodLabel = root.dataset.periodLabel || "近 30 日访客";
   if (!chartNode || !dataNode) return;
 
   const setState = (message, isError = false) => {
@@ -47,7 +48,7 @@
           trigger: "item",
           formatter(params) {
             const value = Number(params.value || 0);
-            return `${params.name}<br/>近 7 日 IP UV：${value}`;
+            return `${params.name}<br/>${periodLabel}：${value}`;
           },
         },
         visualMap: {
