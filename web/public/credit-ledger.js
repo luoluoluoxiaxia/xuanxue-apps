@@ -107,37 +107,6 @@
     </div>`;
   }
 
-  function packEstimate(pack) {
-    return String(pack?.usage_estimate || "按每次回答的实际消耗结算");
-  }
-
-  function renderPacks(wallet, authenticated) {
-    const root = $("[data-cl-packs]");
-    const packs = Array.isArray(wallet?.packs) ? wallet.packs : [];
-    if (!authenticated) {
-      root.innerHTML = "<span>登录后显示可用套餐</span>";
-      return;
-    }
-    if (!packs.length) {
-      root.innerHTML = "<span>暂无可用套餐</span>";
-      return;
-    }
-    root.innerHTML = packs.map(pack => {
-      const credits = Number(pack?.credits || 0);
-      const dollars = (Number(pack?.unit_amount || 0) / 100).toFixed(0);
-      const enabled = !!wallet?.topup_enabled && !!pack?.available;
-      return `<button type="button" data-cl-pack="${escapeHtml(pack?.sku || "")}"${credits >= 660 ? ' class="featured"' : ""}${enabled ? "" : " disabled"}>
-        ${credits >= 660 ? '<small>多 60 分</small>' : ""}
-        <span><b>${credits}</b><i>积分</i></span>
-        <strong>$${dollars}</strong>
-        <em>${escapeHtml(enabled ? packEstimate(pack) : "暂未开放")}</em>
-      </button>`;
-    }).join("");
-    root.querySelectorAll("[data-cl-pack]").forEach(button => {
-      button.addEventListener("click", () => Account.reviewTopup(button.dataset.clPack));
-    });
-  }
-
   function syncSummary(wallet = null) {
     const account = Account.snapshot();
     const currentWallet = wallet || account.creditWallet || {};
@@ -152,7 +121,6 @@
     $("[data-cl-quota-used]").textContent = `${Number(quota.used || 0)} 分`;
     const ratio = total > 0 ? Math.min(100, Math.max(0, (remaining / total) * 100)) : 0;
     $("[data-cl-quota-progress]").style.width = `${ratio}%`;
-    renderPacks(currentWallet, !!account.authenticated);
   }
 
   function setLoading() {
@@ -294,13 +262,10 @@
     load();
   });
 
-  $("[data-cl-topup]").addEventListener("click", () => {
-    if (!Account.snapshot().authenticated) {
-      Account.open("login", "登录后充值积分。");
-      return;
-    }
-    $("[data-cl-packs]").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-    requestAnimationFrame(() => $("[data-cl-pack]:not(:disabled)")?.focus({ preventScroll: true }));
+  $("[data-cl-topup]").addEventListener("click", async () => {
+    const authenticated = await Account.requireLogin({ mode: "login", message: "登录后充值积分。" });
+    if (!authenticated) return;
+    Account.open("topup");
   });
 
   document.addEventListener("xuanshu:authchange", event => {
