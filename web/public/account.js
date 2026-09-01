@@ -322,7 +322,7 @@
     dialog.setAttribute("aria-labelledby", "account-dialog-title");
     dialog.innerHTML = `
       <button type="button" class="account-dialog-close" data-account-close aria-label="关闭">×</button>
-      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b><em>每日免费 · 注册赠积分</em></span></div>
+      <div class="account-dialog-brand"><i>玄</i><span><b>玄枢账户</b></span></div>
       <div class="account-dialog-body" data-account-body></div>`;
     document.body.append(dialog);
     body = dialog.querySelector("[data-account-body]");
@@ -450,14 +450,13 @@
     const isCodeLogin = mode === "login_code";
     const usesCode = isRegister || isCodeLogin;
     const privacyNote = isRegister
-      ? "注册同时验证邀请码和邮箱所有权；邀请码仅在成功注册时核销。公开卦帖不会展示邮箱。"
+      ? "邮箱不会在社区展示。"
       : isCodeLogin
-        ? "验证码 10 分钟内有效且只能使用一次；若收件箱里没有，请检查垃圾箱。公开卦帖不会展示邮箱。"
-        : "老账号首次登录请切换验证码登录，完成一次邮箱验证后继续使用；公开卦帖不会展示邮箱。";
+        ? "验证码 10 分钟内有效。"
+        : "老账号首次登录请使用验证码。";
     body.innerHTML = `
       <div class="account-auth-head">
-        <span>账户让你的私密问题与邀请奖励长期保留</span>
-        <h2 id="account-dialog-title">${isRegister ? "创建账户" : "欢迎回来"}</h2>
+        <h2 id="account-dialog-title">${isRegister ? "创建账户" : "登录玄枢"}</h2>
         ${message ? `<p class="account-context-note">${escapeHtml(message)}</p>` : ""}
       </div>
       <div class="account-tabs" role="tablist" aria-label="登录或注册">
@@ -496,7 +495,7 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">先领取一次性邀请码，再向填写的邮箱发送验证码；两项都通过后才会创建账户。注册赠送积分会自动进入永久账户余额。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">领取邀请码并验证邮箱后即可注册，赠送积分自动到账。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
         <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
@@ -693,18 +692,17 @@
     const archiveTotal = Number(archives.total || 0);
     body.innerHTML = `
       <div class="account-home-head">
-        <span>我的账户</span>
         <h2 id="account-dialog-title">${escapeHtml(state.user?.email || "")}</h2>
         ${message ? `<p class="account-context-note ${escapeHtml(tone)}">${escapeHtml(message)}</p>` : ""}
       </div>
       <a class="account-personal-home-link" href="/">
-        <span><b>打开观象台</b><em>本月宜忌 · 穿搭 · 八字六爻</em></span><i>→</i>
+        <span><b>打开观象台</b><em>查看今日与本月提示</em></span><i>→</i>
       </a>
       <section class="account-archive-card${archiveTotal ? "" : " empty"}" aria-label="云端档案">
         <div class="account-archive-copy">
           <span>云端档案</span>
           <strong><b>${archiveTotal}</b><i>份</i></strong>
-          <em>换设备登录后也能继续查看</em>
+          <em>可跨设备查看</em>
         </div>
         <div class="account-archive-detail">
           <span>${Number(archives.bazi || 0)} 份八字</span>
@@ -734,7 +732,7 @@
         <div class="account-wallet-balance">
           <span>账户积分</span>
           <strong><b>${Number(wallet.balance || 0)}</b><i>分</i></strong>
-          <em>注册赠送与充值积分都不会过期 · 完整回答后结算</em>
+          <em>长期有效 · 完整回答后结算</em>
         </div>
         <div class="account-wallet-packs">
           ${packs.map(pack => `
@@ -744,20 +742,20 @@
               <i>${wallet.topup_enabled && pack.available ? "选择" : "暂未开放"}</i>
             </button>`).join("")}
         </div>
-        <p>只要还有 1 分就能开始一次完整回答；本次积分不足也不会中途截断，结算最多扣到 0。确认套餐后再前往 Stripe 付款。</p>
+        <p>余额不足也会完成本次回答，最多扣到 0。</p>
         <button type="button" class="account-wallet-history" data-credit-history>
-          <span><b>积分明细</b><em>每次获得、回答消耗和体验保护都有记录</em></span><i>查看 →</i>
+          <span><b>积分明细</b><em>获得与消耗记录</em></span><i>查看 →</i>
         </button>
       </section>
       <section class="account-referral-card">
         <div><span>分享带来的每日加成</span><strong>+${Number(quota.referral_bonus || 0)}</strong></div>
-        <p>登录后分享站内任意公开问题。新用户经你的链接注册并完成首次提问，你每天都会永久多获得 ${Number(quota.base || 10)} 积分。</p>
+        <p>每邀请 1 位新用户完成首次提问，每日积分永久 +${Number(quota.base || 10)}。</p>
         <div class="account-referral-stats">
           <span><b>${Number(quota.pending_referrals || 0)}</b><em>待完成首问</em></span>
           <span><b>${Number(quota.qualified_referrals || 0)}</b><em>已生效邀请</em></span>
           <span><b>${Number(quota.max_total || 100)}</b><em>每日最高积分</em></span>
         </div>
-        <a href="/#gua-square" data-account-community>去卦帖广场分享任意问题 <span>→</span></a>
+        <a href="/#gua-square" data-account-community>去社区分享 <span>→</span></a>
       </section>
       <div class="account-home-actions">
         <button type="button" data-account-refresh>刷新账户数据</button>
@@ -1058,7 +1056,7 @@
         <button type="button" data-checkout-back>返回账户</button>
         <span>积分充值</span>
         <h2 id="account-dialog-title" tabindex="-1">确认充值套餐</h2>
-        <p>金额确认无误后，再前往 Stripe 安全付款。</p>
+        <p>确认后前往 Stripe 付款。</p>
       </div>
       ${checkoutSteps("confirm")}
       ${message ? `<p class="account-context-note error" role="alert">${escapeHtml(message)}</p>` : ""}
@@ -1074,15 +1072,10 @@
           <em>一次性付款</em>
         </div>
       </section>
-      <div class="checkout-assurances" aria-label="付款说明">
-        <p><b>付款前不会扣款</b><span>通常会在新标签打开 Stripe 托管结账页。</span></p>
-        <p><b>卡号不经过玄枢</b><span>支付信息由 Stripe 直接处理。</span></p>
-        <p><b>付款成功自动到账</b><span>返回玄枢后会自动核验，不需要上传截图。</span></p>
-      </div>
-      <p class="checkout-fx-note">价格以美元结算；发卡行可能按自身规则换算币种或收取费用。</p>
+      <p class="checkout-fx-note">支付由 Stripe 处理，成功后自动到账；以美元结算。</p>
       <div class="checkout-actions">
         <button type="button" class="primary" data-checkout-confirm>前往 Stripe 付款 · $${dollars}</button>
-        <button type="button" data-checkout-back>再看看其他套餐</button>
+        <button type="button" data-checkout-back>更换套餐</button>
       </div>`;
     body.querySelectorAll("[data-checkout-back]").forEach(button => {
       button.addEventListener("click", () => {
@@ -1172,37 +1165,37 @@
       pending: {
         eyebrow: "到账核验",
         title: "正在确认到账",
-        description: "已经从 Stripe 返回。系统正在等待签名确认，确认后会自动增加积分。",
+        description: "等待 Stripe 确认，请勿重复付款。",
       },
       paying: {
         eyebrow: "Stripe 安全付款",
         title: "付款页已在新标签打开",
-        description: "当前排盘、卦象和未发送的问题会保留在这个标签页。完成付款后，这里会自动显示到账结果。",
+        description: "付款完成后，这里会自动更新。",
       },
       delayed: {
         eyebrow: "到账核验",
         title: "还在确认中",
-        description: "Stripe 的通知偶尔会慢一点，不需要重复付款。你可以留在这里继续检查，或稍后刷新账户。",
+        description: "通知可能稍慢，请勿重复付款。",
       },
       paid: {
         eyebrow: "充值完成",
         title: `${display.credits} 积分已到账`,
-        description: `账户积分余额现在是 ${balance} 分，可以继续使用私密 AI 回答。`,
+        description: "",
       },
       cancelled: {
         eyebrow: "付款已取消",
         title: "没有产生本次充值",
-        description: "本次没有增加积分；玄枢也不会因为取消结账而产生站内扣款。",
+        description: "没有扣款或增加积分。",
       },
       expired: {
         eyebrow: "付款链接已过期",
         title: "请重新选择套餐",
-        description: "过期的 Stripe 结账页不能继续使用，也不会增加积分。",
+        description: "链接已失效，不会扣款。",
       },
       error: {
         eyebrow: "暂时无法核验",
         title: "到账状态没有更新",
-        description: "当前网络可能不稳定。不要重复付款，可以重新检查或到账户查看余额。",
+        description: "请勿重复付款，可重新检查。",
       },
     }[kind] || {};
     const progressStep = kind === "paid" ? "credit" : kind === "pending" || kind === "delayed" ? "credit" : "pay";
@@ -1212,7 +1205,7 @@
       <div class="checkout-status-head" aria-live="polite">
         <span>${escapeHtml(content.eyebrow || "充值状态")}</span>
         <h2 id="account-dialog-title" tabindex="-1">${escapeHtml(content.title || "充值状态")}</h2>
-        <p>${escapeHtml(content.description || "")}</p>
+        ${content.description ? `<p>${escapeHtml(content.description)}</p>` : ""}
         ${kind === "pending" ? '<div class="checkout-status-progress" role="progressbar" aria-label="正在核验 Stripe 付款结果"><i aria-hidden="true"></i></div>' : ""}
       </div>
       ${checkoutSteps(progressStep)}
@@ -1221,15 +1214,11 @@
         <span><b>$${dollars} USD</b><em>一次性付款</em></span>
         ${kind === "paid" ? `<span><b>${balance} 分</b><em>账户积分余额</em></span>` : ""}
       </section>` : ""}
-      <div class="checkout-status-note">
-        <b>付款结果只以 Stripe 签名通知为准</b>
-        <span>返回页面本身不会直接加分，避免重复到账或伪造支付结果。</span>
-      </div>
       <div class="checkout-actions">
         ${kind === "paid" ? `<button type="button" class="primary" data-checkout-resume>${checkoutChildTab ? "关闭此页，返回原页面" : "继续使用玄枢"}</button><button type="button" data-checkout-account>查看账户余额</button>` : ""}
         ${kind === "paying" ? '<button type="button" class="primary" data-checkout-reopen>重新打开 Stripe 付款页</button><button type="button" data-checkout-account>留在账户等待</button>' : ""}
-        ${kind === "pending" ? '<button type="button" data-checkout-account>先到账户等待</button>' : ""}
-        ${kind === "delayed" || kind === "error" ? '<button type="button" class="primary" data-checkout-refresh>重新检查到账</button><button type="button" data-checkout-account>查看账户余额</button>' : ""}
+        ${kind === "pending" ? '<button type="button" data-checkout-account>回到账户</button>' : ""}
+        ${kind === "delayed" || kind === "error" ? '<button type="button" class="primary" data-checkout-refresh>刷新状态</button><button type="button" data-checkout-account>账户余额</button>' : ""}
         ${kind === "cancelled" || kind === "expired" ? `${display.sku ? '<button type="button" class="primary" data-checkout-retry>重新确认这个套餐</button>' : ""}${checkoutChildTab ? '<button type="button" data-checkout-resume>关闭此页，返回原页面</button>' : '<button type="button" data-checkout-account>返回账户</button>'}` : ""}
       </div>`;
     body.querySelector("[data-checkout-account]")?.addEventListener("click", () => {

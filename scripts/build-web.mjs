@@ -127,7 +127,7 @@ if (!app.includes('"X-Xuanshu-Interaction": "same-origin-v1"')) {
 
 const account = readFileSync(join(publicDir, "account.js"), "utf8");
 for (const requiredAuthBoundary of [
-  "注册同时验证邀请码和邮箱所有权",
+  "领取邀请码并验证邮箱后即可注册",
   "{ email, password, code, invite_code: inviteCode }",
 ]) {
   if (!account.includes(requiredAuthBoundary)) {

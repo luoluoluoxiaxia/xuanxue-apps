@@ -308,10 +308,10 @@
         homeCommunityDone = !homeCommunityCursor;
         if (!homeCommunityLoadedCount) {
           renderHomeCommunityPlaceholder(
-            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "这个筛选下还没有帖子" : "社区刚刚开卷",
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "这个筛选下还没有帖子" : "还没有帖子",
             homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular"
               ? "换个分类或排序看看。"
-              : "你可以排盘后直接向社区求助，不调用 AI，也不扣积分。",
+              : "排盘后即可发起求助。",
           );
         }
         if (sentinel) sentinel.hidden = homeCommunityDone;
