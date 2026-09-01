@@ -807,7 +807,7 @@
 
   function commentFormMarkup(inputId = "comment-body") {
     const lineOptions = pageSystem === "liuyao"
-      ? `<fieldset><legend>参考爻位（可选）</legend><div>${[1, 2, 3, 4, 5, 6].map(line => `<label><input type="checkbox" name="referenced_lines" value="${line}">${line}</label>`).join("")}</div></fieldset>`
+      ? `<fieldset class="reading-lines-field"><legend>参考爻位 <em>选填</em></legend><div>${[1, 2, 3, 4, 5, 6].map(line => `<label><input type="checkbox" name="referenced_lines" value="${line}"><span>${line}</span></label>`).join("")}</div></fieldset>`
       : "";
     return `<form class="comment-form" data-comment-form>
       <div class="comment-reply-context" data-comment-reply-context hidden>
@@ -818,16 +818,21 @@
         <label><input type="radio" name="kind" value="discussion" checked><span>参与讨论</span></label>
         <label><input type="radio" name="kind" value="reading"><span>给出判断</span></label>
       </div>
-      <label class="sr-only" for="${inputId}">发表评论</label>
-      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="${pageKind === "help" ? "先写你的判断或建议……" : "说点什么……"}"></textarea>
+      <div class="comment-body-field">
+        <div class="comment-field-heading">
+          <label for="${inputId}" data-comment-body-label>说说你的看法</label>
+          <span data-comment-body-hint>补充信息，或回应已有观点</span>
+        </div>
+        <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="从你最想回应的一点写起……"></textarea>
+      </div>
       <div class="reading-fields" data-reading-fields hidden>
-        <label>判断依据<textarea name="reasoning" rows="3" maxlength="500" placeholder="你根据哪些盘面信息得出这个判断？"></textarea></label>
-        <label>应期 / 结果（可选）<input name="prediction" maxlength="300" placeholder="例如：两周内会有明确消息"></label>
+        <label class="reading-reasoning-field"><span>判断依据 <em>选填</em></span><textarea name="reasoning" rows="3" maxlength="500" placeholder="写下支撑结论的盘面信息"></textarea></label>
+        <label class="reading-prediction-field"><span>应期 / 结果 <em>选填</em></span><input name="prediction" maxlength="300" placeholder="例如：两周内有消息"></label>
         ${lineOptions}
       </div>
       <div class="comment-form-actions">
-        <span><b data-comment-length>0</b> / 500 · 公开显示为匿名卦友编号</span>
-        <button type="submit" class="primary-action" data-comment-submit>发布</button>
+        <span><b data-comment-length>0</b> / 500 · 匿名发布</span>
+        <button type="submit" class="primary-action" data-comment-submit>发布讨论</button>
       </div>
       <p class="form-state" data-comment-state role="status" aria-live="polite"></p>
     </form>`;
@@ -872,7 +877,11 @@
     const context = form.querySelector("[data-comment-reply-context]");
     if (context) context.hidden = true;
     const input = form.elements.body;
-    if (input) input.placeholder = "说点什么……";
+    if (input) {
+      input.placeholder = form.dataset.commentKind === "reading"
+        ? "例如：短期会有进展，但最终落地偏慢。"
+        : "从你最想回应的一点写起……";
+    }
   }
 
   function beginCommentReply(host, parentId, authorName) {
@@ -938,9 +947,21 @@
     const state = form.querySelector("[data-comment-state]");
     const submit = form.querySelector("button[type=submit]");
     const readingFields = form.querySelector("[data-reading-fields]");
+    const bodyLabel = form.querySelector("[data-comment-body-label]");
+    const bodyHint = form.querySelector("[data-comment-body-hint]");
     const syncKind = () => {
       const reading = form.elements.kind?.value === "reading";
+      form.dataset.commentKind = reading ? "reading" : "discussion";
       if (readingFields) readingFields.hidden = !reading;
+      if (bodyLabel) bodyLabel.textContent = reading ? "先说结论" : "说说你的看法";
+      if (bodyHint) bodyHint.textContent = reading ? "一句话说明你认为会怎样" : "补充信息，或回应已有观点";
+      if (!form.dataset.replyParentId) {
+        input.placeholder = reading
+          ? "例如：短期会有进展，但最终落地偏慢。"
+          : "从你最想回应的一点写起……";
+      }
+      submit.dataset.defaultLabel = reading ? "发布判断" : "发布讨论";
+      if (!submit.disabled) submit.textContent = submit.dataset.defaultLabel;
     };
     form.querySelectorAll('input[name="kind"]').forEach(input => input.addEventListener("change", syncKind));
     syncKind();
@@ -996,7 +1017,7 @@
       } finally {
         if (submit.isConnected) {
           submit.disabled = false;
-          submit.textContent = "发布";
+          submit.textContent = submit.dataset.defaultLabel || "发布讨论";
         }
       }
     });
