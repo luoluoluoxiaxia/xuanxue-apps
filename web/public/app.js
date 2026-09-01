@@ -889,6 +889,7 @@ function replaceHomeLocation({ start = "", flow = "", hash = "", screen = "landi
     if (flow) url.searchParams.set("flow", flow);
     else url.searchParams.delete("flow");
     if (screen === "credits") url.searchParams.set("view", "credits");
+    else if (screen === "archives") url.searchParams.set("view", "archives");
     else {
       url.searchParams.delete("view");
       url.searchParams.delete("month");
@@ -936,6 +937,7 @@ function currentScreenNavTarget() {
   if (state.screen === "cast") return combinedCastActive() ? "detailed" : "liuyao";
   if (state.screen === "dash") return detailedWorkspaceActive() ? "detailed" : state.system;
   if (state.screen === "credits") return "credits";
+  if (state.screen === "archives") return "profile";
   if (location.hash === HOME_COMMUNITY_HASH) return "community";
   return "landing";
 }
@@ -992,6 +994,8 @@ function focusScreenMain(screen, preferredTarget = "") {
           ? $("#dashboard")
           : screen === "credits"
             ? $("#credit-ledger-page")
+            : screen === "archives"
+              ? $("#profile-library-page")
             : PersonalHome?.isVisible()
               ? $("#personal-workbench")
               : $("#home-main");
@@ -1020,6 +1024,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
   $("#personal-workbench").hidden = true;
   if (screen === "credits") CreditLedger?.activate();
   else CreditLedger?.deactivate();
+  const profileLibraryPage = $("#profile-library-page");
+  if (profileLibraryPage) profileLibraryPage.hidden = screen !== "archives";
   $("#dashboard").hidden = screen !== "dash";
   $("#birth-modal").hidden = screen !== "birth";
   $("#cast-modal").hidden = screen !== "cast";
@@ -1040,6 +1046,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
           ? "dashboard"
           : screen === "credits"
             ? "credit-ledger-page"
+            : screen === "archives"
+              ? "profile-library-page"
           : communityLanding
             ? "gua-square"
             : PersonalHome?.isVisible()
@@ -1055,6 +1063,8 @@ function showScreen(screen, { preserveEntryLocation = false, historyMode = "repl
         ? (detailedWorkspaceActive() ? "detailed" : state.system)
         : screen === "credits"
           ? "credits"
+          : screen === "archives"
+            ? "profile"
         : "landing";
   setPrimaryNavCurrent(navTarget);
   const activePage = screen === "birth" ? $("#birth-modal") : screen === "cast" ? $("#cast-modal") : null;
@@ -2496,7 +2506,7 @@ function enterDashboard({ preserveEntryLocation = false, historyMode = "replace"
     const topLabel = document.querySelector("#top-profile-btn .top-profile-label");
     if (topLabel) topLabel.textContent = "档案";
     const topProfile = $("#top-profile-btn");
-    if (topProfile) topProfile.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+    if (topProfile) topProfile.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
     const rechart = $("#rechart-btn");
     if (rechart) rechart.onclick = () => { state.system === "liuyao" ? openCastModal() : openBirthModal(); };
     const railRechart = $("#rail-rechart-btn");
@@ -3635,10 +3645,13 @@ function bind() {
   $("#rechart-btn").onclick = () => { state.system === "liuyao" ? openCastModal() : openBirthModal(); };
   $("#top-chart-btn").onclick = openChartDrawer;
   $$("[data-mode-btn]").forEach(b => { b.onclick = () => setMode(b.dataset.modeBtn || "basic"); });
-  $("#profile-fab").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
-  $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+  $("#profile-fab").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
+  $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   if ($("#hero-feedback-btn")) $("#hero-feedback-btn").onclick = openFeedback;
   if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可查看私密问题与档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
+  if ($("[data-profile-page-account]")) $("[data-profile-page-account]").onclick = () => Account.open("account");
+  if ($("[data-profile-page-start-bazi]")) $("[data-profile-page-start-bazi]").onclick = () => openBirthModal();
+  if ($("[data-profile-page-start-liuyao]")) $("[data-profile-page-start-liuyao]").onclick = () => openCastModal({ clearQuestion: true, fresh: true });
   $("#ask-chart-btn").onclick = () => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); };
   $("#ask-community-btn").onclick = openCommunityHelpDialog;
   $("#open-trend-btn").onclick = openTrend;
@@ -3807,6 +3820,8 @@ async function init() {
     showScreen(start === "bazi" ? "birth" : "cast", { preserveEntryLocation: true });
   } else if (creditsRequested) {
     showScreen("credits", { preserveEntryLocation: true });
+  } else if (archivesRequested) {
+    showScreen("archives", { preserveEntryLocation: true });
   } else {
     showScreen("landing", { preserveEntryLocation: true });
   }

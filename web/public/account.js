@@ -655,7 +655,7 @@
         resolvePending(true);
       } else {
         resolvePending(true);
-        requestAnimationFrame(() => body.querySelector("[data-account-archives], [data-account-start-bazi]")?.focus({ preventScroll: true }));
+        requestAnimationFrame(() => body.querySelector("[data-account-refresh]")?.focus({ preventScroll: true }));
       }
     } catch (reason) {
       if (!isRegister && !isCodeLogin && String(reason?.message || "").includes("邮箱验证")) {
@@ -678,8 +678,6 @@
       renderAuth("login_password", message);
       return;
     }
-    const archives = state.archiveSummary || {};
-    const archiveTotal = Number(archives.total || 0);
     body.innerHTML = `
       <div class="account-home-head">
         <h2 id="account-dialog-title">${escapeHtml(state.user?.email || "")}</h2>
@@ -688,47 +686,10 @@
       <a class="account-personal-home-link" href="/">
         <span><b>打开观象台</b><em>查看今日与本月提示</em></span><i>→</i>
       </a>
-      <section class="account-archive-card${archiveTotal ? "" : " empty"}" aria-label="云端档案">
-        <div class="account-archive-copy">
-          <span>云端档案</span>
-          <strong><b>${archiveTotal}</b><i>份</i></strong>
-          <em>可跨设备查看</em>
-        </div>
-        <div class="account-archive-detail">
-          <span>${Number(archives.bazi || 0)} 份八字</span>
-          <span>${Number(archives.liuyao || 0)} 份六爻</span>
-          <span>${Number(archives.history_count || 0)} 条解读</span>
-          ${Number(archives.active || 0) ? `<span class="active">${Number(archives.active)} 份正在生成</span>` : ""}
-        </div>
-        ${archiveTotal
-          ? '<button type="button" data-account-archives>查看全部档案 <span>→</span></button>'
-          : `<div class="account-archive-entry-actions" aria-label="开始第一份档案">
-              <button type="button" data-account-start-bazi>排八字 <span>→</span></button>
-              <button type="button" data-account-start-liuyao>起六爻 <span>→</span></button>
-            </div>`}
-      </section>
       <div class="account-home-actions">
         <button type="button" data-account-refresh>刷新账户数据</button>
         <button type="button" class="account-logout" data-account-logout>退出登录</button>
       </div>`;
-    body.querySelector("[data-account-archives]")?.addEventListener("click", () => {
-      close(() => {
-        const openEvent = new CustomEvent("xuanshu:openarchives", { cancelable: true });
-        if (document.dispatchEvent(openEvent)) window.location.assign("/?view=archives");
-      });
-    });
-    body.querySelector("[data-account-start-bazi]")?.addEventListener("click", () => {
-      close(() => {
-        const openEvent = new CustomEvent("xuanshu:startbazi", { cancelable: true });
-        if (document.dispatchEvent(openEvent)) window.location.assign("/?start=bazi");
-      });
-    });
-    body.querySelector("[data-account-start-liuyao]")?.addEventListener("click", () => {
-      close(() => {
-        const openEvent = new CustomEvent("xuanshu:startliuyao", { cancelable: true });
-        if (document.dispatchEvent(openEvent)) window.location.assign("/?start=liuyao");
-      });
-    });
     body.querySelector("[data-account-refresh]").addEventListener("click", () => refresh({ restoreFocus: true }));
     body.querySelector("[data-account-logout]").addEventListener("click", logout);
   }

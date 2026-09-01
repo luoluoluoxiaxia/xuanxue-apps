@@ -34,7 +34,7 @@ function renderProfileFab() {
   const profileFab = $("#profile-fab");
   if (profileFab) {
     profileFab.setAttribute("aria-label", "打开档案与历史");
-    profileFab.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+    profileFab.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   }
 }
 async function refreshProfileHistory() {
@@ -70,9 +70,31 @@ function closeProfileModal(afterClose = null) {
   });
 }
 
+function profilePageBody() {
+  return $("[data-profile-page-body]");
+}
+
+function renderProfilePage(bodyHtml, focusSelector = "", { busy = false } = {}) {
+  const body = profilePageBody();
+  if (!body) return;
+  body.innerHTML = bodyHtml;
+  body.setAttribute("aria-busy", busy ? "true" : "false");
+  if (!focusSelector) return;
+  window.requestAnimationFrame(() => body.querySelector(focusSelector)?.focus({ preventScroll: true }));
+}
+
+function enterProfilePage(options = {}) {
+  const entering = state.screen !== "archives";
+  showScreen("archives", {
+    preserveEntryLocation: !!options.preserveEntryLocation,
+    historyMode: options.startup || !entering ? "replace" : "push",
+    focusPage: entering,
+  });
+}
+
 function openDetailedCaseOverview() {
   if (!detailedWorkspaceActive()) {
-    openProfileHome();
+    openProfileLibrary({ includeCurrent: !!lastPayload });
     return;
   }
   const bazi = detailedBaziFacts();
@@ -252,16 +274,13 @@ function profileDeleteConfirmHtml(profile) {
 async function openProfileLibrary() {
   const supplied = arguments[0];
   const options = supplied && typeof supplied === "object" && !(supplied instanceof Event) ? supplied : {};
+  enterProfilePage(options);
   if (options.tab === "bazi" || options.tab === "liuyao") profileArchiveTab = options.tab;
   const requestId = ++profileLibraryRequestId;
   if (!options.preserveDelete) {
     pendingProfileDeleteId = null;
     deletingProfileId = null;
-    openProfileModal(
-      "档案列表",
-      "正在同步当前账户的档案…",
-      `<div class="profile-empty" role="status">正在读取档案，请稍候…</div>`,
-    );
+    renderProfilePage(`<div class="pl-page-loading" role="status">正在读取档案…</div>`, "", { busy: true });
   }
   const includeCurrent = !!options.includeCurrent && !!lastPayload;
   try {
@@ -340,11 +359,8 @@ async function openProfileLibrary() {
     const activeCount = profiles.filter(p => ["pending", "running"].includes(p.task_status)).length;
     const body = `<div class="saved-list">
       <div class="saved-library-summary" role="status">
-        <b>${profiles.length} 份云端档案</b>
-        <span>${baziCount} 份八字 · ${liuyaoCount} 份六爻 · ${historyCount} 条解读${activeCount ? ` · ${activeCount} 份档案正在生成` : ""}</span>
-      </div>
-      <div class="profile-home-actions profile-library-account-actions">
-        <button type="button" data-profile-account>账户与退出</button>
+        <b>${profiles.length} 份档案</b>
+        <span>八字 ${baziCount} · 六爻 ${liuyaoCount} · 解读 ${historyCount}${activeCount ? ` · ${activeCount} 份正在生成` : ""}</span>
       </div>
       <div class="archive-system-tabs" role="tablist" aria-label="档案类型">
         <button type="button" id="archive-tab-bazi" role="tab" data-archive-tab="bazi" aria-controls="archive-system-panel" aria-selected="${profileArchiveTab === "bazi"}" tabindex="${profileArchiveTab === "bazi" ? "0" : "-1"}" class="${profileArchiveTab === "bazi" ? "active" : ""}">八字 <span>${baziCount}</span></button>
@@ -363,12 +379,11 @@ async function openProfileLibrary() {
         : options.focusArchiveTab
           ? `[data-archive-tab="${options.focusArchiveTab}"]`
           : "";
-    openProfileModal("档案", profiles.length ? "选择档案继续查看。" : "", body, focusSelector);
-    const account = $("#profile-card").querySelector("[data-profile-account]");
-    if (account) account.onclick = () => closeProfileModal(() => Account.open("account"));
-    const current = $("#profile-card").querySelector("[data-open-current-profile]");
+    renderProfilePage(body, focusSelector);
+    const surface = profilePageBody();
+    const current = surface.querySelector("[data-open-current-profile]");
     if (current) current.onclick = openCurrentProfile;
-    $("#profile-card").querySelectorAll("[data-archive-tab]").forEach(tab => {
+    surface.querySelectorAll("[data-archive-tab]").forEach(tab => {
       tab.onclick = () => openProfileLibrary({
         ...options,
         tab: tab.dataset.archiveTab,
@@ -382,10 +397,10 @@ async function openProfileLibrary() {
         openProfileLibrary({ ...options, tab: nextTab, preserveDelete: true, focusArchiveTab: nextTab });
       };
     });
-    $("#profile-card").querySelectorAll("[data-open-bazi-profile]").forEach(b => {
+    surface.querySelectorAll("[data-open-bazi-profile]").forEach(b => {
       b.onclick = () => openBaziProfileDetail(Number(b.dataset.openBaziProfile));
     });
-    $("#profile-card").querySelectorAll("[data-open-profile]").forEach(b => {
+    surface.querySelectorAll("[data-open-profile]").forEach(b => {
       b.onclick = async () => {
         b.disabled = true;
         b.textContent = "打开中…";
@@ -396,13 +411,13 @@ async function openProfileLibrary() {
         }
       };
     });
-    $("#profile-card").querySelectorAll("[data-set-default-profile]").forEach(b => {
+    surface.querySelectorAll("[data-set-default-profile]").forEach(b => {
       b.onclick = () => setArchiveDefaultProfile(
         Number(b.dataset.setDefaultProfile),
         options,
       );
     });
-    $("#profile-card").querySelectorAll("[data-request-delete-profile]").forEach(b => {
+    surface.querySelectorAll("[data-request-delete-profile]").forEach(b => {
       b.onclick = () => {
         const pid = Number(b.dataset.requestDeleteProfile);
         if (pid === Number(activeProfileId) && activeStreamingMessage()) {
@@ -413,28 +428,28 @@ async function openProfileLibrary() {
         openProfileLibrary({ ...options, preserveDelete: true, focusProfileAction: null });
       };
     });
-    $("#profile-card").querySelectorAll("[data-cancel-delete-profile]").forEach(b => {
+    surface.querySelectorAll("[data-cancel-delete-profile]").forEach(b => {
       b.onclick = () => {
         const pid = Number(b.dataset.cancelDeleteProfile);
         pendingProfileDeleteId = null;
         openProfileLibrary({ ...options, preserveDelete: true, focusProfileAction: pid });
       };
     });
-    $("#profile-card").querySelectorAll("[data-confirm-delete-profile]").forEach(b => {
+    surface.querySelectorAll("[data-confirm-delete-profile]").forEach(b => {
       b.onclick = () => deleteSavedProfile(Number(b.dataset.confirmDeleteProfile), options);
     });
-    const emptyOpenBazi = $("#profile-card").querySelector("[data-empty-open-bazi]");
-    const emptyOpenLiuyao = $("#profile-card").querySelector("[data-empty-open-liuyao]");
-    if (emptyOpenBazi) emptyOpenBazi.onclick = () => closeProfileModal(() => openBirthModal());
-    if (emptyOpenLiuyao) emptyOpenLiuyao.onclick = () => closeProfileModal(() => openCastModal({ clearQuestion: true, fresh: true }));
+    const emptyOpenBazi = surface.querySelector("[data-empty-open-bazi]");
+    const emptyOpenLiuyao = surface.querySelector("[data-empty-open-liuyao]");
+    if (emptyOpenBazi) emptyOpenBazi.onclick = () => openBirthModal();
+    if (emptyOpenLiuyao) emptyOpenLiuyao.onclick = () => openCastModal({ clearQuestion: true, fresh: true });
   } catch (e) {
     if (requestId !== profileLibraryRequestId) return;
     const retryBody = `<div class="profile-empty profile-empty-actionable">
       <span>档案加载失败，已保存内容不受影响。</span>
       <div class="profile-empty-actions"><button type="button" class="primary" data-retry-profile-library>重新加载</button></div>
     </div>`;
-    openProfileModal("档案列表", "网络恢复后重试。", retryBody, "[data-retry-profile-library]");
-    const retry = $("#profile-card").querySelector("[data-retry-profile-library]");
+    renderProfilePage(retryBody, "[data-retry-profile-library]");
+    const retry = profilePageBody().querySelector("[data-retry-profile-library]");
     if (retry) retry.onclick = () => openProfileLibrary(options);
     toast("读取档案失败：" + humanError(String(e.message || e)), "warn");
   }
@@ -455,11 +470,8 @@ function baziConversationState(status) {
 async function openBaziProfileDetail(pid) {
   if (!pid) return;
   profileLibraryRequestId += 1;
-  openProfileModal(
-    "八字档案",
-    "正在读取命盘与对话历史…",
-    `<div class="profile-empty" role="status">正在整理这份八字档案，请稍候…</div>`,
-  );
+  enterProfilePage();
+  renderProfilePage(`<div class="pl-page-loading" role="status">正在整理这份八字档案…</div>`, "", { busy: true });
   try {
     const [profileResponse, conversationResponse] = await Promise.all([
       fetch(`/api/profiles/${pid}`),
@@ -523,26 +535,22 @@ async function openBaziProfileDetail(pid) {
         <div class="profile-empty-actions"><button type="button" class="primary" data-new-bazi-conversation>开启新对话</button></div>
       </div>`}
     </div>`;
-    openProfileModal(
-      profile.name || "八字档案",
-      `${conversations.length} 次对话 · 可恢复，也可从同一命盘重新开始`,
-      body,
-      latest ? "[data-resume-latest-bazi]" : "[data-new-bazi-conversation]",
-    );
-    const back = $("#profile-card").querySelector("[data-profile-back-library]");
+    renderProfilePage(body, latest ? "[data-resume-latest-bazi]" : "[data-new-bazi-conversation]");
+    const surface = profilePageBody();
+    const back = surface.querySelector("[data-profile-back-library]");
     if (back) back.onclick = () => openProfileLibrary({ tab: "bazi" });
     const openConversation = async conversation => {
       if (!conversation) return;
       await openSavedProfile(pid, { resumeSessionId: conversation.session_id });
     };
-    const latestButton = $("#profile-card").querySelector("[data-resume-latest-bazi]");
+    const latestButton = surface.querySelector("[data-resume-latest-bazi]");
     if (latestButton) latestButton.onclick = () => openConversation(latest);
-    $("#profile-card").querySelectorAll("[data-resume-bazi-conversation]").forEach(button => {
+    surface.querySelectorAll("[data-resume-bazi-conversation]").forEach(button => {
       button.onclick = () => openConversation(
         conversations.find(item => item.session_id === button.dataset.resumeBaziConversation),
       );
     });
-    $("#profile-card").querySelectorAll("[data-new-bazi-conversation]").forEach(button => {
+    surface.querySelectorAll("[data-new-bazi-conversation]").forEach(button => {
       button.onclick = () => openSavedProfile(pid, { freshConversation: true });
     });
   } catch (e) {
@@ -553,9 +561,10 @@ async function openBaziProfileDetail(pid) {
         <button type="button" class="primary" data-retry-bazi-profile>重新加载</button>
       </div>
     </div>`;
-    openProfileModal("八字档案", "网络恢复后重试。", retryBody, "[data-retry-bazi-profile]");
-    const back = $("#profile-card").querySelector("[data-profile-back-library]");
-    const retry = $("#profile-card").querySelector("[data-retry-bazi-profile]");
+    renderProfilePage(retryBody, "[data-retry-bazi-profile]");
+    const surface = profilePageBody();
+    const back = surface.querySelector("[data-profile-back-library]");
+    const retry = surface.querySelector("[data-retry-bazi-profile]");
     if (back) back.onclick = () => openProfileLibrary({ tab: "bazi" });
     if (retry) retry.onclick = () => openBaziProfileDetail(pid);
     toast("读取八字档案失败：" + humanError(String(e.message || e)), "warn");
@@ -564,7 +573,7 @@ async function openBaziProfileDetail(pid) {
 
 async function setArchiveDefaultProfile(pid, options = {}) {
   if (!pid) return;
-  const button = $("#profile-card")?.querySelector(`[data-set-default-profile="${pid}"]`);
+  const button = profilePageBody()?.querySelector(`[data-set-default-profile="${pid}"]`);
   if (button) {
     button.disabled = true;
     button.textContent = "设置中…";
@@ -706,20 +715,18 @@ function currentArchiveCardHtml(currentProfile = null) {
 
 function openCurrentProfile() {
   clearPersonalCaseContext();
-  const historyMode = state.screen === "landing" ? "push" : "replace";
+  const historyMode = state.screen === "archives" || state.screen === "landing" ? "push" : "replace";
   const focusPage = state.screen !== "dash";
-  closeProfileModal(() => {
-    enterDashboard({ historyMode, focusPage });
-    saveResumeCookie();
-    toast(activeProfileId ? "档案已打开" : "已打开上次记录");
-  });
+  enterDashboard({ historyMode, focusPage });
+  saveResumeCookie();
+  toast(activeProfileId ? "档案已打开" : "已打开上次记录");
 }
 
 async function openSavedProfile(pid, options = {}) {
   const previousWorkspace = currentWorkspaceKey();
   const previousSession = lastPayload ? snapshotSession() : null;
   if (!options?.preservePersonalCase) clearPersonalCaseContext();
-  const historyMode = state.screen === "landing" ? "push" : "replace";
+  const historyMode = state.screen === "archives" || state.screen === "landing" ? "push" : "replace";
   const focusPage = state.screen !== "dash";
   try {
     const r = await fetch(`/api/profiles/${pid}`);
