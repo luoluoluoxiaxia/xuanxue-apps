@@ -76,16 +76,11 @@ body[data-screen="credits"] .landing .hero-footer {
 
 .cl-page-head {
   display: flex;
+  min-height: 56px;
   align-items: center;
-  justify-content: space-between;
-  gap: 34px;
-}
-
-.cl-page-head h1 {
-  margin: 0;
-  color: #151518;
-  font: 700 clamp(34px, 3vw, 48px)/1.18 var(--cl-serif);
-  letter-spacing: -.045em;
+  justify-content: flex-end;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--cl-line);
 }
 
 .cl-balance {
@@ -139,7 +134,7 @@ body[data-screen="credits"] .landing .hero-footer {
 }
 
 .cl-quota {
-  margin-top: clamp(52px, 5vw, 70px);
+  margin-top: clamp(30px, 3vw, 42px);
 }
 
 .cl-quota p {
@@ -424,7 +419,7 @@ body[data-screen="credits"] .landing .hero-footer {
 
 @media (max-width: 820px) {
   .landing .credit-ledger-page { padding: 28px 22px 22px; }
-  .cl-page-head { align-items: flex-start; }
+  .cl-page-head { min-height: 50px; align-items: flex-start; padding-bottom: 20px; }
   .cl-balance { flex-wrap: wrap; justify-content: flex-end; gap: 8px 10px; }
   .cl-balance > span { flex: 0 0 100%; text-align: right; }
   .cl-balance > button { min-width: 82px; min-height: 42px; margin-left: 8px; padding: 0 17px; }
@@ -452,7 +447,6 @@ body[data-screen="credits"] .landing .hero-footer {
 
 @media (max-width: 520px) {
   .landing .credit-ledger-page { padding: 24px 16px 18px; }
-  .cl-page-head h1 { font-size: 30px; }
   .cl-balance strong b { font-size: 32px; }
   .cl-balance > span { display: none; }
   .cl-balance > button { min-width: 68px; min-height: 38px; margin-left: 2px; padding: 0 13px; }
