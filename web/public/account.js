@@ -315,6 +315,10 @@
       button.dataset.authenticated = state.authenticated ? "true" : "false";
       button.title = state.authenticated ? "我的档案" : "登录 / 注册";
     });
+    document.querySelectorAll("[data-account-logout-action]").forEach(button => {
+      button.hidden = !state.authenticated;
+      if (state.authenticated) button.disabled = false;
+    });
   }
 
   function ensureDialog() {
@@ -697,7 +701,7 @@
         <button type="button" class="account-logout" data-account-logout>退出登录</button>
       </div>`;
     body.querySelector("[data-account-refresh]").addEventListener("click", () => refresh({ restoreFocus: true }));
-    body.querySelector("[data-account-logout]").addEventListener("click", logout);
+    body.querySelector("[data-account-logout]").addEventListener("click", event => logout(event.currentTarget));
   }
 
   function creditDate(value) {
@@ -1247,8 +1251,8 @@
     });
   }
 
-  async function logout() {
-    const button = body.querySelector("[data-account-logout]");
+  async function logout(sourceButton = null) {
+    const button = sourceButton || body?.querySelector("[data-account-logout]") || null;
     if (button) button.disabled = true;
     try {
       const response = await fetch("/api/auth/logout", {
@@ -1258,9 +1262,14 @@
       });
       await readJson(response);
       apply({ authenticated: false });
-      renderAuth("login_password", "已退出。");
+      if (dialog?.open && body) renderAuth("login_password", "已退出。");
     } catch (reason) {
-      renderAccount(reason?.message || "退出失败，请稍后再试", "error");
+      if (dialog?.open && body) {
+        renderAccount(reason?.message || "退出失败，请稍后再试", "error");
+      } else if (button) {
+        button.disabled = false;
+        button.title = reason?.message || "退出失败，请稍后再试";
+      }
     }
   }
 
@@ -1294,6 +1303,11 @@
       if (button.dataset.accountBound === "true") return;
       button.dataset.accountBound = "true";
       button.addEventListener("click", () => open(state.authenticated ? "account" : "login"));
+    });
+    root.querySelectorAll("[data-account-logout-action]").forEach(button => {
+      if (button.dataset.accountLogoutBound === "true") return;
+      button.dataset.accountLogoutBound = "true";
+      button.addEventListener("click", () => logout(button));
     });
     syncButtons();
   }

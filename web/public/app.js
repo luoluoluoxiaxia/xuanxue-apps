@@ -3649,9 +3649,6 @@ function bind() {
   $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   if ($("#hero-feedback-btn")) $("#hero-feedback-btn").onclick = openFeedback;
   if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可查看私密问题与档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
-  if ($("[data-profile-page-account]")) $("[data-profile-page-account]").onclick = () => Account.open("account");
-  if ($("[data-profile-page-start-bazi]")) $("[data-profile-page-start-bazi]").onclick = () => openBirthModal();
-  if ($("[data-profile-page-start-liuyao]")) $("[data-profile-page-start-liuyao]").onclick = () => openCastModal({ clearQuestion: true, fresh: true });
   $("#ask-chart-btn").onclick = () => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); };
   $("#ask-community-btn").onclick = openCommunityHelpDialog;
   $("#open-trend-btn").onclick = openTrend;
