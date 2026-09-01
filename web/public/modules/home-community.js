@@ -418,14 +418,6 @@
     }
 
     function setupHomeCommunityFilters() {
-      const toggle = $("[data-home-community-filter-toggle]");
-      const panel = $("#home-community-filters");
-      if (!toggle || !panel) return;
-      toggle.addEventListener("click", () => {
-        const open = toggle.getAttribute("aria-expanded") !== "true";
-        toggle.setAttribute("aria-expanded", open ? "true" : "false");
-        panel.hidden = !open;
-      });
       $$('[data-home-community-view]').forEach(button => {
         button.addEventListener("click", () => {
           const next = button.dataset.homeCommunityView || "latest";
