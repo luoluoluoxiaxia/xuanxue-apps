@@ -249,6 +249,8 @@ body[data-screen="landing"] .post-preview-dialog {
 }
 .post-card-link { display: block; }
 .post-card-body { padding: 16px 16px 0; }
+.post-card-head { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 10px; }
+.post-card-author { overflow: hidden; color: var(--muted); font-size: 10px; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .post-card h2 {
   display: -webkit-box;
   margin: 0;
@@ -762,6 +764,7 @@ body[data-screen="landing"] .post-preview-dialog {
 .comment-form-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .comment-form-actions > span { color: var(--muted); font-size: 9.5px; line-height: 1.55; }
 .comment-form-actions > span b { color: var(--muted-strong); font-weight: 700; }
+.comment-form-actions > span i { font-style: normal; }
 .comment-form-actions .primary-action { min-width: 108px; min-height: 44px; padding: 0 18px; border-radius: 9px; box-shadow: none; }
 .comment-form .form-state { min-height: 18px; margin: -3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
 .comment-form .form-state[data-tone="success"] { color: #197a50; }
@@ -879,7 +882,8 @@ body[data-screen="landing"] .post-preview-dialog {
   letter-spacing: -.025em;
   overflow-wrap: anywhere;
 }
-.preview-meta { display: flex; gap: 13px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+.preview-meta { display: flex; flex-wrap: wrap; gap: 6px 13px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+.preview-meta [data-preview-author] { color: var(--text); font-weight: 650; }
 .post-preview-answer,
 .post-preview-comments { padding: 29px clamp(28px, 3.1vw, 48px) 35px; border-top: 1px solid var(--line); }
 .post-preview-story .post-preview-answer { padding-top: 38px; border-top: 0; }
@@ -1206,9 +1210,25 @@ body.share-card-open { overflow: hidden; }
   .post-preview-context .post-preview-bazi { width: calc(100% - 38px); margin: 0 auto 24px; }
   .post-preview-context .post-preview-oracle { padding: 16px 14px 14px; }
   .post-preview-head h2 { font-size: 26px; }
-  .post-preview-actions { min-height: 66px; padding: 9px 12px; overflow-x: auto; }
+  .post-preview-actions {
+    display: grid;
+    min-height: 66px;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, .9fr) 50px 60px;
+    gap: 6px;
+    padding: 9px 12px max(9px, env(safe-area-inset-bottom));
+    overflow: hidden;
+  }
   .post-preview-actions .primary-action,
-  .preview-action-button { min-height: 40px; flex: 0 0 auto; padding: 0 14px; }
+  .preview-action-button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 9px;
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .post-preview-actions [data-preview-copy] { display: none; }
   .share-card-dialog { width: 100vw; height: 100dvh; border-radius: 0; }
   .share-card-close { top: 10px; right: 10px; }
   .share-card-head { padding: 17px 58px 14px 16px; }

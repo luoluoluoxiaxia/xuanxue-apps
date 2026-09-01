@@ -155,7 +155,7 @@
     }
 
     const HOME_COMMUNITY_PAGE_SIZE = 12;
-    const HOME_COMMUNITY_VIEWS = new Set(["latest", "popular", "featured", "seeking", "resolved"]);
+    const HOME_COMMUNITY_VIEWS = new Set(["latest", "popular", "seeking"]);
     const HOME_COMMUNITY_TYPES = new Set([
       "", "contract", "relationship", "career", "wealth", "exam", "lost", "health", "travel", "other",
     ]);
@@ -165,11 +165,45 @@
     let homeCommunityDone = false;
     let homeCommunityObserver = null;
     let homeCommunityLoadVersion = 0;
-    let homeCommunityView = "popular";
+    let homeCommunityView = "latest";
     let homeCommunityType = "";
     let homeCommunitySystem = "";
     let homeCommunityRefreshFrame = null;
     const homeCommunitySlugs = new Set();
+    const homeCommunityQuestions = new Set();
+
+    function normalizedCommunityQuestion(post) {
+      return String(post?.question || post?.title || "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLocaleLowerCase("zh-CN");
+    }
+
+    function isUsefulCommunityQuestion(post) {
+      const question = normalizedCommunityQuestion(post);
+      return question.length >= 2 && !/^[\d\s._-]+$/.test(question);
+    }
+
+    function renderHomeCommunityPreview(posts) {
+      const host = $("[data-home-community-preview]");
+      if (!host || !Array.isArray(posts)) return;
+      const items = posts.filter(isUsefulCommunityQuestion).slice(0, 3);
+      if (!items.length) {
+        host.innerHTML = '<p>去社区看看最新问题与回答。</p>';
+        return;
+      }
+      host.innerHTML = items.map(post => {
+        const slug = String(post.slug || "");
+        const url = String(post.url || `/?post=${encodeURIComponent(slug)}#gua-square`);
+        const isHelp = post.post_kind === "help";
+        const replies = Number(post.comment_count) || 0;
+        return `<a href="${esc(url)}" data-community-post data-post-slug="${esc(slug)}">
+          <span>${esc(isHelp ? (replies ? `${replies} 条回答` : "等回答") : "新讨论")}</span>
+          <b>${esc(post.question || post.title || "一则社区帖子")}</b>
+          <i aria-hidden="true">→</i>
+        </a>`;
+      }).join("");
+    }
 
     function refreshHomeCommunityPosts() {
       if (homeCommunityRefreshFrame !== null) return;
@@ -209,6 +243,7 @@
         const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
         const hasChanged = !!oracle.has_changed;
         const published = String(post.published_at || post.created_at || "").slice(0, 10);
+        const authorName = String(post.author_name || "卦友");
         const liked = !!post.viewer_liked;
         const likeCount = Number(post.like_count) || 0;
         const commentCount = Number(post.comment_count) || 0;
@@ -241,7 +276,10 @@
           <article class="home-community-post post-card${isHelp ? " is-help" : " is-ai"}" role="listitem" data-question-type="${esc(post.question_type || "other")}" data-system="${esc(post.system || "liuyao")}">
             <a class="post-card-link" href="${esc(postUrl)}"${previewAttrs}>
               <div class="post-card-body">
-                <div class="post-card-labels"><span>${esc(post.system_label || "命理")}</span><b>${esc(statusLabel)}</b></div>
+                <div class="post-card-head">
+                  <div class="post-card-labels"><span>${esc(post.system_label || "命理")}</span><b>${esc(statusLabel)}</b></div>
+                  <span class="post-card-author">${esc(authorName)} · ${esc(published)}</span>
+                </div>
                 <h3>${esc(post.question || post.title || "一则社区帖子")}</h3>
                 ${oracleHtml}
                 ${baziHtml}
@@ -251,7 +289,6 @@
             <div class="post-card-footer">
                 <div class="post-card-meta">
                   <span>${esc(post.question_type_label || "其他")}</span>
-                  <time>${esc(published)}</time>
                   <span class="post-card-views" data-post-viewers="${esc(rawSlug)}">${Number(post.viewer_count) || 0} 人看过</span>
                   <span class="post-card-comments">${commentCount} ${isHelp ? "回答" : "评论"}</span>
                   <button type="button" class="post-like-button${liked ? " is-liked" : ""}" data-like-post="${esc(rawSlug)}" data-like-title="${esc(post.question || post.title || "这条卦帖")}" aria-label="${liked ? "已赞：" : "点赞："}${esc(post.question || post.title || "这条卦帖")}" aria-pressed="${liked ? "true" : "false"}" title="${liked ? "已点赞" : "点赞"}">
@@ -285,9 +322,10 @@
         homeCommunityLoadedCount = 0;
         homeCommunityDone = false;
         homeCommunitySlugs.clear();
+        homeCommunityQuestions.clear();
         if (sentinel) sentinel.hidden = false;
         renderHomeCommunityPlaceholder(
-          homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "正在筛选社区帖子" : "正在翻阅社区帖子",
+          homeCommunityType || homeCommunitySystem || homeCommunityView !== "latest" ? "正在筛选社区帖子" : "正在翻阅社区帖子",
           "找到内容后会直接显示在社区首页。",
           "loading",
         );
@@ -298,7 +336,7 @@
       setHomeCommunityStatus(homeCommunityLoadedCount ? "正在加载更多帖子…" : "正在加载帖子…");
       try {
         const query = new URLSearchParams({
-          limit: String(homeCommunityView === "popular" ? 100 : HOME_COMMUNITY_PAGE_SIZE),
+          limit: String(HOME_COMMUNITY_PAGE_SIZE),
           view: homeCommunityView,
           include_oracle_summary: "true",
         });
@@ -314,18 +352,24 @@
         const items = Array.isArray(data.items) ? data.items : [];
         const freshItems = items.filter(post => {
           const slug = String(post.slug || "");
-          if (!slug || homeCommunitySlugs.has(slug)) return false;
+          const question = normalizedCommunityQuestion(post);
+          if (!slug || homeCommunitySlugs.has(slug) || homeCommunityQuestions.has(question) || !isUsefulCommunityQuestion(post)) return false;
           homeCommunitySlugs.add(slug);
+          homeCommunityQuestions.add(question);
           return true;
         });
-        if (freshItems.length) renderHomeCommunityPosts(freshItems, { append: homeCommunityLoadedCount > 0 });
+        if (freshItems.length) {
+          renderHomeCommunityPosts(freshItems, { append: homeCommunityLoadedCount > 0 });
+          if (!homeCommunityLoadedCount) renderHomeCommunityPreview(freshItems);
+        }
         homeCommunityLoadedCount += freshItems.length;
         homeCommunityCursor = typeof data.next_cursor === "string" ? data.next_cursor : "";
         homeCommunityDone = !homeCommunityCursor;
         if (!homeCommunityLoadedCount) {
+          renderHomeCommunityPreview([]);
           renderHomeCommunityPlaceholder(
-            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "此筛选暂无帖子" : "暂无帖子",
-            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular"
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "latest" ? "此筛选暂无帖子" : "暂无帖子",
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "latest"
               ? "换个分类或排序看看。"
               : "排盘后可发起求助。",
           );
@@ -337,6 +381,7 @@
         if (homeCommunityLoadedCount) {
           root.dataset.state = "ready";
         } else {
+          renderHomeCommunityPreview([]);
           renderHomeCommunityPlaceholder("社区加载失败", "请重试。", "fallback");
         }
         setHomeCommunityStatus("加载失败", { retry: true });
@@ -383,7 +428,7 @@
       });
       $$('[data-home-community-view]').forEach(button => {
         button.addEventListener("click", () => {
-          const next = button.dataset.homeCommunityView || "popular";
+          const next = button.dataset.homeCommunityView || "latest";
           if (!HOME_COMMUNITY_VIEWS.has(next) || next === homeCommunityView) return;
           homeCommunityView = next;
           syncHomeCommunityFilters();

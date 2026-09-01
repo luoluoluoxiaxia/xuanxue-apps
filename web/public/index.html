@@ -80,9 +80,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="community.css?v=community-54">
+<link rel="stylesheet" href="community.css?v=community-55">
 <link rel="stylesheet" href="account.css?v=account-14">
-<link rel="stylesheet" href="style.css?v=design-159">
+<link rel="stylesheet" href="style.css?v=design-160">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-14">
 <link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-3">
 <link rel="stylesheet" href="profile-library.css?v=profile-library-2">
@@ -406,6 +406,16 @@
         <h1 id="home-page-title">你的命盘与近况</h1>
         <p>登录后查看每日与本月提示。</p>
         <button type="button" class="home-observatory-login" data-account-button><span data-account-label>登录 / 注册</span></button>
+        <section class="home-community-pulse" aria-labelledby="home-community-pulse-title">
+          <header>
+            <div><span>社区动态</span><h2 id="home-community-pulse-title">大家正在聊</h2></div>
+            <a href="#gua-square" data-home-community-nav>进入社区 <i aria-hidden="true">→</i></a>
+          </header>
+          <div class="home-community-pulse-list" data-home-community-preview aria-live="polite">
+            <p>正在读取最新讨论…</p>
+          </div>
+          <a class="home-community-pulse-help" href="/?start=liuyao&amp;community=help">不走 AI，向社区求助</a>
+        </section>
       </section>
     </main>
 
@@ -421,11 +431,9 @@
           <div class="home-community-filter-group" aria-label="排序方式">
             <span>排序</span>
             <div class="home-community-filter-options">
-              <button type="button" data-home-community-view="popular" aria-pressed="true">热门</button>
+              <button type="button" data-home-community-view="latest" aria-pressed="true">最新</button>
               <button type="button" data-home-community-view="seeking" aria-pressed="false">等回答</button>
-              <button type="button" data-home-community-view="latest" aria-pressed="false">最新</button>
-              <button type="button" data-home-community-view="resolved" aria-pressed="false">已解决</button>
-              <button type="button" data-home-community-view="featured" aria-pressed="false">精选</button>
+              <button type="button" data-home-community-view="popular" aria-pressed="false">热门</button>
             </div>
           </div>
           <div class="home-community-filter-group" aria-label="盘面类型">
@@ -897,11 +905,11 @@
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-12"></script>
+<script src="modules/home-community.js?v=web-modules-14"></script>
 <script src="app.js?v=design-194"></script>
 <script src="modules/profile-workspace.js?v=web-modules-9"></script>
 <script src="modules/chat-workspace.js?v=web-modules-5"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
-<script src="community.js?v=community-30"></script>
+<script src="community.js?v=community-32"></script>
 </body>
 </html>
