@@ -622,11 +622,37 @@ body.account-dialog-open {
   color: var(--account-muted);
   font: 400 12px/1.65 "Noto Sans SC", sans-serif;
 }
-.checkout-status-head progress {
+.checkout-status-progress {
+  position: relative;
   width: 100%;
-  height: 5px;
+  height: 4px;
   margin-top: 5px;
-  accent-color: #635bff;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e3e9;
+  contain: paint;
+  transform: translateZ(0);
+}
+.checkout-status-progress > i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 20%;
+  border-radius: inherit;
+  background: #635bff;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+  animation: checkout-status-progress-slide 1.35s cubic-bezier(.65, 0, .35, 1) infinite alternate;
+}
+@keyframes checkout-status-progress-slide {
+  to { transform: translate3d(400%, 0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .checkout-status-progress > i {
+    animation: none;
+    transform: translate3d(200%, 0, 0);
+    will-change: auto;
+  }
 }
 
 .checkout-steps {
