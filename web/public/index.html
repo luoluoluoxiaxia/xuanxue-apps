@@ -84,7 +84,7 @@
 <link rel="stylesheet" href="account.css?v=account-14">
 <link rel="stylesheet" href="style.css?v=design-159">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-14">
-<link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-2">
+<link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-3">
 <link rel="stylesheet" href="chat.css?v=chat-17">
 <script type="application/ld+json">
 {
@@ -199,9 +199,9 @@
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
             <span data-account-profile-label>登录 / 注册</span>
           </button>
-          <button type="button" data-hero-nav="credits" title="消费明细">
+          <button type="button" data-hero-nav="credits" title="积分管理">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h5M8 15h3m3 0h2m-8 3h3m3 0h2"/></svg></span>
-            <span>消费明细</span>
+            <span>积分管理</span>
           </button>
           <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-expanded="false" aria-label="展开 Tab 栏" title="展开 Tab 栏">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
@@ -307,7 +307,7 @@
 
     <main id="credit-ledger-page" class="credit-ledger-page" aria-labelledby="credit-ledger-title" tabindex="-1" hidden>
       <header class="cl-page-head">
-        <h1 id="credit-ledger-title">消费明细</h1>
+        <h1 id="credit-ledger-title">积分管理</h1>
         <div class="cl-balance" aria-live="polite">
           <span>当前余额</span>
           <strong><b data-cl-balance>—</b><i>分</i></strong>
@@ -318,9 +318,25 @@
       <section class="cl-quota" aria-label="今日免费积分">
         <p>今日免费积分 <strong data-cl-quota-remaining>—</strong><span> / <b data-cl-quota-total>—</b></span><i>·</i><em>北京时间 0 点刷新</em></p>
         <div aria-hidden="true"><span data-cl-quota-progress></span></div>
+        <aside class="cl-quota-meta" aria-label="免费积分规则">
+          <span><b>每日基础</b><em data-cl-quota-base>—</em></span>
+          <span><b>邀请加成</b><em data-cl-quota-referral>—</em></span>
+          <span><b>今日已用</b><em data-cl-quota-used>—</em></span>
+        </aside>
       </section>
 
-      <section class="cl-statement" aria-label="积分对账单">
+      <section class="cl-topup" aria-labelledby="cl-topup-title">
+        <header>
+          <h2 id="cl-topup-title">充值积分</h2>
+          <p>一次性充值 · 长期有效</p>
+        </header>
+        <div class="cl-packs" data-cl-packs aria-live="polite">
+          <span>登录后显示可用套餐</span>
+        </div>
+      </section>
+
+      <section class="cl-statement" aria-label="积分流水">
+        <h2>积分流水</h2>
         <div class="cl-statement-tools">
           <label class="cl-month-control">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16"/></svg></span>
@@ -328,7 +344,7 @@
             <span class="cl-month-chevron hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></svg></span>
             <input type="month" data-cl-month aria-label="选择月份">
           </label>
-          <div class="cl-filters" role="tablist" aria-label="筛选消费明细">
+          <div class="cl-filters" role="tablist" aria-label="筛选积分流水">
             <button type="button" role="tab" data-cl-filter="all" aria-selected="true">全部</button>
             <button type="button" role="tab" data-cl-filter="usage" aria-selected="false">消耗</button>
             <button type="button" role="tab" data-cl-filter="credit" aria-selected="false">获得</button>
@@ -336,7 +352,7 @@
           </div>
         </div>
 
-        <div class="cl-table" role="table" aria-label="积分明细">
+        <div class="cl-table" role="table" aria-label="积分流水">
           <div class="cl-table-head" role="row">
             <span role="columnheader">时间</span>
             <span role="columnheader">类型</span>
@@ -857,10 +873,10 @@
 
 <script src="chat-render.js?v=chat-1"></script>
 <script src="regions.js?v=20260629"></script>
-<script src="account.js?v=account-24"></script>
+<script src="account.js?v=account-25"></script>
 <script src="share-card.js?v=share-card-6"></script>
 <script src="personal-home.js?v=personal-workbench-14"></script>
-<script src="credit-ledger.js?v=credit-ledger-3"></script>
+<script src="credit-ledger.js?v=credit-ledger-4"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
 <script src="modules/chat-copy.js?v=web-modules-2"></script>
 <script src="modules/chart-domain.js?v=web-modules-2"></script>

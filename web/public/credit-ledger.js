@@ -107,6 +107,37 @@
     </div>`;
   }
 
+  function packEstimate(pack) {
+    return String(pack?.usage_estimate || "按每次回答的实际消耗结算");
+  }
+
+  function renderPacks(wallet, authenticated) {
+    const root = $("[data-cl-packs]");
+    const packs = Array.isArray(wallet?.packs) ? wallet.packs : [];
+    if (!authenticated) {
+      root.innerHTML = "<span>登录后显示可用套餐</span>";
+      return;
+    }
+    if (!packs.length) {
+      root.innerHTML = "<span>暂无可用套餐</span>";
+      return;
+    }
+    root.innerHTML = packs.map(pack => {
+      const credits = Number(pack?.credits || 0);
+      const dollars = (Number(pack?.unit_amount || 0) / 100).toFixed(0);
+      const enabled = !!wallet?.topup_enabled && !!pack?.available;
+      return `<button type="button" data-cl-pack="${escapeHtml(pack?.sku || "")}"${credits >= 660 ? ' class="featured"' : ""}${enabled ? "" : " disabled"}>
+        ${credits >= 660 ? '<small>多 60 分</small>' : ""}
+        <span><b>${credits}</b><i>积分</i></span>
+        <strong>$${dollars}</strong>
+        <em>${escapeHtml(enabled ? packEstimate(pack) : "暂未开放")}</em>
+      </button>`;
+    }).join("");
+    root.querySelectorAll("[data-cl-pack]").forEach(button => {
+      button.addEventListener("click", () => Account.reviewTopup(button.dataset.clPack));
+    });
+  }
+
   function syncSummary(wallet = null) {
     const account = Account.snapshot();
     const currentWallet = wallet || account.creditWallet || {};
@@ -116,8 +147,12 @@
     $("[data-cl-balance]").textContent = String(Number(currentWallet.balance || 0));
     $("[data-cl-quota-remaining]").textContent = String(remaining);
     $("[data-cl-quota-total]").textContent = String(total);
+    $("[data-cl-quota-base]").textContent = `${Number(quota.base || 0)} 分`;
+    $("[data-cl-quota-referral]").textContent = `+${Number(quota.referral_bonus || 0)} 分`;
+    $("[data-cl-quota-used]").textContent = `${Number(quota.used || 0)} 分`;
     const ratio = total > 0 ? Math.min(100, Math.max(0, (remaining / total) * 100)) : 0;
     $("[data-cl-quota-progress]").style.width = `${ratio}%`;
+    renderPacks(currentWallet, !!account.authenticated);
   }
 
   function setLoading() {
@@ -130,8 +165,8 @@
   function renderSignedOut() {
     const body = $("[data-cl-body]");
     body.setAttribute("aria-busy", "false");
-    body.innerHTML = '<div class="cl-empty"><b>登录后查看消费明细</b><span>积分获得、消耗与充值记录只对本人可见。</span><button type="button" data-cl-login>登录 / 注册</button></div>';
-    body.querySelector("[data-cl-login]")?.addEventListener("click", () => Account.open("login", "登录后查看消费明细。"));
+    body.innerHTML = '<div class="cl-empty"><b>登录后管理积分</b><span>积分余额、充值与流水只对本人可见。</span><button type="button" data-cl-login>登录 / 注册</button></div>';
+    body.querySelector("[data-cl-login]")?.addEventListener("click", () => Account.open("login", "登录后管理积分。"));
     $("[data-cl-pagination]").hidden = true;
   }
 
@@ -196,7 +231,7 @@
       if (requestId !== state.requestId) return;
       const body = $("[data-cl-body]");
       body.setAttribute("aria-busy", "false");
-      body.innerHTML = `<div class="cl-error" role="alert"><b>明细加载失败</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-cl-retry>重新加载</button></div>`;
+      body.innerHTML = `<div class="cl-error" role="alert"><b>积分记录加载失败</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-cl-retry>重新加载</button></div>`;
       body.querySelector("[data-cl-retry]")?.addEventListener("click", load);
       $("[data-cl-pagination]").hidden = true;
     }
@@ -259,7 +294,14 @@
     load();
   });
 
-  $("[data-cl-topup]").addEventListener("click", () => Account.open("topup"));
+  $("[data-cl-topup]").addEventListener("click", () => {
+    if (!Account.snapshot().authenticated) {
+      Account.open("login", "登录后充值积分。");
+      return;
+    }
+    $("[data-cl-packs]").scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    requestAnimationFrame(() => $("[data-cl-pack]:not(:disabled)")?.focus({ preventScroll: true }));
+  });
 
   document.addEventListener("xuanshu:authchange", event => {
     if (!isVisible()) return;
