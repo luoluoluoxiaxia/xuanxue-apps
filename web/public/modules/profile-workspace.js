@@ -430,14 +430,8 @@ async function openProfileLibrary() {
           </div>`;
     const baziCount = profiles.filter(p => (p.system || p.summary?.system) !== "liuyao").length;
     const liuyaoCount = profiles.length - baziCount;
-    const historyCount = profiles.reduce((total, p) => total + Number(p.history_count || 0), 0);
-    const activeCount = profiles.filter(p => ["pending", "running"].includes(p.task_status)).length;
     const body = `<div class="saved-list">
       ${profileIdentityHtml()}
-      <div class="saved-library-summary" role="status">
-        <b>${profiles.length} 份档案</b>
-        <span>八字 ${baziCount} · 六爻 ${liuyaoCount} · 解读 ${historyCount}${activeCount ? ` · ${activeCount} 份正在生成` : ""}</span>
-      </div>
       <div class="archive-system-tabs" role="tablist" aria-label="档案类型">
         <button type="button" id="archive-tab-bazi" role="tab" data-archive-tab="bazi" aria-controls="archive-system-panel" aria-selected="${profileArchiveTab === "bazi"}" tabindex="${profileArchiveTab === "bazi" ? "0" : "-1"}" class="${profileArchiveTab === "bazi" ? "active" : ""}">八字 <span>${baziCount}</span></button>
         <button type="button" id="archive-tab-liuyao" role="tab" data-archive-tab="liuyao" aria-controls="archive-system-panel" aria-selected="${profileArchiveTab === "liuyao"}" tabindex="${profileArchiveTab === "liuyao" ? "0" : "-1"}" class="${profileArchiveTab === "liuyao" ? "active" : ""}">六爻 <span>${liuyaoCount}</span></button>
