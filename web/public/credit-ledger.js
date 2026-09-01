@@ -127,6 +127,14 @@
     $("[data-cl-pagination]").hidden = true;
   }
 
+  function renderSignedOut() {
+    const body = $("[data-cl-body]");
+    body.setAttribute("aria-busy", "false");
+    body.innerHTML = '<div class="cl-empty"><b>登录后查看消费明细</b><span>积分获得、消耗与充值记录只对本人可见。</span><button type="button" data-cl-login>登录 / 注册</button></div>';
+    body.querySelector("[data-cl-login]")?.addEventListener("click", () => Account.open("login", "登录后查看消费明细。"));
+    $("[data-cl-pagination]").hidden = true;
+  }
+
   function renderPagination(pagination) {
     const nav = $("[data-cl-pagination]");
     const current = Math.max(1, Number(pagination?.page || 1));
@@ -220,6 +228,7 @@
     if (reload) {
       await Account.ready();
       if (Account.snapshot().authenticated) load();
+      else renderSignedOut();
     }
   }
 
@@ -252,8 +261,11 @@
 
   $("[data-cl-topup]").addEventListener("click", () => Account.open("topup"));
 
-  document.addEventListener("xuanshu:authchange", () => {
-    if (isVisible()) syncSummary();
+  document.addEventListener("xuanshu:authchange", event => {
+    if (!isVisible()) return;
+    syncSummary();
+    if (event.detail?.authenticated) load();
+    else renderSignedOut();
   });
 
   window.XuanxueCreditLedger = Object.freeze({ activate, deactivate, isVisible, load });
