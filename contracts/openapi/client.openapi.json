@@ -5686,6 +5686,16 @@
               "title": "Kind",
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Month",
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -5811,6 +5821,16 @@
             "schema": {
               "default": "all",
               "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Month",
               "type": "string"
             }
           }

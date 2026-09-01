@@ -23,17 +23,19 @@
       }
     }
     const detailedWorkspace = !!query.get("personal_case") || route?.workspace === "detailed" || resumeDetailed;
-    const navTarget = query.get("view") === "archives"
-      ? "profile"
-      : detailedEntry || detailedWorkspace
-        ? "detailed"
-        : start === "bazi" || start === "liuyao"
-        ? start
-        : location.hash === "#gua-square"
-          ? "community"
-          : route?.screen === "dash"
-            ? (route.system === "bazi" || route.system === "liuyao" ? route.system : resumeSystem)
-            : "landing";
+    const navTarget = query.get("view") === "credits"
+      ? "credits"
+      : query.get("view") === "archives"
+        ? "profile"
+        : detailedEntry || detailedWorkspace
+          ? "detailed"
+          : start === "bazi" || start === "liuyao"
+            ? start
+            : location.hash === "#gua-square"
+              ? "community"
+              : route?.screen === "dash"
+                ? (route.system === "bazi" || route.system === "liuyao" ? route.system : resumeSystem)
+                : "landing";
     if (navTarget === "community") document.documentElement.dataset.communityView = "true";
     if (start === "bazi" || start === "liuyao") document.documentElement.dataset.entryStart = start;
     if (!navTarget || navTarget === "landing") return;
@@ -82,6 +84,7 @@
 <link rel="stylesheet" href="account.css?v=account-14">
 <link rel="stylesheet" href="style.css?v=design-159">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-14">
+<link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-2">
 <link rel="stylesheet" href="chat.css?v=chat-17">
 <script type="application/ld+json">
 {
@@ -196,6 +199,10 @@
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg></span>
             <span data-account-profile-label>登录 / 注册</span>
           </button>
+          <button type="button" data-hero-nav="credits" title="消费明细">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h5M8 15h3m3 0h2m-8 3h3m3 0h2"/></svg></span>
+            <span>消费明细</span>
+          </button>
           <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-expanded="false" aria-label="展开 Tab 栏" title="展开 Tab 栏">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
             <span data-sidebar-toggle-label>展开 Tab 栏</span>
@@ -295,6 +302,57 @@
         <h1>观象台加载失败</h1>
         <p data-ph-error-message>请重试。</p>
         <button type="button" data-ph-retry-home>重新加载</button>
+      </section>
+    </main>
+
+    <main id="credit-ledger-page" class="credit-ledger-page" aria-labelledby="credit-ledger-title" tabindex="-1" hidden>
+      <header class="cl-page-head">
+        <h1 id="credit-ledger-title">消费明细</h1>
+        <div class="cl-balance" aria-live="polite">
+          <span>当前余额</span>
+          <strong><b data-cl-balance>—</b><i>分</i></strong>
+          <button type="button" data-cl-topup>充值</button>
+        </div>
+      </header>
+
+      <section class="cl-quota" aria-label="今日免费积分">
+        <p>今日免费积分 <strong data-cl-quota-remaining>—</strong><span> / <b data-cl-quota-total>—</b></span><i>·</i><em>北京时间 0 点刷新</em></p>
+        <div aria-hidden="true"><span data-cl-quota-progress></span></div>
+      </section>
+
+      <section class="cl-statement" aria-label="积分对账单">
+        <div class="cl-statement-tools">
+          <label class="cl-month-control">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="3"/><path d="M8 3v4m8-4v4M4 10h16"/></svg></span>
+            <span data-cl-month-label>—</span>
+            <span class="cl-month-chevron hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m7 9 5 5 5-5"/></svg></span>
+            <input type="month" data-cl-month aria-label="选择月份">
+          </label>
+          <div class="cl-filters" role="tablist" aria-label="筛选消费明细">
+            <button type="button" role="tab" data-cl-filter="all" aria-selected="true">全部</button>
+            <button type="button" role="tab" data-cl-filter="usage" aria-selected="false">消耗</button>
+            <button type="button" role="tab" data-cl-filter="credit" aria-selected="false">获得</button>
+            <button type="button" role="tab" data-cl-filter="orders" aria-selected="false">充值</button>
+          </div>
+        </div>
+
+        <div class="cl-table" role="table" aria-label="积分明细">
+          <div class="cl-table-head" role="row">
+            <span role="columnheader">时间</span>
+            <span role="columnheader">类型</span>
+            <span role="columnheader">说明</span>
+            <span role="columnheader">变动</span>
+            <span role="columnheader">余额</span>
+          </div>
+          <div class="cl-table-body" data-cl-body role="rowgroup" aria-live="polite" aria-busy="true">
+            <div class="cl-loading" role="status"><span></span><b>正在读取明细</b></div>
+          </div>
+        </div>
+
+        <footer class="cl-statement-foot">
+          <p>回答始终完整送达，余额最低为 0。</p>
+          <nav class="cl-pagination" data-cl-pagination aria-label="明细翻页" hidden></nav>
+        </footer>
       </section>
     </main>
 
@@ -802,6 +860,7 @@
 <script src="account.js?v=account-24"></script>
 <script src="share-card.js?v=share-card-6"></script>
 <script src="personal-home.js?v=personal-workbench-14"></script>
+<script src="credit-ledger.js?v=credit-ledger-2"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
 <script src="modules/chat-copy.js?v=web-modules-2"></script>
 <script src="modules/chart-domain.js?v=web-modules-2"></script>

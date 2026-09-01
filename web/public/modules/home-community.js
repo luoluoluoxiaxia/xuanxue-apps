@@ -53,6 +53,10 @@
       const query = new URLSearchParams(location.search);
       const start = query.get("start");
       const detailed = start === "liuyao" && query.get("flow") === "detailed";
+      if (query.get("view") === "credits") {
+        showScreen("credits", { preserveEntryLocation: true, focusPage: true });
+        return;
+      }
       if (route?.screen === "dash" && lastPayload) {
         enterDashboard({ preserveEntryLocation: true, focusPage: true });
         return;
