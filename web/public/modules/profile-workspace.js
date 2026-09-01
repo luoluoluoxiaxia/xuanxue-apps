@@ -92,6 +92,19 @@ function enterProfilePage(options = {}) {
   });
 }
 
+function renderProfileSignedOut(options = {}) {
+  enterProfilePage(options);
+  renderProfilePage(`<div class="profile-empty profile-empty-actionable">
+    <b>登录后查看档案</b>
+    <span>八字、六爻与历史只对本人可见。</span>
+    <div class="profile-empty-actions"><button type="button" class="primary" data-profile-page-login>登录 / 注册</button></div>
+  </div>`, "[data-profile-page-login]");
+  profilePageBody()?.querySelector("[data-profile-page-login]")?.addEventListener("click", () => {
+    Account.requireLogin({ mode: "login", message: "登录后查看跨设备档案。" })
+      .then(ok => { if (ok) openProfileLibrary({ ...options, startup: false }); });
+  });
+}
+
 function openDetailedCaseOverview() {
   if (!detailedWorkspaceActive()) {
     openProfileLibrary({ includeCurrent: !!lastPayload });
