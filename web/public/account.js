@@ -1213,7 +1213,7 @@
         <span>${escapeHtml(content.eyebrow || "充值状态")}</span>
         <h2 id="account-dialog-title" tabindex="-1">${escapeHtml(content.title || "充值状态")}</h2>
         <p>${escapeHtml(content.description || "")}</p>
-        ${kind === "pending" ? '<progress aria-label="正在核验 Stripe 付款结果"></progress>' : ""}
+        ${kind === "pending" ? '<div class="checkout-status-progress" role="progressbar" aria-label="正在核验 Stripe 付款结果"><i aria-hidden="true"></i></div>' : ""}
       </div>
       ${checkoutSteps(progressStep)}
       ${showOrder ? `<section class="checkout-status-order${kind === "paid" ? "" : " compact"}" aria-label="本次充值">
