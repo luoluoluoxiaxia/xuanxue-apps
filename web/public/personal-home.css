@@ -639,6 +639,17 @@
   body[data-home-experience="personal"] .landing .hero::before { display: none; }
 }
 
+/* PERSONAL HOME VIEWPORT · 登录后的观象台隐藏页脚，主内容接管完整视口。 */
+body[data-home-experience="personal"] .landing .personal-workbench {
+  min-height: var(--app-viewport-height, 100svh);
+}
+
+@media (min-width: 1121px) {
+  body[data-home-experience="personal"] .landing .personal-workbench {
+    grid-row: 1 / -1;
+  }
+}
+
 @media (min-width: 1380px) {
   .landing .personal-workbench { padding-right: max(70px, 7vw); padding-left: max(70px, 7vw); }
 }
