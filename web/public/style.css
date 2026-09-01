@@ -3073,11 +3073,25 @@ body[data-screen="landing"] .landing{
     border:0;
     transform:translateX(2px);
   }
-  .landing .hero-links button[aria-current="page"]{
-    color:var(--home-text);
-    background:var(--home-subtle);
+  /* PRIMARY NAV CURRENT STATE · 当前 Tab 用品牌色与侧标明确定位（design-166） */
+  .landing .hero-links button[aria-current="page"],
+  .landing .hero-links a.hero-link-signature[aria-current="page"]{
+    position:relative;
+    color:var(--home-accent-dark);
+    background:var(--home-pink);
     border:0;
     font-weight:720;
+  }
+  .landing .hero-links button[aria-current="page"]::before,
+  .landing .hero-links a.hero-link-signature[aria-current="page"]::before{
+    position:absolute;
+    top:14px;
+    left:-18px;
+    width:3px;
+    height:20px;
+    background:var(--home-accent);
+    border-radius:0 999px 999px 0;
+    content:"";
   }
   .landing .hero-links button[data-community-notifications]{margin-top:auto}
   .landing .hero-link-icon{
@@ -3214,7 +3228,7 @@ body[data-screen="landing"] .landing{
     display:block;
   }
 }
-.landing .home-community-card{padding:24px 28px 28px}
+.landing .home-community-card{padding:0 28px 28px}
 .landing .home-community h2{margin-top:10px}
 .landing .home-community-intro{padding-bottom:12px}
 .landing .home-community-feed{
@@ -6069,6 +6083,6 @@ body[data-screen="dash"] .liuyao-question-card{
   .landing .home-community-pulse{margin-top:28px;padding-top:20px}
   .landing .home-community-pulse-list{grid-template-columns:1fr}
   .landing .home-community-pulse-list a{min-height:72px}
-  .landing .home-community-card{padding:24px 18px 28px}
+  .landing .home-community-card{padding:0 18px 28px}
   .landing .hero-footer{padding-bottom:12px}
 }
