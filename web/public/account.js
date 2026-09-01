@@ -1,4 +1,4 @@
-// OVERLAY HISTORY · 弹窗先响应浏览器返回，再离开当前页面（account-14）
+// OVERLAY HISTORY · 弹窗先响应浏览器返回，再离开当前页面（account-15）
 (() => {
   "use strict";
 
@@ -392,6 +392,7 @@
     ensureDialog();
     if (state.authenticated) {
       if (mode === "checkout") renderCheckoutReview(message);
+      else if (mode === "topup") renderTopupSelection(message);
       else renderAccount(message, message ? "success" : "");
     }
     else renderAuth(mode === "register" ? "register" : "login_password", message);
@@ -951,6 +952,38 @@
       </li>`).join("")}</ol>`;
   }
 
+  function renderTopupSelection(message = "") {
+    checkoutPollToken += 1;
+    const wallet = state.creditWallet || {};
+    const packs = Array.isArray(wallet.packs) ? wallet.packs : [];
+    const packButtons = packs.map(pack => {
+      const credits = Math.max(0, Number(pack?.credits || 0));
+      const dollars = (Math.max(0, Number(pack?.unit_amount || 0)) / 100).toFixed(0);
+      const enabled = !!wallet.topup_enabled && !!pack?.available;
+      const usageEstimate = packEstimate(pack).replace(/\s*·\s*赠\s*\d+\s*分\s*$/, "");
+      return `<button type="button" data-topup-pack="${escapeHtml(pack?.sku || "")}"${credits >= 660 ? ' class="featured"' : ""}${enabled ? "" : " disabled"} aria-label="选择 ${credits} 积分，${dollars} 美元">
+        ${credits >= 660 ? '<small>多 60 分</small>' : ""}
+        <span><b>${credits}</b><i>积分</i></span>
+        <span><strong>$${dollars}</strong><em>${escapeHtml(enabled ? usageEstimate : "暂未开放")}</em></span>
+        <i aria-hidden="true">→</i>
+      </button>`;
+    }).join("");
+    body.innerHTML = `
+      <div class="topup-select-head">
+        <span>积分充值</span>
+        <h2 id="account-dialog-title" tabindex="-1">选择充值套餐</h2>
+        ${message ? `<p class="account-context-note warn">${escapeHtml(message)}</p>` : ""}
+      </div>
+      <div class="topup-pack-list" aria-label="充值套餐">
+        ${packButtons || '<p>充值暂未开放</p>'}
+      </div>
+      <p class="topup-select-note">一次性付款 · 积分长期有效 · Stripe 安全结账</p>`;
+    body.querySelectorAll("[data-topup-pack]").forEach(button => {
+      button.addEventListener("click", () => renderCheckoutReview(button.dataset.topupPack));
+    });
+    focusCheckoutTitle();
+  }
+
   function renderCheckoutReview(sku, message = "") {
     checkoutPollToken += 1;
     const pack = creditPack(sku);
@@ -961,7 +994,7 @@
     const dollars = (Number(pack.unit_amount || 0) / 100).toFixed(0);
     body.innerHTML = `
       <div class="checkout-head">
-        <button type="button" data-checkout-back>返回积分管理</button>
+        <button type="button" data-checkout-account>返回积分管理</button>
         <span>积分充值</span>
         <h2 id="account-dialog-title" tabindex="-1">确认充值套餐</h2>
         <p>确认后前往 Stripe 付款。</p>
@@ -985,9 +1018,8 @@
         <button type="button" class="primary" data-checkout-confirm>前往 Stripe 付款 · $${dollars}</button>
         <button type="button" data-checkout-back>更换套餐</button>
       </div>`;
-    body.querySelectorAll("[data-checkout-back]").forEach(button => {
-      button.addEventListener("click", openPointsManagement);
-    });
+    body.querySelector("[data-checkout-account]")?.addEventListener("click", openPointsManagement);
+    body.querySelector("[data-checkout-back]")?.addEventListener("click", () => renderTopupSelection());
     body.querySelector("[data-checkout-confirm]")?.addEventListener("click", () => startCreditCheckout(pack.sku));
     focusCheckoutTitle();
   }
