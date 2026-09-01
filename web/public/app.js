@@ -3459,7 +3459,7 @@ function nativeSharePayload(title, url) {
 async function sharePublicPost(slug) {
   if (!slug) return;
   const target = await Account?.shareTarget(slug) || {
-    url: `${location.origin}/gua/${slug}?ref=workbench_share`,
+    url: `${location.origin}/?post=${encodeURIComponent(slug)}&ref=workbench_share#gua-square`,
     attributed: false,
   };
   const url = target.url;

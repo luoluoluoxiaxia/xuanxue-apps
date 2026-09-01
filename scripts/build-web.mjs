@@ -139,7 +139,7 @@ for (const requiredAuthBoundary of [
 }
 
 const community = readFileSync(join(publicDir, "community.js"), "utf8");
-if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 4) {
+if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 5) {
   fail("community likes, views, follows, and resolutions must carry same-origin interaction proof");
 }
 
