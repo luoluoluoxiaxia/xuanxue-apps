@@ -343,6 +343,7 @@ body[data-screen="credits"] .landing .hero-footer {
 .cl-error b { color: var(--cl-ink); font-size: 13px; }
 .cl-empty span,
 .cl-error span { font-size: 11px; }
+.cl-empty button,
 .cl-error button {
   min-height: 38px;
   padding: 0 16px;
