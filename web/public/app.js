@@ -243,7 +243,7 @@ function restoreTaskMessage(key, task) {
     msg.stopped = true;
     msg.body = String(task.answer || "已停止生成。").trim();
     if (!msg.body.includes("编辑刚才的问题")) {
-      msg.body += "\n\n已停止生成，可编辑刚才的问题后从这里分叉重发。";
+      msg.body += "\n\n已停止生成。编辑问题后可分叉重发。";
     }
     if (!msg.completedAt) msg.completedAt = restoredTaskTime(task.updated_at);
     return msg;
@@ -377,7 +377,7 @@ async function openCommunityHelpDialog() {
   }
   const loggedIn = await Account?.requireLogin({
     mode: "register",
-    message: "登录并验证邮箱后即可免费向社区求助；不会调用 AI，也不会扣积分。",
+    message: "登录并验证邮箱后可免费求助，不调用 AI，不扣积分。",
   });
   if (!loggedIn) return;
   const dialog = document.querySelector("[data-community-help-dialog]");
@@ -726,7 +726,7 @@ async function openSystemWorkspace(target) {
   stashCurrentWorkspace();
   const saved = accountProfileFor(target);
   if (saved?.id) {
-    toast(target === "liuyao" ? "正在打开账户卦档…" : "正在打开账户命盘…");
+    toast(target === "liuyao" ? "打开卦档…" : "打开命盘…");
     await openSavedProfile(Number(saved.id));
     return;
   }
@@ -1267,7 +1267,7 @@ function syncBirthEntryCopy() {
   if (foot) foot.textContent = editing
     ? "更新后从新盘重新开始解读，原有解读不再挂在当前档案下"
     : manual
-      ? "选择生年候选后匹配出生锚点，不需要城市"
+      ? "选择生年候选匹配出生锚点，无需城市"
       : "";
 }
 function syncBirthInputMode() {
@@ -1418,7 +1418,7 @@ async function openBirthModal(options = {}) {
   }
   const loggedIn = await Account?.requireLogin({
     mode: "login",
-    message: "八字排盘与解读会保存到你的私人账户，请先登录或注册。",
+    message: "私人排盘，先登录或注册。",
   });
   if (!loggedIn) return false;
   if (!options?.preservePersonalCase) clearPersonalCaseContext();
@@ -2125,16 +2125,16 @@ async function submitCast(ev) {
   const loggedIn = await Account?.requireLogin({
     mode: "register",
     message: communityHelp
-      ? "登录并验证邮箱后即可免费向社区求助；不会调用 AI，也不会扣积分。"
+      ? "登录并验证邮箱后可免费求助，不调用 AI，不扣积分。"
       : visibility === "private"
-      ? "私密提问只保存在你的账户中，请先登录或注册。"
-      : "登录后可使用每日免费积分开始解读；分享任意公开问题还能永久增加每日免费积分。",
+      ? "私密提问，先登录或注册。"
+      : "登录后使用每日免费积分。分享公开问题可增加每日积分。",
   });
   if (!loggedIn) return;
   const answerQuota = Account?.snapshot()?.privateQuota;
   if (!communityHelp && answerQuota && !answerQuota.can_start_answer) {
     showCastError("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或到账户充值后继续。");
-    Account?.open?.("topup", "可用积分已经用完。选择套餐并完成付款后，就能继续刚才的 AI 解读。");
+    Account?.open?.("topup", "积分已用完。充值后继续当前解读。");
     syncCastUI();
     return;
   }
@@ -2242,7 +2242,7 @@ function humanError(raw) {
   };
   if (/key|configured/i.test(raw)) {
     const unit = state.system === "liuyao" ? "卦盘" : "命盘";
-    return `AI 解读服务暂时不可用。你的${unit}已保存，可以稍后重新解读。`;
+    return `AI 解读不可用。${unit}已保存，稍后重试。`;
   }
   const transportError = friendlyTransportError(raw);
   if (transportError) return transportError;
@@ -2482,7 +2482,7 @@ function enterDashboard({ preserveEntryLocation = false, historyMode = "replace"
     const topLabel = document.querySelector("#top-profile-btn .top-profile-label");
     if (topLabel) topLabel.textContent = "档案";
     const topProfile = $("#top-profile-btn");
-    if (topProfile) topProfile.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看你的私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+    if (topProfile) topProfile.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
     const rechart = $("#rechart-btn");
     if (rechart) rechart.onclick = () => { state.system === "liuyao" ? openCastModal() : openBirthModal(); };
     const railRechart = $("#rail-rechart-btn");
@@ -3098,10 +3098,10 @@ function renderStage() {
       if (cly) data.push({ kicker: "当前流月", gz: cly.pillar, god: `${cly.stem_ten_god} · ${cly.month_name}`,
         stemElement: cly.stem_element, range: cly.solar_term_range || "", badge: "本月", cur: false, onClick: () => openPop(liuyuePop(cly)) });
       paintRows(data);
-      $("#advanced-stage").innerHTML = `<div class="basic-hint" style="color:var(--ink-2)">需要填写性别，才能按匹配到的出生时间定大运 / 人生走势。<br>点右上「修改信息」补全性别即可。</div>`;
+      $("#advanced-stage").innerHTML = `<div class="basic-hint" style="color:var(--ink-2)">请先填写性别，再按出生时间定大运 / 人生走势。<br>点右上「修改信息」补全。</div>`;
       return;
     }
-    rows.innerHTML = `<div class="basic-hint" style="color:var(--ink-2)">需要填写性别，才能定大运 / 流年 / 流月。<br>点右上「修改信息」补全性别即可。</div>`;
+    rows.innerHTML = `<div class="basic-hint" style="color:var(--ink-2)">请先填写性别，再定大运 / 流年 / 流月。<br>点右上「修改信息」补全。</div>`;
     $("#advanced-stage").innerHTML = "";
     return;
   }
@@ -3287,8 +3287,8 @@ function openPop(P) {
   const card = $("#pop-card");
   const isLy = state.system === "liuyao";
   const note = isLy
-    ? "以上是卦盘事实的本地释读，只看不消耗对话。想结合你的具体处境深聊，回到断卦对话继续问即可。"
-    : "以上是古籍义理的参考释读，只看不消耗对话。想结合你的具体处境深聊，到右侧任意话题里问我即可。";
+    ? "以上为卦盘事实释读，不消耗对话。需结合现实处境时，回到断卦对话继续问。"
+    : "以上为古籍义理参考，不消耗对话。需结合现实处境时，在右侧话题继续问。";
   const tagsBlock = P.tagsLabel && P.tags && P.tags.length
     ? `<div class="pop-tags-block"><div class="pop-tags-label">${esc(P.tagsLabel)}</div><div class="pop-tags">${P.tags.map(t => `<span class="pop-tag">${esc(t)}</span>`).join("")}</div></div>` : "";
   card.innerHTML =
@@ -3547,7 +3547,7 @@ function bind() {
         return;
       }
       if (target === "profile") {
-        Account.requireLogin({ mode: "login", message: "登录后可以跨设备查看自己的私密问题和已保存档案。" })
+        Account.requireLogin({ mode: "login", message: "登录后可跨设备查看私密问题与档案。" })
           .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
         return;
       }
@@ -3612,10 +3612,10 @@ function bind() {
   $("#rechart-btn").onclick = () => { state.system === "liuyao" ? openCastModal() : openBirthModal(); };
   $("#top-chart-btn").onclick = openChartDrawer;
   $$("[data-mode-btn]").forEach(b => { b.onclick = () => setMode(b.dataset.modeBtn || "basic"); });
-  $("#profile-fab").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看你的私人档案。" }).then(ok => { if (ok) openProfileHome(); });
-  $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看你的私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+  $("#profile-fab").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+  $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
   if ($("#hero-feedback-btn")) $("#hero-feedback-btn").onclick = openFeedback;
-  if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可以查看自己的私密问题和档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
+  if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可查看私密问题与档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   $("#ask-chart-btn").onclick = () => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); };
   $("#ask-community-btn").onclick = openCommunityHelpDialog;
   $("#open-trend-btn").onclick = openTrend;
@@ -3695,7 +3695,7 @@ async function openPersonalCase(caseId, { resumeResult = false } = {}) {
       if (question) question.value = item.question || "";
       syncCastEntryMode();
       syncCastUI();
-      toast("本人命盘已经带入。现在围绕这件事完成一次私密起卦。 ");
+      toast("本人命盘已带入，请完成私密起卦。");
       requestAnimationFrame(() => question?.focus());
       return true;
     }
@@ -3729,8 +3729,8 @@ async function openPersonalCase(caseId, { resumeResult = false } = {}) {
     const draft = $("#draft-input");
     if (draft) draft.value = item.question || "";
     toast(item.mode === "combined"
-      ? "卦档已经接回。确认参考声明后，发送原问题继续详断。"
-      : "默认命盘已经接回，近况也已放入输入框。 ");
+      ? "卦档已恢复。确认声明后继续详断。"
+      : "默认命盘已恢复，近况已填入输入框。");
     requestAnimationFrame(() => draft?.focus());
     return true;
   } catch (reason) {
@@ -3812,7 +3812,7 @@ async function init() {
   else {
     clearCookie(RESUME_COOKIE);
     if (personalCaseId) {
-      Account.requireLogin({ mode: "login", message: "这是一条保存在你账户里的私人事项，请先登录后继续。" })
+      Account.requireLogin({ mode: "login", message: "私人事项，登录后继续。" })
         .then(ok => { if (ok) window.location.reload(); });
       return;
     }
@@ -3828,20 +3828,20 @@ async function init() {
         showScreen("landing", { historyMode: "replace", focusPage: true });
       }
     } else {
-      Account.requireLogin({ mode: "login", message: "登录后可用本人命盘与六爻一起详断这件事。" })
+      Account.requireLogin({ mode: "login", message: "登录后使用命盘与六爻详断。" })
         .then(ok => { if (ok) window.location.reload(); });
     }
     return;
   }
   if (archivesRequested) {
     if (accountState?.authenticated) await openProfileLibrary({ includeCurrent: !!lastPayload, startup: true });
-    else Account.requireLogin({ mode: "login", message: "登录后即可查看这个账户在其它设备保存的档案。" })
+    else Account.requireLogin({ mode: "login", message: "登录后查看跨设备档案。" })
       .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, startup: true }); });
     return;
   }
   if (creditsRequested) {
     if (accountState?.authenticated) Account.open("credits");
-    else Account.requireLogin({ mode: "login", message: "登录后即可查看完整积分明细和充值记录。" })
+    else Account.requireLogin({ mode: "login", message: "登录后查看积分与充值记录。" })
       .then(ok => { if (ok) Account.open("credits"); });
     return;
   }

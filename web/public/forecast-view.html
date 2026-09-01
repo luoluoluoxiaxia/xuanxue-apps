@@ -318,7 +318,7 @@ body.fv-unlocked .fv-title{font-size:min(46px,9vw)}
     progress.setAttribute("role", "status");
     progress.setAttribute("aria-live", "polite");
     progressTitle.textContent = "全书正在推演";
-    progressCopy.textContent = stageLabel(data) + "。页面会自动刷新，完成后直接在这里开卷。";
+    progressCopy.textContent = stageLabel(data) + "。完成后自动开卷。";
     progressBar.style.display = "block";
     progressBar.setAttribute("aria-valuemax", String(total));
     progressBar.setAttribute("aria-valuenow", String(Math.min(done, total)));

@@ -13,11 +13,11 @@
       <button type="button" class="post-preview-close" data-preview-close aria-label="关闭卦帖">×</button>
       <div class="post-preview-loading" data-preview-loading role="status">
         <span></span>
-        <b>正在打开卦帖</b>
+        <b>加载中…</b>
       </div>
       <div class="post-preview-error" data-preview-error hidden>
-        <b>这条卦帖暂时没有打开</b>
-        <p data-preview-error-message>请稍后再试。</p>
+        <b>加载失败</b>
+        <p data-preview-error-message>请重试。</p>
         <a class="secondary-action" data-preview-error-link href="/#gua-square">前往完整页面</a>
       </div>
       <div class="post-preview-content" data-preview-content hidden>
@@ -183,7 +183,7 @@
     dialog.innerHTML = `
       <div class="community-notifications-shell">
         <header class="community-notifications-head">
-          <div><h2 id="community-notifications-title">消息</h2><p>赞、评论和回复都会留在这里</p></div>
+          <div><h2 id="community-notifications-title">消息</h2><p>赞、评论与回复</p></div>
           <div class="community-notifications-head-actions">
             <button type="button" data-notification-mark-all>全部已读</button>
             <button type="button" data-notification-close aria-label="关闭消息">×</button>
@@ -245,7 +245,7 @@
         const button = document.createElement("button");
         button.type = "button";
         button.textContent = "重新加载";
-        button.addEventListener("click", () => fetchNotifications().catch(error => renderState(error.message || "消息暂时没有加载出来", true)));
+        button.addEventListener("click", () => fetchNotifications().catch(error => renderState(error.message || "消息加载失败", true)));
         state.append(button);
       }
       list.replaceChildren(state);
@@ -329,7 +329,7 @@
     const fetchNotifications = async ({ append = false } = {}) => {
       if (loading) return;
       loading = true;
-      if (!append) renderState("正在读取消息…");
+      if (!append) renderState("加载消息…");
       try {
         const params = new URLSearchParams({ limit: "30" });
         if (append && nextCursor) params.set("before_id", String(nextCursor));
@@ -338,11 +338,11 @@
           credentials: "same-origin",
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw Object.assign(new Error(payload.detail || "消息暂时没有加载出来"), { status: response.status });
+        if (!response.ok) throw Object.assign(new Error(payload.detail || "消息加载失败"), { status: response.status });
         const items = Array.isArray(payload.items) ? payload.items : [];
         if (!append) list.replaceChildren();
         groupNotificationItems(items).forEach(item => list.append(renderItem(item)));
-        if (!append && !items.length) renderState("还没有新互动。有人点赞或评论后，会显示在这里。");
+        if (!append && !items.length) renderState("暂无新互动");
         nextCursor = payload.next_cursor || null;
         more.hidden = !nextCursor;
         renderSummary(payload.summary);
@@ -393,7 +393,7 @@
       }
       if (!dialog.open) dialog.showModal();
       body.classList.add("community-notifications-open");
-      await fetchNotifications().catch(error => renderState(error.message || "消息暂时没有加载出来", true));
+      await fetchNotifications().catch(error => renderState(error.message || "消息加载失败", true));
       dialog.querySelector("[data-notification-close]")?.focus({ preventScroll: true });
     };
 
@@ -590,7 +590,7 @@
     if (!slug) return;
     const buttons = likeButtonsFor(slug);
     if (buttons.some(button => button.getAttribute("aria-pressed") === "true")) {
-      showToast("你已经赞过这条卦帖了");
+      showToast("已赞过");
       return;
     }
     buttons.forEach(button => { button.disabled = true; });
@@ -603,12 +603,12 @@
         },
       });
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(result.detail || "点赞失败，请稍后再试");
+      if (!response.ok) throw new Error(result.detail || "点赞失败");
       syncLikeState(slug, result.like_count, true);
-      showToast(result.newly_liked ? "已点赞" : "你已经赞过这条卦帖了");
+      showToast(result.newly_liked ? "已点赞" : "已赞过");
     } catch (error) {
       buttons.forEach(button => { button.disabled = false; });
-      showToast(error.message || "点赞失败，请稍后再试", "error");
+      showToast(error.message || "点赞失败", "error");
     }
   }
 
@@ -648,7 +648,7 @@
       if (!account?.authenticated) {
         const loggedIn = await window.XuanxueAccount?.requireLogin({
           mode: "login",
-          message: "登录后即可关注这条求助；有新回答时会在消息中提醒你。",
+          message: "登录后关注；新回答会提醒。",
         });
         if (!loggedIn) return;
         account = await window.XuanxueAccount?.ready();
@@ -668,7 +668,7 @@
           body: JSON.stringify({ following }),
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.detail || "关注失败，请稍后再试");
+        if (!response.ok) throw new Error(payload.detail || "关注失败");
         button.setAttribute("aria-pressed", payload.following ? "true" : "false");
         button.classList.toggle("is-following", !!payload.following);
         const label = button.querySelector("[data-follow-label]");
@@ -680,7 +680,7 @@
         }
         showToast(payload.following ? "已关注，有新回答会提醒你" : "已取消关注");
       } catch (error) {
-        showToast(error.message || "关注失败，请稍后再试", "error");
+        showToast(error.message || "关注失败", "error");
       } finally {
         button.disabled = false;
       }
@@ -750,12 +750,12 @@
         });
         if (!response.ok) {
           const detail = (await response.json().catch(() => ({}))).detail;
-          throw new Error(detail || "举报提交失败，请稍后再试");
+          throw new Error(detail || "举报失败");
         }
         closeReportDialog();
         showToast("举报已提交，我们会尽快处理");
       } catch (error) {
-        state.textContent = error.message || "举报提交失败，请稍后再试";
+        state.textContent = error.message || "举报失败";
         submit.disabled = false;
       }
     });
@@ -785,7 +785,7 @@
             body: JSON.stringify({ comment_id: commentId }),
           });
           const payload = await response.json().catch(() => ({}));
-          if (!response.ok) throw new Error(payload.detail || "采纳失败，请稍后再试");
+          if (!response.ok) throw new Error(payload.detail || "采纳失败");
           document.querySelectorAll("[data-accept-comment]").forEach(item => item.remove());
           const accepted = document.querySelector(`#comment-${commentId}`);
           accepted?.classList.add("is-accepted");
@@ -794,19 +794,19 @@
           const badge = document.querySelector("[data-help-status]");
           if (badge) badge.textContent = `${pageSystem === "bazi" ? "八字" : "六爻"} · ${payload.help_status_label || "已解决"}`;
           const briefTitle = document.querySelector("[data-help-brief] h2");
-          if (briefTitle) briefTitle.textContent = "求助者已采纳一个回答";
-          showToast("已采纳并标记为已解决");
+          if (briefTitle) briefTitle.textContent = "已采纳";
+          showToast("已采纳");
         } catch (error) {
           button.disabled = false;
-          button.textContent = "采纳这个回答";
-          showToast(error.message || "采纳失败，请稍后再试", "error");
+          button.textContent = "采纳";
+          showToast(error.message || "采纳失败", "error");
         }
       });
     });
   }
 
   function commentFormMarkup(inputId = "comment-body") {
-    const readingLabel = pageSystem === "liuyao" ? "这是断卦回复" : "这是命盘判断";
+    const readingLabel = pageSystem === "liuyao" ? "断卦回复" : "命盘判断";
     return `<form class="comment-form" data-comment-form>
       <div class="comment-reply-context" data-comment-reply-context hidden>
         <span data-comment-reply-label></span>
@@ -817,7 +817,7 @@
           <label for="${inputId}">回复内容</label>
           <label class="comment-reading-toggle"><input type="checkbox" name="reading_reply" value="reading"><span>${readingLabel}</span></label>
         </div>
-        <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="说说你的判断或看法……"></textarea>
+        <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="写下回复……"></textarea>
       </div>
       <div class="comment-form-actions">
         <span><b data-comment-length>0</b> / 500 · 匿名发布</span>
@@ -830,8 +830,8 @@
   function commentGateMarkup() {
     return `<div class="comment-gate">
       <span>评</span>
-      <div><b>登录后即可匿名参与评论</b><p>公开显示为卦友编号，不展示你的邮箱。</p></div>
-      <button type="button" class="comment-login-action" data-comment-login>登录后评论</button>
+      <div><b>登录后匿名回复</b><p>仅显示卦友编号。</p></div>
+      <button type="button" class="comment-login-action" data-comment-login>登录回复</button>
     </div>`;
   }
 
@@ -866,7 +866,7 @@
     const context = form.querySelector("[data-comment-reply-context]");
     if (context) context.hidden = true;
     const input = form.elements.body;
-    if (input) input.placeholder = "说说你的判断或看法……";
+    if (input) input.placeholder = "写下回复……";
   }
 
   function beginCommentReply(host, parentId, authorName) {
@@ -891,7 +891,7 @@
         if (!account?.authenticated) {
           const loggedIn = await window.XuanxueAccount?.requireLogin({
             mode: "login",
-            message: "登录后即可用匿名卦友编号回复这条评论。",
+            message: "登录后匿名回复",
           });
           if (!loggedIn) return;
           account = await window.XuanxueAccount?.ready();
@@ -909,7 +909,7 @@
       button.disabled = true;
       const loggedIn = await window.XuanxueAccount?.requireLogin({
         mode: "login",
-        message: "登录后即可用匿名卦友编号参与公开讨论；页面不会展示邮箱。",
+        message: "登录后匿名回复",
       });
       if (loggedIn) onLoggedIn();
       else button.disabled = false;
@@ -958,7 +958,7 @@
           }),
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw Object.assign(new Error(payload.detail || "评论发布失败，请稍后再试"), { status: response.status });
+        if (!response.ok) throw Object.assign(new Error(payload.detail || "回复发布失败"), { status: response.status });
         onPublished(payload.item);
         input.value = "";
         clearCommentReply(form);
@@ -971,10 +971,10 @@
         if (error?.status === 401 || error?.status === 403) {
           await window.XuanxueAccount?.refresh();
           onAuthExpired();
-          showToast("登录状态已失效，请重新登录后评论", "error");
+          showToast("登录已失效，请重新登录", "error");
           return;
         }
-        state.textContent = error.message || "评论发布失败，请稍后再试";
+        state.textContent = error.message || "回复发布失败";
         state.dataset.tone = "error";
       } finally {
         if (submit.isConnected) {
@@ -1059,7 +1059,7 @@
           }),
         });
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw Object.assign(new Error(payload.detail || "故事进展发布失败，请稍后再试"), { status: response.status });
+        if (!response.ok) throw Object.assign(new Error(payload.detail || "进展发布失败"), { status: response.status });
         appendStoryUpdate(payload.item);
         input.value = "";
         syncLength();
@@ -1067,7 +1067,7 @@
         state.dataset.tone = "success";
         showToast("故事进展已发布");
       } catch (error) {
-        state.textContent = error.message || "故事进展发布失败，请稍后再试";
+        state.textContent = error.message || "进展发布失败";
         state.dataset.tone = "error";
       } finally {
         submit.disabled = false;
@@ -1214,7 +1214,7 @@
     appendCommentReading(item, comment);
     item.append(replyAction);
     if (pageKind === "help" && pageCanManage && !comment.accepted) {
-      const accept = makeElement("button", "comment-accept-action", "采纳这个回答");
+      const accept = makeElement("button", "comment-accept-action", "采纳");
       accept.type = "button";
       accept.dataset.acceptComment = String(comment.id || "");
       item.append(accept);
@@ -1229,7 +1229,7 @@
     setField("[data-preview-comment-count]", `${post.comment_count || comments.length} 条`);
     host.replaceChildren();
     if (!comments.length) {
-      host.append(makeElement("p", "section-empty", "还没有评论。"));
+      host.append(makeElement("p", "section-empty", "暂无评论。"));
       return;
     }
     const list = makeElement("div", "comment-list");
@@ -1375,7 +1375,7 @@
     }).then(async response => {
       if (!response.ok) {
         const detail = (await response.json().catch(() => ({}))).detail;
-        throw new Error(detail || "卦帖加载失败，请稍后再试");
+        throw new Error(detail || "卦帖加载失败");
       }
       return response.json();
     }).catch(error => {

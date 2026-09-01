@@ -262,7 +262,7 @@
     }
     if (dialog?.open && rerender) {
       if (refreshFailed && state.authenticated) {
-        renderAccount("暂时无法更新账户数据，当前显示上次同步结果。", "warn");
+        renderAccount("账户数据未更新，显示上次结果。", "warn");
       } else {
         renderAccount();
       }
@@ -472,7 +472,7 @@
         <label><span>邮箱</span><input type="email" name="email" autocomplete="email" required placeholder="name@example.com" value="${escapeHtml(emailValue)}"></label>
         ${isRegister ? `
           <div class="account-registration-code-group">
-            <label for="account-registration-code-input"><span>一次性邀请码</span></label>
+            <label for="account-registration-code-input"><span>邀请码</span></label>
             <span class="account-registration-code-field">
               <input id="account-registration-code-input" type="text" name="invite_code" autocomplete="off" autocapitalize="characters" pattern="XS-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}" maxlength="12" required placeholder="XS-XXXX-XXXX">
               <button type="button" data-registration-code-reveal aria-expanded="false" aria-controls="account-registration-code-popover">领取邀请码</button>
@@ -495,9 +495,9 @@
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">领取邀请码并验证邮箱后即可注册，赠送积分自动到账。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">领取邀请码并验证邮箱，注册后赠送积分。</p>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
-        <button type="submit" class="account-submit">${isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
+        <button type="submit" class="account-submit">${isRegister ? "注册" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
       <p class="account-privacy-note">${privacyNote}</p>`;
     body.querySelectorAll("[data-auth-mode]").forEach(button => {
@@ -598,7 +598,7 @@
       const code = String(payload.code || "");
       form.elements.invite_code.value = code;
       popover.querySelector("[data-registration-code-value]").textContent = code;
-      popover.querySelector("[data-registration-code-remaining]").textContent = `本批还剩 ${Number(payload.remaining || 0)} 个可用码，提交注册后才会核销`;
+      popover.querySelector("[data-registration-code-remaining]").textContent = `本批剩 ${Number(payload.remaining || 0)} 个，注册后核销`;
       popover.hidden = false;
       button.setAttribute("aria-expanded", "true");
       button.textContent = "换一个";
@@ -627,7 +627,7 @@
     const inviteCode = form.elements.invite_code?.value.trim() || "";
     error.hidden = true;
     submit.disabled = true;
-    submit.textContent = isRegister ? "正在创建账户…" : "正在登录…";
+    submit.textContent = isRegister ? "正在注册…" : "正在登录…";
     try {
       const endpoint = isRegister ? "register" : "login";
       const requestBody = isRegister
@@ -667,7 +667,7 @@
       error.textContent = reason?.message || "操作失败，请稍后再试";
       error.hidden = false;
       submit.disabled = false;
-      submit.textContent = isRegister ? "注册并继续" : isCodeLogin ? "验证码登录" : "密码登录";
+      submit.textContent = isRegister ? "注册" : isCodeLogin ? "验证码登录" : "密码登录";
     }
   }
 
@@ -749,7 +749,7 @@
       </section>
       <section class="account-referral-card">
         <div><span>分享带来的每日加成</span><strong>+${Number(quota.referral_bonus || 0)}</strong></div>
-        <p>每邀请 1 位新用户完成首次提问，每日积分永久 +${Number(quota.base || 10)}。</p>
+        <p>邀请新用户完成首次提问，每日积分 +${Number(quota.base || 10)}。</p>
         <div class="account-referral-stats">
           <span><b>${Number(quota.pending_referrals || 0)}</b><em>待完成首问</em></span>
           <span><b>${Number(quota.qualified_referrals || 0)}</b><em>已生效邀请</em></span>
@@ -815,7 +815,7 @@
         <button type="button" data-credit-back>← 返回账户</button>
         <span>积分中心</span>
         <h2 id="account-dialog-title" tabindex="-1">积分明细</h2>
-        <p>账户积分长期有效；今日免费积分按北京时间每天刷新。每次完整回答后才会产生结算记录。</p>
+        <p>账户积分长期有效；免费积分每日刷新；完整回答后结算。</p>
       </div>
       <div class="credit-history-tabs" role="tablist" aria-label="积分记录类型">
         <button type="button" role="tab" data-credit-tab="activity" aria-selected="${tab === "activity"}">积分流水</button>
@@ -884,7 +884,7 @@
         ${filters.map(([value, label]) => `<button type="button" data-credit-filter="${value}" aria-pressed="${filter === value}">${label}</button>`).join("")}
       </div>
       ${items.length ? `<ol class="credit-history-list">${items.map(activityRow).join("")}</ol>` : `
-        <div class="credit-history-empty"><b>这里还没有${filter === "credit" ? "获得" : filter === "usage" ? "消耗" : "积分"}记录</b><span>完成注册、充值或收到一次完整 AI 回答后，会自动出现在这里。</span></div>`}
+        <div class="credit-history-empty"><b>暂无${filter === "credit" ? "获得" : filter === "usage" ? "消耗" : "积分"}记录</b><span>注册、充值或完整 AI 回答后自动记录。</span></div>`}
       ${creditPagination(payload, { tab: "activity", filter })}`;
   }
 
@@ -907,13 +907,13 @@
         ${filters.map(([value, label]) => `<button type="button" data-credit-filter="${value}" aria-pressed="${filter === value}">${label}</button>`).join("")}
       </div>
       ${items.length ? `<ol class="credit-order-list">${items.map(orderRow).join("")}</ol>` : `
-        <div class="credit-history-empty"><b>没有符合条件的充值记录</b><span>只有 Stripe 签名确认成功后，订单才会显示“已到账”。</span></div>`}
+        <div class="credit-history-empty"><b>暂无符合条件的充值记录</b><span>仅显示 Stripe 签名确认到账的订单。</span></div>`}
       ${creditPagination(payload, { tab: "orders", filter })}`;
   }
 
   async function renderCreditHistory(tab = "activity", page = 1, filter = "all") {
     if (!state.authenticated) {
-      renderAuth("login_password", "请先登录，再查看积分明细。");
+      renderAuth("login_password", "登录后查看积分明细。");
       return;
     }
     const requestToken = ++creditHistoryRequestToken;
@@ -945,7 +945,7 @@
       if (requestToken !== creditHistoryRequestToken) return;
       const content = body.querySelector("[data-credit-history-content]");
       if (!content) return;
-      content.innerHTML = `<div class="credit-history-empty error"><b>暂时无法读取积分明细</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-credit-retry>重新加载</button></div>`;
+      content.innerHTML = `<div class="credit-history-empty error"><b>积分明细加载失败</b><span>${escapeHtml(reason?.message || "请稍后再试")}</span><button type="button" data-credit-retry>重新加载</button></div>`;
       content.querySelector("[data-credit-retry]")?.addEventListener("click", () => renderCreditHistory(normalizedTab, page, filter));
     }
   }
@@ -1047,7 +1047,7 @@
     checkoutPollToken += 1;
     const pack = creditPack(sku);
     if (!pack || !pack.available || !state.creditWallet?.topup_enabled) {
-      renderAccount("这个积分包目前无法购买，请稍后再试。", "error");
+      renderAccount("积分包暂不可购买。", "error");
       return;
     }
     const dollars = (Number(pack.unit_amount || 0) / 100).toFixed(0);
@@ -1169,8 +1169,8 @@
       },
       paying: {
         eyebrow: "Stripe 安全付款",
-        title: "付款页已在新标签打开",
-        description: "付款完成后，这里会自动更新。",
+        title: "Stripe 付款页已打开",
+        description: "付款后自动更新。",
       },
       delayed: {
         eyebrow: "到账核验",
@@ -1215,14 +1215,14 @@
         ${kind === "paid" ? `<span><b>${balance} 分</b><em>账户积分余额</em></span>` : ""}
       </section>` : ""}
       <div class="checkout-actions">
-        ${kind === "paid" ? `<button type="button" class="primary" data-checkout-resume>${checkoutChildTab ? "关闭此页，返回原页面" : "继续使用玄枢"}</button><button type="button" data-checkout-account>查看账户余额</button>` : ""}
-        ${kind === "paying" ? '<button type="button" class="primary" data-checkout-reopen>重新打开 Stripe 付款页</button><button type="button" data-checkout-account>留在账户等待</button>' : ""}
+        ${kind === "paid" ? `<button type="button" class="primary" data-checkout-resume>${checkoutChildTab ? "关闭并返回" : "继续使用"}</button><button type="button" data-checkout-account>账户余额</button>` : ""}
+        ${kind === "paying" ? '<button type="button" class="primary" data-checkout-reopen>打开 Stripe 付款页</button><button type="button" data-checkout-account>返回账户</button>' : ""}
         ${kind === "pending" ? '<button type="button" data-checkout-account>回到账户</button>' : ""}
         ${kind === "delayed" || kind === "error" ? '<button type="button" class="primary" data-checkout-refresh>刷新状态</button><button type="button" data-checkout-account>账户余额</button>' : ""}
-        ${kind === "cancelled" || kind === "expired" ? `${display.sku ? '<button type="button" class="primary" data-checkout-retry>重新确认这个套餐</button>' : ""}${checkoutChildTab ? '<button type="button" data-checkout-resume>关闭此页，返回原页面</button>' : '<button type="button" data-checkout-account>返回账户</button>'}` : ""}
+        ${kind === "cancelled" || kind === "expired" ? `${display.sku ? '<button type="button" class="primary" data-checkout-retry>重新付款</button>' : ""}${checkoutChildTab ? '<button type="button" data-checkout-resume>关闭并返回</button>' : '<button type="button" data-checkout-account>返回账户</button>'}` : ""}
       </div>`;
     body.querySelector("[data-checkout-account]")?.addEventListener("click", () => {
-      renderAccount(kind === "paid" ? "积分已经安全到账。" : "可以稍后刷新账户查看最新余额。", kind === "paid" ? "success" : "");
+      renderAccount(kind === "paid" ? "积分已到账。" : "稍后刷新余额。", kind === "paid" ? "success" : "");
       requestAnimationFrame(() => body.querySelector("[data-account-wallet]")?.scrollIntoView({ block: "center" }));
     });
     body.querySelector("[data-checkout-resume]")?.addEventListener("click", () => {
@@ -1330,7 +1330,7 @@
     }
     ready().then(() => {
       if (!state.authenticated) {
-        open("login", "请先登录，再查看这笔充值是否到账。");
+        open("login", "登录后查看充值状态。");
         return;
       }
       open("account");
@@ -1358,7 +1358,7 @@
       });
       await readJson(response);
       apply({ authenticated: false });
-      renderAuth("login_password", "已经安全退出账户。需要时可以重新登录。");
+      renderAuth("login_password", "已退出。");
     } catch (reason) {
       renderAccount(reason?.message || "退出失败，请稍后再试", "error");
     }
@@ -1367,7 +1367,7 @@
   async function requireLogin(options = {}) {
     await ready();
     if (state.authenticated) return true;
-    open(options.mode || "register", options.message || "请先登录或注册后继续。 ");
+    open(options.mode || "register", options.message || "请先登录。");
     return new Promise(resolve => pendingLogin.push(resolve));
   }
 
@@ -1407,11 +1407,11 @@
       prompt.dataset.invitePrompt = "";
       prompt.innerHTML = `
         <button type="button" data-invite-dismiss aria-label="关闭">×</button>
-        <span><b>朋友分享了一条真实卦帖</b><em>注册后每天领取免费积分；公开问题的 AI 解答也按同一规则结算。</em></span>
-        <button type="button" data-invite-register>注册后提问</button>`;
+        <span><b>朋友分享了一条真实卦帖</b><em>注册后领取每日免费积分。</em></span>
+        <button type="button" data-invite-register>注册</button>`;
       document.body.append(prompt);
       prompt.querySelector("[data-invite-dismiss]").addEventListener("click", () => prompt.remove());
-      prompt.querySelector("[data-invite-register]").addEventListener("click", () => open("register", "完成注册后，你的首次有效提问会为分享者增加每日免费积分。"));
+      prompt.querySelector("[data-invite-register]").addEventListener("click", () => open("register", "首次有效提问会为分享者增加每日积分。"));
     });
   }
 
