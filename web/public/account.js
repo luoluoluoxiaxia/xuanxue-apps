@@ -288,7 +288,7 @@
     document.querySelectorAll("[data-account-button]").forEach(button => {
       const label = button.querySelector("[data-account-label]") || button;
       if (state.authenticated) {
-        const name = String(state.user?.email || "账户").split("@", 1)[0];
+        const name = String(state.user?.nickname || state.user?.email || "账户").split("@", 1)[0];
         label.textContent = name.length > 12 ? `${name.slice(0, 10)}…` : name;
         button.dataset.authenticated = "true";
         const archives = Number(state.archiveSummary?.total || 0);

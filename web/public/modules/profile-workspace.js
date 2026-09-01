@@ -105,6 +105,60 @@ function renderProfileSignedOut(options = {}) {
   });
 }
 
+function profileIdentityHtml() {
+  const user = Account?.snapshot()?.user || {};
+  const nickname = String(user.nickname || "").trim();
+  return `<section class="profile-identity" aria-labelledby="profile-identity-title">
+    <div class="profile-identity-copy">
+      <span>社区身份</span>
+      <b id="profile-identity-title">${esc(nickname || "默认匿名昵称")}</b>
+      <p>发帖和回复时显示，邮箱不会公开。</p>
+    </div>
+    <form class="profile-nickname-form" data-profile-nickname-form>
+      <label for="profile-community-nickname">昵称</label>
+      <div>
+        <input id="profile-community-nickname" name="nickname" value="${esc(nickname)}" maxlength="20" autocomplete="nickname" placeholder="输入昵称">
+        <button type="submit">保存</button>
+      </div>
+      <p data-profile-nickname-state role="status">2–20 个字符；留空恢复匿名昵称。</p>
+    </form>
+  </section>`;
+}
+
+function bindProfileNicknameForm(options = {}) {
+  const form = profilePageBody()?.querySelector("[data-profile-nickname-form]");
+  if (!form) return;
+  const input = form.elements.nickname;
+  const submit = form.querySelector('button[type="submit"]');
+  const status = form.querySelector("[data-profile-nickname-state]");
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    const nickname = String(input.value || "").trim();
+    submit.disabled = true;
+    submit.textContent = "保存中…";
+    status.textContent = "";
+    status.dataset.tone = "";
+    try {
+      const response = await fetch("/api/account/profile", {
+        method: "PUT",
+        headers: Account.csrfHeaders({ "Content-Type": "application/json", Accept: "application/json" }),
+        credentials: "same-origin",
+        body: JSON.stringify({ nickname }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.detail || "昵称保存失败");
+      await Account.refresh({ render: false });
+      await openProfileLibrary({ ...options, preserveDelete: true, focusNickname: true });
+      toast(nickname ? "昵称已保存" : "已恢复匿名昵称", "success");
+    } catch (error) {
+      submit.disabled = false;
+      submit.textContent = "保存";
+      status.textContent = error.message || "昵称保存失败";
+      status.dataset.tone = "error";
+    }
+  });
+}
+
 function openDetailedCaseOverview() {
   if (!detailedWorkspaceActive()) {
     openProfileLibrary({ includeCurrent: !!lastPayload });
@@ -371,6 +425,7 @@ async function openProfileLibrary() {
     const historyCount = profiles.reduce((total, p) => total + Number(p.history_count || 0), 0);
     const activeCount = profiles.filter(p => ["pending", "running"].includes(p.task_status)).length;
     const body = `<div class="saved-list">
+      ${profileIdentityHtml()}
       <div class="saved-library-summary" role="status">
         <b>${profiles.length} 份档案</b>
         <span>八字 ${baziCount} · 六爻 ${liuyaoCount} · 解读 ${historyCount}${activeCount ? ` · ${activeCount} 份正在生成` : ""}</span>
@@ -385,15 +440,18 @@ async function openProfileLibrary() {
       ${profileCards || archiveEmpty}
       </div>
     </div>`;
-    const focusSelector = pendingProfileDeleteId
-      ? `[data-cancel-delete-profile="${pendingProfileDeleteId}"]`
-      : options.focusProfileAction
-        ? `[data-request-delete-profile="${Number(options.focusProfileAction)}"]`
-        : options.focusArchiveTab
-          ? `[data-archive-tab="${options.focusArchiveTab}"]`
-          : "";
+    const focusSelector = options.focusNickname
+      ? "#profile-community-nickname"
+      : pendingProfileDeleteId
+        ? `[data-cancel-delete-profile="${pendingProfileDeleteId}"]`
+        : options.focusProfileAction
+          ? `[data-request-delete-profile="${Number(options.focusProfileAction)}"]`
+          : options.focusArchiveTab
+            ? `[data-archive-tab="${options.focusArchiveTab}"]`
+            : "";
     renderProfilePage(body, focusSelector);
     const surface = profilePageBody();
+    bindProfileNicknameForm(options);
     const current = surface.querySelector("[data-open-current-profile]");
     if (current) current.onclick = openCurrentProfile;
     surface.querySelectorAll("[data-archive-tab]").forEach(tab => {
