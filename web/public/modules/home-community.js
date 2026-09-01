@@ -139,7 +139,7 @@
     }
 
     const HOME_COMMUNITY_PAGE_SIZE = 12;
-    const HOME_COMMUNITY_VIEWS = new Set(["latest", "popular", "featured"]);
+    const HOME_COMMUNITY_VIEWS = new Set(["latest", "popular", "featured", "seeking", "resolved"]);
     const HOME_COMMUNITY_TYPES = new Set([
       "", "contract", "relationship", "career", "wealth", "exam", "lost", "health", "travel", "other",
     ]);
@@ -151,6 +151,7 @@
     let homeCommunityLoadVersion = 0;
     let homeCommunityView = "popular";
     let homeCommunityType = "";
+    let homeCommunitySystem = "";
     let homeCommunityRefreshFrame = null;
     const homeCommunitySlugs = new Set();
 
@@ -167,11 +168,11 @@
       if (!root) return;
       root.dataset.state = state;
       const action = state === "empty"
-        ? `<a class="home-community-empty-action" href="/?start=liuyao">去公开起卦 <span aria-hidden="true">→</span></a>`
+        ? `<a class="home-community-empty-action" href="/?start=liuyao&community=help">发起社区求助 <span aria-hidden="true">→</span></a>`
         : "";
       root.innerHTML = `
         <div class="home-community-empty">
-          <span class="home-community-empty-mark" aria-hidden="true">卦</span>
+          <span class="home-community-empty-mark" aria-hidden="true">问</span>
           <span>
             <b>${esc(title)}</b>
             <em>${esc(description)}</em>
@@ -188,12 +189,17 @@
         const rawSlug = String(post.slug || "");
         const slug = encodeURIComponent(rawSlug);
         const oracle = post.oracle_summary || {};
+        const bazi = post.chart_summary || {};
         const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
         const hasChanged = !!oracle.has_changed;
         const published = String(post.published_at || post.created_at || "").slice(0, 10);
         const liked = !!post.viewer_liked;
         const likeCount = Number(post.like_count) || 0;
         const commentCount = Number(post.comment_count) || 0;
+        const isHelp = post.post_kind === "help";
+        const isBazi = post.system === "bazi";
+        const postUrl = String(post.url || (isHelp ? `/community/${slug}` : `/gua/${slug}`));
+        const previewAttrs = !isHelp && !isBazi ? ` data-community-post data-post-slug="${esc(rawSlug)}"` : "";
         const oracleHtml = lines.length ? `
           <div class="post-card-oracle">
             <div class="post-card-gua-pair${hasChanged ? "" : " is-static"}">
@@ -209,13 +215,21 @@
                 </div>` : '<span class="post-card-quiet">静卦</span>'}
             </div>
           </div>` : "";
+        const pillars = bazi.pillars || {};
+        const baziHtml = isBazi && Object.keys(pillars).length ? `
+          <div class="post-card-bazi" aria-label="四柱命盘">
+            ${["year", "month", "day", "hour"].map(key => `<span${key === "day" ? ' class="is-day"' : ""}>${esc(pillars[key] || "—")}</span>`).join("")}
+          </div>` : "";
+        const statusLabel = isHelp ? (post.help_status === "resolved" ? "已解决" : "等回答") : "AI 解读";
         return `
-          <article class="home-community-post post-card" role="listitem" data-question-type="${esc(post.question_type || "other")}">
-            <a class="post-card-link" href="/gua/${slug}" data-community-post data-post-slug="${esc(rawSlug)}">
+          <article class="home-community-post post-card${isHelp ? " is-help" : " is-ai"}" role="listitem" data-question-type="${esc(post.question_type || "other")}" data-system="${esc(post.system || "liuyao")}">
+            <a class="post-card-link" href="${esc(postUrl)}"${previewAttrs}>
               <div class="post-card-body">
-                <h3>${esc(post.question || post.title || "一则公开卦帖")}</h3>
+                <div class="post-card-labels"><span>${esc(post.system_label || "命理")}</span><b>${esc(statusLabel)}</b></div>
+                <h3>${esc(post.question || post.title || "一则社区帖子")}</h3>
                 ${oracleHtml}
-                <p class="post-card-conclusion">${esc(post.answer_excerpt || "查看完整解答")}</p>
+                ${baziHtml}
+                <p class="post-card-conclusion">${esc(isHelp ? (commentCount ? `已有 ${commentCount} 条回答，欢迎继续补充` : "还没有回答，来写下你的判断") : (post.answer_excerpt || "查看完整解答"))}</p>
               </div>
             </a>
             <div class="post-card-footer">
@@ -223,7 +237,7 @@
                   <span>${esc(post.question_type_label || "其他")}</span>
                   <time>${esc(published)}</time>
                   <span class="post-card-views" data-post-viewers="${esc(rawSlug)}">${Number(post.viewer_count) || 0} 人看过</span>
-                  <span class="post-card-comments">${commentCount} 评论</span>
+                  <span class="post-card-comments">${commentCount} ${isHelp ? "回答" : "评论"}</span>
                   <button type="button" class="post-like-button${liked ? " is-liked" : ""}" data-like-post="${esc(rawSlug)}" data-like-title="${esc(post.question || post.title || "这条卦帖")}" aria-label="${liked ? "已赞：" : "点赞："}${esc(post.question || post.title || "这条卦帖")}" aria-pressed="${liked ? "true" : "false"}" title="${liked ? "已点赞" : "点赞"}">
                     <span data-like-icon aria-hidden="true">${liked ? "♥" : "♡"}</span><b data-like-count>${likeCount}</b>
                   </button>
@@ -257,15 +271,15 @@
         homeCommunitySlugs.clear();
         if (sentinel) sentinel.hidden = false;
         renderHomeCommunityPlaceholder(
-          homeCommunityType || homeCommunityView !== "popular" ? "正在筛选卦帖" : "正在翻阅卦帖",
-          "找到内容后会直接显示在首页广场。",
+          homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "正在筛选社区帖子" : "正在翻阅社区帖子",
+          "找到内容后会直接显示在社区首页。",
           "loading",
         );
       }
       const loadVersion = homeCommunityLoadVersion;
       homeCommunityLoading = true;
       root.setAttribute("aria-busy", "true");
-      setHomeCommunityStatus(homeCommunityLoadedCount ? "正在加载更多卦帖…" : "正在加载卦帖…");
+      setHomeCommunityStatus(homeCommunityLoadedCount ? "正在加载更多帖子…" : "正在加载帖子…");
       try {
         const query = new URLSearchParams({
           limit: String(homeCommunityView === "popular" ? 100 : HOME_COMMUNITY_PAGE_SIZE),
@@ -273,11 +287,12 @@
           include_oracle_summary: "true",
         });
         if (homeCommunityType) query.set("question_type", homeCommunityType);
+        if (homeCommunitySystem) query.set("system", homeCommunitySystem);
         if (homeCommunityCursor) {
           query.set("cursor", homeCommunityCursor);
         }
-        const resp = await fetch(`/api/community/liuyao/posts?${query}`, { cache: "no-store" });
-        if (!resp.ok) throw new Error("卦帖加载失败");
+        const resp = await fetch(`/api/community/posts?${query}`, { cache: "no-store" });
+        if (!resp.ok) throw new Error("社区帖子加载失败");
         const data = await resp.json();
         if (loadVersion !== homeCommunityLoadVersion) return;
         const items = Array.isArray(data.items) ? data.items : [];
@@ -293,20 +308,20 @@
         homeCommunityDone = !homeCommunityCursor;
         if (!homeCommunityLoadedCount) {
           renderHomeCommunityPlaceholder(
-            homeCommunityType || homeCommunityView !== "popular" ? "这个筛选下还没有卦帖" : "广场刚刚开卷",
-            homeCommunityType || homeCommunityView !== "popular"
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "这个筛选下还没有帖子" : "社区刚刚开卷",
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular"
               ? "换个分类或排序看看。"
-              : "审核通过的公开问题会自动进入这里。",
+              : "你可以排盘后直接向社区求助，不调用 AI，也不扣积分。",
           );
         }
         if (sentinel) sentinel.hidden = homeCommunityDone;
-        setHomeCommunityStatus(homeCommunityDone && homeCommunityLoadedCount ? "已经看到全部卦帖" : "");
+        setHomeCommunityStatus(homeCommunityDone && homeCommunityLoadedCount ? "已经看到全部帖子" : "");
       } catch (_) {
         if (loadVersion !== homeCommunityLoadVersion) return;
         if (homeCommunityLoadedCount) {
           root.dataset.state = "ready";
         } else {
-          renderHomeCommunityPlaceholder("卦帖暂时没有加载出来", "稍后重试即可，不会离开首页。", "fallback");
+          renderHomeCommunityPlaceholder("社区暂时没有加载出来", "稍后重试即可，不会离开首页。", "fallback");
         }
         setHomeCommunityStatus("暂时没有加载出来", { retry: true });
       } finally {
@@ -336,6 +351,9 @@
       $$('[data-home-community-type]').forEach(button => {
         button.setAttribute("aria-pressed", button.dataset.homeCommunityType === homeCommunityType ? "true" : "false");
       });
+      $$('[data-home-community-system]').forEach(button => {
+        button.setAttribute("aria-pressed", button.dataset.homeCommunitySystem === homeCommunitySystem ? "true" : "false");
+      });
     }
 
     function setupHomeCommunityFilters() {
@@ -361,6 +379,15 @@
           const next = button.dataset.homeCommunityType || "";
           if (!HOME_COMMUNITY_TYPES.has(next) || next === homeCommunityType) return;
           homeCommunityType = next;
+          syncHomeCommunityFilters();
+          void loadHomeCommunityPosts({ reset: true });
+        });
+      });
+      $$('[data-home-community-system]').forEach(button => {
+        button.addEventListener("click", () => {
+          const next = button.dataset.homeCommunitySystem || "";
+          if (!["", "bazi", "liuyao"].includes(next) || next === homeCommunitySystem) return;
+          homeCommunitySystem = next;
           syncHomeCommunityFilters();
           void loadHomeCommunityPosts({ reset: true });
         });

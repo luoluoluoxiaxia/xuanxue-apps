@@ -113,8 +113,8 @@
     <string name="home_archive">내 보관함</string>
 
     <!-- 커뮤니티 -->
-    <string name="community_title">괘 사례 광장</string>
-    <string name="community_empty">아직 공개된 괘 사례가 없습니다</string>
+    <string name="community_title">현추 커뮤니티</string>
+    <string name="community_empty">아직 공개된 상담이나 토론이 없습니다</string>
     <string name="community_stats">조회 %1$d · 좋아요 %2$d · 댓글 %3$d</string>
     <string name="community_load_more">더 보기</string>
     <string name="community_comments">댓글 %1$d개</string>

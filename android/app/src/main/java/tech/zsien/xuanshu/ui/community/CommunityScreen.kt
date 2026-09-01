@@ -117,6 +117,21 @@ private fun PostList(
                         color = XuanshuColors.Text,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Surface(
+                            color = if (post.postKind == "help") {
+                                XuanshuColors.Danger.copy(alpha = 0.10f)
+                            } else {
+                                XuanshuColors.Gold.copy(alpha = 0.12f)
+                            },
+                            shape = RoundedCornerShape(6.dp),
+                        ) {
+                            Text(
+                                text = "${post.systemLabel} · ${if (post.postKind == "help") post.helpStatusLabel else post.postKindLabel}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (post.postKind == "help") XuanshuColors.Danger else XuanshuColors.GoldDim,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                            )
+                        }
                         if (post.questionTypeLabel.isNotBlank()) {
                             Surface(
                                 color = XuanshuColors.Gold.copy(alpha = 0.12f),
@@ -187,6 +202,29 @@ private fun PostDetail(state: CommunityUiState) {
                     dividerColor = XuanshuColors.LineSoft,
                 ),
             )
+        } else if (post.postKind == "help") {
+            Surface(
+                color = XuanshuColors.Panel2,
+                border = BorderStroke(1.dp, XuanshuColors.Line),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text(
+                        text = "不走 AI · 不扣积分",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = XuanshuColors.GoldDim,
+                    )
+                    Text(
+                        text = if (post.helpStatus == "resolved") "求助者已采纳一个回答" else "这条求助正在等待大家判断",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = XuanshuColors.Text,
+                    )
+                }
+            }
         }
 
         if (state.comments.isNotEmpty()) {
@@ -210,6 +248,27 @@ private fun PostDetail(state: CommunityUiState) {
                         style = MaterialTheme.typography.bodySmall,
                         color = XuanshuColors.Text2,
                     )
+                    if (comment.kindLabel.isNotBlank()) {
+                        Text(
+                            text = comment.kindLabel + if (comment.accepted) " · 已采纳" else "",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = XuanshuColors.GoldDim,
+                        )
+                    }
+                    if (comment.reasoning.isNotBlank()) {
+                        Text(
+                            text = "判断依据：${comment.reasoning}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = XuanshuColors.Weak,
+                        )
+                    }
+                    if (comment.prediction.isNotBlank()) {
+                        Text(
+                            text = "应期 / 结果：${comment.prediction}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = XuanshuColors.Weak,
+                        )
+                    }
                 }
             }
         }

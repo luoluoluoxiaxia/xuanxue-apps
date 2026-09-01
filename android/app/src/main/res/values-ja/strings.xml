@@ -111,8 +111,8 @@
     <string name="home_archive">保存した命式</string>
 
     <!-- コミュニティ -->
-    <string name="community_title">みんなの占例</string>
-    <string name="community_empty">公開されている占例はまだありません</string>
+    <string name="community_title">玄枢コミュニティ</string>
+    <string name="community_empty">公開された相談やディスカッションはまだありません</string>
     <string name="community_stats">閲覧 %1$d · いいね %2$d · コメント %3$d</string>
     <string name="community_load_more">もっと見る</string>
     <string name="community_comments">コメント %1$d 件</string>
