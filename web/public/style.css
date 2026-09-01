@@ -432,9 +432,9 @@ html.big-text body{zoom:1.16}
 .seg-btn{cursor:pointer;border:0;background:transparent;color:var(--muted);font-size:12px;padding:5px 13px;border-radius:1px}
 .seg-btn[aria-pressed="true"]{background:linear-gradient(180deg,#E8C77D,#C9A356);color:#14120D;font-weight:700}
 .dt-rechart{cursor:pointer;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--gold-dim);padding:7px 12px;border-radius:2px;font-size:12px}
-.top-chart-btn,.top-profile-btn{cursor:pointer;border:1px solid rgba(212,175,93,.40);background:rgba(212,175,93,.07);color:var(--gold-2);padding:7px 12px;border-radius:2px;font-size:12px;white-space:nowrap}
-.top-chart-btn{display:none}
-.top-chart-btn:hover,.top-profile-btn:hover{border-color:rgba(239,213,151,.80);box-shadow:0 0 14px rgba(212,175,93,.20)}
+.top-chart-btn,.top-profile-btn,.top-community-btn{cursor:pointer;border:1px solid rgba(212,175,93,.40);background:rgba(212,175,93,.07);color:var(--gold-2);padding:7px 12px;border-radius:2px;font-size:12px;white-space:nowrap}
+.top-chart-btn,.top-community-btn{display:none}
+.top-chart-btn:hover,.top-profile-btn:hover,.top-community-btn:hover{border-color:rgba(239,213,151,.80);box-shadow:0 0 14px rgba(212,175,93,.20)}
 .workspace{position:relative;flex:1;display:grid;grid-template-columns:352px minmax(0,1fr);gap:0;min-height:0}
 .chart-rail{
   min-height:0;border-right:1px solid rgba(212,175,93,.14);background:rgba(8,8,12,.72);
@@ -1259,6 +1259,7 @@ body.modal-open .profile-fab,body.modal-open .feedback-fab{display:none}
   .session-btn.add{flex:0 0 auto;max-width:52px;color:var(--gold-dim);background:rgba(255,255,255,.015)}
   .session-btn.add.empty{display:none}
   .top-chart-btn{height:34px;padding:0 10px;margin-left:0;display:inline-flex;align-items:center}
+  .top-community-btn{height:34px;padding:0 10px;margin-left:0;display:inline-flex;align-items:center}
   .top-profile-btn{height:34px;padding:0 10px;margin-left:0;display:inline-flex;align-items:center}
   .top-profile-sep,#top-profile-state{display:none}
   .board-strip{display:none}
@@ -4083,6 +4084,7 @@ body[data-screen="dash"] .dt-gua-chip{
 body[data-screen="dash"] .dt-pillar-chip.day,
 body[data-screen="dash"] .dt-gua-chip{color:var(--shell-accent-dark);background:var(--shell-accent-soft)}
 body[data-screen="dash"] .dt-rechart,
+body[data-screen="dash"] .top-community-btn,
 body[data-screen="dash"] .top-chart-btn,
 body[data-screen="dash"] .top-profile-btn{
   min-height:34px;
@@ -4094,6 +4096,7 @@ body[data-screen="dash"] .top-profile-btn{
 }
 body[data-screen="dash"]:not([data-workspace="detailed"]) .top-profile-btn{display:none}
 body[data-screen="dash"] .top-chart-btn:hover,
+body[data-screen="dash"] .top-community-btn:hover,
 body[data-screen="dash"] .top-profile-btn:hover,
 body[data-screen="dash"] .dt-rechart:hover{color:var(--shell-accent-dark);border-color:rgba(255,36,66,.2);box-shadow:none}
 body[data-screen="dash"] .dash-topbar .account-nav-button{display:none}
@@ -5090,6 +5093,7 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
   .landing .hero-links button,
   .landing .hero-links a.hero-link-signature{min-height:40px}
   body[data-screen="dash"] .session-btn,
+  body[data-screen="dash"] .top-community-btn,
   body[data-screen="dash"] .top-chart-btn,
   body[data-screen="dash"] .top-profile-btn,
   body[data-screen="dash"] .account-nav-button,
@@ -5712,6 +5716,64 @@ body[data-screen="dash"] .composer-box:focus-within{
     padding:0 0 0 16px;
   }
   body[data-screen="dash"] .chart-rail{padding:16px 0}
+}
+
+/* COMMUNITY HELP · AI 解读与真人求助并列，求助路径不触发积分消费。 */
+.nc-actions{display:flex;align-items:center;gap:8px}
+.nc-community-ask{
+  min-height:32px;padding:0 12px;color:var(--shell-accent-dark,#8f3027);
+  background:transparent;border:1px solid var(--shell-accent,#a43a31);border-radius:7px;
+  font:600 11px/1 var(--sans);letter-spacing:.04em;cursor:pointer;
+}
+.nc-community-ask:hover{background:var(--shell-accent-soft,rgba(155,48,39,.08))}
+.cast-visibility-options{grid-template-columns:repeat(3,minmax(0,1fr))}
+.cast-visibility-option.cast-visibility-help:has(input:checked){
+  border-color:rgba(155,48,39,.62);background:rgba(155,48,39,.075);
+  box-shadow:inset 0 2px 0 rgba(155,48,39,.72);
+}
+.cast-visibility-option.cast-visibility-help input{accent-color:#9b3027}
+.community-help-dialog{
+  width:min(620px,calc(100% - 28px));max-height:min(760px,calc(100dvh - 28px));padding:0;
+  color:var(--shell-text,#25211c);background:#fff;border:1px solid var(--shell-line,#ded8ce);
+  border-radius:16px;box-shadow:0 28px 90px rgba(35,27,19,.22);
+}
+.community-help-dialog::backdrop{background:rgba(24,20,17,.48);backdrop-filter:blur(3px)}
+.community-help-dialog form{display:grid;gap:18px;padding:26px}
+.community-help-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.community-help-head span{display:block;margin-bottom:7px;color:#9b3027;font-size:10px;font-weight:700;letter-spacing:.14em}
+.community-help-head h2{margin:0;font-family:var(--serif);font-size:28px;letter-spacing:.04em}
+.community-help-head button{width:40px;height:40px;color:#756d62;background:transparent;border:0;border-radius:50%;font-size:24px;cursor:pointer}
+.community-help-dialog form>p{margin:0;color:#746d63;font-size:12px;line-height:1.75}
+.community-help-dialog label:not(.community-help-consent){display:grid;gap:8px;color:#332e27;font-size:12px;font-weight:700}
+.community-help-dialog textarea{width:100%;min-height:128px;padding:13px 14px;color:#25211c;background:#fbfaf7;border:1px solid #d8d2c8;border-radius:10px;font:400 14px/1.7 var(--sans);resize:vertical}
+.community-help-dialog textarea:focus{outline:2px solid rgba(155,48,39,.22);border-color:#9b3027}
+.community-help-dialog textarea[readonly]{color:#625b52;background:#f3f1ec}
+.community-help-consent{display:flex;align-items:flex-start;gap:10px;padding:13px 14px;background:#f8f6f1;border-radius:9px;color:#665f56;font-size:11px;line-height:1.65}
+.community-help-consent input{width:16px;height:16px;flex:0 0 auto;margin-top:2px;accent-color:#9b3027}
+.community-help-actions{display:flex;justify-content:flex-end;gap:10px}
+.community-help-actions button{min-height:42px;padding:0 18px;border-radius:8px;font:600 12px/1 var(--sans);cursor:pointer}
+.community-help-actions button:first-child{color:#6c655c;background:#fff;border:1px solid #d7d1c7}
+.community-help-actions button[type="submit"]{color:#fff;background:#9b3027;border:1px solid #9b3027}
+.community-help-actions button:disabled{opacity:.58;cursor:wait}
+[data-community-help-state]{min-height:20px;color:#9b3027!important}
+.post-card-labels{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.post-card-labels span,.post-card-labels b{padding:3px 6px;border-radius:4px;font-size:9px;line-height:1;letter-spacing:.06em}
+.post-card-labels span{color:#766b5e;background:#f1eee8}
+.post-card-labels b{color:#923128;background:#f8e9e7}
+.post-card.is-ai .post-card-labels b{color:#78602f;background:#f5eedf}
+.post-card-bazi{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:11px 0}
+.post-card-bazi span{padding:7px 4px;text-align:center;color:#655e55;background:#f5f2ec;border-top:2px solid #c5bfb5;font-family:var(--serif);font-size:14px}
+.post-card-bazi span.is-day{color:#91342b;border-color:#9b3027;background:#f9ecea}
+
+@media(max-width:900px){
+  .cast-visibility-options{grid-template-columns:1fr}
+  .nc-actions{gap:6px}
+  .nc-community-ask{min-height:30px;padding:0 9px;font-size:10px}
+}
+@media(max-width:520px){
+  .community-help-dialog form{gap:15px;padding:20px 16px}
+  .community-help-head h2{font-size:24px}
+  .community-help-actions{display:grid;grid-template-columns:1fr 1.4fr}
 }
 
 /* DASHBOARD LINE CHART RAIL · 左侧盘面改为连续栏与内部网格线（design-155） */

@@ -1261,6 +1261,11 @@
       "ClientCommunityComment": {
         "additionalProperties": false,
         "properties": {
+          "accepted": {
+            "default": false,
+            "title": "Accepted",
+            "type": "boolean"
+          },
           "author_name": {
             "title": "Author Name",
             "type": "string"
@@ -1283,7 +1288,7 @@
             "type": "string"
           },
           "kind_label": {
-            "default": "故事讨论",
+            "default": "参与讨论",
             "title": "Kind Label",
             "type": "string"
           },
@@ -1561,6 +1566,17 @@
       "ClientCommunityPost": {
         "additionalProperties": false,
         "properties": {
+          "accepted_comment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Comment Id"
+          },
           "ai_disclosure": {
             "title": "Ai Disclosure",
             "type": "string"
@@ -1578,6 +1594,30 @@
             "default": false,
             "title": "Can Manage",
             "type": "boolean"
+          },
+          "chart": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart"
+          },
+          "chart_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Summary"
           },
           "comment_count": {
             "title": "Comment Count",
@@ -1614,6 +1654,21 @@
             "title": "Discussion Count",
             "type": "integer"
           },
+          "follow_count": {
+            "default": 0,
+            "title": "Follow Count",
+            "type": "integer"
+          },
+          "help_status": {
+            "default": "open",
+            "title": "Help Status",
+            "type": "string"
+          },
+          "help_status_label": {
+            "default": "求助中",
+            "title": "Help Status Label",
+            "type": "string"
+          },
           "index_enabled": {
             "title": "Index Enabled",
             "type": "boolean"
@@ -1649,6 +1704,16 @@
               }
             ],
             "title": "Oracle Summary"
+          },
+          "post_kind": {
+            "default": "ai",
+            "title": "Post Kind",
+            "type": "string"
+          },
+          "post_kind_label": {
+            "default": "AI 解读",
+            "title": "Post Kind Label",
+            "type": "string"
           },
           "published_at": {
             "anyOf": [
@@ -1693,6 +1758,16 @@
             "title": "Status",
             "type": "string"
           },
+          "system": {
+            "default": "liuyao",
+            "title": "System",
+            "type": "string"
+          },
+          "system_label": {
+            "default": "六爻",
+            "title": "System Label",
+            "type": "string"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -1714,6 +1789,11 @@
               }
             ],
             "title": "Updates"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
           },
           "verification_status": {
             "anyOf": [
@@ -1744,6 +1824,11 @@
           "viewer_count": {
             "title": "Viewer Count",
             "type": "integer"
+          },
+          "viewer_following": {
+            "default": false,
+            "title": "Viewer Following",
+            "type": "boolean"
           },
           "viewer_liked": {
             "title": "Viewer Liked",
@@ -2244,6 +2329,88 @@
           "viewer_count"
         ],
         "title": "ClientEngagement",
+        "type": "object"
+      },
+      "ClientFollowState": {
+        "additionalProperties": false,
+        "properties": {
+          "follow_count": {
+            "title": "Follow Count",
+            "type": "integer"
+          },
+          "following": {
+            "title": "Following",
+            "type": "boolean"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "following",
+          "follow_count"
+        ],
+        "title": "ClientFollowState",
+        "type": "object"
+      },
+      "ClientHelpPostCreated": {
+        "additionalProperties": false,
+        "properties": {
+          "already_exists": {
+            "default": false,
+            "title": "Already Exists",
+            "type": "boolean"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "post": {
+            "$ref": "#/components/schemas/ClientCommunityPost"
+          }
+        },
+        "required": [
+          "ok",
+          "post"
+        ],
+        "title": "ClientHelpPostCreated",
+        "type": "object"
+      },
+      "ClientHelpResolution": {
+        "additionalProperties": false,
+        "properties": {
+          "accepted_comment_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Comment Id"
+          },
+          "help_status": {
+            "title": "Help Status",
+            "type": "string"
+          },
+          "help_status_label": {
+            "title": "Help Status Label",
+            "type": "string"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "help_status",
+          "help_status_label"
+        ],
+        "title": "ClientHelpResolution",
         "type": "object"
       },
       "ClientIdResult": {
@@ -4044,6 +4211,17 @@
         "title": "FeedbackCreate",
         "type": "object"
       },
+      "FollowInput": {
+        "properties": {
+          "following": {
+            "default": true,
+            "title": "Following",
+            "type": "boolean"
+          }
+        },
+        "title": "FollowInput",
+        "type": "object"
+      },
       "ForecastInput": {
         "description": "岁运全书历史订单输入；新建能力已经下线。",
         "properties": {
@@ -4296,6 +4474,32 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HelpPostCreate": {
+        "properties": {
+          "consent_version": {
+            "default": "community-help-v1",
+            "title": "Consent Version",
+            "type": "string"
+          },
+          "profile_id": {
+            "exclusiveMinimum": 0.0,
+            "title": "Profile Id",
+            "type": "integer"
+          },
+          "question": {
+            "maxLength": 2000,
+            "minLength": 8,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile_id",
+          "question"
+        ],
+        "title": "HelpPostCreate",
         "type": "object"
       },
       "InterpretCancelInput": {
@@ -5108,6 +5312,24 @@
         "title": "ResidenceCityInput",
         "type": "object"
       },
+      "ResolveHelpInput": {
+        "properties": {
+          "comment_id": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Id"
+          }
+        },
+        "title": "ResolveHelpInput",
+        "type": "object"
+      },
       "ResumeBatch": {
         "properties": {
           "items": {
@@ -5763,6 +5985,44 @@
         "summary": "Client Capabilities"
       }
     },
+    "/api/community/help-posts": {
+      "post": {
+        "operationId": "api_create_help_post_api_community_help_posts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HelpPostCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientHelpPostCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Create Help Post"
+      }
+    },
     "/api/community/liuyao/posts": {
       "get": {
         "operationId": "api_list_posts_api_community_liuyao_posts_get",
@@ -6191,6 +6451,417 @@
           }
         },
         "summary": "Api Mark Notifications Read"
+      }
+    },
+    "/api/community/posts": {
+      "get": {
+        "operationId": "api_list_community_posts_api_community_posts_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "question_type",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Question Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "default": "latest",
+              "title": "View",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Cursor",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_oracle_summary",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Oracle Summary",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "system",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "System",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "post_kind",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Post Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityFeed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api List Community Posts"
+      }
+    },
+    "/api/community/posts/{slug}": {
+      "get": {
+        "operationId": "api_get_community_post_api_community_posts__slug__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityPost"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Get Community Post"
+      }
+    },
+    "/api/community/posts/{slug}/comments": {
+      "get": {
+        "operationId": "api_list_comments_api_community_posts__slug__comments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommunityComments"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api List Comments"
+      },
+      "post": {
+        "operationId": "api_add_comment_api_community_posts__slug__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientCommentCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Add Comment"
+      }
+    },
+    "/api/community/posts/{slug}/follow": {
+      "post": {
+        "operationId": "api_follow_post_api_community_posts__slug__follow_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientFollowState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Follow Post"
+      }
+    },
+    "/api/community/posts/{slug}/like": {
+      "post": {
+        "operationId": "api_like_post_api_community_posts__slug__like_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEngagement"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Like Post"
+      }
+    },
+    "/api/community/posts/{slug}/resolve": {
+      "post": {
+        "operationId": "api_resolve_help_post_api_community_posts__slug__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveHelpInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientHelpResolution"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Resolve Help Post"
+      }
+    },
+    "/api/community/posts/{slug}/view": {
+      "post": {
+        "operationId": "api_record_post_view_api_community_posts__slug__view_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientEngagement"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Record Post View"
       }
     },
     "/api/community/reports": {

@@ -122,8 +122,8 @@
     <string name="home_archive">我的檔案</string>
 
     <!-- 社群 -->
-    <string name="community_title">卦例廣場</string>
-    <string name="community_empty">還沒有公開的卦例</string>
+    <string name="community_title">玄樞社區</string>
+    <string name="community_empty">還沒有公開的討論或求助</string>
     <string name="community_stats">瀏覽 %1$d · 讚 %2$d · 留言 %3$d</string>
     <string name="community_load_more">載入更多</string>
     <string name="community_comments">%1$d 則留言</string>

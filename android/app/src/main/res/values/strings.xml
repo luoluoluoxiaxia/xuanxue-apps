@@ -124,8 +124,8 @@
     <string name="home_archive">我的档案</string>
 
     <!-- 社区 -->
-    <string name="community_title">卦例广场</string>
-    <string name="community_empty">还没有公开的卦例</string>
+    <string name="community_title">玄枢社区</string>
+    <string name="community_empty">还没有公开的讨论或求助</string>
     <string name="community_stats">浏览 %1$d · 赞 %2$d · 评论 %3$d</string>
     <string name="community_load_more">加载更多</string>
     <string name="community_comments">%1$d 条评论</string>

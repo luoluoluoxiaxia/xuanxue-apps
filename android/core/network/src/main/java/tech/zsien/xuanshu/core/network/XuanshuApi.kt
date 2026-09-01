@@ -78,14 +78,14 @@ interface XuanshuApi {
     @POST("api/interpret")
     suspend fun interpret(@Body body: InterpretRequest): InterpretTask
 
-    /** 公开卦帖广场，无需登录即可浏览。 */
-    @GET("api/community/liuyao/posts")
+    /** 八字与六爻社区，无需登录即可浏览。 */
+    @GET("api/community/posts")
     suspend fun communityFeed(@Query("cursor") cursor: String? = null): CommunityFeed
 
-    @GET("api/community/liuyao/posts/{slug}")
+    @GET("api/community/posts/{slug}")
     suspend fun communityPost(@Path("slug") slug: String): CommunityPost
 
-    @GET("api/community/liuyao/posts/{slug}/comments")
+    @GET("api/community/posts/{slug}/comments")
     suspend fun communityComments(@Path("slug") slug: String): CommunityComments
 
     /** 私人档案列表，八字与六爻混在一起，按 system 区分。 */

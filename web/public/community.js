@@ -3,6 +3,10 @@
 
   const body = document.body;
   const pageSlug = body?.dataset.postSlug || "";
+  const pageUrl = body?.dataset.postUrl || (pageSlug ? `/gua/${pageSlug}` : "");
+  const pageKind = body?.dataset.postKind || "ai";
+  const pageSystem = body?.dataset.postSystem || "liuyao";
+  const pageCanManage = body?.dataset.canManage === "true";
   const previewCache = new Map();
   const PREVIEW_DIALOG_HTML = `
     <dialog class="post-preview-dialog" data-post-preview aria-labelledby="post-preview-title">
@@ -118,6 +122,7 @@
   window.XuanxueChatRenderer?.renderMarkdownElements(document);
 
   function canonicalFor(slug) {
+    if (slug === pageSlug && pageUrl) return `${location.origin}${pageUrl}`;
     return `${location.origin}/gua/${slug}`;
   }
 
@@ -245,7 +250,7 @@
       }
       list.replaceChildren(state);
     };
-    const notificationIcon = kind => kind === "post_like" ? "♥" : kind === "comment_reply" ? "↩" : "评";
+    const notificationIcon = kind => kind === "post_like" ? "♥" : kind === "comment_reply" ? "↩" : kind === "answer_accepted" ? "✓" : "评";
     const groupNotificationItems = items => {
       const grouped = [];
       const likesByPost = new Map();
@@ -419,7 +424,7 @@
       const selector = kind === "like"
         ? '[data-notification-kind="post_like"]'
         : kind === "comment"
-          ? '[data-notification-kind="post_comment"], [data-notification-kind="comment_reply"]'
+          ? '[data-notification-kind="post_comment"], [data-notification-kind="comment_reply"], [data-notification-kind="followed_post_comment"], [data-notification-kind="answer_accepted"]'
           : ".community-notification-item.is-unread";
       const target = list.querySelector(selector);
       if (!target) return;
@@ -507,7 +512,9 @@
   async function sharePost(slug, title, post = null) {
     if (!slug) return;
     const target = await shareTarget(slug);
-    if (window.XuanxueShareCard?.open) {
+    const shareKind = post?.post_kind || pageKind;
+    const shareSystem = post?.system || pageSystem;
+    if (window.XuanxueShareCard?.open && shareKind === "ai" && shareSystem === "liuyao") {
       await window.XuanxueShareCard.open({
         slug,
         title,
@@ -588,7 +595,7 @@
     }
     buttons.forEach(button => { button.disabled = true; });
     try {
-      const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/like`, {
+      const response = await fetch(`/api/community/posts/${encodeURIComponent(slug)}/like`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -608,7 +615,7 @@
   async function recordView(slug) {
     if (!slug) return null;
     try {
-      const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/view`, {
+      const response = await fetch(`/api/community/posts/${encodeURIComponent(slug)}/view`, {
         method: "POST",
         headers: {
           Accept: "application/json",
@@ -632,6 +639,55 @@
     event.stopPropagation();
     void likePost(button.dataset.likePost || "");
   });
+
+  function setupFollowPost() {
+    const button = document.querySelector("[data-follow-post]");
+    if (!button || !pageSlug) return;
+    button.addEventListener("click", async () => {
+      let account = await window.XuanxueAccount?.ready();
+      if (!account?.authenticated) {
+        const loggedIn = await window.XuanxueAccount?.requireLogin({
+          mode: "login",
+          message: "登录后即可关注这条求助；有新回答时会在消息中提醒你。",
+        });
+        if (!loggedIn) return;
+        account = await window.XuanxueAccount?.ready();
+      }
+      if (!account?.authenticated) return;
+      const following = button.getAttribute("aria-pressed") !== "true";
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/community/posts/${encodeURIComponent(pageSlug)}/follow`, {
+          method: "POST",
+          headers: window.XuanxueAccount?.csrfHeaders({
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-Xuanshu-Interaction": "same-origin-v1",
+          }),
+          credentials: "same-origin",
+          body: JSON.stringify({ following }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.detail || "关注失败，请稍后再试");
+        button.setAttribute("aria-pressed", payload.following ? "true" : "false");
+        button.classList.toggle("is-following", !!payload.following);
+        const label = button.querySelector("[data-follow-label]");
+        const count = button.querySelector("[data-follow-count]");
+        if (label) label.textContent = payload.following ? "已关注" : "关注进展";
+        if (count) {
+          count.textContent = String(Number(payload.follow_count) || 0);
+          count.hidden = !Number(payload.follow_count);
+        }
+        showToast(payload.following ? "已关注，有新回答会提醒你" : "已取消关注");
+      } catch (error) {
+        showToast(error.message || "关注失败，请稍后再试", "error");
+      } finally {
+        button.disabled = false;
+      }
+    });
+  }
+
+  setupFollowPost();
 
   const report = document.querySelector("[data-report-post]");
   const reportDialog = document.querySelector("[data-report-dialog]");
@@ -708,14 +764,67 @@
   const commentComposer = document.querySelector("[data-comment-composer]");
   const commentSection = document.querySelector(".comments-section");
 
+  function bindAcceptActions(scope = document) {
+    scope?.querySelectorAll("[data-accept-comment]").forEach(button => {
+      if (button.dataset.acceptBound === "true") return;
+      button.dataset.acceptBound = "true";
+      button.addEventListener("click", async () => {
+        const commentId = Number(button.dataset.acceptComment || 0);
+        if (!commentId) return;
+        button.disabled = true;
+        button.textContent = "正在采纳…";
+        try {
+          const response = await fetch(`/api/community/posts/${encodeURIComponent(pageSlug)}/resolve`, {
+            method: "POST",
+            headers: window.XuanxueAccount?.csrfHeaders({
+              "Content-Type": "application/json",
+              Accept: "application/json",
+              "X-Xuanshu-Interaction": "same-origin-v1",
+            }),
+            credentials: "same-origin",
+            body: JSON.stringify({ comment_id: commentId }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.detail || "采纳失败，请稍后再试");
+          document.querySelectorAll("[data-accept-comment]").forEach(item => item.remove());
+          const accepted = document.querySelector(`#comment-${commentId}`);
+          accepted?.classList.add("is-accepted");
+          const metaLabel = accepted?.querySelector(".comment-meta span");
+          if (metaLabel && !metaLabel.textContent.includes("已采纳")) metaLabel.textContent += " · 已采纳";
+          const badge = document.querySelector("[data-help-status]");
+          if (badge) badge.textContent = `${pageSystem === "bazi" ? "八字" : "六爻"} · ${payload.help_status_label || "已解决"}`;
+          const briefTitle = document.querySelector("[data-help-brief] h2");
+          if (briefTitle) briefTitle.textContent = "求助者已采纳一个回答";
+          showToast("已采纳并标记为已解决");
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = "采纳这个回答";
+          showToast(error.message || "采纳失败，请稍后再试", "error");
+        }
+      });
+    });
+  }
+
   function commentFormMarkup(inputId = "comment-body") {
+    const lineOptions = pageSystem === "liuyao"
+      ? `<fieldset><legend>参考爻位（可选）</legend><div>${[1, 2, 3, 4, 5, 6].map(line => `<label><input type="checkbox" name="referenced_lines" value="${line}">${line}</label>`).join("")}</div></fieldset>`
+      : "";
     return `<form class="comment-form" data-comment-form>
       <div class="comment-reply-context" data-comment-reply-context hidden>
         <span data-comment-reply-label></span>
         <button type="button" data-comment-reply-cancel>取消回复</button>
       </div>
+      <div class="comment-kind-picker" role="radiogroup" aria-label="回复方式">
+        <label><input type="radio" name="kind" value="discussion" checked><span>参与讨论</span></label>
+        <label><input type="radio" name="kind" value="reading"><span>给出判断</span></label>
+      </div>
       <label class="sr-only" for="${inputId}">发表评论</label>
-      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="说点什么……"></textarea>
+      <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="${pageKind === "help" ? "先写你的判断或建议……" : "说点什么……"}"></textarea>
+      <div class="reading-fields" data-reading-fields hidden>
+        <label>判断依据<textarea name="reasoning" rows="3" maxlength="500" placeholder="你根据哪些盘面信息得出这个判断？"></textarea></label>
+        <label>应期 / 结果（可选）<input name="prediction" maxlength="300" placeholder="例如：两周内会有明确消息"></label>
+        ${lineOptions}
+      </div>
       <div class="comment-form-actions">
         <span><b data-comment-length>0</b> / 500 · 公开显示为匿名卦友编号</span>
         <button type="submit" class="primary-action" data-comment-submit>发布</button>
@@ -754,6 +863,7 @@
     else list.append(renderComment(comment));
     syncCommentTotal(1);
     bindReplyActions(commentSection, commentComposer, renderDetailCommentComposer);
+    bindAcceptActions(commentSection);
   }
 
   function clearCommentReply(form) {
@@ -827,6 +937,13 @@
     const length = form.querySelector("[data-comment-length]");
     const state = form.querySelector("[data-comment-state]");
     const submit = form.querySelector("button[type=submit]");
+    const readingFields = form.querySelector("[data-reading-fields]");
+    const syncKind = () => {
+      const reading = form.elements.kind?.value === "reading";
+      if (readingFields) readingFields.hidden = !reading;
+    };
+    form.querySelectorAll('input[name="kind"]').forEach(input => input.addEventListener("change", syncKind));
+    syncKind();
     form.querySelector("[data-comment-reply-cancel]")?.addEventListener("click", () => clearCommentReply(form));
     const syncLength = () => { length.textContent = String(input.value.length); };
     input.addEventListener("input", syncLength);
@@ -840,7 +957,7 @@
       state.dataset.tone = "";
       try {
         await window.XuanxueAccount?.ready();
-        const response = await fetch(`/api/community/liuyao/posts/${encodeURIComponent(slug)}/comments`, {
+        const response = await fetch(`/api/community/posts/${encodeURIComponent(slug)}/comments`, {
           method: "POST",
           headers: window.XuanxueAccount?.csrfHeaders({
             "Content-Type": "application/json",
@@ -850,6 +967,10 @@
           body: JSON.stringify({
             body: input.value.trim(),
             parent_id: Number(form.dataset.replyParentId) || null,
+            kind: form.elements.kind?.value || "discussion",
+            reasoning: form.elements.reasoning?.value?.trim() || "",
+            prediction: form.elements.prediction?.value?.trim() || "",
+            referenced_lines: [...form.querySelectorAll('input[name="referenced_lines"]:checked')].map(item => Number(item.value)),
           }),
         });
         const payload = await response.json().catch(() => ({}));
@@ -859,6 +980,7 @@
         clearCommentReply(form);
         syncLength();
         form.reset();
+        syncKind();
         state.textContent = `已发布，将显示为 ${payload.item?.author_name || "匿名卦友"}`;
         state.dataset.tone = "success";
         showToast("评论已发布");
@@ -918,6 +1040,7 @@
       }
     });
     bindReplyActions(commentSection, commentComposer, renderDetailCommentComposer);
+    bindAcceptActions(commentSection);
   }
 
   const storyForm = document.querySelector("[data-story-update-form]");
@@ -1051,7 +1174,7 @@
   }
 
   function renderCommentReply(reply) {
-    const replyItem = makeElement("div", "comment-reply");
+    const replyItem = makeElement("div", `comment-reply${reply.accepted ? " is-accepted" : ""}`);
     if (reply.id) {
       replyItem.id = `comment-${reply.id}`;
       replyItem.dataset.commentId = String(reply.id);
@@ -1059,18 +1182,37 @@
     const replyMeta = makeElement("div", "comment-meta");
     replyMeta.append(
       makeElement("b", "", reply.author_name || "卦友"),
+      makeElement("span", "", `${reply.kind_label || "参与讨论"}${reply.accepted ? " · 已采纳" : ""}`),
       makeElement("time", "", formatStamp(reply.created_at, true)),
     );
     const replyAction = makeElement("button", "comment-reply-action", "回复");
     replyAction.type = "button";
     replyAction.dataset.commentReply = String(reply.id || "");
     replyAction.dataset.commentAuthor = reply.author_name || "卦友";
-    replyItem.append(replyMeta, makeElement("p", "", reply.body || ""), replyAction);
+    replyItem.append(replyMeta, makeElement("p", "", reply.body || ""));
+    appendCommentReading(replyItem, reply);
+    replyItem.append(replyAction);
     return replyItem;
   }
 
+  function appendCommentReading(host, comment) {
+    if (comment.reasoning) {
+      const field = makeElement("div", "comment-reading-field");
+      field.append(makeElement("b", "", "判断依据"), makeElement("p", "", comment.reasoning));
+      host.append(field);
+    }
+    if (comment.prediction) {
+      const field = makeElement("div", "comment-reading-field");
+      field.append(makeElement("b", "", "应期 / 结果"), makeElement("p", "", comment.prediction));
+      host.append(field);
+    }
+    if (Array.isArray(comment.referenced_lines) && comment.referenced_lines.length) {
+      host.append(makeElement("div", "comment-reading-lines", `参考爻位：${comment.referenced_lines.join("、")}`));
+    }
+  }
+
   function renderComment(comment) {
-    const item = makeElement("article", "comment");
+    const item = makeElement("article", `comment${comment.accepted ? " is-accepted" : ""}`);
     if (comment.id) {
       item.id = `comment-${comment.id}`;
       item.dataset.commentId = String(comment.id);
@@ -1078,13 +1220,22 @@
     const meta = makeElement("div", "comment-meta");
     meta.append(
       makeElement("b", "", comment.author_name || "卦友"),
+      makeElement("span", "", `${comment.kind_label || "参与讨论"}${comment.accepted ? " · 已采纳" : ""}`),
       makeElement("time", "", formatStamp(comment.created_at, true)),
     );
     const replyAction = makeElement("button", "comment-reply-action", "回复");
     replyAction.type = "button";
     replyAction.dataset.commentReply = String(comment.id || "");
     replyAction.dataset.commentAuthor = comment.author_name || "卦友";
-    item.append(meta, makeElement("p", "", comment.body || ""), replyAction);
+    item.append(meta, makeElement("p", "", comment.body || ""));
+    appendCommentReading(item, comment);
+    item.append(replyAction);
+    if (pageKind === "help" && pageCanManage && !comment.accepted) {
+      const accept = makeElement("button", "comment-accept-action", "采纳这个回答");
+      accept.type = "button";
+      accept.dataset.acceptComment = String(comment.id || "");
+      item.append(accept);
+    }
     (comment.replies || []).forEach(reply => item.append(renderCommentReply(reply)));
     return item;
   }
@@ -1102,6 +1253,7 @@
     comments.forEach(comment => list.append(renderComment(comment)));
     host.append(list);
     bindReplyActions(host, field("[data-preview-comment-composer]"), () => renderPreviewCommentComposer(post, { focus: false }));
+    bindAcceptActions(host);
   }
 
   function appendPreviewComment(post, comment) {

@@ -45,6 +45,7 @@ const {
 } = ChartDomain;
 const esc = ChatRenderer.escapeHtml;
 const LIUYAO_PUBLIC_CONSENT_VERSION = "liuyao-public-v2";
+const COMMUNITY_HELP_CONSENT_VERSION = "community-help-v1";
 
 /* ---------- 子平常量 ---------- */
 /* ---------- 应用状态 ---------- */
@@ -341,7 +342,93 @@ let activePersonalCase = null;
 let activeDetailedBaziProfile = null;
 let detailedBaziProfileRequest = null;
 let pendingCombinedEntry = false;
+let pendingCommunityHelp = false;
 const DETAILED_PUBLIC_ENTRY_ENABLED = false;
+
+async function createCommunityHelp(profileId, question) {
+  const response = await fetch("/api/community/help-posts", {
+    method: "POST",
+    headers: Account.csrfHeaders({
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      "X-Xuanshu-Interaction": "same-origin-v1",
+    }),
+    credentials: "same-origin",
+    body: JSON.stringify({
+      profile_id: Number(profileId || 0),
+      question: String(question || "").trim(),
+      consent_version: COMMUNITY_HELP_CONSENT_VERSION,
+    }),
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.detail || "求助发布失败，请稍后再试");
+  return payload;
+}
+
+function closeCommunityHelpDialog() {
+  const dialog = document.querySelector("[data-community-help-dialog]");
+  if (dialog?.open) dialog.close();
+}
+
+async function openCommunityHelpDialog() {
+  if (!activeProfileId || !lastPayload) {
+    toast("请先完成排盘或起卦，再向社区求助", "warn");
+    return;
+  }
+  const loggedIn = await Account?.requireLogin({
+    mode: "register",
+    message: "登录并验证邮箱后即可免费向社区求助；不会调用 AI，也不会扣积分。",
+  });
+  if (!loggedIn) return;
+  const dialog = document.querySelector("[data-community-help-dialog]");
+  const form = dialog?.querySelector("[data-community-help-form]");
+  if (!dialog || !form) return;
+  const chartCopy = dialog.querySelector("[data-community-help-chart]");
+  if (chartCopy) chartCopy.textContent = state.system === "liuyao"
+    ? "将公开当前卦象和所问，不展示账户信息；求助内容需要与起卦时所问保持一致。"
+    : "将公开四柱、日主与五行数量；出生日期、时刻、地点和账户信息不会展示。";
+  const question = form.elements.question;
+  if (state.system === "liuyao") {
+    question.value = String(lastPayload.question || lastInput?.question || "");
+    question.readOnly = true;
+  } else {
+    question.readOnly = false;
+    if (!question.value) question.value = "请大家帮我看看这个命盘，重点想了解：";
+  }
+  const stateNode = dialog.querySelector("[data-community-help-state]");
+  if (stateNode) stateNode.textContent = "";
+  if (!dialog.open) dialog.showModal();
+  requestAnimationFrame(() => (question.readOnly ? form.elements.consent : question)?.focus({ preventScroll: true }));
+}
+
+function setupCommunityHelpDialog() {
+  const dialog = document.querySelector("[data-community-help-dialog]");
+  const form = dialog?.querySelector("[data-community-help-form]");
+  if (!dialog || !form) return;
+  dialog.querySelectorAll("[data-community-help-close]").forEach(button => {
+    button.addEventListener("click", closeCommunityHelpDialog);
+  });
+  dialog.addEventListener("click", event => {
+    if (event.target === dialog) closeCommunityHelpDialog();
+  });
+  form.addEventListener("submit", async event => {
+    event.preventDefault();
+    if (!form.reportValidity()) return;
+    const stateNode = dialog.querySelector("[data-community-help-state]");
+    const submit = form.querySelector('button[type="submit"]');
+    submit.disabled = true;
+    submit.textContent = "正在发布…";
+    if (stateNode) stateNode.textContent = "正在检查隐私并生成公开帖子…";
+    try {
+      const payload = await createCommunityHelp(activeProfileId, form.elements.question.value);
+      location.assign(payload.post?.url || `/community/${encodeURIComponent(payload.post?.slug || "")}`);
+    } catch (error) {
+      if (stateNode) stateNode.textContent = humanError(String(error?.message || error));
+      submit.disabled = false;
+      submit.textContent = "发布求助";
+    }
+  });
+}
 
 function setActivePersonalCase(item) {
   activePersonalCase = item && typeof item === "object" ? item : null;
@@ -1547,6 +1634,10 @@ async function submitBirth(ev) {
     enterDashboard({ historyMode: "replace", focusPage: true });
     saveResumeCookie();
     refreshAccountArchiveState();
+    if (pendingCommunityHelp) {
+      pendingCommunityHelp = false;
+      window.setTimeout(openCommunityHelpDialog, 0);
+    }
     /* 时辰边界等警告（后端 boundary_check → warnings）：单独提示 */
     const warning = (lastPayload.warnings || [])[0];
     if (warning) toast(warning, "warn");
@@ -1576,7 +1667,7 @@ function snapshotCastDraft() {
   return {
     question: $("#cast-question")?.value || "",
     method: castMethodValue(),
-    visibility: document.querySelector('input[name="cast-visibility"]:checked')?.value || "public",
+    visibility: document.querySelector('input[name="cast-visibility"]:checked')?.value || "help",
     clientCastYaos: clientCastYaos.slice(),
     clientCastCoins: clientCastCoins.map(coins => Array.isArray(coins) ? coins.slice() : coins),
     manualYaos: manualYaos.slice(),
@@ -1599,7 +1690,7 @@ function restoreCastDraft(draft = {}) {
     return [6, 7, 8, 9].includes(value) ? value : undefined;
   });
   clientCastCompletedAt = String(draft.completedAt || "");
-  const visibilityValue = draft.visibility === "private" ? "private" : "public";
+  const visibilityValue = ["help", "public", "private"].includes(draft.visibility) ? draft.visibility : "help";
   const visibility = document.querySelector(`input[name="cast-visibility"][value="${visibilityValue}"]`);
   if (visibility) visibility.checked = true;
   clearCastError();
@@ -1649,9 +1740,11 @@ function syncCastEntryMode() {
   if (!modal) return;
   modal.dataset.castFlow = combined ? "detailed" : "standard";
   const publicVisibility = document.querySelector('input[name="cast-visibility"][value="public"]');
+  const helpVisibility = document.querySelector('input[name="cast-visibility"][value="help"]');
   const privateVisibility = document.querySelector('input[name="cast-visibility"][value="private"]');
   const visibility = document.querySelector(".cast-visibility");
   if (publicVisibility) publicVisibility.disabled = combined;
+  if (helpVisibility) helpVisibility.disabled = combined;
   if (privateVisibility) privateVisibility.disabled = false;
   if (combined && privateVisibility) privateVisibility.checked = true;
   if (visibility) visibility.hidden = combined;
@@ -1837,8 +1930,9 @@ function syncCastUI() {
   const reset = $("#cast-reset-btn");
   const note = $("#cast-foot-note");
   const banner = $("#cast-complete-banner");
-  const visibility = document.querySelector('input[name="cast-visibility"]:checked')?.value || "public";
+  const visibility = document.querySelector('input[name="cast-visibility"]:checked')?.value || "help";
   const isPrivate = visibility === "private";
+  const isHelp = visibility === "help";
   const account = Account?.snapshot?.() || {};
   const quota = account.privateQuota;
   const wallet = account.creditWallet;
@@ -1869,12 +1963,16 @@ function syncCastUI() {
       && !quota.can_start_answer
     );
     submit.disabled = false;
-    submit.textContent = isPrivate
+    submit.textContent = isHelp
+      ? "发 布 社 区 求 助"
+      : isPrivate
       ? (privateExhausted ? "积 分 暂 不 可 用 · 查 看 账 户" : "开 始 私 密 解 读")
       : "开 始 公 开 解 读";
     if (manualHint) manualHint.hidden = true;
     if (reset) reset.textContent = manual ? "重新起卦" : "重新摇一次";
-    if (note) note.textContent = "入局后可围绕所问开始断卦，并继续追问";
+    if (note) note.textContent = isHelp
+      ? "只发布脱敏卦象和所问，不调用 AI，也不扣积分"
+      : "入局后可围绕所问开始断卦，并继续追问";
     return;
   }
   if (manual) {
@@ -1968,11 +2066,12 @@ function resetClientCast() {
   manualYaos = Array(6).fill(undefined);
   clientCastCompletedAt = "";
   const publicVisibility = document.querySelector('input[name="cast-visibility"][value="public"]');
+  const helpVisibility = document.querySelector('input[name="cast-visibility"][value="help"]');
   const privateVisibility = document.querySelector('input[name="cast-visibility"][value="private"]');
   if (combinedCastActive()) {
     if (privateVisibility) privateVisibility.checked = true;
-  } else if (publicVisibility) {
-    publicVisibility.checked = true;
+  } else if (helpVisibility || publicVisibility) {
+    (helpVisibility || publicVisibility).checked = true;
   }
   syncCastEntryMode();
   syncCoinFaces(null, false);
@@ -2021,16 +2120,19 @@ async function submitCast(ev) {
     toast("先自下而上录满六爻，再开始解读", "warn");
     return;
   }
-  const visibility = document.querySelector('input[name="cast-visibility"]:checked')?.value || "public";
+  const visibility = document.querySelector('input[name="cast-visibility"]:checked')?.value || "help";
+  const communityHelp = visibility === "help";
   const loggedIn = await Account?.requireLogin({
     mode: "register",
-    message: visibility === "private"
+    message: communityHelp
+      ? "登录并验证邮箱后即可免费向社区求助；不会调用 AI，也不会扣积分。"
+      : visibility === "private"
       ? "私密提问只保存在你的账户中，请先登录或注册。"
       : "登录后可使用每日免费积分开始解读；分享任意公开问题还能永久增加每日免费积分。",
   });
   if (!loggedIn) return;
   const answerQuota = Account?.snapshot()?.privateQuota;
-  if (answerQuota && !answerQuota.can_start_answer) {
+  if (!communityHelp && answerQuota && !answerQuota.can_start_answer) {
     showCastError("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或到账户充值后继续。");
     Account?.open?.("topup", "可用积分已经用完。选择套餐并完成付款后，就能继续刚才的 AI 解读。");
     syncCastUI();
@@ -2041,7 +2143,7 @@ async function submitCast(ev) {
     method,
     question,
     as_of: method === "client_coins" && clientCastCompletedAt ? clientCastCompletedAt : localDateTimeISO(),
-    visibility,
+    visibility: communityHelp ? "private" : visibility,
     public_consent: visibility === "public",
     public_consent_version: visibility === "public" ? LIUYAO_PUBLIC_CONSENT_VERSION : "",
   };
@@ -2091,6 +2193,12 @@ async function submitCast(ev) {
     profileName = lastPayload.profile_name || (lastPayload.ben_gua && lastPayload.ben_gua.name) || "六爻";
     calendarLabel = "六爻";
     activeProfileId = lastPayload.profile_id || null;
+    if (communityHelp) {
+      submit.textContent = "发 布 求 助 …";
+      const created = await createCommunityHelp(activeProfileId, question);
+      window.location.assign(created.post?.url || `/community/${encodeURIComponent(created.post?.slug || "")}`);
+      return;
+    }
     activeHistory = [];
     resetThreads();
     if (activePersonalCaseId) {
@@ -2413,6 +2521,10 @@ function renderTopbar() {
   if (rechart) rechart.textContent = "修改信息";
   const ask = $("#ask-chart-btn");
   if (ask) { ask.textContent = "解读此盘 →"; ask.onclick = () => closeChartDrawer(() => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); }); }
+  const communityAsk = $("#ask-community-btn");
+  if (communityAsk) { communityAsk.hidden = false; communityAsk.textContent = "社区求助"; communityAsk.onclick = openCommunityHelpDialog; }
+  const topCommunityAsk = $("#top-community-btn");
+  if (topCommunityAsk) topCommunityAsk.hidden = false;
   const trend = $("#open-trend-btn");
   if (trend) trend.hidden = false;
   const manual = isManualBaziPayload(p);
@@ -2450,6 +2562,10 @@ function renderLiuYaoTopbar() {
   $("#dt-pillars").innerHTML = `<span class="dt-gua-chip">${esc((ben.name || "六爻") + arrow)}</span>`;
   $("#nc-daymaster").textContent = `月建${p.month_jian || "—"} · 日辰${p.day_chen || "—"}`;
   $("#dm-summary").textContent = "";
+  const communityAsk = $("#ask-community-btn");
+  if (communityAsk) { communityAsk.hidden = false; communityAsk.textContent = "社区求助"; communityAsk.onclick = openCommunityHelpDialog; }
+  const topCommunityAsk = $("#top-community-btn");
+  if (topCommunityAsk) topCommunityAsk.hidden = false;
 }
 
 function renderDetailedTopbar() {
@@ -2469,6 +2585,10 @@ function renderDetailedTopbar() {
   $("#dt-pillars").innerHTML = `<span class="dt-detailed-chip">命盘 × ${esc((ben.name || "本卦") + bian)}</span>`;
   $("#nc-daymaster").textContent = "八字 × 卦象同参";
   $("#dm-summary").textContent = "";
+  const communityAsk = $("#ask-community-btn");
+  if (communityAsk) communityAsk.hidden = true;
+  const topCommunityAsk = $("#top-community-btn");
+  if (topCommunityAsk) topCommunityAsk.hidden = true;
   const rechart = $("#rechart-btn");
   if (rechart) {
     rechart.textContent = "另起一事";
@@ -3478,6 +3598,7 @@ function bind() {
   if ($("#cast-close-x")) $("#cast-close-x").onclick = closeCastModal;
   if ($("#cast-form")) $("#cast-form").addEventListener("submit", submitCast);
   initCastModal();
+  setupCommunityHelpDialog();
 
   $("#home-btn").onclick = () => {
     showScreen("landing", { historyMode: "push", focusPage: true });
@@ -3496,10 +3617,12 @@ function bind() {
   if ($("#hero-feedback-btn")) $("#hero-feedback-btn").onclick = openFeedback;
   if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可以查看自己的私密问题和档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   $("#ask-chart-btn").onclick = () => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); };
+  $("#ask-community-btn").onclick = openCommunityHelpDialog;
   $("#open-trend-btn").onclick = openTrend;
 
   // 手机版：盘条「看盘」抽屉
   if ($("#open-chart-btn")) $("#open-chart-btn").onclick = openChartDrawer;
+  if ($("#top-community-btn")) $("#top-community-btn").onclick = openCommunityHelpDialog;
   if ($("#chart-rail-close")) $("#chart-rail-close").onclick = closeChartDrawer;
   if ($("#chart-mask")) $("#chart-mask").onclick = closeChartDrawer;
   if ($("#rail-rechart-btn")) $("#rail-rechart-btn").onclick = () => { state.system === "liuyao" ? openCastModal() : openBirthModal(); };
@@ -3623,6 +3746,8 @@ async function init() {
   setupSidebarToggle();
   const query = new URLSearchParams(location.search);
   const start = query.get("start");
+  const communityHelpRequested = query.get("community") === "help";
+  pendingCommunityHelp = communityHelpRequested && start === "bazi";
   const detailedEntryRequested = DETAILED_PUBLIC_ENTRY_ENABLED
     && start === "liuyao"
     && query.get("flow") === "detailed";
@@ -3639,6 +3764,11 @@ async function init() {
   const dashboardNavSystem = routeSystem === "bazi" || routeSystem === "liuyao" ? routeSystem : resumeSystem;
   const personalCaseId = query.get("personal_case") || String(resumeState?.personal_case_id || "");
   bind();
+  if (communityHelpRequested && start === "liuyao") {
+    const helpVisibility = document.querySelector('input[name="cast-visibility"][value="help"]');
+    if (helpVisibility) helpVisibility.checked = true;
+    syncCastUI();
+  }
   syncLayout();
   setupMobileViewportGuards();
   applyBigText();

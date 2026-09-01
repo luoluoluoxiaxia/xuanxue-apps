@@ -136,8 +136,8 @@ for (const requiredAuthBoundary of [
 }
 
 const community = readFileSync(join(publicDir, "community.js"), "utf8");
-if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 2) {
-  fail("community likes and views must carry same-origin interaction proof");
+if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 4) {
+  fail("community likes, views, follows, and resolutions must carry same-origin interaction proof");
 }
 
 const forecast = readFileSync(join(publicDir, "forecast-view.html"), "utf8");
