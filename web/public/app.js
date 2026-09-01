@@ -386,8 +386,8 @@ async function openCommunityHelpDialog() {
   if (!dialog || !form) return;
   const chartCopy = dialog.querySelector("[data-community-help-chart]");
   if (chartCopy) chartCopy.textContent = state.system === "liuyao"
-    ? "将公开当前卦象和所问，不展示账户信息；求助内容需要与起卦时所问保持一致。"
-    : "将公开四柱、日主与五行数量；出生日期、时刻、地点和账户信息不会展示。";
+    ? "将公开当前卦象、所问和社区昵称；邮箱不会展示。求助内容需与起卦时所问一致。"
+    : "将公开四柱、日主、五行数量和社区昵称；出生日期、时刻、地点与邮箱不会展示。";
   const question = form.elements.question;
   if (state.system === "liuyao") {
     question.value = String(lastPayload.question || lastInput?.question || "");

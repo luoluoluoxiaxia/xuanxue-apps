@@ -147,9 +147,17 @@ function bindProfileNicknameForm(options = {}) {
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.detail || "昵称保存失败");
-      await Account.refresh({ render: false });
-      await openProfileLibrary({ ...options, preserveDelete: true, focusNickname: true });
-      toast(nickname ? "昵称已保存" : "已恢复匿名昵称", "success");
+      const account = Account.acceptResponse(payload);
+      const savedNickname = String(account.user?.nickname || "");
+      const title = profilePageBody()?.querySelector("#profile-identity-title");
+      if (title) title.textContent = savedNickname || "默认匿名昵称";
+      input.value = savedNickname;
+      submit.disabled = false;
+      submit.textContent = "保存";
+      status.textContent = savedNickname ? "昵称已保存，社区已更新。" : "已恢复匿名昵称。";
+      status.dataset.tone = "success";
+      input.focus({ preventScroll: true });
+      toast(savedNickname ? "昵称已保存" : "已恢复匿名昵称", "success");
     } catch (error) {
       submit.disabled = false;
       submit.textContent = "保存";

@@ -659,7 +659,7 @@ function renderThread() {
       html += aiFeedbackHtml(m);
       if (m.publicPost) {
         if (m.publicPost.status === "published") {
-          html += `<div class="public-post-link"><span>已匿名公开</span><a href="${esc(m.publicPost.url)}" data-community-post data-post-slug="${esc(m.publicPost.slug)}">查看卦帖</a><button type="button" data-share-public-post="${esc(m.publicPost.slug)}">分享</button></div>`;
+          html += `<div class="public-post-link"><span>已发布到社区</span><a href="${esc(m.publicPost.url)}" data-community-post data-post-slug="${esc(m.publicPost.slug)}">查看卦帖</a><button type="button" data-share-public-post="${esc(m.publicPost.slug)}">分享</button></div>`;
         } else if (m.streaming) {
           html += `<div class="public-post-link pending"><span>完成后公开发布</span></div>`;
         }

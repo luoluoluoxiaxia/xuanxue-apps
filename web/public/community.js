@@ -802,7 +802,7 @@
         <textarea id="${inputId}" name="body" rows="4" maxlength="500" required placeholder="写下回复……"></textarea>
       </div>
       <div class="comment-form-actions">
-        <span><b data-comment-length>0</b> / 500 · <i data-comment-privacy-note>${authenticated ? "匿名发布" : "发布时登录 · 匿名展示"}</i></span>
+        <span><b data-comment-length>0</b> / 500 · <i data-comment-privacy-note>${authenticated ? "显示社区昵称或匿名编号" : "发布时登录 · 显示昵称或匿名编号"}</i></span>
         <button type="submit" class="primary-action" data-comment-submit>发布回复</button>
       </div>
       <p class="form-state" data-comment-state role="status" aria-live="polite"></p>
@@ -812,7 +812,7 @@
   function commentGateMarkup() {
     return `<div class="comment-gate">
       <span>评</span>
-      <div><b>登录后匿名回复</b><p>仅显示卦友编号。</p></div>
+      <div><b>登录后发布回复</b><p>显示社区昵称；未设置时显示匿名编号。</p></div>
       <button type="button" class="comment-login-action" data-comment-login>登录回复</button>
     </div>`;
   }
@@ -881,7 +881,7 @@
       button.disabled = true;
       const loggedIn = await window.XuanxueAccount?.requireLogin({
         mode: "login",
-        message: "登录后匿名回复",
+        message: "登录后发布回复",
       });
       if (loggedIn) onLoggedIn();
       else button.disabled = false;
@@ -974,7 +974,12 @@
     if (!host) return;
     host.dataset.writeReady = authenticated ? "true" : "false";
     const note = host.querySelector("[data-comment-privacy-note]");
-    if (note) note.textContent = authenticated ? "匿名发布" : "发布时登录 · 匿名展示";
+    if (note) {
+      const nickname = String(window.XuanxueAccount?.snapshot()?.user?.nickname || "").trim();
+      note.textContent = authenticated
+        ? (nickname ? `显示为 ${nickname}` : "显示匿名编号")
+        : "发布时登录 · 显示昵称或匿名编号";
+    }
   }
 
   function renderCommentComposer(host, slug, onPublished, onAuthExpired, { focus = true, inputId = "comment-body", system = pageSystem, authenticated = true } = {}) {
