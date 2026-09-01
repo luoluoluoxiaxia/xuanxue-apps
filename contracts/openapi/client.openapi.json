@@ -1,6 +1,17 @@
 {
   "components": {
     "schemas": {
+      "AccountProfileInput": {
+        "properties": {
+          "nickname": {
+            "default": "",
+            "title": "Nickname",
+            "type": "string"
+          }
+        },
+        "title": "AccountProfileInput",
+        "type": "object"
+      },
       "BirthInput": {
         "properties": {
           "as_of": {
@@ -369,6 +380,11 @@
           },
           "id": {
             "title": "Id",
+            "type": "string"
+          },
+          "nickname": {
+            "default": "",
+            "title": "Nickname",
             "type": "string"
           }
         },
@@ -5480,6 +5496,44 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/account/profile": {
+      "put": {
+        "operationId": "api_account_profile_api_account_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountProfileInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Account Profile"
+      }
+    },
     "/api/app/version": {
       "get": {
         "description": "Return the Android display client's minimum and latest release gates.",
