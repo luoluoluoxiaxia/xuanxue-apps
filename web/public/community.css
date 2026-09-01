@@ -408,6 +408,7 @@ body[data-screen="landing"] .post-preview-dialog {
 .button-reset { cursor: pointer; }
 
 /* 卦帖详情 */
+.post-detail-page { --post-reading-width: 860px; }
 .post-detail-page .post-shell {
   width: min(980px, calc(100% - 36px));
   padding: 28px 0 54px;
@@ -422,7 +423,11 @@ body[data-screen="landing"] .post-preview-dialog {
 }
 .post-detail-grid { display: block; }
 .post-copy-panel { min-width: 0; background: var(--surface); }
-.public-post-head { padding: 30px clamp(26px, 3.2vw, 46px) 28px; }
+.public-post-head {
+  width: min(var(--post-reading-width), 100%);
+  margin: 0 auto;
+  padding: 30px 0 28px;
+}
 .post-head-copy { min-width: 0; }
 .post-back { display: inline-flex; margin-bottom: 22px; color: var(--muted-strong); font-size: 11px; font-weight: 600; }
 .post-back:hover { color: var(--accent); }
@@ -461,10 +466,10 @@ body[data-screen="landing"] .post-preview-dialog {
 /* 卦象与正文属于同一条解读阅读流 */
 .post-oracle-panel {
   box-sizing: border-box;
-  width: min(760px, calc(100% - 52px));
+  width: min(var(--post-reading-width), 100%);
   min-width: 0;
-  margin: 0 auto 30px;
-  padding: 20px 22px 22px;
+  margin: 0 auto 22px;
+  padding: 20px 0 22px;
   color: var(--text);
   background: transparent;
   border: 0;
@@ -582,7 +587,12 @@ body[data-screen="landing"] .post-preview-dialog {
 .yao-ledger-row.is-moving .yao-role { color: var(--accent-dark); }
 
 .reading-section,
-.comments-section { padding: 30px clamp(26px, 3.2vw, 46px) 36px; border-top: 1px solid var(--line); }
+.comments-section {
+  width: min(var(--post-reading-width), 100%);
+  margin: 0 auto;
+  padding: 30px 0 36px;
+  border-top: 1px solid var(--line);
+}
 .section-title-row { position: relative; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 23px; }
 .section-title-row > div { display: flex; align-items: flex-start; gap: 10px; }
 .section-title-row h2,
@@ -675,6 +685,20 @@ body[data-screen="landing"] .post-preview-dialog {
   border-bottom: 1px solid var(--line);
   text-align: center;
   font-size: 11px;
+}
+.help-post-page .section-empty {
+  padding: 7px 0 21px;
+  border: 0;
+  text-align: left;
+}
+.help-post-page .comment-composer { margin-top: 0; }
+.help-post-page .comment-form { padding-top: 21px; }
+.help-post-page .comment-gate {
+  margin-top: 0;
+  padding: 19px 0 0;
+  background: transparent;
+  border-top: 1px solid var(--line);
+  border-radius: 0;
 }
 .sr-only {
   position: absolute !important;
@@ -1136,14 +1160,14 @@ body.share-card-open { overflow: hidden; }
   .community-footer { align-items: flex-start; padding: 16px 15px; flex-direction: column; gap: 5px; line-height: 1.6; }
   .post-detail-page .post-shell { width: 100%; padding: 0; }
   .public-post { border: 0; border-radius: 0; box-shadow: none; }
-  .post-oracle-panel { width: calc(100% - 38px); margin: 0 auto 24px; padding: 16px 14px 14px; border-radius: 0; }
+  .post-oracle-panel { width: 100%; margin: 0 auto 16px; padding: 16px 19px 14px; border-radius: 0; }
   .gua-board { grid-template-columns: 1fr; grid-template-rows: auto; gap: 8px; }
   .gua-pair { grid-column: 1; grid-row: 1; width: 100%; margin: 0; gap: 16px; }
   .oracle-facts { grid-column: 1; grid-row: 2; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 0; }
   .yao-ledger { grid-column: 1; grid-row: 3; }
   .public-post-head,
   .reading-section,
-  .comments-section { padding-right: 19px; padding-left: 19px; }
+  .comments-section { width: 100%; padding-right: 19px; padding-left: 19px; }
   .story-update-form-head { flex-direction: column; }
   .story-update-form-head label { width: 100%; }
   .story-update-form-actions { align-items: stretch; flex-direction: column; }
@@ -1473,15 +1497,6 @@ body.share-card-open { overflow: hidden; }
 .follow-post-action{display:inline-flex!important;align-items:center;gap:7px}
 .follow-post-action b{min-width:15px;color:inherit;font-size:10px}
 .follow-post-action.is-following{color:var(--accent-dark)!important;background:var(--accent-soft)!important;border-color:transparent!important}
-.help-brief-section{
-  display:flex;align-items:center;justify-content:space-between;gap:24px;padding:26px 0;
-  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
-}
-.help-brief-section>div{display:grid;gap:7px}
-.help-brief-section span{color:var(--accent-dark);font-size:10px;font-weight:700;letter-spacing:.12em}
-.help-brief-section h2{margin:0;color:var(--text-strong);font-family:var(--serif);font-size:22px;letter-spacing:.03em}
-.help-brief-section p{max-width:700px;margin:0;color:var(--muted-strong);font-size:12px;line-height:1.75}
-.help-brief-section>a{display:inline-flex;min-height:42px;flex:0 0 auto;align-items:center;padding:0 18px;border-radius:9px}
 .bazi-public-board{display:grid;gap:20px;width:100%;padding:28px;background:#fff;border:1px solid var(--line);border-radius:16px}
 .bazi-public-heading{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .bazi-public-heading span{color:var(--text-strong);font-family:var(--serif);font-size:17px;font-weight:700;letter-spacing:.08em}
@@ -1510,8 +1525,6 @@ body.share-card-open { overflow: hidden; }
 .comment.is-accepted .comment-meta>span{font-weight:700}
 
 @media(max-width:720px){
-  .help-brief-section{align-items:flex-start;flex-direction:column;padding:21px 0}
-  .help-brief-section>a{width:100%;justify-content:center}
   .bazi-public-board{gap:15px;padding:17px 14px}
   .bazi-public-heading{align-items:flex-start;flex-direction:column;gap:5px}
   .bazi-public-pillars b{font-size:21px}
