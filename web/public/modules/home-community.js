@@ -57,6 +57,15 @@
         showScreen("credits", { preserveEntryLocation: true, focusPage: true });
         return;
       }
+      if (query.get("view") === "archives") {
+        showScreen("archives", { preserveEntryLocation: true, focusPage: true });
+        Account?.ready().then(account => {
+          if (account?.authenticated) openProfileLibrary({ includeCurrent: !!lastPayload, preserveEntryLocation: true });
+          else Account.requireLogin({ mode: "login", message: "登录后查看跨设备档案。" })
+            .then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload, preserveEntryLocation: true }); });
+        }).catch(() => {});
+        return;
+      }
       if (route?.screen === "dash" && lastPayload) {
         enterDashboard({ preserveEntryLocation: true, focusPage: true });
         return;
