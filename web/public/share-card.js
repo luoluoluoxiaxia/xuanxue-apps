@@ -548,12 +548,12 @@
       '  <button type="button" class="share-card-close" data-share-card-close aria-label="关闭分享图预览">×</button>',
       '  <header class="share-card-head">',
       '    <span>分享长图</span>',
-      '    <h2 id="share-card-title">问题与部分解答已排成图片</h2>',
-      '    <p data-share-card-instruction>手机可直接分享；不支持时，长按图片保存到相册。</p>',
+      '    <h2 id="share-card-title">生成分享图</h2>',
+      '    <p data-share-card-instruction>分享或长按保存。</p>',
       "  </header>",
       '  <div class="share-card-stage">',
-      '    <div class="share-card-loading" data-share-card-loading><i aria-hidden="true"></i><b>正在生成分享图…</b></div>',
-      '    <div class="share-card-error" data-share-card-error hidden><b>分享图暂时没有生成</b><p data-share-card-error-message>请稍后再试。</p></div>',
+      '    <div class="share-card-loading" data-share-card-loading><i aria-hidden="true"></i><b>生成中…</b></div>',
+      '    <div class="share-card-error" data-share-card-error hidden><b>生成失败</b><p data-share-card-error-message>请重试。</p></div>',
       '    <img data-share-card-image hidden alt="玄枢六爻卦帖分享长图">',
       "  </div>",
       '  <footer class="share-card-actions">',
@@ -699,24 +699,24 @@
       native.hidden = true;
       native.disabled = true;
       copy.style.gridColumn = "1 / -1";
-      instruction.textContent = "微信内不能直接保存长图，请点右上角“…”选择“在默认浏览器中打开”。";
-      hint.textContent = "打开系统浏览器后，再使用“分享图片”或“下载原图”。";
+      instruction.textContent = "微信内请用默认浏览器打开。";
+      hint.textContent = "打开后分享或下载原图。";
       return;
     }
     if (canNativeShare) {
       native.textContent = "分享图片";
       native.dataset.mode = "native";
-      instruction.textContent = "点击“分享图片”，可直接发送给好友或使用系统存图功能。";
+      instruction.textContent = "发送或保存。";
       hint.textContent = touchFirst
-        ? "手机端不会再自动下载到“文件”；请使用系统分享面板。"
-        : "可使用系统分享面板，也可以下载原图。";
+        ? "手机不会自动下载。使用系统分享。"
+        : "使用系统分享，或下载原图。";
       return;
     }
     if (touchFirst) {
       native.textContent = "长按上图保存";
       native.dataset.mode = "longpress";
-      instruction.textContent = "当前浏览器不能直接分享图片，请长按图片保存到相册。";
-      hint.textContent = "请长按上方图片，在系统菜单中选择保存或分享。";
+      instruction.textContent = "长按图片保存。";
+      hint.textContent = "长按后选择保存或分享。";
       return;
     }
     native.dataset.mode = "unavailable";
@@ -779,12 +779,12 @@
     save.setAttribute("aria-disabled", "true");
     host.querySelector(".share-card-stage").scrollTop = 0;
     host.querySelector("[data-share-card-instruction]").textContent = wechat
-      ? "微信内请使用系统浏览器保存分享图。"
-      : "手机可直接分享；不支持时，长按图片保存到相册。";
+      ? "微信内请用默认浏览器打开。"
+      : "分享或长按保存。";
     host.querySelector("[data-share-card-hint]").textContent = wechat
-      ? "生成后请点右上角“…”选择“在默认浏览器中打开”。"
+      ? "点右上角“…”并选择“在默认浏览器中打开”。"
       : touchFirst
-        ? "生成后可直接分享；若当前浏览器不支持，请长按图片。"
+        ? "不支持分享时长按图片。"
         : "图片包含公开问题、部分 AI 解答与卦象。";
 
     if (!host.open) host.showModal();

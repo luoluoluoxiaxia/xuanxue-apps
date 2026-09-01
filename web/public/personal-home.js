@@ -116,14 +116,14 @@
     if (payload.profile_state === "no_profile") {
       node.innerHTML = `<span>观象台</span>
         <h2>先建立一张本人命盘</h2>
-        <p>完成八字排盘并设为默认后，今日宜忌、本月宜忌、颜色与手镯材质会出现在这里。</p>
+        <p>设为默认命盘后显示今日、本月、颜色与手镯提示。</p>
         <button type="button" class="ph-primary" data-ph-create-default>去排八字</button>`;
       return;
     }
     if (payload.profile_state === "choose_default") {
       node.innerHTML = `<span>观象台</span>
         <h2>选择一张默认命盘</h2>
-        <p>默认命盘只决定观象台依据哪张盘，其他档案都会保留。初次设置后会自动准备，稍后刷新即可。</p>
+        <p>仅影响观象台，其他档案保留。设置后开始准备内容。</p>
         ${profileChoices(payload)}`;
       return;
     }
@@ -132,15 +132,15 @@
     if (generation.state === "paused") {
       node.innerHTML = `<span>观象台</span>
         <h2>今日与本月尚未更新</h2>
-        <p>${escapeHtml(generation.message || "本次未自动生成，需要时点一下即可更新。")}</p>
+        <p>${escapeHtml(generation.message || "未自动生成，按需更新。")}</p>
         <button type="button" class="ph-primary" data-ph-refresh>更新今日与本月</button>
         <em>点击后才开始准备，不消耗 AI 回答积分。</em>`;
       return;
     }
     if (generation.state === "failed") {
       node.innerHTML = `<span>观象台</span>
-        <h2>这次没有生成成功</h2>
-        <p>${escapeHtml(generation.message || "内容暂时没有准备成功。")}</p>
+        <h2>本次生成失败</h2>
+        <p>${escapeHtml(generation.message || "内容准备失败。")}</p>
         <button type="button" class="ph-primary" data-ph-refresh>重新生成</button>`;
       return;
     }
@@ -148,7 +148,7 @@
       <i class="ph-preparing-mark" aria-hidden="true"></i>
       <h2>正在准备今日与本月</h2>
       <p>${escapeHtml(generation.message || "正在根据默认命盘准备内容。")}</p>
-      <em>可以先离开，完成后会保留在这里。</em>`;
+      <em>完成后自动保存。</em>`;
   }
 
   function renderList(selector, values) {
@@ -354,9 +354,9 @@
       const payload = await readJson(response);
       state.payload = payload;
       renderReady(payload);
-      toast("已经开始准备，完成后会保留在这里");
+      toast("准备中；完成后自动保存。");
     } catch (reason) {
-      toast(reason?.message || "暂时没有开始准备", "warn");
+      toast(reason?.message || "未开始准备", "warn");
       renderReady(state.payload || { profile_state: "ready", generation: { state: "paused" } });
     }
   }
@@ -426,7 +426,7 @@
         daily: {},
         month,
       });
-      toast("本月内容已经开始重新生成");
+      toast("本月内容重新生成中");
     } catch (reason) {
       toast(reason?.message || "本月内容准备失败", "warn");
     } finally {
@@ -453,7 +453,7 @@
         daily,
         month: {},
       });
-      toast("今日宜忌已经开始重新生成");
+      toast("今日宜忌重新生成中");
     } catch (reason) {
       toast(reason?.message || "今日宜忌生成失败", "warn");
     } finally {
@@ -465,7 +465,7 @@
   async function openDetailed(options = {}) {
     const loggedIn = await Account.requireLogin({
       mode: "login",
-      message: "登录后可用本人命盘与六爻一起详断这件事。",
+      message: "登录后使用命盘与六爻详断。",
     });
     if (!loggedIn) return false;
     const payload = await load({ quiet: true }).catch(() => null);
@@ -482,7 +482,7 @@
     const quota = payload.private_quota || {};
     if (!quota.can_start_answer) {
       toast("今日免费积分与充值积分已用完；明日北京时间 0 点刷新，或充值后继续", "warn");
-      Account.open("topup", "可用积分已经用完。充值到账后，可以继续进入一事详断。");
+      Account.open("topup", "积分已用完。充值后继续一事详断。");
       return false;
     }
     document.dispatchEvent(new CustomEvent("xuanshu:startdetailed", {

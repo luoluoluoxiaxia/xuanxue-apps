@@ -211,7 +211,7 @@
     <main id="personal-workbench" class="personal-workbench" aria-label="登录用户观象台" tabindex="-1" hidden>
       <section class="ph-loading" data-ph-loading aria-live="polite">
         <span aria-hidden="true"></span>
-        <p>正在打开观象台</p>
+        <p>加载观象台…</p>
       </section>
 
       <section class="ph-ready" data-ph-ready hidden>
@@ -240,7 +240,7 @@
             <p>正在准备今日宜忌</p>
           </section>
           <section class="ph-period-error ph-daily-error" data-ph-daily-error hidden role="alert">
-            <p>今日宜忌暂时没有生成成功</p>
+            <p>今日宜忌生成失败</p>
             <button type="button" data-ph-retry-day>重新生成今日</button>
           </section>
         </section>
@@ -276,7 +276,7 @@
           </section>
 
           <section class="ph-period-error ph-month-error" data-ph-month-error hidden role="alert">
-            <p>本月内容暂时没有生成成功</p>
+            <p>本月内容生成失败</p>
             <button type="button" data-ph-retry-month>重新生成本月</button>
           </section>
         </section>
@@ -292,8 +292,8 @@
       </section>
 
       <section class="ph-error" data-ph-error hidden role="alert">
-        <h1>观象台暂时没有打开</h1>
-        <p data-ph-error-message>网络连接不稳定，请稍后重试。</p>
+        <h1>观象台加载失败</h1>
+        <p data-ph-error-message>请重试。</p>
         <button type="button" data-ph-retry-home>重新加载</button>
       </section>
     </main>
@@ -315,7 +315,7 @@
       <section class="home-observatory-page">
         <span class="home-observatory-kicker">观象台</span>
         <h1 id="home-page-title">你的命盘与近况</h1>
-        <p>登录后，在这里查看每日与本月提示。</p>
+        <p>登录后查看每日与本月提示。</p>
         <button type="button" class="home-observatory-login" data-account-button><span data-account-label>登录 / 注册</span></button>
       </section>
     </main>
@@ -327,7 +327,7 @@
           <button type="button" class="home-community-all" data-home-community-filter-toggle aria-expanded="false" aria-controls="home-community-filters">分类筛选 <span aria-hidden="true">⌄</span></button>
         </div>
         <h2 id="home-community-title">玄枢社区 <span>命盘与卦象的真实讨论</span></h2>
-        <p class="home-community-intro">看解读，或带着命盘向社区求助。</p>
+        <p class="home-community-intro">看解读，向社区求助。</p>
         <div id="home-community-filters" class="home-community-filters" aria-label="筛选社区帖子" hidden>
           <div class="home-community-filter-group" aria-label="排序方式">
             <span>排序</span>
@@ -367,8 +367,8 @@
           <div class="home-community-empty">
             <span class="home-community-empty-mark" aria-hidden="true">问</span>
             <span>
-              <b>还没有帖子</b>
-              <em>排盘后即可发起求助。</em>
+              <b>暂无帖子</b>
+              <em>排盘后可发起求助。</em>
               <a class="home-community-empty-action" href="/?start=liuyao&community=help">发起求助 <span aria-hidden="true">→</span></a>
             </span>
           </div>
@@ -574,7 +574,7 @@
           <div id="pillar-picker" class="pillar-picker" hidden></div>
           <div class="bm-section-label">生年甲子 · 干支六十年一轮回</div>
           <div id="jiazi-candidates" class="jiazi-candidates">填写年柱后显示近 120 年候选。</div>
-          <span class="bm-hint">大运流年按系统匹配到的出生时间起算；四柱不合阴阳会在提交前提示。</span>
+          <span class="bm-hint">大运流年按匹配出生时间起算；四柱不合阴阳时提示。</span>
         </div>
 
         <details id="birth-location-section" class="bm-optional birth-time-only">
@@ -592,7 +592,7 @@
               </label>
               <input type="hidden" id="f-location">
               <div id="f-location-preview" class="bm-location-preview" aria-live="polite">未选择出生地</div>
-              <span class="bm-hint">用于真太阳时校正；海外地区请继续选择城市，留空或未识别时不做经度修正。</span>
+              <span class="bm-hint">用于真太阳时校正。海外请选择城市；留空或未识别时不修正。</span>
             </div>
           </div>
         </details>
@@ -799,19 +799,19 @@
 
 <script src="chat-render.js?v=chat-1"></script>
 <script src="regions.js?v=20260629"></script>
-<script src="account.js?v=account-23"></script>
-<script src="share-card.js?v=share-card-5"></script>
-<script src="personal-home.js?v=personal-workbench-13"></script>
+<script src="account.js?v=account-24"></script>
+<script src="share-card.js?v=share-card-6"></script>
+<script src="personal-home.js?v=personal-workbench-14"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
-<script src="modules/chat-copy.js?v=web-modules-1"></script>
+<script src="modules/chat-copy.js?v=web-modules-2"></script>
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-8"></script>
-<script src="app.js?v=design-190"></script>
-<script src="modules/profile-workspace.js?v=web-modules-5"></script>
-<script src="modules/chat-workspace.js?v=web-modules-4"></script>
+<script src="modules/home-community.js?v=web-modules-9"></script>
+<script src="app.js?v=design-191"></script>
+<script src="modules/profile-workspace.js?v=web-modules-6"></script>
+<script src="modules/chat-workspace.js?v=web-modules-5"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
-<script src="community.js?v=community-27"></script>
+<script src="community.js?v=community-28"></script>
 </body>
 </html>

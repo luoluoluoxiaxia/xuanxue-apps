@@ -229,7 +229,7 @@
                 <h3>${esc(post.question || post.title || "一则社区帖子")}</h3>
                 ${oracleHtml}
                 ${baziHtml}
-                <p class="post-card-conclusion">${esc(isHelp ? (commentCount ? `已有 ${commentCount} 条回答，欢迎继续补充` : "还没有回答，来写下你的判断") : (post.answer_excerpt || "查看完整解答"))}</p>
+                <p class="post-card-conclusion">${esc(isHelp ? (commentCount ? `已有 ${commentCount} 条回答` : "暂无回答，写下判断") : (post.answer_excerpt || "查看完整解答"))}</p>
               </div>
             </a>
             <div class="post-card-footer">
@@ -308,22 +308,22 @@
         homeCommunityDone = !homeCommunityCursor;
         if (!homeCommunityLoadedCount) {
           renderHomeCommunityPlaceholder(
-            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "这个筛选下还没有帖子" : "还没有帖子",
+            homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular" ? "此筛选暂无帖子" : "暂无帖子",
             homeCommunityType || homeCommunitySystem || homeCommunityView !== "popular"
               ? "换个分类或排序看看。"
-              : "排盘后即可发起求助。",
+              : "排盘后可发起求助。",
           );
         }
         if (sentinel) sentinel.hidden = homeCommunityDone;
-        setHomeCommunityStatus(homeCommunityDone && homeCommunityLoadedCount ? "已经看到全部帖子" : "");
+        setHomeCommunityStatus(homeCommunityDone && homeCommunityLoadedCount ? "已加载全部" : "");
       } catch (_) {
         if (loadVersion !== homeCommunityLoadVersion) return;
         if (homeCommunityLoadedCount) {
           root.dataset.state = "ready";
         } else {
-          renderHomeCommunityPlaceholder("社区暂时没有加载出来", "稍后重试即可，不会离开首页。", "fallback");
+          renderHomeCommunityPlaceholder("社区加载失败", "请重试。", "fallback");
         }
-        setHomeCommunityStatus("暂时没有加载出来", { retry: true });
+        setHomeCommunityStatus("加载失败", { retry: true });
       } finally {
         if (loadVersion === homeCommunityLoadVersion) {
           homeCommunityLoading = false;

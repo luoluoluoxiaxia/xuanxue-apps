@@ -34,7 +34,7 @@ function renderProfileFab() {
   const profileFab = $("#profile-fab");
   if (profileFab) {
     profileFab.setAttribute("aria-label", "打开档案与历史");
-    profileFab.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看你的私人档案。" }).then(ok => { if (ok) openProfileHome(); });
+    profileFab.onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileHome(); });
   }
 }
 async function refreshProfileHistory() {
@@ -86,7 +86,7 @@ function openDetailedCaseOverview() {
       <i>×</i>
       <div><span>本次卦象</span><b>${esc((ben.name || "本卦") + bian)}</b><em>${esc(p.month_jian || "—")}月建 · ${esc(p.day_chen || "—")}日辰</em></div>
     </div>
-    <p>这是一条独立的一事详断记录。八字和卦象只作为同一结论的两类依据，后续追问仍留在本事项中。</p>
+    <p>独立的一事详断记录。八字与卦象共同支持结论，后续追问保留在本事项。</p>
     <div class="profile-card-actions detailed-case-actions">
       <button type="button" class="primary" data-detailed-continue>继续这件事</button>
       <button type="button" data-detailed-new>另起一事</button>
@@ -122,7 +122,7 @@ function openProfileHome() {
       return `<div class="profile-oracle-card bazi muted">
         <div class="profile-oracle-head"><span>八字 · 命盘</span><em>未载入</em></div>
         <div class="profile-oracle-name">尚无当前命盘</div>
-        <div class="profile-oracle-meta">登录后排盘会自动入档，解读与追问也会一并保存。</div>
+        <div class="profile-oracle-meta">登录后排盘、解读与追问自动入档。</div>
         <div class="profile-card-actions"><button type="button" data-profile-open-bazi>开始排盘</button></div>
       </div>`;
     }
@@ -160,7 +160,7 @@ function openProfileHome() {
       return `<div class="profile-oracle-card liuyao muted">
         <div class="profile-oracle-head"><span>六爻 · 卦档</span><em>未载入</em></div>
         <div class="profile-oracle-name">尚无当前卦盘</div>
-        <div class="profile-oracle-meta">登录后起卦会自动入档，同一条卦档标记为公开或私密。</div>
+        <div class="profile-oracle-meta">登录后起卦自动入档，并保留公开或私密状态。</div>
         <div class="profile-card-actions"><button type="button" data-profile-open-liuyao>凝神起卦</button></div>
       </div>`;
     }
@@ -181,7 +181,7 @@ function openProfileHome() {
     `<div class="profile-home profile-oracle-home">
       ${baziBody}
       ${liuyaoBody}
-      <div class="profile-archive-note">登录后完成排盘或起卦，会自动保存到当前账户；无需手动入档。</div>
+      <div class="profile-archive-note">登录后排盘或起卦自动入档。</div>
       <div class="profile-home-actions profile-utility-actions">
         <button type="button" data-profile-library>档案列表</button>
         <button type="button" data-profile-history ${hasProfile ? "" : "disabled"}>查看历史解读</button>
@@ -210,7 +210,7 @@ function openProfileHome() {
   openSaved.forEach(button => {
     button.onclick = async () => {
       button.disabled = true;
-      button.textContent = "正在打开…";
+      button.textContent = "打开中…";
       await openSavedProfile(Number(button.dataset.profileOpenSaved));
       if (button.isConnected) {
         button.disabled = false;
@@ -327,7 +327,7 @@ async function openProfileLibrary() {
     const archiveEmpty = visibleProfiles.length || currentCard
       ? ""
       : `<div class="profile-empty profile-empty-actionable">
-            <span>${profileArchiveTab === "bazi" ? "还没有八字档案。" : "还没有六爻档案。"}</span>
+            <span>${profileArchiveTab === "bazi" ? "暂无八字档案。" : "暂无六爻档案。"}</span>
             <div class="profile-empty-actions">
               ${profileArchiveTab === "bazi"
                 ? `<button type="button" class="primary" data-empty-open-bazi>去排八字</button>`
@@ -388,7 +388,7 @@ async function openProfileLibrary() {
     $("#profile-card").querySelectorAll("[data-open-profile]").forEach(b => {
       b.onclick = async () => {
         b.disabled = true;
-        b.textContent = "正在打开…";
+        b.textContent = "打开中…";
         await openSavedProfile(Number(b.dataset.openProfile));
         if (b.isConnected) {
           b.disabled = false;
@@ -430,10 +430,10 @@ async function openProfileLibrary() {
   } catch (e) {
     if (requestId !== profileLibraryRequestId) return;
     const retryBody = `<div class="profile-empty profile-empty-actionable">
-      <span>暂时没有读到档案，已保存的内容不会受到影响。</span>
+      <span>档案加载失败，已保存内容不受影响。</span>
       <div class="profile-empty-actions"><button type="button" class="primary" data-retry-profile-library>重新加载</button></div>
     </div>`;
-    openProfileModal("档案列表", "网络恢复后可以继续查看当前账户的全部档案。", retryBody, "[data-retry-profile-library]");
+    openProfileModal("档案列表", "网络恢复后重试。", retryBody, "[data-retry-profile-library]");
     const retry = $("#profile-card").querySelector("[data-retry-profile-library]");
     if (retry) retry.onclick = () => openProfileLibrary(options);
     toast("读取档案失败：" + humanError(String(e.message || e)), "warn");
@@ -515,11 +515,11 @@ async function openBaziProfileDetail(pid) {
         <p>新对话会沿用这份命盘，但不会带入旧对话内容。</p>
       </section>
       <div class="bazi-conversation-section-head">
-        <div><b>对话历史</b><span>按完整会话整理，不再把每次回复拆散</span></div>
+        <div><b>对话历史</b><span>按完整会话整理</span></div>
         <em>${conversations.length} 次对话</em>
       </div>
       ${conversationCards || `<div class="profile-empty profile-empty-actionable">
-        <span>这份命盘还没有对话。可以直接开启第一次解读。</span>
+        <span>暂无对话，开始首次解读。</span>
         <div class="profile-empty-actions"><button type="button" class="primary" data-new-bazi-conversation>开启新对话</button></div>
       </div>`}
     </div>`;
@@ -547,13 +547,13 @@ async function openBaziProfileDetail(pid) {
     });
   } catch (e) {
     const retryBody = `<div class="profile-empty profile-empty-actionable">
-      <span>暂时没有读到这份档案，对话记录不会受到影响。</span>
+      <span>档案加载失败，对话记录不受影响。</span>
       <div class="profile-empty-actions">
         <button type="button" data-profile-back-library>返回档案列表</button>
         <button type="button" class="primary" data-retry-bazi-profile>重新加载</button>
       </div>
     </div>`;
-    openProfileModal("八字档案", "网络恢复后可以继续查看完整对话。", retryBody, "[data-retry-bazi-profile]");
+    openProfileModal("八字档案", "网络恢复后重试。", retryBody, "[data-retry-bazi-profile]");
     const back = $("#profile-card").querySelector("[data-profile-back-library]");
     const retry = $("#profile-card").querySelector("[data-retry-bazi-profile]");
     if (back) back.onclick = () => openProfileLibrary({ tab: "bazi" });
@@ -796,13 +796,13 @@ async function openSavedProfile(pid, options = {}) {
       ? options.preservePersonalCase ? "详断对话" : "六爻对话"
       : "八字对话";
     toast(options.resumeSessionId
-      ? hasRunning ? "已恢复上次对话，解读正在继续" : `已恢复这段${conversationLabel}，可以继续追问`
+      ? hasRunning ? "已恢复上次对话，解读继续" : `已恢复这段${conversationLabel}，继续追问`
       : options.freshConversation
         ? `已用这份${loadedSystem === "liuyao" ? "卦档" : "八字"}开启新对话`
         : hasRunning
           ? "档案已打开，解读正在继续"
           : hasFailure
-            ? "档案已打开，上次解读可以重新尝试"
+            ? "档案已打开，可重试上次解读"
             : hasStopped
               ? "档案已打开，上次解读已停止"
           : "档案已打开");
@@ -814,7 +814,7 @@ async function openSavedProfile(pid, options = {}) {
 }
 
 async function openHistoryModal() {
-  if (!activeProfileId) { toast("当前记录尚未入档；登录后重新排盘或起卦即可自动保存", "warn"); return; }
+  if (!activeProfileId) { toast("尚未入档，请登录后重新排盘或起卦", "warn"); return; }
   pendingHistoryDeleteId = null;
   deletingHistoryId = null;
   try {
@@ -876,7 +876,7 @@ function renderHistoryModal(actionFocusSelector = "") {
       </div>
       <div class="history-answer">${esc(historyAnswerPreview(h.answer))}</div>
     </div>`).join("")}</div>` : `<div class="profile-empty profile-empty-actionable">
-      <span>这个档案还没有历史解读。点「开始解读」后，新的解读会自动归档到这里。</span>
+      <span>暂无历史解读。点击「开始解读」后自动归档。</span>
       <div class="profile-empty-actions"><button type="button" class="primary" data-history-return>返回当前对话</button></div>
     </div>`;
   const focusSelector = actionFocusSelector || (pendingHistoryDeleteId ? `[data-cancel-delete-history="${pendingHistoryDeleteId}"]` : "");
@@ -956,7 +956,7 @@ async function restoreHistory(id) {
   renderTabs();
   renderThread();
   focusHistoryMessage(id);
-  toast(alreadyInThread ? "已定位到这条历史解读" : "历史解读已打开，可以继续追问");
+  toast(alreadyInThread ? "已定位到这条历史解读" : "历史解读已打开，继续追问");
 }
 
 async function deleteHistory(id) {

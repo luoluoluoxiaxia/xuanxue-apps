@@ -53,7 +53,7 @@ function answerCreditsUnavailable() {
 
 function showAnswerCreditGate() {
   toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", "warn");
-  Account?.open?.("topup", "可用积分已经用完。充值到账后，可以继续当前这份命盘或卦象的 AI 解读。");
+  Account?.open?.("topup", "积分已用完。充值后继续当前解读。");
 }
 
 function startThread(key = state.activeTab) {
@@ -322,7 +322,7 @@ function stopCurrentInterpret() {
   if (!msg.completedAt) msg.completedAt = Date.now();
   if (!msg.body) msg.body = "已停止生成。";
   msg.body = msg.body.trim()
-    ? `${msg.body}\n\n已停止生成，可编辑刚才的问题后从这里分叉重发。`
+    ? `${msg.body}\n\n已停止生成。编辑问题后可分叉重发。`
     : "已停止生成。";
   msg.followups = [];
   state.streaming = !!activeStreamingMessage();
@@ -380,7 +380,7 @@ function editStoppedMessage(id) {
     input.disabled = false;
     input.focus();
   }
-  toast("已回到停止点，可以编辑后重新发送");
+  toast("已回到停止点，可编辑后重发");
 }
 
 function recoverFailedMessage(id, edit = false) {
@@ -561,11 +561,11 @@ function renderThread() {
     })() : "";
     const starterHtml = isLy ? "" : `<div class="starter-grid" aria-label="常见问题">
       ${BAZI_STARTER_QUESTIONS.map(item => `<button type="button" data-fill-starter="${esc(item.question)}">${esc(item.label)}</button>`).join("")}
-    </div><div class="starter-note">点一下只会把问题放进输入框，你仍可改成自己的说法。</div>`;
+    </div><div class="starter-note">仅填入输入框，可继续修改。</div>`;
     const emptyHtml = `<div class="chat-empty${isDetailed ? " detailed-empty" : isLy ? " liuyao-empty" : " bazi-empty"}">
         <div class="k">${isDetailed ? "八 字 × 卦 象 · 一 事 详 断" : isLy ? esc(t.label) : "同 一 命 盘 · 一 段 对 话"}</div>
         <div class="t">${isDetailed ? "复合依据已齐，开始详断" : isLy ? "一卦已成，开始断卦" : "你想先问哪件事？"}</div>
-        <div class="b">${isDetailed ? `本人命盘与 ${lyBrief} 已绑定到「${esc(liuyaoQuestionText())}」。结论会统一收束，不会把你带进单独的八字或六爻会话。` : isLy ? `${lyBrief}。点「开始解读」，围绕所问给出答案；也可直接在下方追问。` : "下面只是帮你起个头，不是不同的分析模式。后面想换到工作、感情或财运，直接在同一段对话里继续问。"}</div>
+        <div class="b">${isDetailed ? `命盘与 ${lyBrief} 已绑定到「${esc(liuyaoQuestionText())}」，将统一给出结论。` : isLy ? `${lyBrief}。开始解读，或直接追问。` : "从一个问题开始，之后在同一段对话继续问。"}</div>
         ${needsAck ? `<label class="chat-risk-ack">
           <input type="checkbox" data-risk-ack-tab="${esc(key)}">
           <span>${esc(RISK_ACK_TEXT)}</span>
@@ -661,7 +661,7 @@ function renderThread() {
         if (m.publicPost.status === "published") {
           html += `<div class="public-post-link"><span>已匿名公开</span><a href="${esc(m.publicPost.url)}" data-community-post data-post-slug="${esc(m.publicPost.slug)}">查看卦帖</a><button type="button" data-share-public-post="${esc(m.publicPost.slug)}">分享</button></div>`;
         } else if (m.streaming) {
-          html += `<div class="public-post-link pending"><span>完成后自动发布为公开卦帖</span></div>`;
+          html += `<div class="public-post-link pending"><span>完成后公开发布</span></div>`;
         }
       }
     }
@@ -757,7 +757,7 @@ function answerCreditsHtml(credits) {
   const paid = Number(credits.paid_spent || 0);
   const covered = Number(credits.platform_covered || 0);
   if (covered > 0) {
-    return `<div class="ai-credit-settlement covered" role="status"><b>本次回答已完整送达</b><span>可用积分已经扣到 0；本次不足部分由体验保护覆盖。</span></div>`;
+    return `<div class="ai-credit-settlement covered" role="status"><b>本次回答已完整送达</b><span>积分扣至 0，不足部分免扣。</span></div>`;
   }
   const sources = [daily ? `今日免费 ${daily}` : "", paid ? `充值积分 ${paid}` : ""].filter(Boolean).join(" + ");
   return `<div class="ai-credit-settlement"><b>本次消耗 ${required} 分</b><span>${sources || "未扣充值积分"} · 今日免费剩余 ${Number(credits.daily_remaining || 0)} 分 · 充值剩余 ${Number(credits.paid_balance_after || 0)} 分</span></div>`;
@@ -829,8 +829,8 @@ async function requestInterpret(key, opts) {
   const loggedIn = await Account?.requireLogin({
     mode: "register",
     message: state.system === "liuyao" && lastInput?.visibility === "private"
-      ? "这是一条私密问题，请先登录后继续解读。"
-      : "登录后即可使用每日免费积分开始 AI 解读。",
+      ? "私人问题，登录后继续解读。"
+      : "登录后使用每日免费积分解读。",
   });
   if (!loggedIn) return;
   if (answerCreditsUnavailable()) {
@@ -888,7 +888,7 @@ async function requestInterpret(key, opts) {
       // SESSION RECOVERY · 会话失效时保留问题，原地重新登录后自动续发（design-146）
       stopWaitingTicker(msg);
       msg.status = "reauth";
-      msg.waitText = "登录状态已失效，重新登录后继续这次解读。";
+      msg.waitText = "登录已失效，重新登录后继续。";
       msg.waitTextUpdatedAt = Date.now();
       refreshWaitingNode(msg);
       accountReauthInProgress = true;
@@ -898,13 +898,13 @@ async function requestInterpret(key, opts) {
         if (!msg.streaming || msg.stopped) return;
         relogged = await Account.requireLogin({
           mode: "login",
-          message: "登录状态已失效。重新登录后会自动继续刚才的问题，不需要重新输入。",
+          message: "登录已失效；重新登录后自动继续。",
         });
       } finally {
         accountReauthInProgress = false;
       }
       if (!msg.streaming || msg.stopped) return;
-      if (!relogged) throw new Error("登录状态已失效，问题已保留；重新登录后可继续解读。");
+      if (!relogged) throw new Error("登录已失效，问题已保留。");
       setWaitingStatus(msg, "analysis");
       startWaitingTicker(msg);
       resp = await postInterpret();
@@ -974,7 +974,7 @@ async function pollInterpretTask(msg) {
   } catch (_) {
     if (!msg.streaming) return;
     msg.pollFailures = (msg.pollFailures || 0) + 1;
-    setWaitingStatus(msg, "网络暂时中断，后台任务还在继续；正在重试。");
+    setWaitingStatus(msg, "网络中断，正在重试；解读仍在继续。");
     refreshWaitingNode(msg);
     scheduleTaskPoll(msg);
   }
