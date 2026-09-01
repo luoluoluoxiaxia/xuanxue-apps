@@ -123,7 +123,10 @@
 
     async function loadSiteStats() {
       try {
-        const resp = await fetch("/api/site-stats", { cache: "no-store" });
+        const resp = await fetch("/api/site-stats", {
+          cache: "no-store",
+          headers: { "X-Xuanshu-Visit": "web-v1" },
+        });
         if (!resp.ok) return;
         const data = await resp.json();
         const answered = data.answered || {};
