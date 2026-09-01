@@ -3648,6 +3648,7 @@ function bind() {
   $("#profile-fab").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   $("#top-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后查看私人档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   if ($("#hero-feedback-btn")) $("#hero-feedback-btn").onclick = openFeedback;
+  $$("[data-feedback-nav]").forEach(button => { button.onclick = openFeedback; });
   if ($("#hero-profile-btn")) $("#hero-profile-btn").onclick = () => Account.requireLogin({ mode: "login", message: "登录后可查看私密问题与档案。" }).then(ok => { if (ok) openProfileLibrary({ includeCurrent: !!lastPayload }); });
   $("#ask-chart-btn").onclick = () => { switchTab("解读"); fillComposerQuestion(DEFAULT_Q.topic.本命); };
   $("#ask-community-btn").onclick = openCommunityHelpDialog;
