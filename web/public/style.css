@@ -538,7 +538,10 @@ body[data-mode="advanced"] .basic-hint{display:none}
 .dayun-mechanics-head strong{display:flex;align-items:baseline;gap:8px;color:var(--text);font-family:var(--serif);font-size:19px;letter-spacing:.08em}
 .dayun-mechanics-head strong i{color:var(--weak);font-family:var(--mono);font-size:8px;font-style:normal;font-weight:400;letter-spacing:0}
 .dayun-mechanics-head>em{color:var(--weak);font-size:8px;font-style:normal;text-align:right;white-space:nowrap}
-.dayun-mechanics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+.dayun-mechanics-tier-title{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px}
+.dayun-mechanics-tier-title span{color:var(--gold-dim);font-size:9px;letter-spacing:.12em}
+.dayun-mechanics-tier-title em{color:var(--weak);font-size:8px;font-style:normal}
+.dayun-mechanics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
 .dayun-mechanic{display:flex;min-height:57px;box-sizing:border-box;flex-direction:column;justify-content:space-between;gap:8px;padding:8px;border:1px solid rgba(212,175,93,.12);background:rgba(255,255,255,.015)}
 .dayun-mechanic>span,.dayun-mechanics-group>span{color:var(--weak);font-size:8px;letter-spacing:.06em}
 .dayun-mechanic>b{color:var(--gold-dim);font-family:var(--serif);font-size:15px;letter-spacing:.06em}
@@ -550,6 +553,15 @@ body[data-mode="advanced"] .basic-hint{display:none}
 .dayun-mechanic-empty{color:var(--weak);font-size:10px}
 .dayun-mechanics-group{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;margin-top:10px}
 .dayun-mechanics-group>span{padding-top:5px}
+.dayun-mechanics-level{margin-top:10px;border-top:1px solid rgba(212,175,93,.14)}
+.dayun-mechanics-level summary{cursor:pointer;display:grid;grid-template-columns:1fr auto 12px;gap:8px;align-items:center;min-height:38px;color:var(--gold-dim);list-style:none}
+.dayun-mechanics-level summary::-webkit-details-marker{display:none}
+.dayun-mechanics-level summary::after{content:"⌄";color:var(--weak);font-size:12px;line-height:1;transform:rotate(0);transition:transform .16s ease}
+.dayun-mechanics-level[open]>summary::after{transform:rotate(180deg)}
+.dayun-mechanics-level summary span{font-size:10px;letter-spacing:.1em}
+.dayun-mechanics-level summary em{color:var(--weak);font-family:var(--mono);font-size:8px;font-style:normal}
+.dayun-mechanics-level-body{padding:0 0 2px}
+.dayun-mechanics-level-body .dayun-mechanics-group:first-child{margin-top:2px}
 .dayun-endpoints{display:grid;grid-template-columns:1fr;gap:6px}
 .dayun-endpoint{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 8px;padding:7px 8px;border-left:2px solid rgba(212,175,93,.26);background:rgba(212,175,93,.035)}
 .dayun-endpoint span{color:var(--weak);font-size:8px;white-space:nowrap}
@@ -1319,6 +1331,7 @@ body.modal-open .profile-fab,body.modal-open .feedback-fab{display:none}
   .advanced-stage{padding:0}
   .dayun-mechanics-group{grid-template-columns:1fr}
   .dayun-mechanics-group>span{padding-top:0}
+  .dayun-mechanics-level summary{min-height:44px}
   .rail-actions-m button{min-height:44px}
 
   /* 浮层全部底部抽屉化（盖过看盘抽屉） */
@@ -4049,12 +4062,18 @@ body[data-screen="dash"] .dayun-mechanics-head span{color:var(--shell-accent-dar
 body[data-screen="dash"] .dayun-mechanics-head strong{color:var(--shell-text-strong)}
 body[data-screen="dash"] .dayun-mechanics-head strong i,
 body[data-screen="dash"] .dayun-mechanics-head>em,
+body[data-screen="dash"] .dayun-mechanics-tier-title em,
 body[data-screen="dash"] .dayun-mechanic>span,
 body[data-screen="dash"] .dayun-mechanics-group>span,
 body[data-screen="dash"] .dayun-hidden-stem em,
 body[data-screen="dash"] .dayun-endpoint span,
 body[data-screen="dash"] .dayun-endpoint em{color:var(--shell-weak)}
 body[data-screen="dash"] .dayun-mechanic{background:#fff;border-color:var(--shell-line);border-radius:9px}
+body[data-screen="dash"] .dayun-mechanics-tier-title span,
+body[data-screen="dash"] .dayun-mechanics-level summary{color:var(--shell-text-strong)}
+body[data-screen="dash"] .dayun-mechanics-level{border-color:var(--shell-line)}
+body[data-screen="dash"] .dayun-mechanics-level summary em,
+body[data-screen="dash"] .dayun-mechanics-level summary::after{color:var(--shell-weak)}
 body[data-screen="dash"] .dayun-mechanic>b,
 body[data-screen="dash"] .dayun-hidden-stem b{color:var(--shell-text-strong)}
 body[data-screen="dash"] .dayun-endpoint{background:#fff;border-color:rgba(255,36,66,.3);border-radius:0 8px 8px 0}

@@ -142,8 +142,18 @@ for (const field of [
 ]) {
   if (!dayunMechanics.includes(field)) fail(`advanced DaYun mechanics missing ${field}`);
 }
-if (!app.includes("DayunMechanics.markup(step)")) {
+if (!app.includes("DayunMechanics.markup(step,")) {
   fail("advanced DaYun mechanics are not connected to the selected step");
+}
+for (const marker of [
+  'data-dayun-mechanics-level="relations"',
+  'data-dayun-mechanics-level="endpoints"',
+  "relationsOpen",
+  "endpointsOpen",
+]) {
+  if (!dayunMechanics.includes(marker) && !app.includes(marker)) {
+    fail(`advanced DaYun mechanics hierarchy missing ${marker}`);
+  }
 }
 
 const account = readFileSync(join(publicDir, "account.js"), "utf8");
