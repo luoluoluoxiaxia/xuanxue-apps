@@ -43,6 +43,7 @@ const required = [
   "modules/core.js",
   "modules/chat-copy.js",
   "modules/chart-domain.js",
+  "modules/dayun-mechanics.js",
   "modules/location-picker.js",
   "modules/modal-manager.js",
   "modules/home-community.js",
@@ -92,6 +93,7 @@ const expectedOrder = [
   "modules/core.js",
   "modules/chat-copy.js",
   "modules/chart-domain.js",
+  "modules/dayun-mechanics.js",
   "modules/location-picker.js",
   "modules/modal-manager.js",
   "modules/home-community.js",
@@ -126,6 +128,22 @@ if (!app.includes("const DETAILED_PUBLIC_ENTRY_ENABLED = false;")) {
 }
 if (!app.includes('"X-Xuanshu-Interaction": "same-origin-v1"')) {
   fail("feedback submissions must carry same-origin interaction proof");
+}
+const dayunMechanics = readFileSync(join(publicDir, "modules", "dayun-mechanics.js"), "utf8");
+for (const field of [
+  "branch_hidden_stems",
+  "day_master_stage",
+  "na_yin",
+  "pillar_xun_kong",
+  "in_natal_xun_kong",
+  "shensha",
+  "relations_to_natal",
+  "relations_to_natal_endpoints",
+]) {
+  if (!dayunMechanics.includes(field)) fail(`advanced DaYun mechanics missing ${field}`);
+}
+if (!app.includes("DayunMechanics.markup(step)")) {
+  fail("advanced DaYun mechanics are not connected to the selected step");
 }
 
 const account = readFileSync(join(publicDir, "account.js"), "utf8");
