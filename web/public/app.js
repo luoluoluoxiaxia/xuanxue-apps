@@ -1518,8 +1518,6 @@ async function openBirthModal(options = {}) {
   birthEntryFrom = openingFromDashboard && !options?.fresh ? "work" : "landing";
   birthEditingCurrent = editingCurrentBazi;
   birthEditingProfileId = editingCurrentBazi && activeProfileId ? Number(activeProfileId) : null;
-  const back = $("#birth-close");
-  if (back) back.textContent = birthEntryFrom === "work" ? "← 返回解读" : "← 返回观象台";
   clearBirthError();
   if (birthEditingCurrent) populateBirthForm(lastInput);
   else resetBirthForm();
@@ -1879,8 +1877,6 @@ function openCastModal(opts = {}) {
   const historyMode = opts?.historyMode === "replace" ? "replace" : "push";
   closeChartDrawerNow();
   castEntryFrom = state.screen === "dash" ? "work" : "landing";
-  const back = $("#cast-close");
-  if (back) back.textContent = castEntryFrom === "work" ? "← 返回解读" : "← 返回观象台";
   clearCastError();
   /* 重新起卦保留原卦，弃卦需显式点「重新起卦」；从首页进入则起新卦 */
   if (opts.fresh || castEntryFrom === "landing") resetClientCast();
@@ -3657,7 +3653,6 @@ function bind() {
       showScreen("landing", { historyMode: "push", focusPage: true });
     };
   });
-  $("#birth-close").onclick = closeBirthModal;
   $("#birth-form").addEventListener("submit", submitBirth);
   $("#birth-form").addEventListener("input", clearBirthError);
   $("#f-input-mode").addEventListener("change", syncBirthInputMode);
@@ -3697,7 +3692,6 @@ function bind() {
   syncBirthInputMode();
 
   // 六爻起卦
-  if ($("#cast-close")) $("#cast-close").onclick = closeCastModal;
   if ($("#cast-close-x")) $("#cast-close-x").onclick = closeCastModal;
   if ($("#cast-form")) $("#cast-form").addEventListener("submit", submitCast);
   initCastModal();
@@ -3883,8 +3877,6 @@ async function init() {
   }
   // DIRECT ENTRY FIRST PAINT · 刷新排盘/起卦地址时，先画目标页，不等账户请求后再从首页跳转。
   if (directEntryRequested) {
-    const entryBack = start === "bazi" ? $("#birth-close") : $("#cast-close");
-    if (entryBack) entryBack.textContent = "← 返回观象台";
     showScreen(start === "bazi" ? "birth" : "cast", { preserveEntryLocation: true });
   } else if (creditsRequested) {
     showScreen("credits", { preserveEntryLocation: true });
