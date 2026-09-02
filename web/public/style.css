@@ -531,6 +531,31 @@ body[data-mode="advanced"] .basic-hint{display:none}
 .adv-label span{letter-spacing:.02em;color:var(--weak)}
 .rel-chips{display:flex;flex-wrap:wrap;gap:6px}
 .rel-chip{border:1px solid rgba(212,175,93,.18);background:rgba(212,175,93,.05);color:var(--gold-dim);font-size:11px;padding:4px 8px;border-radius:2px}
+.dayun-mechanics{margin:2px 0 16px;padding:12px;border:1px solid rgba(212,175,93,.18);background:rgba(255,255,255,.02)}
+.dayun-mechanics-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:10px;border-bottom:1px solid rgba(212,175,93,.12)}
+.dayun-mechanics-head>div{display:flex;min-width:0;flex-direction:column;gap:5px}
+.dayun-mechanics-head span{color:var(--gold-dim);font-size:9px;letter-spacing:.18em}
+.dayun-mechanics-head strong{display:flex;align-items:baseline;gap:8px;color:var(--text);font-family:var(--serif);font-size:19px;letter-spacing:.08em}
+.dayun-mechanics-head strong i{color:var(--weak);font-family:var(--mono);font-size:8px;font-style:normal;font-weight:400;letter-spacing:0}
+.dayun-mechanics-head>em{color:var(--weak);font-size:8px;font-style:normal;text-align:right;white-space:nowrap}
+.dayun-mechanics-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:10px}
+.dayun-mechanic{display:flex;min-height:57px;box-sizing:border-box;flex-direction:column;justify-content:space-between;gap:8px;padding:8px;border:1px solid rgba(212,175,93,.12);background:rgba(255,255,255,.015)}
+.dayun-mechanic>span,.dayun-mechanics-group>span{color:var(--weak);font-size:8px;letter-spacing:.06em}
+.dayun-mechanic>b{color:var(--gold-dim);font-family:var(--serif);font-size:15px;letter-spacing:.06em}
+.dayun-mechanic.hidden-stems{grid-column:1/-1}
+.dayun-mechanic.hidden-stems>div{display:flex;flex-wrap:wrap;gap:5px}
+.dayun-hidden-stem{display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+.dayun-hidden-stem b{color:var(--text);font-family:var(--serif);font-size:14px}
+.dayun-hidden-stem em{color:var(--weak);font-size:8px;font-style:normal}
+.dayun-mechanic-empty{color:var(--weak);font-size:10px}
+.dayun-mechanics-group{display:grid;grid-template-columns:76px minmax(0,1fr);gap:8px;align-items:start;margin-top:10px}
+.dayun-mechanics-group>span{padding-top:5px}
+.dayun-endpoints{display:grid;grid-template-columns:1fr;gap:6px}
+.dayun-endpoint{display:grid;grid-template-columns:auto minmax(0,1fr);gap:3px 8px;padding:7px 8px;border-left:2px solid rgba(212,175,93,.26);background:rgba(212,175,93,.035)}
+.dayun-endpoint span{color:var(--weak);font-size:8px;white-space:nowrap}
+.dayun-endpoint b{overflow:hidden;color:var(--gold-dim);font-size:9px;font-weight:500;text-overflow:ellipsis;white-space:nowrap}
+.dayun-endpoint em{grid-column:1/-1;color:var(--weak);font-size:8px;font-style:normal;line-height:1.45}
+.dayun-endpoint.empty{grid-template-columns:1fr}
 .dayun-timeline{position:relative;padding:0 14px 14px}
 .dayun-timeline-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px}
 .dayun-timeline-head span{color:var(--gold-dim);font-size:11px;letter-spacing:.16em}
@@ -1292,6 +1317,8 @@ body.modal-open .profile-fab,body.modal-open .feedback-fab{display:none}
   .stage-rows.stage-rows-horizontal{padding:0 0 8px;margin:0}
   .dayun-timeline{padding:0 0 10px}
   .advanced-stage{padding:0}
+  .dayun-mechanics-group{grid-template-columns:1fr}
+  .dayun-mechanics-group>span{padding-top:0}
   .rail-actions-m button{min-height:44px}
 
   /* 浮层全部底部抽屉化（盖过看盘抽屉） */
@@ -4016,6 +4043,22 @@ body[data-screen="dash"] .sr-badge{
   border:0;
   border-radius:999px;
 }
+body[data-screen="dash"] .dayun-mechanics{background:#fafafa;border-color:var(--shell-line);border-radius:14px}
+body[data-screen="dash"] .dayun-mechanics-head{border-color:var(--shell-line)}
+body[data-screen="dash"] .dayun-mechanics-head span{color:var(--shell-accent-dark)}
+body[data-screen="dash"] .dayun-mechanics-head strong{color:var(--shell-text-strong)}
+body[data-screen="dash"] .dayun-mechanics-head strong i,
+body[data-screen="dash"] .dayun-mechanics-head>em,
+body[data-screen="dash"] .dayun-mechanic>span,
+body[data-screen="dash"] .dayun-mechanics-group>span,
+body[data-screen="dash"] .dayun-hidden-stem em,
+body[data-screen="dash"] .dayun-endpoint span,
+body[data-screen="dash"] .dayun-endpoint em{color:var(--shell-weak)}
+body[data-screen="dash"] .dayun-mechanic{background:#fff;border-color:var(--shell-line);border-radius:9px}
+body[data-screen="dash"] .dayun-mechanic>b,
+body[data-screen="dash"] .dayun-hidden-stem b{color:var(--shell-text-strong)}
+body[data-screen="dash"] .dayun-endpoint{background:#fff;border-color:rgba(255,36,66,.3);border-radius:0 8px 8px 0}
+body[data-screen="dash"] .dayun-endpoint b{color:var(--shell-muted)}
 body[data-screen="dash"] .stage-row::before{
   background:#fff;
   border-color:var(--shell-line-strong);
