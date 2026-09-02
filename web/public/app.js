@@ -1838,17 +1838,9 @@ function syncCastEntryMode() {
   if (privateVisibility) privateVisibility.disabled = false;
   if (combined && privateVisibility) privateVisibility.checked = true;
   if (visibility) visibility.hidden = combined;
-  const kicker = modal.querySelector(".cast-guide .entry-kicker");
-  const title = $("#cast-page-title");
-  const guide = modal.querySelector(".cast-guide > p");
   const cardTitle = modal.querySelector(".cast-head-row h2");
   const cardCopy = modal.querySelector(".cast-head-row p");
   const hint = $("#cast-question-hint");
-  if (kicker) kicker.textContent = combined ? "命 盘 与 卦 象 · 一 事 详 断" : "问 眼 前 · 六 爻 起 卦";
-  if (title) title.innerHTML = combined ? "命卦同参<br>只断一事" : "一事一卦<br>据问而断";
-  if (guide) guide.textContent = combined
-    ? "默认命盘已带入；完成六爻后开始私密解读。"
-    : "写下问题，完成六爻，再选择社区求助或 AI 解读。";
   if (cardTitle) cardTitle.textContent = combined ? "一事 · 详断" : "六爻 · 起卦";
   if (cardCopy) cardCopy.textContent = combined
     ? "默认命盘已带入，写下所问。"
