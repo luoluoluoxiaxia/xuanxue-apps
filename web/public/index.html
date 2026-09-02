@@ -82,7 +82,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700;900&family=Noto+Sans+SC:wght@300;400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="community.css?v=community-55">
 <link rel="stylesheet" href="account.css?v=account-15">
-<link rel="stylesheet" href="style.css?v=design-170">
+<link rel="stylesheet" href="style.css?v=design-171">
 <link rel="stylesheet" href="personal-home.css?v=personal-workbench-14">
 <link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-5">
 <link rel="stylesheet" href="profile-library.css?v=profile-library-6">
@@ -583,15 +583,9 @@
 </main>
 
 <!-- ============ BAZI ENTRY / 录入生辰 ============ -->
-<main id="birth-modal" class="entry-mask site-content-page" aria-labelledby="birth-page-title" tabindex="-1" hidden>
+<main id="birth-modal" class="entry-mask site-content-page" aria-labelledby="birth-form-title" tabindex="-1" hidden>
   <div class="birth-modal entry-shell">
     <div class="entry-layout">
-      <aside class="entry-guide">
-        <div class="entry-kicker">第 一 步 · 录 生 辰</div>
-        <h2 id="birth-page-title">录入生辰<br>以定四柱</h2>
-        <p>按出生时间或四柱排盘；生成后再选择 AI 解读或社区求助。</p>
-      </aside>
-
       <form id="birth-form" class="bm-body entry-card">
         <div class="entry-card-head">
           <div class="entry-card-head-row">
@@ -694,20 +688,15 @@
 </main>
 
 <!-- ============ LIUYAO ENTRY / 六爻起卦 ============ -->
-<main id="cast-modal" class="entry-mask site-content-page cast-entry-mask" aria-labelledby="cast-page-title" tabindex="-1" hidden>
+<main id="cast-modal" class="entry-mask site-content-page cast-entry-mask" aria-labelledby="cast-form-title" tabindex="-1" hidden>
   <div class="birth-modal entry-shell cast-entry">
     <div class="entry-layout cast-layout">
-      <aside class="entry-guide cast-guide">
-        <div class="entry-kicker">问 眼 前 · 六 爻 起 卦</div>
-        <h2 id="cast-page-title">一事一卦<br>据问而断</h2>
-        <p>写下问题，完成六爻，再选择社区求助或 AI 解读。</p>
-      </aside>
       <div class="cast-center">
         <form id="cast-form" class="cast-card" novalidate>
         <div class="cast-card-inner">
           <div class="cast-head-row">
             <div>
-              <h2>六爻 · 起卦</h2>
+              <h2 id="cast-form-title">六爻 · 起卦</h2>
               <p>写下一个具体问题，再完成六爻。</p>
             </div>
             <button type="button" id="cast-close-x" class="modal-close" aria-label="返回">×</button>
@@ -875,7 +864,7 @@
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
 <script src="modules/home-community.js?v=web-modules-17"></script>
-<script src="app.js?v=design-200"></script>
+<script src="app.js?v=design-201"></script>
 <script src="modules/profile-workspace.js?v=web-modules-12"></script>
 <script src="modules/chat-workspace.js?v=web-modules-6"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
