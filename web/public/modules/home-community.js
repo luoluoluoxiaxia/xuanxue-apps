@@ -75,8 +75,6 @@
       }
       if (start === "bazi") {
         birthEntryFrom = route?.fromScreen === "dash" ? "work" : "landing";
-        const back = $("#birth-close");
-        if (back) back.textContent = birthEntryFrom === "work" ? "← 返回解读" : "← 返回观象台";
         showScreen("birth", { preserveEntryLocation: true, focusPage: true });
         return;
       }
@@ -84,8 +82,6 @@
         pendingCombinedEntry = detailed;
         syncCastEntryMode();
         castEntryFrom = route?.fromScreen === "dash" ? "work" : "landing";
-        const back = $("#cast-close");
-        if (back) back.textContent = castEntryFrom === "work" ? "← 返回解读" : "← 返回观象台";
         showScreen("cast", { preserveEntryLocation: true, focusPage: true });
         Account?.ready().then(syncCastUI).catch(() => {});
         return;
