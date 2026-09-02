@@ -3642,6 +3642,9 @@ body[data-screen="dash"] .feedback-fab{
   margin:0 auto;
   padding:10px 30px 28px;
 }
+@media(min-width:1024px){
+  #birth-modal.site-content-page .entry-layout{width:min(885px,100%)}
+}
 .site-content-page .entry-steps{
   margin-top:30px;
   padding:0;
