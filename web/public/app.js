@@ -3196,6 +3196,10 @@ function renderAdvancedStage() {
   const p = lastPayload;
   const wrap = $("#advanced-stage");
   if (!p.da_yun) { wrap.innerHTML = ""; return; }
+  const mechanicsLevelState = {
+    relationsOpen: wrap.querySelector('[data-dayun-mechanics-level="relations"]')?.open ?? true,
+    endpointsOpen: wrap.querySelector('[data-dayun-mechanics-level="endpoints"]')?.open ?? false,
+  };
   const step = dayunStep($("#dayun-timeline")?.dataset.selectedDayun
     || p.da_yun.current || p.da_yun.next || p.da_yun.list?.[0]?.ganzhi);
   const cly = p.current_liu_yue;
@@ -3211,7 +3215,7 @@ function renderAdvancedStage() {
       <div class="mc-god">${m.stem_ten_god}</div></button>`).join("");
 
   wrap.innerHTML =
-    DayunMechanics.markup(step) +
+    DayunMechanics.markup(step, mechanicsLevelState) +
     `<div class="adv-label">当前流月引动 <span>${esc(cly?.pillar || "")}${cly ? " ↔ 本命 / 大运 / 流年" : ""}</span></div>
      <div class="rel-chips">${relChips}</div>
      <div class="adv-label mt">${p.liu_nian?.year || ""} 十二流月 <span>点一个去问</span></div>
