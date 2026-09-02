@@ -109,18 +109,22 @@ function profileIdentityHtml() {
   const user = Account?.snapshot()?.user || {};
   const nickname = String(user.nickname || "").trim();
   return `<section class="profile-identity" aria-labelledby="profile-identity-title">
-    <div class="profile-identity-copy">
-      <span>社区身份</span>
-      <b id="profile-identity-title">${esc(nickname || "默认匿名昵称")}</b>
-      <p>发帖和回复时显示，邮箱不会公开。</p>
+    <div class="profile-identity-view" data-profile-nickname-view>
+      <div class="profile-identity-copy">
+        <span>社区昵称</span>
+        <b id="profile-identity-title">${esc(nickname || "匿名昵称")}</b>
+        <p>发帖和回复时显示</p>
+      </div>
+      <button type="button" class="profile-nickname-edit" data-profile-nickname-edit aria-expanded="false" aria-controls="profile-nickname-editor">编辑</button>
     </div>
-    <form class="profile-nickname-form" data-profile-nickname-form>
-      <label for="profile-community-nickname">昵称</label>
+    <form id="profile-nickname-editor" class="profile-nickname-form" data-profile-nickname-form hidden>
+      <label class="sr-only-label" for="profile-community-nickname">社区昵称</label>
       <div>
         <input id="profile-community-nickname" name="nickname" value="${esc(nickname)}" maxlength="20" autocomplete="nickname" placeholder="输入昵称">
         <button type="submit">保存</button>
+        <button type="button" class="profile-nickname-cancel" data-profile-nickname-cancel>取消</button>
       </div>
-      <p data-profile-nickname-state role="status">2–20 个字符；留空恢复匿名昵称。</p>
+      <p data-profile-nickname-state role="status">2–20 个字符，留空改为匿名昵称</p>
     </form>
   </section>`;
 }
@@ -128,13 +132,44 @@ function profileIdentityHtml() {
 function bindProfileNicknameForm(options = {}) {
   const form = profilePageBody()?.querySelector("[data-profile-nickname-form]");
   if (!form) return;
+  const view = profilePageBody()?.querySelector("[data-profile-nickname-view]");
+  const edit = profilePageBody()?.querySelector("[data-profile-nickname-edit]");
+  const cancel = form.querySelector("[data-profile-nickname-cancel]");
   const input = form.elements.nickname;
   const submit = form.querySelector('button[type="submit"]');
   const status = form.querySelector("[data-profile-nickname-state]");
+  const originalNickname = () => String(Account?.snapshot()?.user?.nickname || "").trim();
+  const enterEdit = () => {
+    input.value = originalNickname();
+    status.textContent = "2–20 个字符，留空改为匿名昵称";
+    status.dataset.tone = "";
+    view.hidden = true;
+    form.hidden = false;
+    edit.setAttribute("aria-expanded", "true");
+    window.requestAnimationFrame(() => {
+      input.focus({ preventScroll: true });
+      input.select();
+    });
+  };
+  const leaveEdit = ({ restore = true, returnFocus = true } = {}) => {
+    if (restore) input.value = originalNickname();
+    form.hidden = true;
+    view.hidden = false;
+    edit.setAttribute("aria-expanded", "false");
+    if (returnFocus) window.requestAnimationFrame(() => edit.focus({ preventScroll: true }));
+  };
+  edit.addEventListener("click", enterEdit);
+  cancel.addEventListener("click", () => leaveEdit());
+  form.addEventListener("keydown", event => {
+    if (event.key !== "Escape" || submit.disabled) return;
+    event.preventDefault();
+    leaveEdit();
+  });
   form.addEventListener("submit", async event => {
     event.preventDefault();
     const nickname = String(input.value || "").trim();
     submit.disabled = true;
+    cancel.disabled = true;
     submit.textContent = "保存中…";
     status.textContent = "";
     status.dataset.tone = "";
@@ -150,21 +185,22 @@ function bindProfileNicknameForm(options = {}) {
       const account = Account.acceptResponse(payload);
       const savedNickname = String(account.user?.nickname || "");
       const title = profilePageBody()?.querySelector("#profile-identity-title");
-      if (title) title.textContent = savedNickname || "默认匿名昵称";
+      if (title) title.textContent = savedNickname || "匿名昵称";
       input.value = savedNickname;
       submit.disabled = false;
+      cancel.disabled = false;
       submit.textContent = "保存";
-      status.textContent = savedNickname ? "昵称已保存，社区已更新。" : "已恢复匿名昵称。";
-      status.dataset.tone = "success";
-      input.focus({ preventScroll: true });
+      leaveEdit({ restore: false });
       toast(savedNickname ? "昵称已保存" : "已恢复匿名昵称", "success");
     } catch (error) {
       submit.disabled = false;
+      cancel.disabled = false;
       submit.textContent = "保存";
       status.textContent = error.message || "昵称保存失败";
       status.dataset.tone = "error";
     }
   });
+  if (options.focusNickname) enterEdit();
 }
 
 function openDetailedCaseOverview() {
@@ -381,14 +417,16 @@ async function openProfileLibrary() {
       const lyLine = [ben, bian && bian !== ben ? `→ ${bian}` : ""].filter(Boolean).join(" ");
       const pillars = isLy ? (lyLine || summary.question || "六爻卦盘") : (summary.pillars ? Object.values(summary.pillars).join(" ") : "");
       const fallbackName = isLy ? "未命名卦盘" : "未命名命盘";
-      const visibility = isLy ? (p.visibility === "public" ? "公开" : "私密") : "仅自己";
-      const typeLabel = isLy ? "六爻" : "八字";
+      const visibility = isLy ? (p.visibility === "public" ? "公开" : "私密") : "";
       const taskState = archiveTaskState(p.task_status);
       const detail = isLy && summary.question ? `<div class="saved-pillars sub">${esc(summary.question)}</div>` : "";
       const confirming = Number(pendingProfileDeleteId) === Number(p.id);
       const publicSlug = String(p.public_post?.slug || "").trim();
       const defaultBadge = !isLy && p.is_default
         ? `<em class="saved-default-badge">默认命盘</em>`
+        : "";
+      const eyebrow = visibility || defaultBadge
+        ? `<div class="saved-eyebrow">${visibility ? `<em>${esc(visibility)}</em>` : ""}${defaultBadge}</div>`
         : "";
       const defaultAction = !isLy && !p.is_default
         ? `<button type="button" data-set-default-profile="${p.id}">设为默认</button>`
@@ -407,7 +445,7 @@ async function openProfileLibrary() {
       return `<div class="saved-item">
         <div class="saved-main">
           <div class="saved-copy">
-            <div class="saved-eyebrow"><span>${esc(typeLabel)}</span><em>${esc(visibility)}</em>${defaultBadge}</div>
+            ${eyebrow}
             <div class="saved-name">${esc(p.name || fallbackName)}</div>
             <div class="saved-meta">${esc(archiveDateLabel(p.created_at))} · ${p.history_count || 0} 条解读</div>
             ${taskState ? `<div class="saved-task-state ${taskState.tone}"><i></i>${esc(taskState.label)}</div>` : ""}
@@ -443,7 +481,7 @@ async function openProfileLibrary() {
       </div>
     </div>`;
     const focusSelector = options.focusNickname
-      ? "#profile-community-nickname"
+      ? ""
       : pendingProfileDeleteId
         ? `[data-cancel-delete-profile="${pendingProfileDeleteId}"]`
         : options.focusProfileAction

@@ -117,6 +117,8 @@ function readResumeCookie() {
 }
 function saveResumeCookie() {
   if (!activeChartId && !activeProfileId) return;
+  const updatedAt = Date.now();
+  touchWorkspaceActivity(currentWorkspaceKey(), updatedAt);
   const activeKey = tabOf(state.activeTab) ? state.activeTab : currentTabs()[0]?.key;
   if (activeKey) sessionIdForTab(activeKey);
   const sessionIds = {};
@@ -132,7 +134,7 @@ function saveResumeCookie() {
     personal_case_id: activePersonalCaseId || "",
     active_tab: state.activeTab || "",
     session_ids: sessionIds,
-    updated_at: Date.now(),
+    updated_at: updatedAt,
   }));
 }
 function restoreResumeSessionIds(resume) {
@@ -276,9 +278,14 @@ function restoreActiveTasks(items = []) {
     else scheduleTaskPoll(msg);
   });
 }
-async function restoreResumeFromCookie() {
+async function restoreResumeFromCookie({ expectedSystem = "", requireRecent = false } = {}) {
   const resume = readResumeCookie();
   if (!resume?.chart_id) return false;
+  if (expectedSystem && resume.system !== expectedSystem) return false;
+  if (requireRecent && !withinWorkspaceReopenWindow(resume.updated_at)) {
+    clearCookie(RESUME_COOKIE);
+    return false;
+  }
   const items = resumeSessionEntries(resume)
     .map(([key, sid]) => ({
       key,
@@ -576,7 +583,9 @@ function toggleBigText() {
 }
 
 /* ---------- 三工作区并存：命 / 卦 / 详断随切随回，生成任务继续在后台运行 ---------- */
+const WORKSPACE_REOPEN_WINDOW_MS = 10 * 60 * 1000;
 const sessionStore = { bazi: null, liuyao: null, detailed: null };
+const workspaceActivityAt = { bazi: 0, liuyao: 0, detailed: 0 };
 const accountProfileIndex = { bazi: null, liuyao: null };
 let accountProfileIndexRequest = null;
 let accountProfileIndexGeneration = 0;
@@ -610,6 +619,48 @@ function resetAccountProfileIndex() {
 
 function accountProfileFor(system) {
   return accountProfileIndex[system === "liuyao" ? "liuyao" : "bazi"] || null;
+}
+
+function activityTimestamp(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function withinWorkspaceReopenWindow(value, now = Date.now()) {
+  const timestamp = activityTimestamp(value);
+  const elapsed = now - timestamp;
+  return timestamp > 0 && elapsed >= 0 && elapsed <= WORKSPACE_REOPEN_WINDOW_MS;
+}
+
+function workspaceSnapshotHasActiveWork(snapshot) {
+  return Object.values(snapshot?.threads || {}).some(messages =>
+    (Array.isArray(messages) ? messages : []).some(message => message?.kind === "ai" && message.streaming),
+  );
+}
+
+function touchWorkspaceActivity(target = currentWorkspaceKey(), updatedAt = Date.now()) {
+  if (!Object.prototype.hasOwnProperty.call(workspaceActivityAt, target)) return;
+  workspaceActivityAt[target] = updatedAt;
+  if (sessionStore[target]) sessionStore[target].updatedAt = updatedAt;
+}
+
+function workspaceRecentlyActive(target, now = Date.now()) {
+  const snapshot = sessionStore[target];
+  if (workspaceSnapshotHasActiveWork(snapshot)) return true;
+  if (currentWorkspaceKey() === target && activeStreamingMessage()) return true;
+  const resume = readResumeCookie();
+  const resumeAt = resume?.system === target ? activityTimestamp(resume.updated_at) : 0;
+  const updatedAt = Math.max(
+    activityTimestamp(snapshot?.updatedAt),
+    activityTimestamp(workspaceActivityAt[target]),
+    resumeAt,
+  );
+  return withinWorkspaceReopenWindow(updatedAt, now);
+}
+
+function profileRecentlyCreated(profile, now = Date.now()) {
+  return withinWorkspaceReopenWindow(profile?.created_at, now);
 }
 
 async function refreshAccountProfileIndex({ force = false } = {}) {
@@ -652,9 +703,12 @@ function currentWorkspaceKey(screen = state.screen) {
 }
 function snapshotSession(workspaceScreen = state.screen) {
   const workspaceKey = currentWorkspaceKey(workspaceScreen);
+  const updatedAt = Date.now();
+  workspaceActivityAt[workspaceKey] = updatedAt;
   return {
     system: state.system,
     workspaceScreen,
+    updatedAt,
     lastInput, lastPayload, activeChartId, profileName, calendarLabel,
     activeProfileId, activeHistory,
     threads: state.threads, sessionIds: state.sessionIds,
@@ -685,6 +739,7 @@ function restoreSession(snap) {
   detailedBaziProfileRequest = null;
   pendingCombinedEntry = !!snap.pendingCombinedEntry;
   if (snap.castDraft) restoreCastDraft(snap.castDraft);
+  touchWorkspaceActivity(currentWorkspaceKey());
 }
 function stashCurrentWorkspace(workspaceScreen = state.screen) {
   if (!lastPayload && workspaceScreen !== "birth" && workspaceScreen !== "cast") return;
@@ -713,27 +768,40 @@ function restoreWorkspaceScreen(snap, target) {
 async function switchToSystem(target) {
   const current = currentWorkspaceKey();
   if (current === target && lastPayload) {
+    if (!workspaceRecentlyActive(target)) return false;
     enterDashboard({ historyMode: state.screen === "landing" ? "push" : "replace", focusPage: true });
     return true;
   }
   const snap = sessionStore[target];
   if (!snap) return false;
+  if (!workspaceRecentlyActive(target)) {
+    sessionStore[target] = null;
+    workspaceActivityAt[target] = 0;
+    return false;
+  }
   if (current !== target) stashCurrentWorkspace();
   return restoreWorkspaceScreen(snap, target);
 }
 
 async function openSystemWorkspace(target) {
   if (await switchToSystem(target)) return;
-  stashCurrentWorkspace();
+  if (await restoreResumeFromCookie({ expectedSystem: target, requireRecent: true })) {
+    enterDashboard({ historyMode: state.screen === "landing" ? "push" : "replace", focusPage: true });
+    return;
+  }
+  const current = currentWorkspaceKey();
+  if (current !== target) stashCurrentWorkspace();
+  sessionStore[target] = null;
+  workspaceActivityAt[target] = 0;
   const saved = accountProfileFor(target);
-  if (saved?.id) {
+  if (saved?.id && (["pending", "running"].includes(saved.task_status) || profileRecentlyCreated(saved))) {
     toast(target === "liuyao" ? "打开卦档…" : "打开命盘…");
     await openSavedProfile(Number(saved.id));
     return;
   }
   clearPersonalCaseContext();
   if (target === "liuyao") openCastModal({ clearQuestion: true, fresh: true });
-  else openBirthModal();
+  else openBirthModal({ fresh: true });
 }
 
 async function openDetailedWorkspace() {
@@ -1435,7 +1503,7 @@ function hideRitualOverlay() {
 async function openBirthModal(options = {}) {
   const historyMode = options?.historyMode === "replace" ? "replace" : "push";
   const openingFromDashboard = state.screen === "dash";
-  const editingCurrentBazi = openingFromDashboard && state.system === "bazi" && !!lastInput;
+  const editingCurrentBazi = !options?.fresh && openingFromDashboard && state.system === "bazi" && !!lastInput;
   if (editingCurrentBazi && activeStreamingMessage()) {
     toast("请先停止当前解读，再修改出生信息", "warn");
     return false;
@@ -1447,7 +1515,7 @@ async function openBirthModal(options = {}) {
   if (!loggedIn) return false;
   if (!options?.preservePersonalCase) clearPersonalCaseContext();
   await closeChartDrawer();
-  birthEntryFrom = openingFromDashboard ? "work" : "landing";
+  birthEntryFrom = openingFromDashboard && !options?.fresh ? "work" : "landing";
   birthEditingCurrent = editingCurrentBazi;
   birthEditingProfileId = editingCurrentBazi && activeProfileId ? Number(activeProfileId) : null;
   const back = $("#birth-close");
@@ -2294,23 +2362,19 @@ function renderSessionSwitcher(kind) {
   if (!bazi || !liuyao) return;
   const isBazi = kind === "bazi";
   const compact = !isDesktopLayout();
-  /* 对侧优先恢复本页会话；刷新后仍可直接打开账户里的最新档案。 */
-  const otherBazi = sessionStore.bazi;
-  const otherLiuyao = sessionStore.liuyao;
-  const savedBazi = accountProfileFor("bazi");
-  const savedLiuyao = accountProfileFor("liuyao");
+  /* 主导航只恢复十分钟内的会话；更早的内容统一从“我的档案”打开。 */
+  const otherBazi = workspaceRecentlyActive("bazi") ? sessionStore.bazi : null;
+  const otherLiuyao = workspaceRecentlyActive("liuyao") ? sessionStore.liuyao : null;
   const baziName = otherBazi?.lastPayload
     ? (otherBazi.profileName || "命盘")
-    : (savedBazi?.name || "");
+    : "";
   const baziEmpty = !isBazi && !baziName;
-  const liuyaoEmpty = isBazi && !otherLiuyao?.lastPayload && !savedLiuyao;
+  const liuyaoEmpty = isBazi && !otherLiuyao?.lastPayload;
   bazi.textContent = isBazi
     ? `命 · ${profileName || "命盘"}`
     : (baziName ? (compact ? "命" : `命 · ${baziName}`) : (compact ? "排盘" : "命 +"));
   const benName = isBazi
     ? (otherLiuyao?.lastPayload?.ben_gua?.name
-      || savedLiuyao?.summary?.ben_gua?.name
-      || savedLiuyao?.name
       || "")
     : (lastPayload?.ben_gua?.name || "六爻");
   const bianName = !isBazi && compact && (lastPayload?.dong_yao || []).length
@@ -2324,9 +2388,9 @@ function renderSessionSwitcher(kind) {
   liuyao.className = `session-btn${isBazi ? " add" : " active"}${liuyaoEmpty ? " empty" : ""}`;
   bazi.title = isBazi
     ? "当前命盘"
-    : (otherBazi?.lastPayload ? "回到命盘会话" : (savedBazi ? "打开账户命盘" : "排一张命盘"));
+    : (otherBazi?.lastPayload ? "回到最近命盘" : "排一张新命盘");
   liuyao.title = isBazi
-    ? (otherLiuyao?.lastPayload ? "回到卦盘会话" : (savedLiuyao ? "打开账户卦档" : "起一卦"))
+    ? (otherLiuyao?.lastPayload ? "回到最近一卦" : "重新起一卦")
     : "当前卦盘";
 }
 
@@ -2683,10 +2747,6 @@ function renderLiuYaoChart() {
       <div class="lfc-meta">${esc(ben.palace || "—")}宫${esc(ben.palace_label || "")} · 动爻 ${esc(dongText)}</div>
     </div>
     <div class="liuyao-board">${rows}</div>
-    <div class="liuyao-question-card">
-      <div>所 问</div>
-      <p>${esc(p.question || "未填写所问")}</p>
-    </div>
     <div class="liuyao-note">纳甲六亲依京房八宫 · 六神依日干起法</div>`;
   // 当前阶段卡 → 六爻关键摘要
   const dong = dongText;
@@ -3178,15 +3238,27 @@ function renderTabs() {
     <span>换个方向</span>
     ${BAZI_STARTER_QUESTIONS.map(item => `<button type="button" data-fill-kind="${esc(item.question)}">${esc(item.label)}</button>`).join("")}
   </div>` : "";
-  row.innerHTML = `<div class="conversation-title">
-    <b>${detailed ? "一事详断" : liuyao ? "六爻断卦" : "命理解读"}</b>
-    <span>${detailed ? "八字定人和阶段，卦象定此事；围绕同一件事继续追问" : liuyao ? "一卦只断一件事" : "同一命盘，直接问你关心的事"}</span>
-  </div>${kindButtons}`;
+  if (liuyao && !detailed) {
+    const p = lastPayload || {};
+    const ben = p.ben_gua?.name || "本卦";
+    const bian = (p.dong_yao || []).length ? ` → ${p.bian_gua?.name || "变卦"}` : "";
+    row.innerHTML = `<div class="liuyao-conversation-context" aria-label="本次所问与卦象">
+      <span>所问</span>
+      <b>${esc(liuyaoQuestionText())}</b>
+      <em>${esc(ben + bian)}</em>
+    </div>`;
+  } else {
+    row.innerHTML = `<div class="conversation-title">
+      <b>${detailed ? "一事详断" : "命理解读"}</b>
+      <span>${detailed ? "八字定人和阶段，卦象定此事；围绕同一件事继续追问" : "同一命盘，直接问你关心的事"}</span>
+    </div>${kindButtons}`;
+  }
   row.querySelectorAll("[data-fill-kind]").forEach(button => {
     button.onclick = () => fillComposerQuestion(button.dataset.fillKind);
   });
   const gloss = $("#gloss-tab-btn");
   if (gloss) {
+    gloss.hidden = false;
     if (detailed) {
       gloss.textContent = "八字 × 卦象同参";
       gloss.title = "本页使用本人命盘与本次卦象复合判断";
@@ -3194,11 +3266,9 @@ function renderTabs() {
       gloss.setAttribute("aria-disabled", "true");
       gloss.onclick = null;
     } else if (state.system === "liuyao") {
-      const q = liuyaoQuestionText();
-      gloss.textContent = q;
-      gloss.title = q;
-      gloss.classList.add("question-chip");
-      gloss.setAttribute("aria-disabled", "true");
+      gloss.hidden = true;
+      gloss.classList.remove("question-chip");
+      gloss.removeAttribute("aria-disabled");
       gloss.onclick = null;
     } else {
       gloss.textContent = "名词解释";
@@ -3841,7 +3911,10 @@ async function init() {
       if (opened) return;
     }
     if (dashboardRefreshRequested && !communityRequested && start !== "liuyao" && start !== "bazi") {
-      resumedWorkspace = await restoreResumeFromCookie();
+      resumedWorkspace = await restoreResumeFromCookie({
+        expectedSystem: dashboardNavSystem,
+        requireRecent: true,
+      });
     }
     if (!resumedWorkspace && !communityRequested && start !== "liuyao" && start !== "bazi" && !query.get("view")) {
       PersonalHome?.syncScreen("landing");
