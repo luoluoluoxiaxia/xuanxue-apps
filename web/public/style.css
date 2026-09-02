@@ -663,8 +663,6 @@ body[data-mode="advanced"] .basic-hint{display:none}
 .nc-mode-row-m{display:none;align-items:center;justify-content:space-between;gap:10px;padding:8px 14px 4px}
 .nc-mode-row-m>span{font-size:10px;color:var(--weak)}
 .chart-mask{position:fixed;inset:0;z-index:78;background:rgba(4,4,7,.75)}
-.composer-disclaimer-m{display:block;margin-top:8px;font-size:10.5px;color:var(--weak-2);text-align:center;letter-spacing:.04em}
-.composer-risk-ack:not([hidden])+.composer-disclaimer-m{display:none}
 .profile-bigtext-btn{
   cursor:pointer;text-align:center;border:1px solid rgba(212,175,93,.28);background:transparent;color:var(--gold-dim);
   font-size:12.5px;letter-spacing:.14em;padding:12px 0;border-radius:2px;
@@ -1075,9 +1073,6 @@ body.modal-open .profile-fab,body.modal-open .feedback-fab{display:none}
 .ly-summary-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed rgba(216,206,178,.14);font-size:13px}
 .ly-summary-row span{color:var(--weak)}
 .ly-summary-row b{color:var(--text);text-align:right}
-.liuyao-question-card{position:relative;margin-top:14px;border:1px solid rgba(212,175,93,.20);background:rgba(255,255,255,.02);padding:11px 14px}
-.liuyao-question-card div{font-size:10px;letter-spacing:.30em;color:var(--gold-dim);margin-bottom:4px}
-.liuyao-question-card p{margin:0;font-size:13.5px;color:var(--text);line-height:1.8}
 .liuyao-note{margin-top:10px;font-size:10.5px;color:var(--weak);line-height:1.7;text-align:center}
 [data-system="liuyao"] #wuxing-bar{display:none}
 
@@ -3579,7 +3574,7 @@ body[data-screen="dash"] .landing .hero::before{
 }
 body[data-screen="birth"] .landing .hero-footer,
 body[data-screen="cast"] .landing .hero-footer,
-body[data-screen="dash"] .landing .hero-footer{position:relative;z-index:50}
+body[data-screen="dash"] .landing .hero-footer{display:none}
 
 .site-content-page,
 body[data-screen="dash"] .dashboard{
@@ -4251,8 +4246,7 @@ body[data-screen="dash"] .btn-ghost-sm{
   border:1px solid var(--shell-line);
   border-radius:999px;
 }
-body[data-screen="dash"] .composer-risk-ack,
-body[data-screen="dash"] .composer-disclaimer-m{color:var(--shell-weak)}
+body[data-screen="dash"] .composer-risk-ack{color:var(--shell-weak)}
 
 /* 六爻盘面在浅色卡片上保持足够对比 */
 body[data-screen="dash"] .pillars-grid.is-liuyao::before{border-color:var(--shell-line);opacity:.55}
@@ -4291,13 +4285,6 @@ body[data-screen="dash"] .ly-tag{border-radius:999px}
 body[data-screen="dash"] .ly-tag.shi{color:#294a67;background:#dcecff}
 body[data-screen="dash"] .ly-tag.ying{color:#765820;background:#f7ebcc}
 body[data-screen="dash"] .ly-tag.kong{color:#64646b;background:#e8e8ea}
-body[data-screen="dash"] .liuyao-question-card{
-  background:var(--shell-subtle);
-  border:0;
-  border-radius:12px;
-}
-body[data-screen="dash"] .liuyao-question-card div{color:var(--shell-accent-dark);letter-spacing:.08em}
-body[data-screen="dash"] .liuyao-question-card p{color:var(--shell-text)}
 body[data-screen="dash"] .liuyao-note{color:var(--shell-weak)}
 
 /* ============================================================
@@ -4651,32 +4638,16 @@ body[data-workspace="detailed"] .detailed-empty{background:linear-gradient(145de
 
 /* DASHBOARD SIDEBAR SEAM · 桌面导航与命盘页面共用同一条起始边（design-156） */
 @media(min-width:1121px){
-  body[data-screen="birth"] .landing .hero-footer,
-  body[data-screen="cast"] .landing .hero-footer,
-  body[data-screen="dash"] .landing .hero-footer{
-    position:fixed;
-    right:0;
-    bottom:0;
-    left:184px;
-    z-index:50;
-    width:auto;
-    height:58px;
-    min-height:58px;
-    margin:0;
-  }
   .site-content-page,
   body[data-screen="dash"] .dashboard{
     top:0;
     right:0;
-    bottom:58px;
+    bottom:0;
     left:184px;
   }
 }
 
 @media(max-width:1120px){
-  body[data-screen="birth"] .landing .hero-footer,
-  body[data-screen="cast"] .landing .hero-footer,
-  body[data-screen="dash"] .landing .hero-footer{display:none}
   .site-content-page,
   body[data-screen="dash"] .dashboard{
     top:0;
@@ -5595,6 +5566,56 @@ body[data-screen="dash"] .conv-head{
   background:#fff;
   border-bottom:1px solid var(--shell-line);
 }
+body[data-screen="dash"][data-workspace="liuyao"] .conv-head-top{
+  height:auto;
+  min-height:86px;
+  gap:24px;
+  padding:14px 28px;
+}
+body[data-screen="dash"][data-workspace="liuyao"] .tab-row{
+  height:auto;
+  overflow:visible;
+}
+.liuyao-conversation-context{
+  display:grid;
+  min-width:0;
+  gap:3px;
+}
+.liuyao-conversation-context span{
+  color:var(--shell-accent-dark);
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.08em;
+}
+.liuyao-conversation-context b{
+  overflow-wrap:anywhere;
+  color:var(--shell-text-strong);
+  font-size:17px;
+  font-weight:720;
+  line-height:1.45;
+  white-space:normal;
+}
+.liuyao-conversation-context em{
+  color:var(--shell-muted);
+  font-family:var(--serif);
+  font-size:12px;
+  font-style:normal;
+  line-height:1.5;
+}
+@media(min-width:1024px){
+  body[data-screen="dash"][data-workspace="liuyao"] .dash-topbar{display:none}
+}
+@media(max-width:1023px){
+  body[data-screen="dash"][data-workspace="liuyao"] .dt-left{display:none}
+  body[data-screen="dash"][data-workspace="liuyao"] .dash-topbar-inner{justify-content:flex-end}
+  body[data-screen="dash"][data-workspace="liuyao"] .conv-head-top{
+    min-height:72px;
+    gap:10px;
+    padding:9px 12px;
+  }
+  .liuyao-conversation-context b{font-size:14px}
+  .liuyao-conversation-context em{font-size:10.5px}
+}
 body[data-screen="dash"] .chat-thread{background:#fff}
 body[data-screen="dash"] .chat-empty{
   width:min(680px,calc(100% - 40px));
@@ -5855,14 +5876,6 @@ body[data-screen="dash"] .ly-row:hover{background:var(--shell-subtle);border-col
 body[data-screen="dash"] .ly-row.moving{
   background:linear-gradient(90deg,var(--shell-accent-soft),transparent);
   border-color:var(--shell-line);
-}
-body[data-screen="dash"] .liuyao-question-card{
-  margin-top:14px;
-  padding:12px 0 0;
-  background:transparent;
-  border:0;
-  border-top:1px solid var(--shell-line);
-  border-radius:0;
 }
 @media(min-width:1024px){
   body[data-screen="dash"] .workspace{
