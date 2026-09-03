@@ -319,52 +319,17 @@ body.account-dialog-open {
 .account-code-field button:hover:not(:disabled) { border-color: #ff9dac; background: #ffe5ea; }
 .account-code-field button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
 .account-code-field button:disabled { cursor: default; opacity: .58; }
-.account-registration-code-group { position: relative; display: grid; gap: 7px; }
-.account-registration-code-group > label { color: #56565d; font: 500 12px/1.2 "Noto Sans SC", sans-serif; }
-.account-registration-code-field { display: grid; grid-template-columns: minmax(0, 1fr) 116px; gap: 8px; }
-.account-registration-code-field input { text-transform: uppercase; font-family: "Space Mono", monospace; letter-spacing: .04em; }
-.account-registration-code-field button {
-  border: 1px solid #ffd0d7;
-  border-radius: 11px;
-  background: var(--account-accent-soft);
+.account-password-reset-link {
+  justify-self: start;
+  border: 0;
+  background: transparent;
   color: var(--account-accent-strong);
   cursor: pointer;
-  padding: 0 10px;
-  font: 500 12px/1.2 "Noto Sans SC", sans-serif;
-  white-space: nowrap;
+  padding: 0;
+  font: 500 12px/1.4 "Noto Sans SC", sans-serif;
 }
-.account-registration-code-field button:hover:not(:disabled) { border-color: #ff9dac; background: #ffe5ea; }
-.account-registration-code-field button:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 2px; }
-.account-registration-code-field button:disabled { cursor: wait; opacity: .58; }
-.account-registration-code-popover {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 4px 12px;
-  margin-top: 3px;
-  padding: 12px 13px;
-  border: 1px solid #ffd2d9;
-  border-radius: 12px;
-  background: #fff9fa;
-  box-shadow: 0 12px 28px rgba(84, 25, 35, .1);
-}
-.account-registration-code-popover[hidden] { display: none; }
-.account-registration-code-popover::before {
-  content: "";
-  position: absolute;
-  top: -6px;
-  right: 52px;
-  width: 10px;
-  height: 10px;
-  transform: rotate(45deg);
-  border-top: 1px solid #ffd2d9;
-  border-left: 1px solid #ffd2d9;
-  background: #fff9fa;
-}
-.account-registration-code-popover span { color: var(--account-muted); font: 500 10px/1.3 "Noto Sans SC", sans-serif; }
-.account-registration-code-popover strong { grid-row: 2; color: var(--account-accent-strong); font: 700 16px/1.3 "Space Mono", monospace; letter-spacing: .04em; }
-.account-registration-code-popover em { grid-column: 2; grid-row: 1 / span 2; max-width: 150px; color: var(--account-muted); font: normal 10px/1.45 "Noto Sans SC", sans-serif; text-align: right; }
+.account-password-reset-link:hover { text-decoration: underline; }
+.account-password-reset-link:focus-visible { outline: 3px solid rgba(255, 36, 66, .18); outline-offset: 3px; }
 .account-form-hint,
 .account-privacy-note { margin: 0; color: var(--account-muted); font: 400 11px/1.6 "Noto Sans SC", sans-serif; }
 .account-code-status { margin: -6px 0 0; color: var(--account-success); font: 500 11px/1.5 "Noto Sans SC", sans-serif; }
@@ -887,9 +852,6 @@ body.account-dialog-open {
   .account-archive-copy > em { white-space: normal; }
   .account-quota-detail { grid-template-columns: 1fr 1fr; padding: 13px 0 0; border-top: 1px solid #ffd8de; border-left: 0; }
   .account-code-field { grid-template-columns: minmax(0, 1fr) 108px; }
-  .account-registration-code-field { grid-template-columns: minmax(0, 1fr) 108px; }
-  .account-registration-code-popover { grid-template-columns: 1fr; }
-  .account-registration-code-popover em { grid-column: 1; grid-row: 3; max-width: none; text-align: left; }
   .account-invite-prompt { bottom: 10px; gap: 10px; padding: 12px; }
   .account-invite-prompt em { display: none; }
   .account-invite-prompt > button:first-child { position: absolute; top: -9px; right: 2px; border-radius: 50%; background: #f0f0f2; }

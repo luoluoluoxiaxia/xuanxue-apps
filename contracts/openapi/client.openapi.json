@@ -2694,6 +2694,7 @@
       },
       "ClientInviteCode": {
         "additionalProperties": false,
+        "description": "旧客户端注册流程使用的无门槛兼容响应。",
         "properties": {
           "code": {
             "title": "Code",
@@ -4983,6 +4984,27 @@
         "title": "NotificationReadInput",
         "type": "object"
       },
+      "PasswordResetInput": {
+        "properties": {
+          "code": {
+            "default": "",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "password": {
+            "default": "",
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "title": "PasswordResetInput",
+        "type": "object"
+      },
       "ProfileCreate": {
         "properties": {
           "as_of": {
@@ -5272,11 +5294,6 @@
           "email": {
             "default": "",
             "title": "Email",
-            "type": "string"
-          },
-          "invite_code": {
-            "default": "",
-            "title": "Invite Code",
             "type": "string"
           },
           "password": {
@@ -5593,8 +5610,9 @@
     },
     "/api/auth/invite-code": {
       "get": {
-        "description": "给注册浮窗展示一个尚未使用的邀请码，不做预约。",
-        "operationId": "api_auth_invite_code_api_auth_invite_code_get",
+        "deprecated": true,
+        "description": "兼容旧客户端；该值不再代表注册资格，也不会被核销。",
+        "operationId": "api_auth_invite_code_compat_api_auth_invite_code_get",
         "responses": {
           "200": {
             "content": {
@@ -5607,7 +5625,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Api Auth Invite Code"
+        "summary": "Api Auth Invite Code Compat"
       }
     },
     "/api/auth/login": {
@@ -5682,6 +5700,45 @@
           }
         },
         "summary": "Api Auth Me"
+      }
+    },
+    "/api/auth/password/reset": {
+      "post": {
+        "description": "验证邮箱后设置一个用户知晓的新密码，并登录该账户。",
+        "operationId": "api_auth_password_reset_api_auth_password_reset_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientAccount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Auth Password Reset"
       }
     },
     "/api/auth/register": {

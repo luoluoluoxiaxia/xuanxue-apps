@@ -424,7 +424,9 @@
   }
 
   function codePurpose(mode) {
-    return mode === "register" ? "register" : "login";
+    if (mode === "register") return "register";
+    if (mode === "reset_password") return "password_reset";
+    return "login";
   }
 
   function syncCodeButton(form) {
@@ -459,22 +461,25 @@
   function renderAuth(mode, message = "", emailValue = "") {
     const isRegister = mode === "register";
     const isCodeLogin = mode === "login_code";
-    const usesCode = isRegister || isCodeLogin;
+    const isPasswordReset = mode === "reset_password";
+    const usesCode = isRegister || isCodeLogin || isPasswordReset;
     const privacyNote = isRegister
       ? "邮箱不会在社区展示。"
+      : isPasswordReset
+        ? "验证码 10 分钟内有效；重设后可使用新密码登录。"
       : isCodeLogin
         ? "验证码 10 分钟内有效。"
-        : "老账号首次登录请使用验证码。";
+        : "密码无法登录时，可以验证邮箱后重设密码。";
     body.innerHTML = `
       <div class="account-auth-head">
-        <h2 id="account-dialog-title">${isRegister ? "创建账户" : "登录玄枢"}</h2>
+        <h2 id="account-dialog-title">${isRegister ? "创建账户" : isPasswordReset ? "重设密码" : "登录玄枢"}</h2>
         ${message ? `<p class="account-context-note">${escapeHtml(message)}</p>` : ""}
       </div>
       <div class="account-tabs" role="tablist" aria-label="登录或注册">
         <button type="button" id="account-login-tab" role="tab" data-auth-mode="login_password" aria-controls="account-auth-panel" aria-selected="${!isRegister}" tabindex="${isRegister ? -1 : 0}">登录</button>
         <button type="button" id="account-register-tab" role="tab" data-auth-mode="register" aria-controls="account-auth-panel" aria-selected="${isRegister}" tabindex="${isRegister ? 0 : -1}">注册</button>
       </div>
-      ${isRegister ? "" : `
+      ${isRegister || isPasswordReset ? "" : `
         <div class="account-login-methods" role="group" aria-label="登录方式">
           <button type="button" data-login-method="login_password" aria-pressed="${!isCodeLogin}">密码登录</button>
           <button type="button" data-login-method="login_code" aria-pressed="${isCodeLogin}">验证码登录</button>
@@ -482,33 +487,23 @@
       <form id="account-auth-panel" class="account-auth-form" role="tabpanel" aria-labelledby="${isRegister ? "account-register-tab" : "account-login-tab"}" data-auth-form data-mode="${mode}">
         <label><span>邮箱</span><input type="email" name="email" autocomplete="email" required placeholder="name@example.com" value="${escapeHtml(emailValue)}"></label>
         ${isRegister ? `
-          <div class="account-registration-code-group">
-            <label for="account-registration-code-input"><span>邀请码</span></label>
-            <span class="account-registration-code-field">
-              <input id="account-registration-code-input" type="text" name="invite_code" autocomplete="off" autocapitalize="characters" pattern="XS-[A-HJ-NP-Z2-9]{4}-[A-HJ-NP-Z2-9]{4}" maxlength="12" required placeholder="XS-XXXX-XXXX">
-              <button type="button" data-registration-code-reveal aria-expanded="false" aria-controls="account-registration-code-popover">领取邀请码</button>
-            </span>
-            <aside id="account-registration-code-popover" class="account-registration-code-popover" data-registration-code-popover role="status" aria-live="polite" hidden>
-              <span>当前可用邀请码</span>
-              <strong data-registration-code-value></strong>
-              <em data-registration-code-remaining></em>
-            </aside>
-          </div>
           <div class="account-code-group"><label for="account-code-input"><span>邮箱验证码</span></label><span class="account-code-field"><input id="account-code-input" type="text" name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="6 位验证码"><button type="button" data-code-send>发送验证码</button></span></div>
           <p class="account-code-status" data-code-status role="status" aria-live="polite" hidden></p>` : usesCode ? `
           <div class="account-code-group"><label for="account-code-input"><span>邮箱验证码</span></label><span class="account-code-field"><input id="account-code-input" type="text" name="code" autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" required placeholder="6 位验证码"><button type="button" data-code-send>发送验证码</button></span></div>
           <p class="account-code-status" data-code-status role="status" aria-live="polite" hidden></p>` : ""}
         ${isCodeLogin ? "" : `
           <div class="account-password-group">
-            <label for="account-password-input"><span>密码</span></label>
+            <label for="account-password-input"><span>${isPasswordReset ? "新密码" : "密码"}</span></label>
             <span class="account-password-field">
-              <input id="account-password-input" type="password" name="password" autocomplete="${isRegister ? "new-password" : "current-password"}" minlength="8" maxlength="128" required placeholder="至少 8 位">
+              <input id="account-password-input" type="password" name="password" autocomplete="${isRegister || isPasswordReset ? "new-password" : "current-password"}" minlength="8" maxlength="128" required placeholder="至少 8 位">
               <button type="button" data-password-toggle aria-controls="account-password-input" aria-pressed="false" aria-label="显示密码">显示</button>
             </span>
           </div>`}
-        ${isRegister ? `<p class="account-form-hint">领取邀请码并验证邮箱，注册后赠送积分。</p>` : ""}
+        ${isRegister ? `<p class="account-form-hint">验证邮箱后创建账户，注册即赠送积分。</p>` : ""}
+        ${mode === "login_password" ? `<button type="button" class="account-password-reset-link" data-password-reset>忘记或重设密码</button>` : ""}
+        ${isPasswordReset ? `<button type="button" class="account-password-reset-link" data-password-reset-back>返回密码登录</button>` : ""}
         <p class="account-form-error" data-auth-error role="alert" aria-live="assertive" hidden></p>
-        <button type="submit" class="account-submit">${isRegister ? "注册" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
+        <button type="submit" class="account-submit">${isRegister ? "注册" : isPasswordReset ? "重设密码并登录" : isCodeLogin ? "验证码登录" : "密码登录"}</button>
       </form>
       <p class="account-privacy-note">${privacyNote}</p>`;
     body.querySelectorAll("[data-auth-mode]").forEach(button => {
@@ -538,9 +533,11 @@
     const form = body.querySelector("[data-auth-form]");
     form.addEventListener("submit", submitAuth);
     form.querySelector("[data-code-send]")?.addEventListener("click", sendVerificationCode);
-    form.querySelector("[data-registration-code-reveal]")?.addEventListener("click", revealRegistrationCode);
-    form.elements.invite_code?.addEventListener("input", event => {
-      event.currentTarget.value = event.currentTarget.value.toUpperCase();
+    form.querySelector("[data-password-reset]")?.addEventListener("click", () => {
+      renderAuth("reset_password", "验证邮箱后设置一个新密码。", form.elements.email?.value || "");
+    });
+    form.querySelector("[data-password-reset-back]")?.addEventListener("click", () => {
+      renderAuth("login_password", "", form.elements.email?.value || "");
     });
     form.querySelector("[data-password-toggle]")?.addEventListener("click", event => {
       const button = event.currentTarget;
@@ -591,58 +588,27 @@
     }
   }
 
-  async function revealRegistrationCode(event) {
-    const button = event.currentTarget;
-    const form = button.closest("form");
-    const error = form.querySelector("[data-auth-error]");
-    const popover = form.querySelector("[data-registration-code-popover]");
-    error.hidden = true;
-    button.disabled = true;
-    button.textContent = "正在领取…";
-    try {
-      const response = await fetch("/api/auth/invite-code", {
-        headers: { Accept: "application/json" },
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      const payload = await readJson(response);
-      const code = String(payload.code || "");
-      form.elements.invite_code.value = code;
-      popover.querySelector("[data-registration-code-value]").textContent = code;
-      popover.querySelector("[data-registration-code-remaining]").textContent = `本批剩 ${Number(payload.remaining || 0)} 个，注册后核销`;
-      popover.hidden = false;
-      button.setAttribute("aria-expanded", "true");
-      button.textContent = "换一个";
-      form.elements.invite_code.focus();
-      form.elements.invite_code.select();
-    } catch (reason) {
-      error.textContent = reason?.message || "邀请码领取失败，请稍后再试";
-      error.hidden = false;
-      button.textContent = "重新领取";
-    } finally {
-      button.disabled = false;
-    }
-  }
-
   async function submitAuth(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const mode = form.dataset.mode || "login_password";
     const isRegister = mode === "register";
     const isCodeLogin = mode === "login_code";
+    const isPasswordReset = mode === "reset_password";
     const submit = form.querySelector(".account-submit");
     const error = form.querySelector("[data-auth-error]");
     const email = form.elements.email.value.trim();
     const password = form.elements.password?.value || "";
     const code = form.elements.code?.value.trim() || "";
-    const inviteCode = form.elements.invite_code?.value.trim() || "";
     error.hidden = true;
     submit.disabled = true;
-    submit.textContent = isRegister ? "正在注册…" : "正在登录…";
+    submit.textContent = isRegister ? "正在注册…" : isPasswordReset ? "正在重设…" : "正在登录…";
     try {
-      const endpoint = isRegister ? "register" : "login";
+      const endpoint = isRegister ? "register" : isPasswordReset ? "password/reset" : "login";
       const requestBody = isRegister
-        ? { email, password, code, invite_code: inviteCode }
+        ? { email, password, code }
+        : isPasswordReset
+          ? { email, password, code }
         : isCodeLogin
           ? { email, code, method: "code" }
           : { email, password, method: "password" };
@@ -657,6 +623,8 @@
       apply(payload);
       const successMessage = isRegister
         ? "邮箱已验证，账户已创建。"
+        : isPasswordReset
+          ? "密码已重设，已登录。"
         : isCodeLogin
           ? "邮箱验证完成，已登录。"
           : "已登录。";
@@ -669,14 +637,14 @@
         requestAnimationFrame(() => body.querySelector("[data-account-refresh]")?.focus({ preventScroll: true }));
       }
     } catch (reason) {
-      if (!isRegister && !isCodeLogin && String(reason?.message || "").includes("邮箱验证")) {
-        renderAuth("login_code", reason.message, email);
+      if (!isRegister && !isCodeLogin && !isPasswordReset && String(reason?.message || "").includes("验证邮箱")) {
+        renderAuth("reset_password", reason.message, email);
         return;
       }
       error.textContent = reason?.message || "操作失败，请稍后再试";
       error.hidden = false;
       submit.disabled = false;
-      submit.textContent = isRegister ? "注册" : isCodeLogin ? "验证码登录" : "密码登录";
+      submit.textContent = isRegister ? "注册" : isPasswordReset ? "重设密码并登录" : isCodeLogin ? "验证码登录" : "密码登录";
     }
   }
 

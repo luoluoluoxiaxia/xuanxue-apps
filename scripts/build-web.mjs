@@ -158,11 +158,18 @@ for (const marker of [
 
 const account = readFileSync(join(publicDir, "account.js"), "utf8");
 for (const requiredAuthBoundary of [
-  "领取邀请码并验证邮箱，注册后赠送积分",
-  "{ email, password, code, invite_code: inviteCode }",
+  "验证邮箱后创建账户，注册即赠送积分",
+  "{ email, password, code }",
+  "忘记或重设密码",
+  'endpoint = isRegister ? "register" : isPasswordReset ? "password/reset" : "login"',
 ]) {
   if (!account.includes(requiredAuthBoundary)) {
     fail(`account registration boundary missing ${requiredAuthBoundary}`);
+  }
+}
+for (const retiredInviteMarker of ["领取邀请码", "invite_code", "/api/auth/invite-code"]) {
+  if (account.includes(retiredInviteMarker)) {
+    fail(`account registration still exposes retired invite marker ${retiredInviteMarker}`);
   }
 }
 
