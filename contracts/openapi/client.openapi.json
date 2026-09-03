@@ -2692,6 +2692,26 @@
         "title": "ClientInterpretTask",
         "type": "object"
       },
+      "ClientInviteCode": {
+        "additionalProperties": false,
+        "description": "旧客户端注册流程使用的无门槛兼容响应。",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "remaining"
+        ],
+        "title": "ClientInviteCode",
+        "type": "object"
+      },
       "ClientLiuyaoChart": {
         "additionalProperties": false,
         "properties": {
@@ -5586,6 +5606,26 @@
           }
         },
         "summary": "Api Auth Code"
+      }
+    },
+    "/api/auth/invite-code": {
+      "get": {
+        "deprecated": true,
+        "description": "兼容旧客户端；该值不再代表注册资格，也不会被核销。",
+        "operationId": "api_auth_invite_code_compat_api_auth_invite_code_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInviteCode"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Api Auth Invite Code Compat"
       }
     },
     "/api/auth/login": {
