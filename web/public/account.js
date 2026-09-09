@@ -273,9 +273,10 @@
     return snapshot();
   }
 
-  function ready() {
+  async function ready() {
     if (!initialLoad) initialLoad = refresh();
-    return initialLoad;
+    await initialLoad;
+    return snapshot();
   }
 
   function csrfHeaders(extra = {}) {

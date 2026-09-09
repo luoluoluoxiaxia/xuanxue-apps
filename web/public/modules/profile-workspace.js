@@ -833,6 +833,23 @@ function openCurrentProfile() {
   toast(activeProfileId ? "档案已打开" : "已打开上次记录");
 }
 
+async function profileResumeSessionId(data, options = {}) {
+  if (options.resumeSessionId) return options.resumeSessionId;
+  const system = data.system || data.payload?.system || data.input?.system;
+  if (system !== "liuyao" || options.freshConversation) return "";
+  const latest = [...(data.active_tasks || []), ...(data.history || [])]
+    .sort((a, b) => restoredTaskTime(b.created_at, 0) - restoredTaskTime(a.created_at, 0))[0];
+  if (!latest) return "";
+  let task = latest;
+  if (!validSessionId(task.session_id)) {
+    const response = await fetch(`/api/interpret/tasks/${encodeURIComponent(task.task_id)}`);
+    if (!response.ok) throw new Error("历史对话暂时无法恢复，请稍后重试");
+    task = await response.json();
+  }
+  if (!validSessionId(task.session_id)) throw new Error("历史对话缺少有效会话标识");
+  return task.session_id;
+}
+
 async function openSavedProfile(pid, options = {}) {
   const previousWorkspace = currentWorkspaceKey();
   const previousSession = lastPayload ? snapshotSession() : null;
@@ -845,10 +862,10 @@ async function openSavedProfile(pid, options = {}) {
     const data = await r.json();
     const loadedSystem = data.system || data.payload?.system || data.input?.system || "bazi";
     const resumeTabKey = loadedSystem === "liuyao" ? "断卦" : "解读";
+    const resumeSessionId = await profileResumeSessionId(data, options);
     let resumedConversation = null;
-    if (options.resumeSessionId) {
-      const detailedResume = loadedSystem === "liuyao" && options.preservePersonalCase;
-      if ((loadedSystem !== "bazi" && !detailedResume) || !validSessionId(options.resumeSessionId)) {
+    if (resumeSessionId) {
+      if (!["bazi", "liuyao"].includes(loadedSystem) || !validSessionId(resumeSessionId)) {
         throw new Error("对话标识无效");
       }
       const resumeResponse = await fetch("/api/resume", {
@@ -857,7 +874,7 @@ async function openSavedProfile(pid, options = {}) {
         body: JSON.stringify({ items: [{
           key: resumeTabKey,
           chart_id: Number(data.chart_id || data.payload?.chart_id || 0),
-          session_id: options.resumeSessionId,
+          session_id: resumeSessionId,
           profile_id: Number(data.id),
           limit: 200,
         }] }),
@@ -883,7 +900,7 @@ async function openSavedProfile(pid, options = {}) {
     resetThreads();
     let recoverableTasks = [];
     if (resumedConversation) {
-      state.sessionIds[resumeTabKey] = options.resumeSessionId;
+      state.sessionIds[resumeTabKey] = resumeSessionId;
       state.threads[resumeTabKey] = chatRowsToThread(resumeTabKey, resumedConversation.messages || []);
       state.activeTab = resumeTabKey;
       if (resumedConversation.active_task) recoverableTasks = [resumedConversation.active_task];
@@ -913,7 +930,7 @@ async function openSavedProfile(pid, options = {}) {
     const conversationLabel = loadedSystem === "liuyao"
       ? options.preservePersonalCase ? "详断对话" : "六爻对话"
       : "八字对话";
-    toast(options.resumeSessionId
+    toast(resumeSessionId
       ? hasRunning ? "已恢复上次对话，解读继续" : `已恢复这段${conversationLabel}，继续追问`
       : options.freshConversation
         ? `已用这份${loadedSystem === "liuyao" ? "卦档" : "八字"}开启新对话`

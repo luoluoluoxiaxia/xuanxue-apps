@@ -3,6 +3,26 @@
 /* Interpretation conversation lifecycle, rendering, streaming, and recovery.
    This zero-build feature fragment shares the app.js runtime by design. */
 
+const composerDrafts = new Map();
+let composerDraftKey = "";
+
+function syncComposerDraft() {
+  const input = $("#draft-input");
+  if (!input || !activeChartId || !state.activeTab) return;
+  const key = `${currentWorkspaceKey()}:${activeChartId}:${sessionIdForTab(state.activeTab)}`;
+  if (key === composerDraftKey) return;
+  if (composerDraftKey) composerDrafts.set(composerDraftKey, input.value);
+  input.value = composerDrafts.get(key) || "";
+  composerDraftKey = key;
+}
+
+function clearComposerDrafts() {
+  composerDrafts.clear();
+  composerDraftKey = "";
+  const input = $("#draft-input");
+  if (input) input.value = "";
+}
+
 function switchTab(key) {
   if (!tabOf(key)) return;
   if (key === state.activeTab) return;
@@ -690,6 +710,7 @@ function renderThread() {
 }
 
 function syncComposerState() {
+  syncComposerDraft();
   const activeMessage = activeStreamingMessage();
   const busy = !!state.streaming || !!activeMessage;
   const canRevealCompleted = !!activeMessage?.serverDone;

@@ -491,6 +491,23 @@ body[data-screen="archives"] .landing .hero-footer {
 }
 
 .profile-page-logout { display: none; }
+.landing .profile-library-page .profile-credits-link {
+  display: flex;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  color: var(--pl-accent-dark);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13px;
+  text-decoration: none;
+}
+.profile-credits-link span { color: var(--pl-muted); font-size: 11px; }
 
 @media (max-width: 620px) {
   .profile-page-logout {
