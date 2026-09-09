@@ -5969,13 +5969,35 @@ body[data-screen="dash"] .ly-row.moving{
    MOBILE BOTTOM NAV · 手机端不再挤占左侧正文（design-160）
    ============================================================ */
 @media(max-width:620px){
+  :root{--mobile-nav-height:calc(64px + env(safe-area-inset-bottom))}
+  /* Dialogs and the chart drawer must stay above navigation on workspace pages. */
+  body[data-screen="birth"] .landing .hero-nav,
+  body[data-screen="cast"] .landing .hero-nav,
+  body[data-screen="dash"] .landing .hero-nav{z-index:35}
+  /* Fixed workspaces must reserve the same space as the bottom navigation. */
+  .site-content-page,
+  body[data-screen="dash"] .dashboard{
+    left:0;
+    bottom:auto;
+    height:calc(var(--app-viewport-height) - var(--mobile-nav-height));
+  }
+  body[data-screen="dash"] .composer{padding-bottom:12px}
+  body.chart-open .chart-rail{padding-bottom:max(18px, env(safe-area-inset-bottom))}
+  body.chart-open .rail-actions-m button:not(.question){min-width:88px}
+  .pop-foot,.trend-foot,.feedback-foot{padding-bottom:max(18px, env(safe-area-inset-bottom))}
+  .gloss-card-body,.profile-card-body{padding-bottom:max(20px, env(safe-area-inset-bottom))}
+  body:has(.landing .hero-nav) .account-invite-prompt,
+  body:has(.landing .hero-nav) .community-toast,
+  body:has(.landing .hero-nav) .toast{
+    bottom:calc(var(--mobile-nav-height) + 12px);
+  }
   .landing .hero{
     display:block;
     min-height:100svh;
-    padding:0 0 calc(68px + env(safe-area-inset-bottom));
+    padding:0 0 calc(var(--mobile-nav-height) + 4px);
     background:#fff;
   }
-  .landing .hero::before{inset:0 0 calc(68px + env(safe-area-inset-bottom))}
+  .landing .hero::before{inset:0 0 calc(var(--mobile-nav-height) + 4px)}
   .landing .hero-nav,
   html.modal-open .landing .hero-nav{
     position:fixed;
@@ -5986,7 +6008,7 @@ body[data-screen="dash"] .ly-row.moving{
     left:0;
     display:flex;
     width:100%;
-    height:calc(64px + env(safe-area-inset-bottom));
+    height:var(--mobile-nav-height);
     min-height:0;
     flex-direction:row;
     align-items:flex-start;
