@@ -1293,6 +1293,7 @@
   }
 
   function appendPreviewComment(post, comment) {
+    previewCommentDrafts.delete(post.slug);
     if (!Array.isArray(post.comments)) post.comments = [];
     const parent = comment.parent_id
       ? post.comments.find(item => Number(item.id) === Number(comment.parent_id))
@@ -1304,8 +1305,10 @@
       post.comments.push(comment);
     }
     post.comment_count = Math.max(0, Number(post.comment_count) || 0) + 1;
-    renderComments(post);
+    if (activePreview?.slug === post.slug) renderComments(post);
   }
+
+  const previewCommentDrafts = new Map();
 
   function renderPreviewCommentGate(post) {
     renderPreviewCommentComposer(post, { focus: false });
@@ -1313,6 +1316,14 @@
 
   function renderPreviewCommentComposer(post, { focus = false } = {}) {
     const host = field("[data-preview-comment-composer]");
+    const previous = host.querySelector("[data-comment-form]");
+    if (previous && host.dataset.postSlug !== post.slug && !previous.querySelector("button[type=submit]").disabled) {
+      previewCommentDrafts.set(host.dataset.postSlug, {
+        body: previous.elements.body.value,
+        reading: !!previous.elements.reading_reply?.checked,
+      });
+    }
+    host.dataset.postSlug = post.slug;
     renderCommentComposer(
       host,
       post.slug,
@@ -1328,6 +1339,13 @@
         authenticated: !!post.comments_write_ready,
       },
     );
+    const draft = previewCommentDrafts.get(post.slug);
+    const form = host.querySelector("[data-comment-form]");
+    if (draft && form) {
+      form.elements.body.value = draft.body;
+      if (form.elements.reading_reply) form.elements.reading_reply.checked = draft.reading;
+      form.querySelector("[data-comment-length]").textContent = String(draft.body.length);
+    }
   }
 
   function renderPreviewCommentEntry(post) {
@@ -1338,7 +1356,7 @@
       host.innerHTML = '<p class="section-empty">这条卦帖暂未开放评论。</p>';
       return;
     }
-    if (!host.querySelector("[data-comment-form]")) renderPreviewCommentComposer(post);
+    if (host.dataset.postSlug !== post.slug || !host.querySelector("[data-comment-form]")) renderPreviewCommentComposer(post);
     else syncCommentAuthState(host, !!post.comments_write_ready);
   }
 

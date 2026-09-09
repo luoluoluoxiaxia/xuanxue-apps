@@ -103,6 +103,7 @@ function handleAccountAuthChange(event) {
     renderProfileFab();
     return;
   }
+  clearComposerDrafts();
   appHadAuthenticatedAccount = false;
   stopAllPendingWork();
   window.location.replace("/");
