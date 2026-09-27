@@ -50,3 +50,15 @@ Web 同时保留两套视觉：新版「宣纸 · 墨 · 朱印」与原有的�
 - `ui-next.css` 必须是最后加载的样式表，所有新版规则都限定在 `html[data-ui="next"]` 下；新版专属节点带 `nx-only`（经典版隐藏），只在经典版显示的节点带 `nx-classic-only`。
 - `modules/ui-shell.js` 负责侧栏、手机顶栏与首页右上角的切换按钮、新版首次提示，以及新版的输入增强（性别/历法一次点选、对话「回到最新」等）。
 - `modules/social.js` 提供社区头像与相对时间的展示辅助，数据仍全部来自服务端。
+
+## 独立新版前端：`next.html`
+
+`next.html` + `public/next/` 是一套重新设计的前端（信息架构、导航、页面布局和交互都与经典版不同），与经典版共用同一套公开接口与会话 Cookie，不读取经典版的页面结构或脚本状态（只复用 `chat-render.js` 的回答渲染与 `regions.js` 行政区划数据）。
+
+- 零构建原生 ES 模块：`next/app.js` 为入口；`lib/`（请求、路由、会话、解读任务引擎、文案）、`ui/`（浮层、提示、卦象、命盘面板、出生地选择）、`views/`（每个页面一个模块）。
+- 所有相对导入都带同一个版本号（当前 `?v=n1`，与 `next.html` 中入口脚本和样式表一致）；发布新版本时统一替换。`scripts/build-web.mjs` 会检查版本一致性，防止同一模块被加载两份。
+- 路由使用哈希（静态托管无需改写）：`#/` 广场、`#/post/<slug>` 帖子讨论、`#/ask`（`/liuyao`、`/bazi`）提问、`#/reading/<档案 id>[?session=]` 解读工作台、`#/today` 今日、`#/inbox` 消息、`#/me`（`/archives`、`/credits`、`/settings`）。
+- 经典版地址会被映射过来：`?post=`、`?start=liuyao|bazi[&community=help]`、`?view=credits|archives`（含支付返回参数）、`#gua-square`。
+- 外观跟随系统，也可在账户菜单或设置里固定浅色 / 深色（`localStorage.xz-next-theme`）。
+- 「回到经典版」会写入 `localStorage.xz-ui = "classic"` 并带 `?ui=classic` 跳回对应的经典版页面。
+- 页面标记为 `noindex`：经典版仍是搜索引擎收录的规范页面。
