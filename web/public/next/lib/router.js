@@ -1,9 +1,10 @@
 // 哈希路由：静态托管下无需服务端改写；浏览器前进后退时恢复原滚动位置。
+// 每条历史记录在 history.state 里带一个序号：新打开的页面记新序号（不恢复滚动），
+// 前进后退回到已有序号时恢复它离开时的位置；站内「返回」只在前面还有本站页面时才后退。
 const scrollMemory = new Map();
 let routes = [];
 let onChange = () => {};
-let intentional = false;
-let depth = 0;
+let index = -1;
 let current = null;
 
 function compile(pattern) {
@@ -45,24 +46,18 @@ export function navigate(to, { replace = false } = {}) {
     handle();
     return;
   }
-  scrollMemory.set(location.hash || "#/", window.scrollY);
-  intentional = true;
+  scrollMemory.set(index, window.scrollY);
   if (replace) {
     history.replaceState(history.state, "", target);
     handle();
   } else {
-    depth += 1;
     location.hash = target;
   }
 }
 
 export function back(fallback = "/") {
-  if (depth > 0) {
-    depth -= 1;
-    history.back();
-  } else {
-    navigate(fallback, { replace: true });
-  }
+  if (index > 0) history.back();
+  else navigate(fallback, { replace: true });
 }
 
 export function currentRoute() {
@@ -71,22 +66,28 @@ export function currentRoute() {
 
 function handle() {
   const next = parse();
-  const restoring = !intentional;
-  intentional = false;
+  const state = history.state;
+  let restoreScroll;
+  if (state && typeof state.xzIndex === "number") {
+    // 已有的记录：前进/后退回来时恢复位置；原地替换或刷新时不动。
+    if (state.xzIndex !== index) restoreScroll = scrollMemory.get(state.xzIndex);
+    index = state.xzIndex;
+  } else {
+    // 新打开的记录（链接点击或 navigate）：接着上一条编号。
+    index += 1;
+    history.replaceState({ ...(state && typeof state === "object" ? state : {}), xzIndex: index }, "");
+  }
   const previous = current;
   current = next;
-  onChange(next, previous, {
-    restoreScroll: restoring ? scrollMemory.get(location.hash || "#/") : undefined,
-  });
+  onChange(next, previous, { restoreScroll });
 }
 
 export function startRouter() {
-  window.addEventListener("hashchange", () => {
-    if (!intentional && depth > 0) depth -= 1;
-    handle();
-  });
+  // 由路由自己恢复滚动，避免浏览器的自动恢复覆盖记下的位置。
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  window.addEventListener("hashchange", handle);
   window.addEventListener("scroll", () => {
-    if (current) scrollMemory.set(location.hash || "#/", window.scrollY);
+    if (current) scrollMemory.set(index, window.scrollY);
   }, { passive: true });
   if (!location.hash) history.replaceState(history.state, "", "#/");
   handle();
