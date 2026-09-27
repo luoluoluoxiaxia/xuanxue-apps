@@ -112,6 +112,8 @@ test('classic links map onto the new routes and back', async () => {
   assert.equal(routeFromLegacy('?post=ly-abc&ref=post_share'), '?ref=post_share#/post/ly-abc');
   assert.equal(routeFromLegacy('?start=liuyao&community=help'), '#/ask/liuyao?help=1');
   assert.equal(routeFromLegacy('?view=credits&checkout=success&session_id=cs_1&order_id=o1'), '#/me/credits?checkout=success&session_id=cs_1&order_id=o1');
+  assert.equal(routeFromLegacy('?checkout=cancelled&order_id=o2'), '#/me/credits?checkout=cancelled&order_id=o2');
+  assert.equal(routeFromLegacy('?checkout=bogus'), '');
   assert.equal(routeFromLegacy(''), '');
   assert.equal(classicUrl({ path: '/post/ly-abc', query: new URLSearchParams() }), './?post=ly-abc&ui=classic#gua-square');
   assert.equal(classicUrl({ path: '/ask/liuyao', query: new URLSearchParams('help=1') }), './?start=liuyao&community=help&ui=classic');
