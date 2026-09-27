@@ -122,6 +122,23 @@ function syncNetwork(recovered = false) {
 window.addEventListener("offline", () => syncNetwork());
 window.addEventListener("online", () => syncNetwork(true));
 
+/* ---------- 输入时收起底栏 ---------- */
+// 手机键盘弹出时底栏会浮在键盘上方挡住输入框；输入期间给根元素加 is-typing 并隐藏底栏。
+const TEXT_FIELD = 'textarea, select, [contenteditable="true"], input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"])';
+document.addEventListener("focusin", event => {
+  if (!(event.target instanceof Element) || !event.target.matches(TEXT_FIELD)) return;
+  document.documentElement.classList.add("is-typing");
+  if (shell.tabbar) shell.tabbar.hidden = true;
+});
+document.addEventListener("focusout", () => {
+  setTimeout(() => {
+    const focused = document.activeElement;
+    if (focused instanceof Element && focused.matches(TEXT_FIELD)) return;
+    document.documentElement.classList.remove("is-typing");
+    if (shell.tabbar) shell.tabbar.hidden = false;
+  }, 80);
+});
+
 function renderAccountSlot() {
   const state = session.get();
   const slot = shell.accountSlot;
