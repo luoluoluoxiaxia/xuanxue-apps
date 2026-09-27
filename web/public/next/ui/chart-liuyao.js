@@ -161,17 +161,18 @@ function paipanRow(line, { changed, onOpen }) {
   }, cells);
 }
 
+// heading 传 null：外面已经写着卦名（如解读页标题），盘里只留宫位与动爻那一行。
 export function liuyaoPaipan(model, { heading = "h3", question = "", onOpen = null, footer = null, className = "" } = {}) {
   // 有没有动爻只看服务端给的 dong_yao / has_changed；变卦名缺失时只在显示上写「变卦」。
   const changed = !!model.changed;
   const facts = model.facts.filter(([, value]) => str(value));
   return h("div", { class: ["pp", className] },
-    h("div", { class: "pp-head" },
-      h(heading, { class: "pp-title serif" },
+    heading || model.meta.length ? h("div", { class: "pp-head" },
+      heading ? h(heading, { class: "pp-title serif" },
         h("span", null, model.benName),
         changed ? h("span", { class: "pp-zhi" }, "之") : null,
-        changed ? h("span", null, model.bianName || "变卦") : h("span", { class: "pp-quiet" }, "六爻安静")),
-      model.meta.length ? h("p", { class: "pp-meta" }, model.meta.join(" · ")) : null),
+        changed ? h("span", null, model.bianName || "变卦") : h("span", { class: "pp-quiet" }, "六爻安静")) : null,
+      model.meta.length ? h("p", { class: "pp-meta" }, model.meta.join(" · ")) : null) : null,
     question ? h("blockquote", { class: "cp-question" }, h("span", null, "所问"), question) : null,
     facts.length ? h("dl", { class: "pp-facts" }, facts.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, str(value))))) : null,
     h("div", { class: "pp-scroll" },
@@ -183,12 +184,13 @@ export function liuyaoPaipan(model, { heading = "h3", question = "", onOpen = nu
     footer);
 }
 
-export function liuyaoPanel(payload, { method = "" } = {}) {
+// beside：摆在解读页标题旁边（桌面右栏），卦名和所问页面上已经有了，盘里不再重复。
+export function liuyaoPanel(payload, { method = "", beside = false } = {}) {
   const model = paipanFromPayload(payload, { method });
   return h("section", { class: "chart-panel is-liuyao", "aria-label": "六爻卦盘" },
     liuyaoPaipan(model, {
-      heading: "h2",
-      question: payload?.question || "",
+      heading: beside ? null : "h2",
+      question: beside ? "" : payload?.question || "",
       onOpen: (line, trigger) => yaoPop(line.raw || {}, { returnFocus: trigger }),
       footer: [
         h("p", { class: "cp-note" }, "纳甲六亲依京房八宫 · 六神依日干起法 · 点一爻看释读"),
@@ -197,10 +199,10 @@ export function liuyaoPanel(payload, { method = "" } = {}) {
     }));
 }
 
+// 解读页顶部的看盘条：卦名已经是页面标题，这里只放卦象与月建日辰。
 export function liuyaoStrip(payload) {
   const lines = linesFromYaos(payload?.yaos);
   return h("div", { class: "chart-strip" },
     guaGlyph(lines, { label: `本卦 ${payload?.ben_gua?.name || ""}` }),
-    h("span", { class: "strip-names serif" }, liuyaoTitle(payload)),
-    h("span", { class: "strip-dm" }, `月建 ${payload?.month_jian || "—"} · 日辰 ${payload?.day_chen || "—"}`));
+    h("span", { class: "strip-dm is-liuyao" }, `月建 ${payload?.month_jian || "—"} · 日辰 ${payload?.day_chen || "—"}`));
 }

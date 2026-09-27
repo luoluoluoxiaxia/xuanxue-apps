@@ -323,7 +323,7 @@ export function render(ctx) {
 
   function buildLayout() {
     const liuyao = state.system === "liuyao";
-    const panel = liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input });
+    const panel = liuyao ? liuyaoPanel(state.payload, { method: state.input?.method, beside: true }) : baziPanel(state.payload, { name: state.name, input: state.input, beside: true });
     const title = liuyao ? liuyaoTitle(state.payload) : (state.name || state.payload?.profile_name || "我的命盘");
     // 解读进行中不能重新起卦 / 开新对话；按钮在 syncComposer 里随忙碌状态切换。
     const restart = liuyao
@@ -354,6 +354,7 @@ export function render(ctx) {
     const live = h("p", { class: "sr-only", role: "status", "aria-live": "polite" });
     const composer = buildComposer();
     const jump = h("button", { type: "button", class: "jump-latest", hidden: true, onClick: () => scrollToBottom(true) }, icon("arrowUp", "icon-sm"), "回到最新");
+    const questionLine = liuyao && state.question ? h("p", { class: "rd-question" }, `所问：${state.question}`) : null;
     const conversationCol = h("section", { class: "rd-main", "aria-label": "对话" },
       h("header", { class: "rd-head" },
         h("div", { class: "rd-title" },
@@ -363,7 +364,7 @@ export function render(ctx) {
           liuyao ? h("span", { class: ["chip", "chip-outline", "rd-vis"], title: isPublic ? "公开卦：首轮解答发布到广场" : "私密卦：仅自己可见" }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
           h("h1", null, title)),
         headActions,
-        liuyao && state.question ? h("p", { class: "rd-question" }, `所问：${state.question}`) : null),
+        questionLine),
       strip,
       thread,
       live,
@@ -371,7 +372,7 @@ export function render(ctx) {
       composer.node);
     const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel);
     root.replaceChildren(h("div", { class: ["rd-layout", liuyao ? "is-liuyao" : "is-bazi"] }, conversationCol, side));
-    nodes = { thread, composer, jump, panel, side, live, restart, helpSlot };
+    nodes = { thread, composer, jump, panel, side, live, restart, helpSlot, question: questionLine };
     syncHelpAction();
     window.addEventListener("scroll", syncJump, { passive: true });
     ctx.cleanup(() => window.removeEventListener("scroll", syncJump));
@@ -424,9 +425,18 @@ export function render(ctx) {
   }
 
   /* ---------- 对话渲染 ---------- */
+  // 六爻：对话里已经有这句所问时，页头不再另写一遍「所问」。
+  function syncQuestionLine() {
+    const line = nodes.question;
+    if (!line || !state.conversation) return;
+    const asked = String(state.question || "").trim();
+    line.hidden = !!asked && state.conversation.messages.some(message => message.kind === "user" && String(message.text || "").trim() === asked);
+  }
+
   function renderThread() {
     const conversation = state.conversation;
     const thread = nodes.thread;
+    syncQuestionLine();
     if (!conversation.messages.length) {
       thread.replaceChildren(emptyState());
       return;
@@ -449,9 +459,8 @@ export function render(ctx) {
       const moving = Array.isArray(payload.dong_yao) ? payload.dong_yao : [];
       const start = h("button", { type: "button", class: "btn btn-primary", disabled: !riskAccepted(), onClick: () => startFirst() }, icon("sparkle"), "开始解读");
       return h("div", { class: "thread-empty" },
-        h("p", { class: "kicker" }, "断卦"),
-        h("h2", null, "一卦已成，开始断卦"),
-        h("p", null, `${liuyaoTitle(payload)} · 世${LY_POS[(payload.shi_yao || 1) - 1]}爻 应${LY_POS[(payload.ying_yao || 1) - 1]}爻 · 动爻${CN_NUM[moving.length] || moving.length}处。开始解读，或直接追问。`),
+        h("h2", null, "一卦已成"),
+        h("p", null, `${liuyaoTitle(payload)} · 世${LY_POS[(payload.shi_yao || 1) - 1]}爻 应${LY_POS[(payload.ying_yao || 1) - 1]}爻 · ${moving.length ? `动爻${CN_NUM[moving.length] || moving.length}处` : "六爻安静"}`),
         ack,
         h("div", { class: "thread-empty-actions" },
           start,
@@ -459,7 +468,6 @@ export function render(ctx) {
     }
     return h("div", { class: "thread-empty" },
       h("div", { class: "rd-resume-slot" }, resumeLink()),
-      h("p", { class: "kicker" }, "同一命盘 · 一段对话"),
       h("h2", null, "你想先问哪件事？"),
       h("p", null, "从一个问题开始，之后在同一段对话里继续追问。"),
       ack,
@@ -717,6 +725,7 @@ export function render(ctx) {
       if (message.kind === "ai" && nodes.live) nodes.live.textContent = "正在解读，请稍候";
       if (nodes.thread.querySelector(".thread-empty")) nodes.thread.replaceChildren();
       nodes.thread.append(messageNode(message));
+      if (message.kind === "user") syncQuestionLine();
       scrollToBottom(true);
       syncComposer();
       return;
