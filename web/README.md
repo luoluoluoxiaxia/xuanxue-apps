@@ -9,7 +9,7 @@ Web 仍使用浏览器原生脚本，不需要 Node 打包或框架运行时。`
 ```text
 基础独立脚本（账户、个人主页、Markdown、分享）
   ↓
-modules/core.js、chat-copy.js、chart-domain.js
+modules/core.js、social.js、chat-copy.js、chart-domain.js
 modules/location-picker.js、modal-manager.js、home-community.js
   ↓
 app.js                         页面状态、命盘/起卦工作区与导航编排
@@ -18,6 +18,9 @@ modules/profile-workspace.js  档案与历史工作区
 modules/chat-workspace.js     解读任务、流式回答、恢复与消息反馈
   ↓
 app-bootstrap.js              所有模块就绪后唯一调用 init()
+  ↓
+community.js                  社区帖子、评论与消息
+modules/ui-shell.js           界面版本切换与新版增强（最后加载）
 ```
 
 `core.js` 等前置模块通过只读的 `window.Xuanxue*` 命名空间提供窄能力；`profile-workspace.js` 和 `chat-workspace.js` 是现有零构建应用的后置功能片段，明确共享 `app.js` 的页面运行时，只能按 `index.html` 中的顺序加载，不能单独执行。这个兼容层避免在目录重构时同时改写页面交互，后续若迁移 TypeScript 或组件框架，再由显式 import 替换。
@@ -38,3 +41,12 @@ npm run package:web
 六爻本机摇钱只负责生成并展示用户操作得到的六个爻值；本卦、变卦、世应、六亲等机械事实统一由后端返回，Web 不保留六十四卦计算表或本地装卦实现。
 
 客户端只依赖 `contracts/openapi/client.openapi.json` 和 `contracts/events/`。它展示后端给出的产品结果，不选择或接收模型、供应商、提示词版本、路由策略、原始推理、用量或成本。
+
+## 界面版本：新版与经典版
+
+Web 同时保留两套视觉：新版「宣纸 · 墨 · 朱印」与原有的经典版。两者共用同一份页面结构、脚本、接口与状态，只切换 `html[data-ui]` 与视觉层，因此切换即时生效、不会中断正在进行的解读。
+
+- `index.html` 顶部内联脚本在首帧前决定版本：`?ui=next` / `?ui=classic` 优先并写入 `localStorage` 的 `xz-ui`，否则读取已保存的选择，都没有时使用脚本里的 `DEFAULT_UI`（当前为 `next`）。
+- `ui-next.css` 必须是最后加载的样式表，所有新版规则都限定在 `html[data-ui="next"]` 下；新版专属节点带 `nx-only`（经典版隐藏），只在经典版显示的节点带 `nx-classic-only`。
+- `modules/ui-shell.js` 负责侧栏、手机顶栏与首页右上角的切换按钮、新版首次提示，以及新版的输入增强（性别/历法一次点选、对话「回到最新」等）。
+- `modules/social.js` 提供社区头像与相对时间的展示辅助，数据仍全部来自服务端。

@@ -3,6 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script>
+// 与首页一致：沿用访客保存的界面版本（新版 / 经典版），首帧前确定。
+(() => {
+  const valid = value => value === "next" || value === "classic";
+  let mode = "next";
+  let requested = "";
+  try { requested = new URLSearchParams(location.search).get("ui") || ""; } catch (_) {}
+  try {
+    const stored = localStorage.getItem("xz-ui");
+    if (valid(stored)) mode = stored;
+    if (valid(requested)) localStorage.setItem("xz-ui", requested);
+  } catch (_) {}
+  if (valid(requested)) mode = requested;
+  document.documentElement.dataset.ui = mode;
+})();
+</script>
 <title>岁运全书 · 专属查阅 | 玄枢</title>
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#ffffff">
@@ -112,6 +128,7 @@ body.fv-unlocked .fv-title{font-size:min(46px,9vw)}
 }
 </style>
 <link rel="stylesheet" href="/forecast.css?v=forecast-10">
+<link rel="stylesheet" href="/ui-next.css?v=ui-next-1">
 </head>
 <body>
 <a class="forecast-skip-link" href="#forecast-view-main">跳到主要内容</a>

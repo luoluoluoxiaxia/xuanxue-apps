@@ -4,6 +4,23 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script>
+// 界面版本：新版与经典版共用同一套页面逻辑，只切换视觉层；首帧前确定，避免闪烁。
+(() => {
+  const DEFAULT_UI = "next";
+  const valid = value => value === "next" || value === "classic";
+  let mode = DEFAULT_UI;
+  let requested = "";
+  try { requested = new URLSearchParams(location.search).get("ui") || ""; } catch (_) {}
+  try {
+    const stored = localStorage.getItem("xz-ui");
+    if (valid(stored)) mode = stored;
+    if (valid(requested)) localStorage.setItem("xz-ui", requested);
+  } catch (_) {}
+  if (valid(requested)) mode = requested;
+  document.documentElement.dataset.ui = mode;
+})();
+</script>
+<script>
 (() => {
   try {
     const query = new URLSearchParams(location.search);
@@ -87,6 +104,7 @@
 <link rel="stylesheet" href="credit-ledger.css?v=credit-ledger-5">
 <link rel="stylesheet" href="profile-library.css?v=profile-library-7">
 <link rel="stylesheet" href="chat.css?v=chat-17">
+<link rel="stylesheet" href="ui-next.css?v=ui-next-1">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -168,6 +186,21 @@
       </div>
       <div class="compass-core">玄</div>
     </aside>
+    <header class="nx-appbar nx-only">
+      <button type="button" class="nx-appbar-brand" data-hero-nav="landing" aria-label="返回首页">
+        <span class="nx-seal" aria-hidden="true">玄</span><b>玄枢</b>
+      </button>
+      <div class="nx-appbar-actions">
+        <button type="button" class="nx-icon-btn" data-ui-switch title="切换界面版本">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg>
+          <span class="nx-sr" data-ui-switch-label>切换界面</span>
+        </button>
+        <button type="button" class="nx-icon-btn" data-community-notifications title="消息" aria-haspopup="dialog" aria-label="消息">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
+          <b class="community-notification-badge" data-notification-badge hidden>0</b>
+        </button>
+      </div>
+    </header>
     <div class="hero-nav">
       <button type="button" class="brand" data-hero-nav="landing" aria-label="返回观象台">
         <span class="brand-mark">玄</span>
@@ -207,6 +240,10 @@
           <button type="button" data-hero-nav="credits" title="积分管理">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 7h8M8 11h5M8 15h3m3 0h2m-8 3h3m3 0h2"/></svg></span>
             <span>积分管理</span>
+          </button>
+          <button type="button" class="ui-switch-nav" data-ui-switch title="切换界面版本">
+            <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg></span>
+            <span data-ui-switch-label>切换界面</span>
           </button>
           <button type="button" class="sidebar-toggle" data-sidebar-toggle aria-expanded="false" aria-label="展开 Tab 栏" title="展开 Tab 栏">
             <span class="hero-link-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
@@ -393,6 +430,38 @@
 
     <main id="home-main" class="hero-body" data-home-action-panel aria-labelledby="home-page-title" tabindex="-1">
       <section class="home-observatory-page">
+        <section class="nx-home-hero nx-only" aria-labelledby="nx-home-title">
+          <p class="nx-eyebrow"><span class="nx-seal nx-seal-sm" aria-hidden="true">玄</span>八字排盘 · 六爻起卦 · AI 白话解读</p>
+          <h1 id="nx-home-title">把心里的事，<br>放到盘上慢慢看清</h1>
+          <p class="nx-home-lead">排一张八字命盘，看长期的节奏；起一卦六爻，问眼前的一件事。AI 陪你把盘面读成白话，也可以不走 AI，向社区求助。</p>
+          <div class="nx-start-grid">
+            <button type="button" class="nx-start-card nx-start-bazi" data-hero-nav="bazi">
+              <span class="nx-start-glyph" aria-hidden="true">命</span>
+              <span class="nx-start-kicker">看长期</span>
+              <b>八字排盘</b>
+              <em>性格底色、事业财运、大运流年</em>
+              <span class="nx-start-stat" data-bazi-stats hidden></span>
+              <span class="nx-start-go" aria-hidden="true">开始排盘</span>
+            </button>
+            <button type="button" class="nx-start-card nx-start-liuyao" data-hero-nav="liuyao">
+              <span class="nx-start-glyph" aria-hidden="true">卦</span>
+              <span class="nx-start-kicker">问眼前</span>
+              <b>六爻起卦</b>
+              <em>写下一件具体的事，三钱六掷成卦</em>
+              <span class="nx-start-stat" data-liuyao-stats hidden></span>
+              <span class="nx-start-go" aria-hidden="true">开始起卦</span>
+            </button>
+          </div>
+          <div class="nx-home-account">
+            <p>登录后，每天为你准备今日宜忌与本月提示。</p>
+            <button type="button" class="nx-text-btn" data-account-button><span data-account-label>登录 / 注册</span></button>
+          </div>
+          <ul class="nx-promise" aria-label="使用须知">
+            <li><b>私密</b><span>私密解读仅自己可见</span></li>
+            <li><b>连续</b><span>同一张盘可以一直追问</span></li>
+            <li><b>参考</b><span>不替代医疗、法律、投资判断</span></li>
+          </ul>
+        </section>
         <span class="home-observatory-kicker">观象台</span>
         <h1 id="home-page-title">你的命盘与近况</h1>
         <p>登录后查看每日与本月提示。</p>
@@ -412,6 +481,37 @@
 
     <aside id="gua-square" class="home-community" aria-label="玄枢社区" tabindex="-1">
       <div class="home-community-card">
+        <header class="nx-feed-head nx-only">
+          <div>
+            <span class="nx-feed-kicker">玄枢社区</span>
+            <h2>大家正在聊</h2>
+            <p>真实的问题，真人的判断。看看别人在问什么，也说说你的看法。</p>
+          </div>
+          <a class="nx-feed-cta" href="/?start=liuyao&amp;community=help">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>发起求助
+          </a>
+        </header>
+        <aside class="nx-feed-side nx-only" aria-label="社区说明">
+          <section class="nx-side-card nx-side-ask">
+            <h3>有事想问大家？</h3>
+            <p>起一卦或排好命盘后发起求助，不走 AI、不扣积分，由卦友帮你看。</p>
+            <a class="nx-side-primary" href="/?start=liuyao&amp;community=help">向社区求助</a>
+            <button type="button" class="nx-side-secondary" data-hero-nav="bazi">先排一张八字</button>
+          </section>
+          <section class="nx-side-card nx-side-pulse" aria-label="社区热度">
+            <h3>今日热度</h3>
+            <p class="nx-pulse-line"><i aria-hidden="true">卦</i><span data-liuyao-stats hidden></span></p>
+            <p class="nx-pulse-line"><i aria-hidden="true">命</i><span data-bazi-stats hidden></span></p>
+          </section>
+          <section class="nx-side-card nx-side-rules">
+            <h3>社区公约</h3>
+            <ol>
+              <li><b>就盘论事</b>说判断，也说依据。</li>
+              <li><b>善意表达</b>讨论问题，不评判人。</li>
+              <li><b>保护隐私</b>不留姓名、电话、住址与证件号。</li>
+            </ol>
+          </section>
+        </aside>
         <div id="home-community-filters" class="home-community-filters" aria-label="筛选社区帖子">
           <div class="home-community-filter-group" aria-label="排序方式">
             <span>排序</span>
@@ -860,16 +960,18 @@
 <script src="personal-home.js?v=personal-workbench-14"></script>
 <script src="credit-ledger.js?v=credit-ledger-5"></script>
 <script src="modules/core.js?v=web-modules-1"></script>
+<script src="modules/social.js?v=social-1"></script>
 <script src="modules/chat-copy.js?v=web-modules-2"></script>
 <script src="modules/chart-domain.js?v=web-modules-2"></script>
 <script src="modules/dayun-mechanics.js?v=web-modules-2"></script>
 <script src="modules/location-picker.js?v=web-modules-1"></script>
 <script src="modules/modal-manager.js?v=web-modules-2"></script>
-<script src="modules/home-community.js?v=web-modules-17"></script>
+<script src="modules/home-community.js?v=web-modules-18"></script>
 <script src="app.js?v=design-204"></script>
-<script src="modules/profile-workspace.js?v=web-modules-13"></script>
+<script src="modules/profile-workspace.js?v=web-modules-14"></script>
 <script src="modules/chat-workspace.js?v=web-modules-7"></script>
 <script src="app-bootstrap.js?v=design-177"></script>
-<script src="community.js?v=community-34"></script>
+<script src="community.js?v=community-35"></script>
+<script src="modules/ui-shell.js?v=ui-shell-1"></script>
 </body>
 </html>
