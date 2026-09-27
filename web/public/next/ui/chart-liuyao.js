@@ -47,11 +47,12 @@ export function paipanFromPayload(payload, { method = "" } = {}) {
     benName: str(payload?.ben_gua?.name) || "本卦",
     bianName: changed ? str(payload?.bian_gua?.name) : "",
     changed,
-    meta: [palaceText(payload?.ben_gua), changed ? `${moving.map(posLabel).join("、")}动` : "", METHOD_LABEL[method] || ""].filter(Boolean),
+    meta: [palaceText(payload?.ben_gua), changed ? `${moving.map(posLabel).join("、")}动` : "", METHOD_LABEL[payload?.method || method] || ""].filter(Boolean),
     facts: [["月建", payload?.month_jian], ["日辰", payload?.day_chen], ["旬空", payload?.xun_kong]],
     lines: yaos.slice().reverse().map(yao => {
       const yin = yao.yin_yang === "阴";
       const bian = yao.moving && yao.bian ? yao.bian : null;
+      const bianYin = bian?.yin_yang === "阴" || bian?.yin_yang === "阳" ? bian.yin_yang === "阴" : null;
       return {
         pos: posLabel(yao.pos),
         god: str(yao.liu_shen),
@@ -61,7 +62,8 @@ export function paipanFromPayload(payload, { method = "" } = {}) {
         yin,
         moving: !!yao.moving,
         mark: yao.moving ? (yao.old_young === "老阳" ? "○" : "×") : "",
-        changedYin: yao.moving ? !yin : yin,
+        // 变爻阴阳以排盘结果为准；老数据没有这个字段时才按「动则阴阳互变」补上。
+        changedYin: bianYin ?? (yao.moving ? !yin : yin),
         changedText: bian ? `${str(bian.liu_qin)} ${str(bian.najia)}${str(bian.wuxing)}`.trim() : "",
         changedElement: bian ? str(bian.wuxing) : "",
         shi: !!yao.shi,
@@ -96,7 +98,7 @@ export function paipanFromOracle(oracle) {
         yin: !!line.yin,
         moving: !!line.moving,
         mark: line.moving ? str(line.moving_mark) || "动" : "",
-        changedYin: line.moving ? !line.yin : !!line.yin,
+        changedYin: typeof line.changed_yin === "boolean" ? line.changed_yin : (line.moving ? !line.yin : !!line.yin),
         changedText,
         // changed_label 形如「父母 戊午火」，最后一个字是五行。
         changedElement: changedText ? changedText.slice(-1) : "",
@@ -160,14 +162,15 @@ function paipanRow(line, { changed, onOpen }) {
 }
 
 export function liuyaoPaipan(model, { heading = "h3", question = "", onOpen = null, footer = null, className = "" } = {}) {
-  const changed = !!(model.changed && model.bianName);
+  // 有没有动爻只看服务端给的 dong_yao / has_changed；变卦名缺失时只在显示上写「变卦」。
+  const changed = !!model.changed;
   const facts = model.facts.filter(([, value]) => str(value));
   return h("div", { class: ["pp", className] },
     h("div", { class: "pp-head" },
       h(heading, { class: "pp-title serif" },
         h("span", null, model.benName),
         changed ? h("span", { class: "pp-zhi" }, "之") : null,
-        changed ? h("span", null, model.bianName) : h("span", { class: "pp-quiet" }, "六爻安静")),
+        changed ? h("span", null, model.bianName || "变卦") : h("span", { class: "pp-quiet" }, "六爻安静")),
       model.meta.length ? h("p", { class: "pp-meta" }, model.meta.join(" · ")) : null),
     question ? h("blockquote", { class: "cp-question" }, h("span", null, "所问"), question) : null,
     facts.length ? h("dl", { class: "pp-facts" }, facts.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, str(value))))) : null,
