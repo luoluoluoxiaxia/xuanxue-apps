@@ -38,6 +38,7 @@ const required = [
   "credit-ledger.css",
   "forecast-view.html",
   "forecast.css",
+  "ui-next.css",
   "robots.txt",
   "sitemap.xml",
   "modules/core.js",
@@ -49,6 +50,8 @@ const required = [
   "modules/home-community.js",
   "modules/profile-workspace.js",
   "modules/chat-workspace.js",
+  "modules/social.js",
+  "modules/ui-shell.js",
   "assets/xuanshu-favicon.svg",
   "vendor/echarts-6.1.0.min.js",
   "vendor/echarts-6.1.0.LICENSE.txt",
@@ -116,6 +119,22 @@ for (const source of scriptSources) {
   const path = join(publicDir, source.split("?", 1)[0].replace(/^\//, ""));
   if (!existsSync(path)) fail(`index.html references missing script ${source}`);
 }
+
+// 新版界面只是一层可切换的视觉：必须最后加载，且经典版保持可用。
+const stylesheets = [...html.matchAll(/<link[^>]+rel="stylesheet"[^>]+href="([^"]+)"/g)]
+  .map(match => match[1].split("?", 1)[0])
+  .filter(href => !/^(?:https?:)?\/\//.test(href));
+if (stylesheets.at(-1) !== "ui-next.css") fail("ui-next.css must be the last local stylesheet");
+if (!html.includes('localStorage.getItem("xz-ui")') || !html.includes("document.documentElement.dataset.ui = mode;")) {
+  fail("index.html must choose the interface version before first paint");
+}
+for (const source of ["modules/social.js", "modules/ui-shell.js"]) {
+  if (!scriptSources.some(value => value.split("?", 1)[0] === source)) fail(`index.html does not load ${source}`);
+}
+if (scriptSources.findIndex(value => value.startsWith("modules/social.js")) > scriptSources.findIndex(value => value.startsWith("modules/home-community.js"))) {
+  fail("modules/social.js must load before the community renderers");
+}
+if (!scriptSources.at(-1)?.startsWith("modules/ui-shell.js")) fail("modules/ui-shell.js must load last");
 
 const core = readFileSync(join(publicDir, "modules", "core.js"), "utf8");
 if (!core.includes('location?.protocol === "https:" ? "; Secure" : ""')) {

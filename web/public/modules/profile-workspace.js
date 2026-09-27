@@ -110,6 +110,7 @@ function profileIdentityHtml() {
   const nickname = String(user.nickname || "").trim();
   return `<section class="profile-identity" aria-labelledby="profile-identity-title">
     <div class="profile-identity-view" data-profile-nickname-view>
+      ${window.XuanxueSocial ? window.XuanxueSocial.avatarHtml(nickname || "匿名", "nx-avatar-lg") : ""}
       <div class="profile-identity-copy">
         <span>社区昵称</span>
         <b id="profile-identity-title">${esc(nickname || "匿名昵称")}</b>

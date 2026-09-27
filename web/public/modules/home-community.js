@@ -132,16 +132,14 @@
           const todayTotal = Number(answered.today || 0) + Number(divinations.today || 0);
           summary.textContent = `已排 ${formatCount(answered.total)} 盘 · 已断 ${formatCount(divinations.total)} 卦 · 今日 ${formatCount(todayTotal)} 问`;
         }
-        const baziStats = $("[data-bazi-stats]");
-        if (baziStats) {
+        $$("[data-bazi-stats]").forEach(baziStats => {
           baziStats.textContent = `今日已答 ${formatCount(answered.today)} 问 · 累计 ${formatCount(answered.total)} 问`;
           baziStats.hidden = false;
-        }
-        const liuyaoStats = $("[data-liuyao-stats]");
-        if (liuyaoStats) {
+        });
+        $$("[data-liuyao-stats]").forEach(liuyaoStats => {
           liuyaoStats.textContent = `今日已断 ${formatCount(divinations.today)} 卦 · 累计 ${formatCount(divinations.total)} 卦`;
           liuyaoStats.hidden = false;
-        }
+        });
       } catch (_) {}
     }
 
@@ -241,8 +239,10 @@
         const bazi = post.chart_summary || {};
         const lines = Array.isArray(oracle.lines) ? oracle.lines : [];
         const hasChanged = !!oracle.has_changed;
-        const published = String(post.published_at || post.created_at || "").slice(0, 10);
+        const publishedAt = String(post.published_at || post.created_at || "");
+        const published = publishedAt.slice(0, 10);
         const authorName = String(post.author_name || "卦友");
+        const Social = global.XuanxueSocial;
         const liked = !!post.viewer_liked;
         const likeCount = Number(post.like_count) || 0;
         const commentCount = Number(post.comment_count) || 0;
@@ -277,7 +277,7 @@
               <div class="post-card-body">
                 <div class="post-card-head">
                   <div class="post-card-labels"><span>${esc(post.system_label || "命理")}</span><b>${esc(statusLabel)}</b></div>
-                  <span class="post-card-author">${esc(authorName)} · ${esc(published)}</span>
+                  <span class="post-card-author">${Social ? Social.avatarHtml(authorName) : ""}<span class="post-card-author-name">${esc(authorName)}</span><span class="nx-classic-only"> · ${esc(published)}</span>${Social ? `<time class="nx-only" datetime="${esc(publishedAt)}">${esc(Social.relativeTime(publishedAt))}</time>` : ""}</span>
                 </div>
                 <h3>${esc(post.question || post.title || "一则社区帖子")}</h3>
                 ${oracleHtml}
