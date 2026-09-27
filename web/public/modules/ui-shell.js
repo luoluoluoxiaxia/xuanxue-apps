@@ -231,6 +231,43 @@
     button.addEventListener("click", () => global.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }));
   }
 
+  /* ---------- 新版：对话与评论只在第一次出现时入场 ---------- */
+  // 流式回答会频繁重绘消息节点，发出评论后也会重绘整个评论列表。按稳定键记住每条的首次出现时间：
+  // 重绘出的同一条不再从头入场；入场还没播完就被重绘时，用负延迟接着播，避免闪烁。
+  const ENTER_MS = 420;
+  const ENTER_SELECTOR = ".msg-user, .msg-ai, .comment";
+  const firstSeen = new Map();
+
+  function enterKey(node) {
+    if (node.matches(".msg-ai")) return node.dataset.id ? `ai:${node.dataset.id}` : "";
+    if (node.matches(".comment")) return node.dataset.commentId ? `comment:${node.dataset.commentId}` : "";
+    const users = node.parentElement ? Array.from(node.parentElement.querySelectorAll(":scope > .msg-user")) : [];
+    return `user:${users.indexOf(node)}:${node.textContent.slice(0, 120)}`;
+  }
+
+  function markEnter(node, now) {
+    const key = enterKey(node);
+    if (!key) return;
+    if (!firstSeen.has(key)) firstSeen.set(key, now);
+    const elapsed = now - firstSeen.get(key);
+    if (elapsed >= ENTER_MS) return;
+    node.classList.add("nx-enter");
+    if (elapsed > 0) node.style.animationDelay = `-${Math.round(elapsed)}ms`;
+  }
+
+  function setupEnterOnce() {
+    if (!("MutationObserver" in global)) return;
+    new MutationObserver(records => {
+      if (currentMode() !== "next") return;
+      const now = global.performance.now();
+      records.forEach(record => record.addedNodes.forEach(node => {
+        if (node.nodeType !== 1) return;
+        if (node.matches(ENTER_SELECTOR)) markEnter(node, now);
+        node.querySelectorAll(ENTER_SELECTOR).forEach(child => markEnter(child, now));
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
   /* ---------- 新版：登录后首页按时段问候 ---------- */
   function setupGreeting() {
     const header = document.querySelector(".ph-today > header");
@@ -273,6 +310,7 @@
     });
     setupBirthControls();
     setupJumpToLatest();
+    setupEnterOnce();
     setupBackToTop();
     setupGreeting();
     showIntro();
