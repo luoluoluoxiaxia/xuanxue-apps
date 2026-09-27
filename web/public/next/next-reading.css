@@ -219,11 +219,15 @@
 .rd-layout { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 32px; align-items: start; }
 .rd-main { position: relative; min-width: 0; display: flex; flex-direction: column; min-height: calc(100dvh - var(--topbar-h) - 28px); max-width: 780px; width: 100%; margin: 0 auto; }
 .app[data-layout="reading"] .main { padding-bottom: 0; }
-.rd-head { display: grid; gap: 10px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
-.rd-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 页头一行：返回、类型、名称在左，常用操作在右；六爻的「所问」另起一行。 */
+.rd-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; padding-bottom: 6px; }
+.rd-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex: 1 1 auto; min-width: 0; }
+.rd-back { width: 36px; padding: 0; margin-left: -8px; justify-content: center; }
 .rd-title h1 { font-size: 22px; font-weight: 800; line-height: 1.3; }
 .rd-question { flex-basis: 100%; color: var(--ink-2); font-size: 14.5px; }
-.rd-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.rd-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.rd-help .icon { color: var(--brand-ink); }
+.rd-more { width: 36px; padding: 0; justify-content: center; }
 /* 「向社区求助 / 查看卦帖」会随卦帖发布切换，占位容器不参与排版。 */
 .rd-help-slot { display: contents; }
 .rd-vis { color: var(--ink-2); }
@@ -277,17 +281,16 @@
 .ai-public { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; color: var(--brand-ink); background: var(--brand-tint); border-radius: 12px; font-size: 13.5px; font-weight: 600; }
 .ai-public.is-pending { color: var(--ink-3); background: var(--bg-sunken); }
 .ai-credits { color: var(--ink-3); font-size: 12.5px; }
-.ai-tools { display: flex; gap: 2px; margin-left: -6px; }
+.ai-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-left: -6px; }
+.ai-tool-more { margin-left: 6px; font-size: 13px; }
+.ai-tools .ai-credits { margin-left: auto; padding-left: 12px; text-align: right; }
 .ai-tool { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--ink-3); }
 .ai-tool:hover { color: var(--ink); background: var(--bg-hover); }
 .ai-tool.is-on { color: var(--brand); }
 .ai-tool .icon { width: 18px; height: 18px; }
-.followups-wrap { display: grid; gap: 8px; }
-.followups-hint { color: var(--ink-3); font-size: 12.5px; }
 .followups { display: flex; flex-wrap: wrap; gap: 8px; }
 .followup { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; color: var(--ink-2); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13.5px; font-weight: 600; text-align: left; transition: border-color .16s var(--ease), color .16s var(--ease); }
 .followup:hover { color: var(--brand-ink); border-color: var(--brand); }
-.followup .icon { color: var(--ink-4); }
 
 .rd-composer { position: sticky; bottom: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--bg) 72%, color-mix(in srgb, var(--bg) 0%, transparent)); }
 .rd-ack:empty { display: none; }
@@ -457,6 +460,7 @@
   .rd-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rd-layout.is-liuyao .rd-action-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .rd-actions .btn { padding: 0 10px; }
+  .ai-tools .ai-credits { flex-basis: 100%; margin-left: 0; padding: 2px 0 0 6px; text-align: left; }
   .starters { grid-template-columns: minmax(0, 1fr); }
   .thread-empty { padding: 18px 16px; border-radius: 20px; }
   .msg-ai .prose { font-size: 15.5px; }
