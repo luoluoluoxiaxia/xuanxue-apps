@@ -1,5 +1,6 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
+// 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
 import { h, svg } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, put } from "../lib/api.js?v=n1";
@@ -13,6 +14,29 @@ const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
 const REASON_FALLBACK = "依据本月月令变化，并与整月穿搭主调相互呼应。";
 const CITY_MAX = 80;
+const CACHE_TTL = 3 * 60 * 1000;
+
+// 上次的观象台内容（只在内存里，按账户区分）；默认命盘变化或切换账户时作废。
+let cache = null;
+if (typeof document !== "undefined") {
+  document.addEventListener("xz:authchange", () => { cache = null; });
+  document.addEventListener("xz:personal-home-changed", () => { cache = null; });
+}
+
+// 按钮进入「处理中」：不用 disabled（焦点会丢到页面顶端），用 aria-busy 并忽略重复点击。
+function setBusy(button, text) {
+  if (button.getAttribute("aria-busy") === "true") return false;
+  button.setAttribute("aria-busy", "true");
+  button.classList.add("is-busy");
+  button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), text);
+  return true;
+}
+
+function setIdle(button, ...content) {
+  button.removeAttribute("aria-busy");
+  button.classList.remove("is-busy");
+  button.replaceChildren(...content);
+}
 
 const GLYPHS = {
   palette: '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.1 0 1.9-.8 1.9-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h2.1a4.2 4.2 0 0 0 4.2-4.2c0-3.7-4-6.7-9-6.7z"/><circle cx="7.6" cy="11.2" r="1.1"/><circle cx="10.3" cy="7.5" r="1.1"/><circle cx="14.8" cy="7.7" r="1.1"/>',
@@ -406,11 +430,13 @@ function openCitySheet(current, save) {
     maxlength: CITY_MAX,
     required: true,
     autocomplete: "address-level2",
+    enterkeyhint: "done",
     placeholder: "例如：杭州",
     value: current || "",
     autofocus: true,
+    "aria-describedby": `${id}-error`,
   });
-  const error = h("p", { class: "field-error", role: "alert", hidden: true });
+  const error = h("p", { class: "field-error", id: `${id}-error`, role: "alert", hidden: true });
   const form = h("form", { class: "td-city-form", id: `${id}-form`, novalidate: true },
     h("p", { class: "td-city-lead" }, "用于本月穿搭与手镯的城市方位辅助。"),
     h("div", { class: "field" },
@@ -420,36 +446,47 @@ function openCitySheet(current, save) {
   const cancel = h("button", { type: "button", class: "btn btn-ghost" }, "取消");
   const submit = h("button", { type: "submit", class: "btn btn-primary", form: `${id}-form` }, "保存");
   const sheet = openSheet({ title: "常住城市", body: form, footer: [cancel, submit], className: "sheet-city" });
+  // 打开时选中原有城市：直接输入即可替换。
+  requestAnimationFrame(() => { if (document.activeElement === input) input.select(); });
   cancel.addEventListener("click", () => sheet.close("cancel"));
-  input.addEventListener("input", () => { error.hidden = true; input.removeAttribute("aria-invalid"); });
+  input.addEventListener("input", () => { error.hidden = true; error.textContent = ""; input.removeAttribute("aria-invalid"); });
+  const invalid = text => {
+    error.textContent = text;
+    error.hidden = false;
+    input.setAttribute("aria-invalid", "true");
+    input.focus();
+  };
+  let saving = false;
   form.addEventListener("submit", async event => {
     event.preventDefault();
+    if (saving) return;
     const city = input.value.trim();
     if (!city) {
-      error.textContent = "请填写常住城市";
-      error.hidden = false;
-      input.setAttribute("aria-invalid", "true");
-      input.focus();
+      invalid("请填写常住城市");
       return;
     }
-    if (city.length > CITY_MAX) {
-      error.textContent = `城市名称最多 ${CITY_MAX} 个字`;
-      error.hidden = false;
+    if (Array.from(city).length > CITY_MAX) {
+      invalid(`城市名称最多 ${CITY_MAX} 个字`);
       return;
     }
-    submit.disabled = true;
+    // 没有改动：直接收起，不再请求。
+    if (city === String(current || "").trim()) {
+      sheet.close("same");
+      return;
+    }
+    saving = true;
+    setBusy(submit, "正在保存");
     cancel.disabled = true;
-    submit.textContent = "正在保存";
     try {
       await save(city);
       sheet.close("done");
       toast("常住城市已更新", { type: "ok" });
     } catch (reason) {
-      error.textContent = reason?.message || "城市保存失败";
-      error.hidden = false;
-      submit.disabled = false;
+      setIdle(submit, "保存");
       cancel.disabled = false;
-      submit.textContent = "保存";
+      invalid(reason?.message || "城市没有保存成功，请稍后再试");
+    } finally {
+      saving = false;
     }
   });
   return sheet;
@@ -465,6 +502,7 @@ export function render(ctx) {
   let lastAuth = null;
   let stalled = null;
   let failed = false;
+  let choosing = false;
 
   const heroSlot = h("div", { class: "td-slot" });
   const noticeSlot = h("div", { class: "td-slot" });
@@ -480,7 +518,7 @@ export function render(ctx) {
     if (signatures.get(slot) === signature) return;
     signatures.set(slot, signature);
     const content = build();
-    slot.replaceChildren(...(Array.isArray(content) ? content : [content]));
+    slot.replaceChildren(...(Array.isArray(content) ? content : [content]).filter(Boolean));
   }
 
   function mountContent() {
@@ -488,8 +526,25 @@ export function render(ctx) {
     root.replaceChildren(heroSlot, noticeSlot, gateSlot, daySlot, monthSlot, railSlot, foot);
   }
 
+  function remember() {
+    const user = session.get().user?.id;
+    if (user && payload) cache = { user, payload, at: Date.now() };
+  }
+
+  // 内容重绘后焦点丢了（按钮被替换或隐藏）：交给同一区域里新的按钮，没有按钮就交给这一块本身。
+  function repairFocus(preferred) {
+    const active = document.activeElement;
+    if (active && root.contains(active) && active.getClientRects().length) return;
+    const slot = [preferred, gateSlot, daySlot].find(node => node && !node.hidden && node.firstElementChild);
+    if (!slot) return;
+    const target = slot.querySelector("button:not([disabled]), a[href]") || slot.firstElementChild;
+    if (!target.matches("button, a")) target.setAttribute("tabindex", "-1");
+    target.focus({ preventScroll: true });
+  }
+
   function paint() {
     if (!payload || !ctx.isCurrent()) return;
+    const focusSlot = [noticeSlot, gateSlot, daySlot, monthSlot].find(slot => slot.contains(document.activeElement)) || null;
     mountContent();
     const nickname = String(session.get().user?.nickname || "");
     const daily = payload.daily || {};
@@ -512,17 +567,23 @@ export function render(ctx) {
     }
     paintNotice();
     schedule();
+    if (focusSlot) repairFocus(focusSlot);
   }
 
   function paintNotice() {
+    const hadFocus = noticeSlot.contains(document.activeElement);
     if (!stalled) {
       noticeSlot.replaceChildren();
+      if (hadFocus) repairFocus(daySlot);
       return;
     }
+    const retry = h("button", { type: "button", class: "btn btn-soft btn-sm" }, icon("refresh"), "重试");
+    retry.addEventListener("click", () => actions.reload({ button: retry }));
     noticeSlot.replaceChildren(h("div", { class: "td-notice", role: "alert" },
       icon("alert", "icon-sm"),
       h("span", null, `内容暂时没有更新：${stalled.message || "网络连接不稳定"}`),
-      h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => actions.reload() }, icon("refresh"), "重试")));
+      retry));
+    if (hadFocus) retry.focus({ preventScroll: true });
   }
 
   function showError(error) {
@@ -560,16 +621,21 @@ export function render(ctx) {
     load({ quiet: true });
   }
 
-  async function load({ quiet = false } = {}) {
+  async function load({ quiet = false, announce = false } = {}) {
     const id = ++requestId;
     clearTimeout(timer);
+    const visible = () => [...signatures.values()].join("|");
+    const before = announce ? visible() : "";
+    if (announce) root.classList.add("is-refreshing");
     try {
       const data = await get("/api/personal-home", { cache: "no-store" });
       if (!ctx.isCurrent() || id !== requestId) return;
       payload = data || {};
       stalled = null;
       failed = false;
+      remember();
       paint();
+      if (announce) toast(visible() === before ? "已是最新" : "已更新", { type: "ok" });
     } catch (error) {
       if (!ctx.isCurrent() || id !== requestId) return;
       if (error?.status === 401) refreshSession().catch(() => {});
@@ -583,6 +649,8 @@ export function render(ctx) {
       } else {
         showError(error);
       }
+    } finally {
+      if (id === requestId) root.classList.remove("is-refreshing");
     }
   }
 
@@ -592,9 +660,13 @@ export function render(ctx) {
   };
 
   const actions = {
-    reload() {
-      stalled = null;
-      paintNotice();
+    // 从提示条点「重试」：按钮先转圈，提示条等结果回来再收起。
+    reload({ button = null } = {}) {
+      if (button && !setBusy(button, "正在重试")) return;
+      if (!button) {
+        stalled = null;
+        paintNotice();
+      }
       load();
     },
     openCity() {
@@ -602,18 +674,25 @@ export function render(ctx) {
         const data = await put("/api/personal-home/city", { city });
         if (!ctx.isCurrent()) return;
         payload = data || payload;
+        remember();
         paint();
+        // 城市标签被重绘：焦点交给新的标签，而不是丢在页面顶端。
+        requestAnimationFrame(() => heroSlot.querySelector(".td-chip")?.focus({ preventScroll: true }));
       });
     },
     async setDefault(profileId, button) {
+      if (choosing) return;
+      choosing = true;
       const buttons = Array.from(root.querySelectorAll(".td-choice"));
-      buttons.forEach(node => { node.disabled = true; });
+      buttons.forEach(node => node.setAttribute("aria-disabled", "true"));
+      button.setAttribute("aria-busy", "true");
       const label = button.querySelector(".td-choice-action");
       if (label) label.textContent = "设置中…";
       try {
         const data = await put("/api/personal-home/default-profile", { profile_id: Number(profileId) });
         if (!ctx.isCurrent()) return;
         payload = data || payload;
+        remember();
         signatures.delete(gateSlot);
         paint();
         toast("已设为默认命盘，正在准备内容", { type: "ok" });
@@ -622,39 +701,39 @@ export function render(ctx) {
         signatures.delete(gateSlot);
         paint();
         failToast(error, "默认命盘设置失败");
+      } finally {
+        choosing = false;
       }
     },
     async refresh(button, label) {
-      button.disabled = true;
-      button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "正在开始准备");
+      if (!setBusy(button, "正在开始准备")) return;
       try {
         const data = await post("/api/personal-home/refresh");
         if (!ctx.isCurrent()) return;
         payload = data || payload;
+        remember();
         signatures.delete(gateSlot);
         paint();
         toast("准备中；完成后自动保存。", { type: "ok" });
       } catch (error) {
         if (!ctx.isCurrent()) return;
-        button.disabled = false;
-        button.replaceChildren(icon("refresh"), label);
+        setIdle(button, icon("refresh"), label);
         failToast(error, "未开始准备");
       }
     },
     async regenerate(kind, button, busyText, label) {
-      button.disabled = true;
-      button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), busyText);
+      if (!setBusy(button, busyText)) return;
       try {
         const data = await post(kind === "day" ? "/api/personal-home/day" : "/api/personal-home/month");
         if (!ctx.isCurrent()) return;
         payload = { ...payload, [kind === "day" ? "daily" : "month"]: data || {} };
         stalled = null;
+        remember();
         paint();
         toast(kind === "day" ? "今日宜忌重新生成中" : "本月内容重新生成中", { type: "ok" });
       } catch (error) {
         if (!ctx.isCurrent()) return;
-        button.disabled = false;
-        button.replaceChildren(icon("refresh"), label);
+        setIdle(button, icon("refresh"), label);
         failToast(error, kind === "day" ? "今日宜忌生成失败" : "本月内容准备失败");
       }
     },
@@ -677,6 +756,14 @@ export function render(ctx) {
         root.replaceChildren(anonView(ctx));
         return;
       }
+      const saved = cache;
+      if (saved && saved.user === current.user?.id && Date.now() - saved.at < CACHE_TTL) {
+        // 几分钟内回来：先显示上次的内容，再静默更新。
+        payload = saved.payload;
+        paint();
+        load({ quiet: true });
+        return;
+      }
       root.replaceChildren(skeletonView());
       load();
       return;
@@ -697,6 +784,12 @@ export function render(ctx) {
   };
   window.addEventListener("online", recover);
   document.addEventListener("visibilitychange", recover);
+  // 已在顶部时再点一次「今日」：重新拉取（内容先变淡，回来后恢复）。
+  ctx.onRefresh(() => {
+    if (!session.get().authenticated) return;
+    if (payload) load({ announce: true });
+    else if (failed) recover();
+  });
 
   sync();
   ctx.subscribe(session, sync);
