@@ -23,7 +23,7 @@
         <section class="post-preview-context">
           <header class="post-preview-head">
             <h2 id="post-preview-title" data-preview-question></h2>
-            <div class="preview-meta"><span class="nx-avatar nx-only" data-preview-avatar aria-hidden="true"></span><span data-preview-author></span><time data-preview-date></time><span data-preview-viewers></span></div>
+            <div class="preview-meta"><span data-preview-author></span><time data-preview-date></time><span data-preview-viewers></span></div>
           </header>
 
           <section class="post-oracle-panel post-preview-oracle" data-preview-liuyao aria-label="卦象">
@@ -1207,17 +1207,6 @@
     });
   }
 
-  // 新版界面：评论者头像与相对时间（nx-only 节点，经典版不显示）
-  function decorateCommentMeta(meta, comment) {
-    const Social = window.XuanxueSocial;
-    if (!Social) return;
-    meta.prepend(Social.avatarNode(comment.author_name || "卦友"));
-    const relative = makeElement("time", "nx-only", Social.relativeTime(comment.created_at));
-    relative.dateTime = String(comment.created_at || "");
-    relative.title = formatStamp(comment.created_at, true);
-    meta.append(relative);
-  }
-
   function renderCommentReply(reply) {
     const replyItem = makeElement("div", `comment-reply${reply.accepted ? " is-accepted" : ""}`);
     if (reply.id) {
@@ -1228,9 +1217,8 @@
     replyMeta.append(
       makeElement("b", "", reply.author_name || "卦友"),
       makeElement("span", "", `${reply.kind_label || "参与讨论"}${reply.accepted ? " · 已采纳" : ""}`),
-      makeElement("time", "nx-classic-only", formatStamp(reply.created_at, true)),
+      makeElement("time", "", formatStamp(reply.created_at, true)),
     );
-    decorateCommentMeta(replyMeta, reply);
     const replyAction = makeElement("button", "comment-reply-action", "回复");
     replyAction.type = "button";
     replyAction.dataset.commentReply = String(reply.id || "");
@@ -1267,9 +1255,8 @@
     meta.append(
       makeElement("b", "", comment.author_name || "卦友"),
       makeElement("span", "", `${comment.kind_label || "参与讨论"}${comment.accepted ? " · 已采纳" : ""}`),
-      makeElement("time", "nx-classic-only", formatStamp(comment.created_at, true)),
+      makeElement("time", "", formatStamp(comment.created_at, true)),
     );
-    decorateCommentMeta(meta, comment);
     const replyAction = makeElement("button", "comment-reply-action", "回复");
     replyAction.type = "button";
     replyAction.dataset.commentReply = String(comment.id || "");
@@ -1436,7 +1423,6 @@
     setField("[data-preview-category]", post.question_type_label || "其他");
     setField("[data-preview-question]", post.question || post.title || "六爻卦帖");
     setField("[data-preview-author]", post.author_name || "卦友");
-    window.XuanxueSocial?.paintAvatar(field("[data-preview-avatar]"), post.author_name || "卦友");
     setField("[data-preview-date]", formatStamp(post.published_at || post.created_at));
     setField("[data-preview-viewers]", `${Number(post.viewer_count) || 0} 人看过`);
     setField("[data-preview-answer-title]", "解答");

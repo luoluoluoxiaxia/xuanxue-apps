@@ -7,7 +7,7 @@ from scripts.ci_scope import classify
 
 class CiScopeTests(unittest.TestCase):
     def test_web_only_change_skips_android(self):
-        self.assertEqual(classify(["web/public/app.js"]), (True, False))
+        self.assertEqual(classify(["web/public/next/app.js"]), (True, False))
 
     def test_android_only_change_skips_web(self):
         self.assertEqual(
