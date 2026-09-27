@@ -1111,21 +1111,24 @@ function quotaBlock(quota) {
       h("div", null, h("dt", null, "今日已用"), h("dd", { class: "tnum" }, `${Number(quota?.used) || 0} 分`))));
 }
 
+// 明细里大多是同一类记录（AI 回答）：每行先写这一笔是什么，类型、时间和免费额度放进小字，
+// 不再一行行重复同一个粗标题。
 function activityRow(item) {
   const amount = Number(item?.amount) || 0;
   const type = String(item?.entry_type || "");
   const label = ENTRY_LABEL[type] || String(item?.title || "").trim() || "积分变动";
-  const description = String(item?.description || "").trim() || "积分余额已更新";
+  const description = String(item?.description || "").trim();
+  const lead = description || label;
   const free = type === "answer_usage" ? Number(item?.daily_free_spent) || 0 : 0;
   const direction = amount > 0 ? "plus" : amount < 0 ? "minus" : "zero";
   return h("li", { class: "cr-row" },
     h("span", { class: ["cr-row-icon", `is-${direction}`], "aria-hidden": "true" }, icon(ENTRY_GLYPH[type] || (amount >= 0 ? "plus" : "coins"))),
     h("span", { class: "cr-row-main" },
-      h("span", { class: "cr-row-title" }, label),
-      h("span", { class: "cr-row-desc", title: description }, description),
+      h("span", { class: "cr-row-lead", title: lead }, lead),
       h("span", { class: "cr-row-meta" },
+        description ? h("span", null, label) : null,
         h("time", { datetime: item?.created_at || "" }, ledgerTime(item?.created_at)),
-        free > 0 ? h("span", null, free >= Math.abs(amount) ? "免费额度抵扣" : `免费额度抵扣 ${free} 分`) : null)),
+        free > 0 ? h("span", null, free >= Math.abs(amount) ? "免费额度" : `免费额度 ${free} 分`) : null)),
     h("span", { class: "cr-row-side" },
       h("b", { class: ["cr-change", `is-${direction}`, "tnum"] }, signed(amount), h("span", { class: "sr-only" }, " 分")),
       h("span", { class: "cr-after tnum" }, `余额 ${number(item?.balance_after)}`)));
@@ -1140,9 +1143,9 @@ function orderRow(item) {
   const when = item?.paid_at || item?.expired_at || item?.created_at;
   return h("li", { class: "cr-row" },
     h("span", { class: ["cr-row-icon", change > 0 ? "is-plus" : "is-zero"], "aria-hidden": "true" }, icon("wallet")),
+    // 「充值」标签页里每行都是充值：先写金额和积分，状态跟在后面。
     h("span", { class: "cr-row-main" },
-      h("span", { class: "cr-row-title" }, "充值", h("span", { class: "sr-only" }, " · "), h("span", { class: ["chip", "cr-order-chip", `is-${tone}`] }, statusLabel)),
-      h("span", { class: "cr-row-desc" }, `${currency} ${((Number(item?.amount_total) || 0) / 100).toFixed(2)} · ${credits} 分`),
+      h("span", { class: "cr-row-title" }, `${currency} ${((Number(item?.amount_total) || 0) / 100).toFixed(2)} · ${credits} 分`, h("span", { class: "sr-only" }, " · "), h("span", { class: ["chip", "cr-order-chip", `is-${tone}`] }, statusLabel)),
       h("span", { class: "cr-row-meta" }, h("time", { datetime: when || "" }, ledgerTime(when)))),
     h("span", { class: "cr-row-side" },
       h("b", { class: ["cr-change", change > 0 ? "is-plus" : "is-zero", "tnum"] }, signed(change), h("span", { class: "sr-only" }, " 分")),
