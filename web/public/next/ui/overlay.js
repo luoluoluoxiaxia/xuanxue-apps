@@ -1,7 +1,7 @@
 // 浮层：桌面为居中对话框，手机为底部面板；统一处理焦点、Esc、背景滚动锁与层叠。
 import { h } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
-import { holdNavigation } from "../lib/router.js?v=n1";
+import { holdNavigation, navigationHold } from "../lib/router.js?v=n1";
 
 const stack = [];
 let historyToken = 0;
@@ -98,9 +98,16 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
   document.body.append(overlay);
   keepAboveKeyboard(overlay, entry);
   if (dismissible) {
-    entry.historyToken = ++historyToken;
-    const state = history.state && typeof history.state === "object" ? history.state : {};
-    history.pushState({ ...state, xzOverlay: entry.historyToken }, "");
+    const remember = () => {
+      if (closed) return;
+      entry.historyToken = ++historyToken;
+      const state = history.state && typeof history.state === "object" ? history.state : {};
+      history.pushState({ ...state, xzOverlay: entry.historyToken }, "");
+    };
+    // 上一个面板刚关、它的后退还没完成就打开新面板（例如「重试」）时，等后退完成再记入历史，
+    // 否则那次后退会把新面板当成返回键关掉。
+    const pending = navigationHold();
+    if (pending) pending.then(remember); else remember();
   }
   requestAnimationFrame(() => {
     const target = panel.querySelector("[autofocus]") || panel.querySelector(".sheet-body " + FOCUSABLE) || closeButton || panel;
