@@ -261,6 +261,8 @@
 .ai-tool:hover { color: var(--ink); background: var(--bg-hover); }
 .ai-tool.is-on { color: var(--brand); }
 .ai-tool .icon { width: 18px; height: 18px; }
+.followups-wrap { display: grid; gap: 8px; }
+.followups-hint { color: var(--ink-3); font-size: 12.5px; }
 .followups { display: flex; flex-wrap: wrap; gap: 8px; }
 .followup { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; color: var(--ink-2); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 999px; font-size: 13.5px; font-weight: 600; text-align: left; transition: border-color .16s var(--ease), color .16s var(--ease); }
 .followup:hover { color: var(--brand-ink); border-color: var(--brand); }
@@ -270,6 +272,9 @@
 .rd-ack:empty { display: none; }
 .rd-box { display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px 8px 10px; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 24px; box-shadow: var(--shadow-2); transition: border-color .16s var(--ease), box-shadow .16s var(--ease); }
 .rd-box:focus-within { border-color: var(--brand); box-shadow: var(--focus), var(--shadow-2); }
+/* 追问建议填入后，输入框轻闪一下，提示内容去了哪里、需要确认发送。 */
+.rd-box.is-filled { animation: rd-filled .8s var(--ease-out); }
+@keyframes rd-filled { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand) 40%, transparent), var(--shadow-2); } 100% { box-shadow: 0 0 0 10px transparent, var(--shadow-2); } }
 .rd-input { flex: 1; min-width: 0; min-height: 40px; max-height: 180px; padding: 9px 4px; color: var(--ink); background: transparent; border: 0; resize: none; font-size: 15.5px; line-height: 1.5; }
 .rd-input:focus { outline: none; box-shadow: none; }
 .rd-input::placeholder { color: var(--ink-3); }

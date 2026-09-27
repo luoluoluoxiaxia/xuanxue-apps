@@ -442,7 +442,15 @@ export function render(ctx) {
           feedbackButton(message, "dislike"),
           copyButton(message)));
         if (message.followups && message.followups.length) {
-          children.push(h("div", { class: "followups" }, message.followups.map(text => h("button", { type: "button", class: "followup", onClick: () => ask(text) }, icon("reply", "icon-sm"), text))));
+          // 追问建议只填进输入框，由用户确认（可先修改）后再发送，避免误点直接发起一次解读。
+          children.push(h("div", { class: "followups-wrap" },
+            h("p", { class: "followups-hint", id: `followups-hint-${message.id}` }, "点选后填入输入框，可修改后再发送"),
+            h("div", { class: "followups" }, message.followups.map(text => h("button", {
+              type: "button",
+              class: "followup",
+              "aria-describedby": `followups-hint-${message.id}`,
+              onClick: () => useFollowup(text),
+            }, icon("reply", "icon-sm"), text)))));
         }
       }
     }
@@ -737,6 +745,24 @@ export function render(ctx) {
     composer.fit();
     composer.textarea.focus();
     composer.textarea.setSelectionRange(text.length, text.length);
+  }
+
+  // 点选追问建议：填入输入框并闪一下提示位置；原来写了别的内容时可以撤销替换。
+  function useFollowup(text) {
+    const composer = nodes.composer;
+    if (!composer) return;
+    const previous = composer.textarea.value;
+    fillComposer(text);
+    const box = composer.node.querySelector(".rd-box");
+    if (box && !reducedMotion()) {
+      box.classList.remove("is-filled");
+      void box.offsetWidth;
+      box.classList.add("is-filled");
+      setTimeout(() => box.classList.remove("is-filled"), 800);
+    }
+    if (previous.trim() && previous.trim() !== text) {
+      toast("已替换输入框里原来的内容", { action: { label: "撤销", onClick: () => fillComposer(previous) } });
+    }
   }
 
   function syncUrl() {
