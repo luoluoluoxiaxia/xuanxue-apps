@@ -244,6 +244,7 @@ html[data-ui="next"] .sc-scroll::-webkit-scrollbar-thumb{background:rgba(62,48,3
 @keyframes nx-shimmer{0%{background-position:-240px 0}100%{background-position:calc(240px + 100%) 0}}
 @keyframes nx-breathe{0%,100%{opacity:.35;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
 @keyframes nx-spin{to{transform:rotate(360deg)}}
+@keyframes nx-skel{0%,100%{opacity:1}50%{opacity:.5}}
 
 /* 新版通用小件 */
 html[data-ui="next"] .nx-seal{
@@ -573,7 +574,7 @@ html[data-ui="next"] .nx-appbar{display:none}
   position:fixed;
   z-index:120;
   left:50%;
-  bottom:32px;
+  top:20px;
   max-width:calc(100vw - 32px);
   padding:11px 18px;
   color:#fff;
@@ -582,12 +583,12 @@ html[data-ui="next"] .nx-appbar{display:none}
   box-shadow:0 12px 34px rgba(0,0,0,.2);
   font:500 14px/1.4 "Noto Sans SC",-apple-system,sans-serif;
   opacity:0;
-  transform:translate(-50%,8px);
+  transform:translate(-50%,-8px);
   transition:opacity .2s ease,transform .2s ease;
   pointer-events:none;
 }
 .ui-switch-notice.is-visible{opacity:1;transform:translate(-50%,0)}
-@media(max-width:620px){.ui-switch-notice{bottom:calc(var(--mobile-nav-height,64px) + 14px)}}
+@media(max-width:620px){.ui-switch-notice{top:68px}}
 /* 经典版：侧栏里的切换项沿用经典导航样式；手机底栏放不下，改用页面右上角的小标签 */
 .ui-switch-float{display:none}
 @media(max-width:620px){
@@ -3491,31 +3492,30 @@ html[data-ui="next"] .landing .home-community-feed[data-state="loading"]::after{
   display:block;
   height:188px;
   background:
-    linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent) -240px 0/240px 100% no-repeat,
-    radial-gradient(circle 16px at 36px 36px,var(--nx-surface-3) 98%,transparent) no-repeat,
-    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 62px 26px/120px 12px no-repeat,
-    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 20px 74px/72% 16px no-repeat,
-    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 20px 102px/48% 16px no-repeat,
-    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 20px 146px/90% 1px no-repeat,
+    radial-gradient(circle 16px at 38px 36px,var(--nx-surface-3) 98%,transparent) no-repeat,
+    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 64px 29px/120px 14px no-repeat,
+    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 22px 76px/72% 18px no-repeat,
+    linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 22px 106px/48% 18px no-repeat,
+    linear-gradient(var(--nx-line),var(--nx-line)) 22px 150px/calc(100% - 44px) 1px no-repeat,
     var(--nx-surface);
   border:1px solid var(--nx-line);
   border-radius:var(--nx-r-lg);
   content:"";
-  animation:nx-shimmer 1.4s linear infinite;
+  animation:nx-skel 1.4s ease-in-out infinite;
 }
+html[data-ui="next"] .landing .home-community-feed[data-state="loading"]::after{animation-delay:.2s}
 /* 解读等待中：正文位置先铺三行柔和的占位 */
-html[data-ui="next"] body[data-screen="dash"] .ai-body:has(>.ai-status-line:only-child)::after{
+html[data-ui="next"] body[data-screen="dash"] .ai-body:has(>.ai-status-line):not(:has(p,li,h2,h3))::after{
   display:block;
   height:64px;
   margin-top:14px;
   background:
-    linear-gradient(90deg,transparent,rgba(255,255,255,.6),transparent) -240px 0/240px 100% no-repeat,
     linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 0 0/92% 12px no-repeat,
     linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 0 26px/78% 12px no-repeat,
     linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) 0 52px/54% 12px no-repeat;
   border-radius:6px;
   content:"";
-  animation:nx-shimmer 1.4s linear infinite;
+  animation:nx-skel 1.4s ease-in-out infinite;
 }
 /* 对话往上翻时出现「回到最新」 */
 html[data-ui="next"] .nx-jump-latest{
@@ -3757,3 +3757,21 @@ html[data-ui="next"] :is(.trend-step-card span,.trend-year-card span){color:var(
 html[data-ui="next"] :is(.trend-step-card em,.trend-step-card small,.trend-year-card em){color:var(--nx-muted);font-size:11px}
 html[data-ui="next"] .trend-foot .disc{color:var(--nx-muted);font-size:13px}
 html[data-ui="next"] body[data-screen="dash"] .pillars-grid:not(.is-liuyao):not(.is-detailed){align-items:stretch}
+@media(max-width:1023px){
+  html[data-ui="next"] body[data-screen="dash"] .session-switcher{gap:6px;padding:0;background:transparent}
+  html[data-ui="next"] body[data-screen="dash"] .session-btn{padding:0 14px;background:var(--nx-surface-3);border-radius:999px}
+  html[data-ui="next"] body[data-screen="dash"] .session-btn.active{flex:0 1 auto;background:var(--nx-surface);box-shadow:0 0 0 1px var(--nx-line-2)}
+}
+
+/* 账户、钱包、充值与结算：9–11px 的小字统一放大到 12–13px */
+html[data-ui="next"] .account-dialog :is(.account-dialog-brand em,.account-auth-head>span,.account-home-head>span,.checkout-head>span,.checkout-status-head>span,.credit-history-head>span){font-size:12.5px}
+html[data-ui="next"] .account-dialog :is(.account-personal-home-link em,.account-archive-copy>span,.account-archive-copy>em,.account-archive-detail,.account-quota-main>em,.account-wallet-balance>em,.account-wallet-packs em,.topup-pack-list>button>span:nth-of-type(2) em,.topup-select-note,.checkout-summary em,.credit-history-empty span,.account-wallet-card>p){font-size:12.5px;line-height:1.55}
+html[data-ui="next"] .account-dialog :is(.account-privacy-note,.account-code-status,.account-quota-detail em,.account-quota-detail b,.account-referral-card>p,.credit-history-head p,.credit-history-copy b,.credit-order-row b,.checkout-summary span,.account-wallet-history b,.account-wallet-packs b){font-size:13px}
+html[data-ui="next"] .account-dialog :is(.account-archive-card>button,.account-archive-entry-actions button,.account-referral-card>a,.checkout-head>button,.credit-history-empty button,.credit-history-loading){font-size:13px}
+html[data-ui="next"] .account-dialog .checkout-steps li{font-size:12px}
+html[data-ui="next"] .account-dialog .checkout-steps li.active{color:var(--nx-indigo)}
+html[data-ui="next"] .account-dialog .checkout-steps li.active b{background:var(--nx-indigo);border-color:var(--nx-indigo)}
+html[data-ui="next"] .account-dialog :is(.checkout-head>button,.account-wallet-packs i,.credit-history-empty button){color:var(--nx-indigo)}
+html[data-ui="next"] .account-dialog .credit-history-pages span{font-size:12px}
+html[data-ui="next"] .account-dialog .topup-pack-list>button{background:var(--nx-surface);border-color:var(--nx-line-2);border-radius:var(--nx-r-lg)}
+html[data-ui="next"] .account-dialog .topup-pack-list>button:hover{background:var(--nx-surface-2);border-color:rgba(180,65,43,.38)}
