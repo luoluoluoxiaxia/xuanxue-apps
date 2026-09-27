@@ -1091,7 +1091,13 @@ export function render(ctx) {
       list.replaceChildren(...rows.map((item, index) => h("a", {
         class: ["conv-item", item.session_id === state.conversation.sessionId && "is-current"],
         href: `#/reading/${encodeURIComponent(state.profileId)}?session=${encodeURIComponent(item.session_id)}`,
-        onClick: () => sheet.close(),
+        // 关闭面板会退掉它占用的那条历史记录；等退完再切换对话，否则这次后退会把刚选中的对话撤回去。
+        onClick: event => {
+          if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          event.preventDefault();
+          sheet.close();
+          if (item.session_id !== state.conversation.sessionId) ctx.navigate(event.currentTarget.getAttribute("href"));
+        },
       },
       h("span", { class: "conv-top" },
         h("b", null, item.first_question || item.last_question || "本命解读"),

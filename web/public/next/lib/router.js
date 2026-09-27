@@ -49,6 +49,11 @@ export function holdNavigation(promise) {
   current.then(() => { if (historyHold === current) historyHold = null; });
 }
 
+// 正在等这样一次后退时返回它的 Promise，否则返回 null。
+export function navigationHold() {
+  return historyHold;
+}
+
 export function navigate(to, { replace = false } = {}) {
   if (historyHold) {
     historyHold.then(() => navigate(to, { replace }));
