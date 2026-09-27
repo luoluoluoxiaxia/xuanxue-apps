@@ -702,15 +702,29 @@ function baziFlow(ctx) {
       }
       return;
     }
-    let profiles = [];
-    try {
+    const loadProfiles = async () => {
       const items = await get("/api/profiles", { cache: "no-store" });
-      profiles = (Array.isArray(items) ? items : []).filter(item => (item.system || item.summary?.system) !== "liuyao");
-    } catch (_) {}
+      return (Array.isArray(items) ? items : []).filter(item => (item.system || item.summary?.system) !== "liuyao");
+    };
+    let profiles = [];
+    let profilesError = null;
+    try {
+      profiles = await loadProfiles();
+    } catch (error) {
+      profilesError = error;
+    }
     if (!ctx.isCurrent()) return;
+    // 已有命盘读取失败时单独提示并可以重试，不当成「还没有命盘」，免得用户重复新建；下面的新建表单照常可用。
+    const unavailable = profilesError && !setDefault ? profilesUnavailable(profilesError, async () => {
+      const list = await loadProfiles();
+      if (!ctx.isCurrent()) return;
+      if (list.length) unavailable.replaceWith(existingProfiles(ctx, list, { help: wantsHelp }));
+      else unavailable.remove();
+    }) : null;
     body.replaceChildren(...[
+      unavailable,
       profiles.length && !setDefault ? existingProfiles(ctx, profiles, { help: wantsHelp }) : null,
-      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0, help: wantsHelp }),
+      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0 || !!profilesError, help: wantsHelp }),
     ].filter(Boolean));
   };
   start();
@@ -724,6 +738,31 @@ function baziFlow(ctx) {
     }
   });
   return { node, title: "八字排盘", layout: "focus" };
+}
+
+function profilesUnavailable(error, retry) {
+  const again = h("button", { type: "button", class: "btn btn-soft" }, icon("refresh"), "重试");
+  again.addEventListener("click", async () => {
+    if (again.getAttribute("aria-busy") === "true") return;
+    again.setAttribute("aria-busy", "true");
+    again.classList.add("is-busy");
+    try {
+      await retry();
+    } catch (failure) {
+      toast(humanizeError(failure?.message, "已保存的命盘还是没能加载出来，请稍后再试"), { type: "error" });
+    } finally {
+      again.removeAttribute("aria-busy");
+      again.classList.remove("is-busy");
+    }
+  });
+  return h("section", { class: "flow-step" },
+    stateView({
+      tone: "error",
+      title: "已保存的命盘没能加载出来",
+      text: humanizeError(error?.message, "网络或服务暂时不可用"),
+      actions: [again],
+    }),
+    h("p", { class: "flow-or" }, h("span", null, "或者新建一张")));
 }
 
 function existingProfiles(ctx, profiles, { help = false } = {}) {
