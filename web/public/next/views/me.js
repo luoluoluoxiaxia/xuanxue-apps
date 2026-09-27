@@ -1,6 +1,6 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, svg } from "../lib/dom.js?v=n1";
+import { h, svg, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, put, patch, del, query } from "../lib/api.js?v=n1";
 import { session, inbox, applyAccount, refreshSession, displayName } from "../lib/store.js?v=n1";
@@ -25,6 +25,22 @@ let uidSeed = 0;
 const uid = prefix => `${prefix}-${(uidSeed += 1).toString(36)}`;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const number = value => (Number(value) || 0).toLocaleString("zh-CN");
+
+// 按钮进入「处理中」：不用 disabled（焦点会丢到页面顶端），用 aria-busy 并忽略重复点击。
+function setBusy(button, text) {
+  if (!button || button.getAttribute("aria-busy") === "true") return false;
+  button.setAttribute("aria-busy", "true");
+  button.classList.add("is-busy");
+  button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), text);
+  return true;
+}
+
+function setIdle(button, ...content) {
+  if (!button) return;
+  button.removeAttribute("aria-busy");
+  button.classList.remove("is-busy");
+  button.replaceChildren(...content);
+}
 
 /* ==========================================================================
    通用
@@ -128,6 +144,7 @@ function nicknameEditor(ctx, { variant = "row" } = {}) {
     name: "nickname",
     maxlength: 20,
     autocomplete: "nickname",
+    enterkeyhint: "done",
     placeholder: "输入昵称",
     "aria-describedby": `${id}-status`,
   });
@@ -205,9 +222,8 @@ function nicknameEditor(ctx, { variant = "row" } = {}) {
       return;
     }
     saving = true;
-    save.disabled = true;
+    setBusy(save, "保存中…");
     cancel.disabled = true;
-    save.textContent = "保存中…";
     setStatus("");
     try {
       const payload = await put("/api/account/profile", { nickname });
@@ -219,11 +235,13 @@ function nicknameEditor(ctx, { variant = "row" } = {}) {
     } catch (error) {
       if (error?.status === 401) refreshSession().catch(() => {});
       setStatus(error?.message || "昵称保存失败", "error");
+      // 保存失败：焦点回到输入框并选中，直接改就行。
+      input.focus();
+      input.select();
     } finally {
       saving = false;
-      save.disabled = false;
+      setIdle(save, "保存");
       cancel.disabled = false;
-      save.textContent = "保存";
     }
   });
   update();
@@ -397,6 +415,24 @@ function overviewView(ctx, body) {
   }
   paint();
   ctx.subscribe(session, paint);
+  // 已在顶部时再点一次底栏「我」：重新读取余额、免费积分与档案数。
+  let refreshing = false;
+  ctx.onRefresh(async () => {
+    if (refreshing || !session.get().authenticated) return;
+    refreshing = true;
+    const visible = () => { const s = session.get(); return JSON.stringify([s.wallet, s.quota, s.archive, s.user?.nickname]); };
+    const before = visible();
+    body.classList.add("is-refreshing");
+    try {
+      await refreshSession();
+      if (ctx.isCurrent()) toast(visible() === before ? "已是最新" : "已更新", { type: "ok" });
+    } catch (error) {
+      if (ctx.isCurrent()) toast(error?.message || "刷新失败，请稍后再试", { type: "error" });
+    } finally {
+      refreshing = false;
+      body.classList.remove("is-refreshing");
+    }
+  });
 }
 
 function overviewFoot(ctx, authenticated) {
@@ -425,6 +461,10 @@ const NAME_MAX = 30;
 
 // 离开再回来（例如从解读页返回）时停留在上次的标签。
 let archiveTab = "bazi";
+// 上次读到的档案列表（只在内存里，按账户区分）：从解读页返回时先秒开并回到原位置，再静默刷新。
+let archiveCache = null;
+const ARCHIVE_TTL = 10 * 60 * 1000;
+if (typeof document !== "undefined") document.addEventListener("xz:authchange", () => { archiveCache = null; });
 
 const systemOf = profile => ((profile?.system || profile?.summary?.system) === "liuyao" ? "liuyao" : "bazi");
 
@@ -595,7 +635,7 @@ function archivesView(ctx, body) {
     (card?.querySelector(selector) || card?.querySelector("a, button") || tabsNode.querySelector('[aria-selected="true"]'))?.focus({ preventScroll: true });
   }
 
-  function setBusy(card, text) {
+  function setCardBusy(card, text) {
     if (!card) return;
     card.classList.add("is-busy");
     card.setAttribute("aria-busy", "true");
@@ -606,7 +646,7 @@ function archivesView(ctx, body) {
     card.append(h("div", { class: "arc-busy", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }), text));
   }
 
-  function clearBusy(card) {
+  function clearCardBusy(card) {
     if (!card) return;
     card.classList.remove("is-busy");
     card.removeAttribute("aria-busy");
@@ -618,12 +658,11 @@ function archivesView(ctx, body) {
   }
 
   async function setDefault(profile, button) {
-    if (button) {
-      button.disabled = true;
-      button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "设置中…");
-    }
+    if (button && !setBusy(button, "设置中…")) return;
     try {
       await put("/api/personal-home/default-profile", { profile_id: Number(profile.id) });
+      // 观象台依据的命盘变了：让「今日」下次进入时重新读取。
+      document.dispatchEvent(new CustomEvent("xz:personal-home-changed"));
       if (!ctx.isCurrent()) return;
       (state.profiles || []).forEach(item => {
         if (systemOf(item) === "bazi") item.is_default = Number(item.id) === Number(profile.id);
@@ -631,17 +670,19 @@ function archivesView(ctx, body) {
       const hadFocus = listNode.contains(document.activeElement);
       paintList();
       if (hadFocus) focusCard(profile.id);
-      toast("已设为默认命盘", { type: "ok" });
+      toast("已设为默认命盘，今日内容会按它重新准备", { type: "ok" });
       load({ quiet: true });
     } catch (error) {
       if (!ctx.isCurrent()) return;
       if (error?.status === 401) refreshSession().catch(() => {});
-      if (button) {
-        button.disabled = false;
-        button.replaceChildren(icon("sun"), "设为默认");
-      }
+      setIdle(button, icon("sun"), "设为默认");
       toast(`设置失败：${error?.message || "请稍后再试"}`, { type: "error" });
     }
+  }
+
+  // 从卡片菜单打开的面板关掉后，焦点回到这张卡片的「更多」按钮（菜单项已不在页面上）。
+  function focusMore(profile) {
+    requestAnimationFrame(() => listNode.querySelector(`.arc-card[data-id="${Number(profile.id)}"] .arc-more`)?.focus({ preventScroll: true }));
   }
 
   async function removeProfile(profile) {
@@ -655,13 +696,18 @@ function archivesView(ctx, body) {
       cancelText: "取消",
       danger: true,
     });
-    if (!ok || !ctx.isCurrent()) return;
+    if (!ctx.isCurrent()) return;
+    if (!ok) {
+      focusMore(profile);
+      return;
+    }
     const card = listNode.querySelector(`.arc-card[data-id="${Number(profile.id)}"]`);
-    setBusy(card, "正在删除…");
+    setCardBusy(card, "正在删除…");
     try {
       await del(`/api/profiles/${encodeURIComponent(profile.id)}`);
       if (!ctx.isCurrent()) return;
       state.profiles = (state.profiles || []).filter(item => Number(item.id) !== Number(profile.id));
+      rememberProfiles();
       paintTabs();
       paintList();
       (listNode.querySelector(".arc-card .arc-actions .btn-primary") || tabsNode.querySelector('[aria-selected="true"]'))?.focus({ preventScroll: true });
@@ -670,9 +716,10 @@ function archivesView(ctx, body) {
       load({ quiet: true });
     } catch (error) {
       if (!ctx.isCurrent()) return;
-      clearBusy(card);
+      clearCardBusy(card);
       if (error?.status === 401) refreshSession().catch(() => {});
       toast(`删除失败：${error?.message || "请稍后再试"}`, { type: "error" });
+      focusMore(profile);
     }
   }
 
@@ -686,11 +733,13 @@ function archivesView(ctx, body) {
       maxlength: NAME_MAX,
       required: true,
       autocomplete: "off",
+      enterkeyhint: "done",
       autofocus: true,
+      "aria-describedby": `${id}-error`,
       value: String(profile.name || ""),
       placeholder: isLy ? "例如：跳槽 offer" : "例如：本人",
     });
-    const error = h("p", { class: "field-error", role: "alert", hidden: true });
+    const error = h("p", { class: "field-error", id: `${id}-error`, role: "alert", hidden: true });
     const form = h("form", { class: "arc-rename", id: `${id}-form`, novalidate: true },
       h("div", { class: "field" },
         h("label", { class: "field-label", for: id }, isLy ? "卦档名称" : "命盘名称"),
@@ -699,15 +748,26 @@ function archivesView(ctx, body) {
         error));
     const cancel = h("button", { type: "button", class: "btn btn-ghost" }, "取消");
     const save = h("button", { type: "submit", class: "btn btn-primary", form: `${id}-form` }, "保存");
-    const sheet = openSheet({ title: "重命名", body: form, footer: [cancel, save], className: "sheet-rename" });
+    const sheet = openSheet({
+      title: "重命名",
+      body: form,
+      footer: [cancel, save],
+      className: "sheet-rename",
+      onClose: reason => { if (reason !== "done" && ctx.isCurrent()) focusMore(profile); },
+    });
+    // 打开时选中原名：直接输入即可替换。
+    requestAnimationFrame(() => { if (document.activeElement === input) input.select(); });
     cancel.addEventListener("click", () => sheet.close("cancel"));
-    input.addEventListener("input", () => { error.hidden = true; });
+    input.addEventListener("input", () => { error.hidden = true; error.textContent = ""; input.removeAttribute("aria-invalid"); });
+    let saving = false;
     form.addEventListener("submit", async event => {
       event.preventDefault();
+      if (saving) return;
       const name = input.value.trim();
       if (!name) {
         error.textContent = "名称不能为空";
         error.hidden = false;
+        input.setAttribute("aria-invalid", "true");
         input.focus();
         return;
       }
@@ -715,9 +775,9 @@ function archivesView(ctx, body) {
         sheet.close("same");
         return;
       }
-      save.disabled = true;
+      saving = true;
+      setBusy(save, "保存中…");
       cancel.disabled = true;
-      save.textContent = "保存中…";
       try {
         await patch(`/api/profiles/${encodeURIComponent(profile.id)}/name`, { name });
         profile.name = name;
@@ -732,9 +792,13 @@ function archivesView(ctx, body) {
         if (reason?.status === 401) refreshSession().catch(() => {});
         error.textContent = reason?.message || "重命名失败";
         error.hidden = false;
-        save.disabled = false;
+        input.setAttribute("aria-invalid", "true");
+        setIdle(save, "保存");
         cancel.disabled = false;
-        save.textContent = "保存";
+        input.focus();
+        input.select();
+      } finally {
+        saving = false;
       }
     });
   }
@@ -813,19 +877,37 @@ function archivesView(ctx, body) {
     listNode.replaceChildren(h("div", { class: "arc-grid" }, items.map(archiveCard)));
   }
 
-  async function load({ quiet = false } = {}) {
+  function rememberProfiles() {
+    const user = session.get().user?.id;
+    if (user && state.profiles) archiveCache = { user, list: state.profiles, at: Date.now() };
+  }
+
+  // 列表重绘时保持键盘焦点在同一张卡片的同一个按钮上。
+  function repaintKeepingFocus() {
+    const active = listNode.contains(document.activeElement) ? document.activeElement : null;
+    const cardId = active?.closest(".arc-card")?.dataset.id;
+    const selector = active?.classList.contains("arc-more") ? ".arc-more" : ".arc-actions .btn-primary";
+    paintTabs();
+    paintList();
+    if (cardId) focusCard(cardId, selector);
+  }
+
+  async function load({ quiet = false, announce = false } = {}) {
     const requestId = ++state.requestId;
     if (!state.profiles) {
       listNode.setAttribute("aria-busy", "true");
       listNode.replaceChildren(h("p", { class: "sr-only", role: "status" }, "正在读取档案…"), archiveSkeleton());
     }
+    const before = announce ? JSON.stringify(state.profiles) : "";
+    if (announce) listNode.classList.add("is-refreshing");
     try {
       const data = await get("/api/profiles", { cache: "no-store" });
       if (!ctx.isCurrent() || requestId !== state.requestId) return;
       state.profiles = Array.isArray(data) ? data : [];
       state.failed = false;
-      paintTabs();
-      paintList();
+      rememberProfiles();
+      repaintKeepingFocus();
+      if (announce) toast(JSON.stringify(state.profiles) === before ? "已是最新" : "已更新", { type: "ok" });
     } catch (error) {
       if (!ctx.isCurrent() || requestId !== state.requestId) return;
       if (error?.status === 401) refreshSession().catch(() => {});
@@ -843,6 +925,8 @@ function archivesView(ctx, body) {
           load();
         },
       }));
+    } finally {
+      if (requestId === state.requestId) listNode.classList.remove("is-refreshing");
     }
   }
 
@@ -867,6 +951,15 @@ function archivesView(ctx, body) {
       return;
     }
     body.replaceChildren(head, toolbar, listNode);
+    const saved = archiveCache;
+    if (saved && saved.user === current.user?.id && Date.now() - saved.at < ARCHIVE_TTL) {
+      // 从解读页返回：先用上次的列表（滚动位置可以立即恢复），再静默刷新。
+      state.profiles = saved.list;
+      paintTabs();
+      paintList();
+      load({ quiet: true });
+      return;
+    }
     paintTabs();
     load();
   }
@@ -875,6 +968,12 @@ function archivesView(ctx, body) {
   };
   window.addEventListener("online", recover);
   ctx.cleanup(() => window.removeEventListener("online", recover));
+  // 已在顶部时再点一次「我的盘」：重新读取档案。
+  ctx.onRefresh(() => {
+    if (!session.get().authenticated) return;
+    if (state.profiles) load({ quiet: true, announce: true });
+    else load();
+  });
   sync();
   ctx.subscribe(session, sync);
 }
@@ -1097,13 +1196,16 @@ function creditsView(ctx, body) {
   const ledgerTitleSub = h("p", { class: "cr-ledger-sub" });
   const filterNode = h("div", { class: "seg cr-filter", role: "tablist", "aria-label": "明细类型" });
   const monthNode = h("div", { class: "cr-month" });
-  const listNode = h("div", { class: "cr-rows", "aria-live": "polite" });
+  const listNode = h("div", { class: "cr-rows" });
+  // 读屏只播报一句结果，而不是把整张列表重读一遍。
+  const ledgerStatus = h("p", { class: "sr-only", role: "status" });
   const pagerNode = h("nav", { class: "cr-pager", "aria-label": "明细分页", hidden: true });
   const ledgerNode = h("section", { class: "cr-ledger", id: "cr-ledger", "aria-labelledby": "cr-ledger-title", tabindex: "-1" },
     h("header", { class: "cr-ledger-head" },
       h("div", null, h("h2", { id: "cr-ledger-title" }, "积分明细"), ledgerTitleSub),
       monthNode),
     filterNode,
+    ledgerStatus,
     listNode,
     pagerNode);
 
@@ -1268,15 +1370,16 @@ function creditsView(ctx, body) {
       focusPacks();
     });
     pay.addEventListener("click", () => startCheckout(pack, pay, errorNode));
+    // 打开结账失败后回到这里：焦点放在付款按钮上，回车即可重试。
+    if (message) requestAnimationFrame(() => { if (pay.isConnected) pay.focus({ preventScroll: true }); });
   }
 
   // 必须在点击事件里同步打开空白标签页，避免被浏览器拦截弹窗。
   function startCheckout(pack, button, errorNode) {
-    if (button.disabled) return;
+    if (button.getAttribute("aria-busy") === "true") return;
     let tab = null;
     try { tab = window.open("about:blank", CHECKOUT_WINDOW_NAME); } catch (_) { tab = null; }
-    button.disabled = true;
-    button.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "正在打开 Stripe…");
+    setBusy(button, "正在打开 Stripe…");
     errorNode.hidden = true;
     checkout.sheet?.body.setAttribute("aria-busy", "true");
     post("/api/billing/checkout-sessions", { sku: pack.sku }, { headers: { "Idempotency-Key": newIdempotencyKey() } })
@@ -1430,7 +1533,9 @@ function creditsView(ctx, body) {
         h("div", null, h("dt", null, "一次性付款"), h("dd", { class: "tnum" }, `${price} ${display.currency.toUpperCase()}`)),
         kind === "paid" ? h("div", null, h("dt", null, "账户积分余额"), h("dd", { class: "tnum" }, `${number(balance)} 分`)) : null) : null));
     sheet.footer.replaceChildren(...statusActions(kind, context, status, display));
-    if (kind !== "paying" && kind !== "pending") requestAnimationFrame(() => heading.focus({ preventScroll: true }));
+    // 进行中的状态不抢焦点；但原来聚焦的按钮被替换掉时，把焦点放到标题上，避免跑出对话框。
+    const focusLost = !sheet.panel.contains(document.activeElement);
+    if ((kind !== "paying" && kind !== "pending") || focusLost) requestAnimationFrame(() => heading.focus({ preventScroll: true }));
   }
 
   async function poll(sessionId, context, { initialKind = "pending", attempts = 12, intervalMs = 1250 } = {}) {
@@ -1470,15 +1575,18 @@ function creditsView(ctx, body) {
   }
 
   /* ---------- 余额与套餐 ---------- */
-  function focusPacks({ smooth = true } = {}) {
+  // 减少动态效果时直接跳转，不做平滑滚动。
+  const scrollBehavior = () => (reducedMotion() ? "auto" : "smooth");
+
+  function focusPacks({ smooth = !reducedMotion() } = {}) {
     packsNode.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "start" });
     const first = packsNode.querySelector(".cr-pack:not([disabled])");
     setTimeout(() => (first || packsNode).focus({ preventScroll: true }), smooth ? 360 : 0);
   }
 
   function focusLedger() {
-    ledgerNode.scrollIntoView({ behavior: "smooth", block: "start" });
-    setTimeout(() => ledgerNode.focus({ preventScroll: true }), 360);
+    ledgerNode.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+    setTimeout(() => ledgerNode.focus({ preventScroll: true }), reducedMotion() ? 0 : 360);
   }
 
   function paintSummary() {
@@ -1620,7 +1728,7 @@ function creditsView(ctx, body) {
       ledger.page = target;
       ledger.focusPager = pagerNode.contains(document.activeElement);
       loadLedger();
-      ledgerNode.scrollIntoView({ behavior: "smooth", block: "start" });
+      ledgerNode.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     };
     pagerNode.hidden = false;
     pagerNode.replaceChildren(
@@ -1629,13 +1737,31 @@ function creditsView(ctx, body) {
       h("button", { type: "button", class: "btn btn-sm btn-ghost", disabled: page >= pageCount, onClick: () => go(page + 1) }, "下一页", icon("chevronRight")));
   }
 
+  // 换内容前把明细卡片撑到当前视口底部：新内容更短时，浏览器不会把页面往上拽，筛选栏停在原处。
+  function holdLedger() {
+    const reach = Math.floor(window.innerHeight - ledgerNode.getBoundingClientRect().top);
+    ledgerNode.style.minHeight = reach > 0 && window.scrollY > 0 ? `${reach}px` : "";
+  }
+
   async function loadLedger() {
     const requestId = ++ledger.requestId;
     const isOrders = ledger.filter === "orders";
     listNode.setAttribute("aria-busy", "true");
-    listNode.replaceChildren(h("p", { class: "sr-only", role: "status" }, "正在读取明细"), ledgerSkeleton());
-    pagerNode.hidden = true;
+    ledgerStatus.textContent = "正在读取明细…";
+    if (listNode.firstElementChild && !listNode.querySelector(".is-skeleton")) {
+      // 切换类型 / 月份 / 翻页：旧内容先变淡留在原处，新数据回来再替换，高度不塌、页面不跳。
+      listNode.classList.add("is-loading");
+      pagerNode.classList.add("is-loading");
+    } else {
+      listNode.replaceChildren(ledgerSkeleton());
+      pagerNode.hidden = true;
+    }
     ledgerTitleSub.textContent = monthLabel(ledger.month);
+    const settle = () => {
+      listNode.classList.remove("is-loading");
+      pagerNode.classList.remove("is-loading");
+      listNode.setAttribute("aria-busy", "false");
+    };
     try {
       const path = isOrders
         ? `/api/billing/orders${query({ page: ledger.page, month: ledger.month, status: "all" })}`
@@ -1649,9 +1775,14 @@ function creditsView(ctx, body) {
       }
       const items = Array.isArray(data?.items) ? data.items : [];
       ledgerFailed = false;
-      listNode.setAttribute("aria-busy", "false");
+      holdLedger();
+      settle();
       const total = Number(data?.pagination?.total);
       ledgerTitleSub.textContent = Number.isFinite(total) && items.length ? `${monthLabel(ledger.month)} · 共 ${total} 条` : monthLabel(ledger.month);
+      const filterLabel = (LEDGER_FILTERS.find(([key]) => key === ledger.filter) || LEDGER_FILTERS[0])[1];
+      ledgerStatus.textContent = items.length
+        ? `${monthLabel(ledger.month)}「${filterLabel}」明细，${Number.isFinite(total) ? `共 ${total} 条` : `${items.length} 条`}`
+        : EMPTY_LEDGER[ledger.filter] || EMPTY_LEDGER.all;
       if (!items.length) {
         listNode.replaceChildren(h("div", { class: "cr-empty" },
           h("span", { class: "cr-empty-mark", "aria-hidden": "true" }, icon(isOrders ? "wallet" : "coins")),
@@ -1669,7 +1800,9 @@ function creditsView(ctx, body) {
       if (!ctx.isCurrent() || requestId !== ledger.requestId) return;
       if (error?.status === 401) refreshSession().catch(() => {});
       ledgerFailed = true;
-      listNode.setAttribute("aria-busy", "false");
+      holdLedger();
+      settle();
+      ledgerStatus.textContent = "";
       listNode.replaceChildren(retryState({ title: "积分记录加载失败", text: error?.message || "请稍后再试", onRetry: () => loadLedger() }));
       pagerNode.hidden = true;
     }

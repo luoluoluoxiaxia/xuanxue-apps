@@ -33,6 +33,9 @@
    今日（观象台）
    ========================================================================== */
 .td-page, .td-anon, .td-skeleton { display: grid; gap: 16px; }
+/* 手动刷新时内容先变淡，新内容回来后恢复。 */
+.td-page { transition: opacity .18s var(--ease); }
+.td-page.is-refreshing { opacity: .6; }
 .td-slot { display: contents; }
 .td-section-title { padding: 0 2px; font-size: 16px; font-weight: 800; }
 
@@ -251,6 +254,9 @@
 .td-choice:focus-visible { border-radius: 14px; }
 .td-choice { text-align: left; }
 .td-choice:disabled { cursor: default; }
+.td-choice[aria-disabled="true"] { cursor: default; }
+.td-choice[aria-disabled="true"]:not([aria-busy="true"]) { opacity: .6; }
+.td-choice[aria-disabled="true"]:hover { border-color: var(--line); background: var(--bg-elev); }
 .td-choice.is-active { border-color: color-mix(in srgb, var(--gold) 45%, var(--line)); background: color-mix(in srgb, var(--gold-soft) 45%, var(--bg-elev)); }
 .td-choice-mark { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 12px; color: var(--indigo); background: var(--indigo-soft); }
 .td-choice-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
@@ -313,6 +319,11 @@
 .ib-title { font-size: 26px; font-weight: 800; line-height: 1.25; }
 .ib-sub { margin-top: 4px; color: var(--ink-3); font-size: 14px; }
 .ib-markall { flex: none; }
+.ib-markall[aria-disabled="true"] { opacity: .5; cursor: default; }
+.ib-markall[aria-disabled="true"]:hover, .ib-markall[aria-disabled="true"]:active { --btn-bg: var(--brand-soft); transform: none; }
+/* 手动刷新时旧列表先变淡，新内容回来后恢复。 */
+.ib-list { transition: opacity .18s var(--ease); }
+.ib-list.is-refreshing { opacity: .55; }
 .ib-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .ib-tile {
   display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center;
@@ -454,7 +465,9 @@
 .me-tab:hover { color: var(--ink); background: var(--bg-hover); }
 .me-tab:focus-visible { border-radius: 12px; }
 .me-tab[aria-current="page"] { color: var(--brand-ink); background: var(--brand-soft); }
-.me-body { display: grid; gap: 16px; min-width: 0; }
+.me-body { display: grid; gap: 16px; min-width: 0; transition: opacity .18s var(--ease); }
+.me-body.is-refreshing, .arc-list.is-refreshing { opacity: .6; }
+.arc-list { transition: opacity .18s var(--ease); }
 .me-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 2px 2px 0; }
 .me-head-copy { min-width: 0; }
 .me-title { margin-top: 4px; font-size: 26px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
@@ -736,7 +749,7 @@
 .cr-packs-empty { display: flex; align-items: center; gap: 8px; padding: 16px 18px; color: var(--ink-3); background: var(--bg-elev); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); }
 
 /* 明细 */
-.cr-ledger { display: grid; gap: 14px; padding: 20px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); scroll-margin-top: calc(var(--topbar-h) + 16px); }
+.cr-ledger { display: grid; align-content: start; gap: 14px; padding: 20px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); scroll-margin-top: calc(var(--topbar-h) + 16px); }
 .cr-ledger:focus { box-shadow: none; }
 .cr-ledger-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 12px; }
 .cr-ledger-head h2 { font-size: 18px; font-weight: 800; }
@@ -775,6 +788,9 @@
 .cr-pager .btn { margin-top: 10px; }
 .cr-pager-info { margin-top: 10px; color: var(--ink-3); font-size: 13px; white-space: nowrap; }
 .cr-row.is-skeleton { padding: 14px 2px; }
+/* 切换类型 / 月份 / 翻页时旧内容变淡留在原处，新数据回来再替换。 */
+.cr-rows, .cr-pager { transition: opacity .18s var(--ease); }
+.cr-rows.is-loading, .cr-pager.is-loading { opacity: .5; pointer-events: none; }
 
 /* 结账面板 */
 .sheet-checkout { width: min(500px, 100%); }
@@ -875,6 +891,39 @@
 .fb-copy { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; color: var(--brand-ink); border-radius: 999px; font-size: 12.5px; font-weight: 700; }
 .fb-copy:hover { background: var(--brand-soft); }
 .fb-copy:focus-visible { border-radius: 999px; }
+
+/* ==========================================================================
+   登录面板：交互细节（基础样式在 next.css，这里只覆盖）
+   ========================================================================== */
+/* 提交中：按钮保持可聚焦（不用 disabled），只换成转圈与进行时文案。 */
+.btn.is-busy { cursor: progress; }
+.btn.is-busy .spinner { width: 16px; height: 16px; }
+.auth-error, .auth-status {
+  display: flex; align-items: flex-start; flex-wrap: wrap; gap: 4px 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 13.5px; line-height: 1.55;
+}
+.auth-error > span, .auth-status > span { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.auth-error .icon, .auth-status .icon { flex: none; margin-top: 2px; }
+.auth-error { color: var(--danger); background: var(--danger-soft); }
+.auth-error .link-btn { flex: none; margin: -2px -6px -2px auto; padding: 2px 6px; color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.auth-sub { text-wrap: balance; }
+/* 提示信息（如验证码已发送）用中性色，不与错误混淆。 */
+.auth-status { color: var(--ink-2); background: var(--bg-sunken); }
+.auth-status .icon { color: var(--ink-2); }
+.auth-field-error { display: flex; align-items: flex-start; gap: 6px; margin-top: -2px; font-size: 13px; line-height: 1.5; }
+.auth-field-error .icon { flex: none; width: 14px; height: 14px; margin-top: 2px; }
+.auth-code-btn { min-width: 7.6em; font-variant-numeric: tabular-nums; }
+/* 倒计时期间仍清楚可读，而不是半透明。 */
+.auth-code-btn:disabled { opacity: 1; color: var(--ink-3); background: var(--bg-sunken); cursor: default; }
+.auth-reveal { color: var(--ink-3); }
+.auth-reveal:focus-visible { border-radius: 10px; }
+@media (pointer: coarse) {
+  .auth-reveal { right: 3px; width: 40px; height: 40px; }
+  .auth-password .input { padding-right: 50px; }
+  .auth-seg button { min-height: 40px; }
+}
 
 /* ==========================================================================
    响应式

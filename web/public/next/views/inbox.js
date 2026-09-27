@@ -1,15 +1,18 @@
 // 消息：谁赞了、评论了、回复了或采纳了你的内容。
 // 按北京时间分成「今天 / 昨天 / 更早」；同一页内同一卦帖的赞合并成一条；点开后标记已读并跳到对应评论。
-import { h, on } from "../lib/dom.js?v=n1";
+// 从卦帖返回时先用上次的列表秒开并回到原位置，再静默拉取最新；再点一次底栏「消息」可手动刷新。
+import { h, on, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, query } from "../lib/api.js?v=n1";
 import { session, inbox, refreshSession } from "../lib/store.js?v=n1";
 import { relativeTime, fullTime, count } from "../lib/format.js?v=n1";
 import { avatar, stateView } from "../ui/bits.js?v=n1";
+import { confirmDialog } from "../ui/overlay.js?v=n1";
 import { toast } from "../ui/toast.js?v=n1";
 
 const PAGE_LIMIT = 30;
 const READ_BATCH = 100;
+const SNAPSHOT_TTL = 15 * 60 * 1000;
 const COMMENT_KINDS = ["post_comment", "comment_reply", "followed_post_comment"];
 const FILTERS = [
   { key: "all", label: "全部", empty: "" },
@@ -27,6 +30,10 @@ const KIND_STYLE = {
 
 // 离开再回来时保留筛选项。
 let lastFilter = "all";
+// 上次加载的列表（只在内存里，按账户区分）与最后点开的一条。
+let snapshot = null;
+let lastOpened = null;
+if (typeof document !== "undefined") document.addEventListener("xz:authchange", () => { snapshot = null; lastOpened = null; });
 
 const dayFormat = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit" });
 
@@ -49,8 +56,9 @@ function groupPage(items) {
   items.forEach(item => {
     const id = Number(item.id);
     const actor = String(item.actor_name || "").trim() || "卦友";
+    const unread = !item.read_at;
     if (item.kind !== "post_like") {
-      entries.push({ ...item, key: `n${id}`, ids: [id], actors: [actor], total: 1, unread: !item.read_at });
+      entries.push({ ...item, key: `n${id}`, ids: [id], actors: [actor], total: 1, unread, unreadCount: unread ? 1 : 0 });
       return;
     }
     const groupKey = String(item.post_slug || item.target_url || item.id);
@@ -59,10 +67,11 @@ function groupPage(items) {
       existing.ids.push(id);
       existing.total += 1;
       if (!existing.actors.includes(actor)) existing.actors.push(actor);
-      existing.unread = existing.unread || !item.read_at;
+      existing.unread = existing.unread || unread;
+      existing.unreadCount += unread ? 1 : 0;
       return;
     }
-    const entry = { ...item, key: `n${id}`, ids: [id], actors: [actor], total: 1, unread: !item.read_at };
+    const entry = { ...item, key: `n${id}`, ids: [id], actors: [actor], total: 1, unread, unreadCount: unread ? 1 : 0 };
     likes.set(groupKey, entry);
     entries.push(entry);
   });
@@ -123,17 +132,21 @@ export function render(ctx) {
     cursor: null,
     loaded: false,
     loading: false,
+    refreshing: false,
     error: null,
     moreError: null,
     requestId: 0,
     filter: FILTERS.some(item => item.key === lastFilter) ? lastFilter : "all",
   };
+  let marking = false;
 
-  const markAllButton = h("button", { type: "button", class: "btn btn-soft btn-sm ib-markall", disabled: true }, icon("check"), "全部已读");
+  // 「全部已读」用 aria-disabled 而不是 disabled：点完后焦点仍停在按钮上，不会丢到页面顶端。
+  const markAllButton = h("button", { type: "button", class: "btn btn-soft btn-sm ib-markall", "aria-disabled": "true" }, icon("check"), "全部已读");
   const summaryNode = h("div", { class: "ib-summary" });
   const filterNode = h("div", { class: "ib-filters", role: "tablist", "aria-label": "消息类型" });
   const listNode = h("div", { class: "ib-list", "aria-live": "polite", "aria-busy": "false" });
   const moreNode = h("div", { class: "ib-more" });
+  const liveNote = h("p", { class: "sr-only", role: "status" });
 
   const header = h("header", { class: "ib-head" },
     h("div", null,
@@ -142,15 +155,23 @@ export function render(ctx) {
     markAllButton);
 
   function paintShell() {
-    root.replaceChildren(header, summaryNode, filterNode, listNode, moreNode);
+    root.replaceChildren(header, summaryNode, filterNode, listNode, moreNode, liveNote);
   }
+
+  function saveSnapshot() {
+    const user = session.get().user?.id;
+    if (!user || !state.loaded || state.error) return;
+    snapshot = { user, entries: state.entries, summary: state.summary, cursor: state.cursor, at: Date.now() };
+  }
+
+  const unreadTotal = () => Math.max(0, Number(state.summary?.unread_count) || 0);
 
   /* ---------- 汇总与筛选 ---------- */
   function paintSummary() {
     const loaded = !!state.summary;
     const summary = state.summary || {};
-    const unread = Number(summary.unread_count) || 0;
-    markAllButton.disabled = !unread;
+    const unread = unreadTotal();
+    if (!marking) markAllButton.setAttribute("aria-disabled", String(!unread));
     markAllButton.hidden = !loaded;
     summaryNode.hidden = !loaded && !!state.error;
     filterNode.hidden = !loaded && !!state.error;
@@ -163,7 +184,7 @@ export function render(ctx) {
           requestAnimationFrame(() => {
             const first = listNode.querySelector(".ib-item.is-unread");
             if (first) {
-              first.scrollIntoView({ block: "center", behavior: "smooth" });
+              first.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
               first.focus({ preventScroll: true });
             } else {
               toast("没有未读消息");
@@ -277,8 +298,11 @@ export function render(ctx) {
       listNode.replaceChildren(stateView({
         glyph: "bell",
         title: "暂无新互动",
-        text: "有人赞了、评论或回复你的卦帖时，会第一时间出现在这里。",
-        actions: [h("a", { class: "btn btn-soft", href: "#/" }, icon("plaza"), "去广场看看")],
+        text: "有人赞了、评论或回复你的卦帖时，会第一时间出现在这里。发个问题，卦友会来帮你看。",
+        actions: [
+          h("a", { class: "btn btn-soft", href: "#/ask" }, icon("plus"), "发起提问"),
+          h("a", { class: "btn btn-ghost", href: "#/" }, icon("plaza"), "去广场看看"),
+        ],
       }));
       paintMore();
       return;
@@ -299,10 +323,26 @@ export function render(ctx) {
       if (last && last.label === bucket) last.items.push(entry);
       else groups.push({ label: bucket, items: [entry] });
     });
+    // 重绘会替换节点：焦点在某一条上时，重绘后还给同一条。
+    const focusedKey = listNode.contains(document.activeElement) ? document.activeElement.closest(".ib-item")?.dataset.key : "";
     listNode.replaceChildren(...groups.map(group => h("section", { class: "ib-group", "aria-label": group.label },
       h("h2", { class: "ib-group-title" }, group.label),
       h("div", { class: "ib-group-list" }, group.items.map(itemNode)))));
+    if (focusedKey) listNode.querySelector(`[data-key="${focusedKey}"]`)?.focus({ preventScroll: true });
     paintMore();
+  }
+
+  // 列表整体重绘时，让视口里的那一条停在原位（新消息插在上方也不跳）。
+  function keepPlace(paint) {
+    const topbar = document.querySelector(".topbar")?.getBoundingClientRect().bottom || 0;
+    const anchor = window.scrollY > 0
+      ? Array.from(listNode.querySelectorAll(".ib-item")).find(node => node.getBoundingClientRect().bottom > topbar + 8)
+      : null;
+    const key = anchor?.dataset.key;
+    const before = anchor?.getBoundingClientRect().top;
+    paint();
+    const after = key ? listNode.querySelector(`[data-key="${key}"]`)?.getBoundingClientRect().top : undefined;
+    if (typeof after === "number" && typeof before === "number" && Math.abs(after - before) > 1) window.scrollBy(0, after - before);
   }
 
   function paintMore() {
@@ -324,14 +364,15 @@ export function render(ctx) {
       moreNode.replaceChildren(h("button", { type: "button", class: "btn btn-ghost ib-more-btn", onClick: () => load() }, "加载更多", icon("chevronDown")));
       return;
     }
-    moreNode.replaceChildren(state.entries.length > 4 ? h("p", { class: "ib-end" }, "没有更早的消息了") : null);
+    if (state.entries.length > 4) moreNode.replaceChildren(h("p", { class: "ib-end" }, "没有更早的消息了"));
+    else moreNode.replaceChildren();
   }
 
   /* ---------- 数据 ---------- */
   function applySummary(summary) {
     if (!summary) return;
     state.summary = summary;
-    inbox.set({ unread: Math.max(0, Number(summary.unread_count) || 0), loaded: true });
+    inbox.set({ unread: unreadTotal(), loaded: true });
     paintSummary();
   }
 
@@ -365,6 +406,7 @@ export function render(ctx) {
       applySummary(data?.summary);
       paintFilters();
       paintList();
+      saveSnapshot();
       if (keepFocus) {
         const target = added.map(entry => listNode.querySelector(`[data-key="${entry.key}"]`)).find(Boolean)
           || moreNode.querySelector("button") || listNode;
@@ -385,6 +427,61 @@ export function render(ctx) {
     }
   }
 
+  // 静默拉取第一页：新消息插到最前，已有条目同步已读状态；手动刷新（announce）时给出反馈。
+  async function refreshTop({ announce = false } = {}) {
+    if (state.loading || state.refreshing || !state.loaded || state.error) {
+      if (announce && state.error && !state.loading) load({ reset: true });
+      return;
+    }
+    const requestId = state.requestId;
+    state.refreshing = true;
+    if (announce) {
+      listNode.classList.add("is-refreshing");
+      listNode.setAttribute("aria-busy", "true");
+    }
+    try {
+      const data = await get(`/api/community/notifications${query({ limit: PAGE_LIMIT })}`, { cache: "no-store" });
+      if (!ctx.isCurrent() || requestId !== state.requestId) return;
+      const items = Array.isArray(data?.items) ? data.items : [];
+      const byId = new Map(items.map(item => [Number(item.id), item]));
+      const known = new Set(state.entries.flatMap(entry => entry.ids));
+      const overlaps = items.some(item => known.has(Number(item.id)));
+      const added = groupPage(items.filter(item => !known.has(Number(item.id))));
+      if (!overlaps && state.entries.length && items.length) {
+        // 离开太久、新消息超过一页：直接换成最新一页，避免中间缺一段。
+        state.entries = added;
+        state.cursor = data?.next_cursor ? Number(data.next_cursor) || null : null;
+      } else {
+        state.entries.forEach(entry => {
+          const fresh = entry.ids.map(id => byId.get(id));
+          if (fresh.every(Boolean)) {
+            entry.unreadCount = fresh.filter(item => !item.read_at).length;
+            entry.unread = entry.unreadCount > 0;
+          }
+        });
+        state.entries.unshift(...added);
+      }
+      applySummary(data?.summary);
+      paintFilters();
+      keepPlace(paintList);
+      saveSnapshot();
+      if (announce) {
+        if (added.length) liveNote.textContent = `有 ${added.length} 条新消息`;
+        else toast("暂无新消息");
+      }
+    } catch (error) {
+      if (!ctx.isCurrent()) return;
+      if (error?.status === 401) refreshSession().catch(() => {});
+      if (announce) toast(error?.message || "刷新失败，请稍后再试", { type: "error" });
+    } finally {
+      state.refreshing = false;
+      if (ctx.isCurrent()) {
+        listNode.classList.remove("is-refreshing");
+        listNode.setAttribute("aria-busy", "false");
+      }
+    }
+  }
+
   function syncEntryNodes(entry) {
     listNode.querySelectorAll(`[data-key="${entry.key}"]`).forEach(node => {
       node.classList.toggle("is-unread", entry.unread);
@@ -392,57 +489,106 @@ export function render(ctx) {
     });
   }
 
+  function setUnreadCount(value) {
+    if (!state.summary) return;
+    state.summary.unread_count = Math.max(0, Number(value) || 0);
+    inbox.set({ unread: unreadTotal(), loaded: true });
+  }
+
+  // 乐观标记已读：先更新界面与角标，请求失败再恢复原状。
   async function markRead(entry) {
     if (!entry?.unread) return;
     const ids = entry.ids.filter(Number.isFinite).slice(0, READ_BATCH);
-    const result = await post("/api/community/notifications/read", { ids, mark_all: false });
+    const previous = { unread: entry.unread, unreadCount: entry.unreadCount, total: unreadTotal() };
     entry.unread = false;
-    if (state.summary && typeof result?.unread_count === "number") state.summary = { ...state.summary, unread_count: result.unread_count };
-    ctx.refreshInbox();
+    entry.unreadCount = 0;
+    setUnreadCount(previous.total - Math.max(1, previous.unreadCount || 0));
     if (ctx.isCurrent()) {
       syncEntryNodes(entry);
       paintSummary();
       paintFilters();
     }
+    try {
+      const result = await post("/api/community/notifications/read", { ids, mark_all: false });
+      if (typeof result?.unread_count === "number") setUnreadCount(result.unread_count);
+    } catch (error) {
+      entry.unread = previous.unread;
+      entry.unreadCount = previous.unreadCount;
+      setUnreadCount(previous.total);
+      if (error?.status === 401) refreshSession().catch(() => {});
+      if (ctx.isCurrent()) {
+        syncEntryNodes(entry);
+        paintFilters();
+        toast("消息状态没有更新，请稍后再试", { type: "error" });
+      }
+    } finally {
+      ctx.refreshInbox();
+      if (ctx.isCurrent()) paintSummary();
+    }
   }
 
   markAllButton.addEventListener("click", async () => {
-    if (markAllButton.disabled) return;
-    markAllButton.disabled = true;
+    if (marking || markAllButton.getAttribute("aria-disabled") === "true") return;
+    const unread = unreadTotal();
+    // 标为已读后无法恢复为未读：先确认一次。
+    const ok = await confirmDialog({
+      title: "全部标为已读？",
+      message: `${unread} 条未读消息会全部标为已读，之后不能再恢复为未读。`,
+      confirmText: "全部已读",
+    });
+    if (!ok || !ctx.isCurrent()) return;
+    marking = true;
+    markAllButton.setAttribute("aria-busy", "true");
+    markAllButton.classList.add("is-busy");
+    markAllButton.replaceChildren(h("span", { class: "spinner", "aria-hidden": "true" }), "正在标记…");
     try {
       const result = await post("/api/community/notifications/read", { ids: [], mark_all: true });
       if (!ctx.isCurrent()) return;
-      state.entries.forEach(entry => { entry.unread = false; });
+      state.entries.forEach(entry => {
+        entry.unread = false;
+        entry.unreadCount = 0;
+        syncEntryNodes(entry);
+      });
       state.summary = { ...(state.summary || {}), unread_count: Number(result?.unread_count) || 0 };
       ctx.refreshInbox();
-      paintSummary();
-      paintFilters();
-      paintList();
-      toast("已全部标记为已读", { type: "ok" });
+      saveSnapshot();
+      toast(`已将 ${unread} 条消息标为已读`, { type: "ok" });
     } catch (error) {
       if (!ctx.isCurrent()) return;
-      markAllButton.disabled = false;
+      if (error?.status === 401) refreshSession().catch(() => {});
       toast(error?.message || "消息状态更新失败", { type: "error" });
+    } finally {
+      marking = false;
+      if (ctx.isCurrent()) {
+        markAllButton.removeAttribute("aria-busy");
+        markAllButton.classList.remove("is-busy");
+        markAllButton.replaceChildren(icon("check"), "全部已读");
+        paintSummary();
+        paintFilters();
+      }
     }
   });
 
-  // 点开消息：先标记已读（失败也继续），再进入卦帖并定位到评论。
-  on(listNode, "click", ".ib-item", async (event, node) => {
+  // 点开消息：立即进入卦帖并定位到评论，已读在后台同步（失败会恢复未读）。
+  on(listNode, "click", ".ib-item", (event, node) => {
     const entry = state.entries.find(item => item.key === node.dataset.key);
     if (!entry) return;
     const modified = event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
     if (modified && node.tagName === "A") {
-      markRead(entry).catch(() => {});
+      markRead(entry);
       return;
     }
     event.preventDefault();
     const route = routeFor(entry);
-    node.classList.add("is-opening");
-    await markRead(entry).catch(() => {});
-    if (!ctx.isCurrent()) return;
-    node.classList.remove("is-opening");
-    if (route) ctx.navigate(route);
-    else toast("这条消息关联的卦帖已不存在");
+    if (!route) {
+      markRead(entry);
+      toast("这条消息关联的卦帖已不存在");
+      return;
+    }
+    lastOpened = { key: entry.key, keyboard: event.detail === 0 };
+    saveSnapshot();
+    markRead(entry);
+    ctx.navigate(route);
   });
   on(listNode, "keydown", "div.ib-item", (event, node) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -457,13 +603,14 @@ export function render(ctx) {
     const current = session.get();
     if (!current.ready) {
       root.replaceChildren(header, h("div", { class: "ib-list" }, skeletonRows(4)));
-      markAllButton.disabled = true;
+      markAllButton.setAttribute("aria-disabled", "true");
       return;
     }
     if (current.authenticated === lastAuth) return;
     lastAuth = current.authenticated;
     state.requestId += 1;
     if (!current.authenticated) {
+      snapshot = null;
       state.entries = [];
       state.summary = null;
       state.loading = false;
@@ -471,6 +618,16 @@ export function render(ctx) {
       return;
     }
     paintShell();
+    const saved = snapshot;
+    if (saved && saved.user === current.user?.id && Date.now() - saved.at < SNAPSHOT_TTL) {
+      // 回到消息页：先用上次的列表（位置可以立即恢复），再静默拉取最新。
+      Object.assign(state, { entries: saved.entries, summary: saved.summary, cursor: saved.cursor, loaded: true, error: null });
+      paintSummary();
+      paintFilters();
+      paintList();
+      refreshTop();
+      return;
+    }
     paintSummary();
     paintFilters();
     load({ reset: true });
@@ -483,9 +640,23 @@ export function render(ctx) {
   };
   window.addEventListener("online", recover);
   ctx.cleanup(() => window.removeEventListener("online", recover));
+  // 已在顶部时再点一次底栏「消息」：拉取最新。
+  ctx.onRefresh(() => {
+    if (session.get().authenticated) refreshTop({ announce: true });
+  });
 
   sync();
   ctx.subscribe(session, sync);
 
-  return { node: root, title: "消息" };
+  return {
+    node: root,
+    title: "消息",
+    // 浏览器返回到这里：键盘用户的焦点回到刚才点开的那一条。
+    onRestore() {
+      const opened = lastOpened;
+      lastOpened = null;
+      if (!opened?.keyboard) return;
+      listNode.querySelector(`[data-key="${opened.key}"]`)?.focus({ preventScroll: true });
+    },
+  };
 }
