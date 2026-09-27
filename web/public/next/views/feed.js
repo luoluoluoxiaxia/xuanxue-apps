@@ -149,7 +149,6 @@ export function postCard(item, { onLike } = {}) {
   const resolved = item.help_status === "resolved";
   const token = item.system === "bazi" ? pillarsToken(item.chart_summary) : guaToken(item.oracle_summary);
   const excerpt = String(item.answer_excerpt || "").trim();
-  const noAnswers = isHelp && !resolved && !Number(item.comment_count);
   const href = `#/post/${encodeURIComponent(item.slug)}`;
   const like = h("button", {
     type: "button",
@@ -173,12 +172,11 @@ export function postCard(item, { onLike } = {}) {
         h("span", { class: ["chip", item.system === "bazi" ? "chip-bazi" : "chip-liuyao"] }, item.system_label || (item.system === "bazi" ? "八字" : "六爻")),
         item.question_type_label ? h("span", { class: "chip" }, item.question_type_label) : null)),
     h("h3", { class: "post-card-title" }, h("a", { href, class: "post-card-link" }, item.question || item.title)),
-    token || excerpt || noAnswers ? h("div", { class: "post-card-body" },
+    token || excerpt ? h("div", { class: "post-card-body" },
       token,
       excerpt ? h("p", { class: "post-card-excerpt" },
         h("span", { class: ["excerpt-mark", isHelp ? "is-people" : "is-ai"] }, isHelp ? "卦友" : "AI"),
-        excerpt) : null,
-      noAnswers ? h("p", { class: "post-card-invite" }, icon("hand", "icon-sm"), "还没有人回答，懂的卦友来说说？") : null) : null,
+        excerpt) : null) : null,
     h("footer", { class: "post-card-foot" },
       like,
       h("span", { class: "stat", title: "讨论", "data-stat": "comments" }, icon("comment"), h("span", { class: "tnum" }, count(item.comment_count)), h("span", { class: "sr-only" }, "条讨论")),
@@ -257,7 +255,7 @@ function composerCard(ctx) {
   return h("section", { class: "composer-card", "aria-label": "发起提问" },
     h("a", { class: "composer-prompt", href: "#/ask" },
       state.authenticated ? avatar(name) : h("span", { class: "composer-mark", "aria-hidden": "true" }, icon("feather")),
-      h("span", { class: "composer-placeholder" }, "有什么放不下的事？写下来，让卦象和卦友一起帮你看看"),
+      h("span", { class: "composer-placeholder" }, "有什么放不下的事？写下来问问"),
       h("span", { class: "composer-go", "aria-hidden": "true" }, icon("arrowRight"))),
     h("div", { class: "composer-actions" },
       h("a", { class: "composer-action is-liuyao", href: "#/ask/liuyao" }, icon("gua"), h("span", null, h("b", null, "六爻问事"), h("small", null, "一件具体的事"))),
@@ -295,7 +293,9 @@ function visitHeader() {
   return { "X-Xuanshu-Visit": "web-v1" };
 }
 
-function sideRail(ctx, { onSeeking, onStats } = {}) {
+// shown()：列表还没载入时返回 undefined（右栏先留骨架），「等你来答」列表时返回 null（右栏这一块收起），
+// 其余返回列表里已有帖子的 slug 集合，右栏只补列表里没有的求助。
+function sideRail(ctx, { shown, onStats } = {}) {
   const rail = h("aside", { class: "rail rail-right", "aria-label": "社区动态" });
   const todayBox = h("section", { class: "side-card side-today" });
   const seekingList = h("div", { class: "side-seeking-list" });
@@ -359,9 +359,12 @@ function sideRail(ctx, { onSeeking, onStats } = {}) {
   ctx.subscribe(session, renderToday);
 
   const paintSeeking = items => {
-    const open = (items || []).filter(item => item.help_status !== "resolved").slice(0, 4);
+    const inList = shown?.();
+    if (inList === undefined) return;
+    const open = inList === null ? [] : (items || []).filter(item => item.help_status !== "resolved" && !inList.has(item.slug)).slice(0, 4);
+    seekingBox.hidden = !open.length;
     if (!open.length) {
-      seekingList.replaceChildren(h("p", { class: "side-empty" }, "暂时没有等待回答的求助。"));
+      seekingList.replaceChildren();
       return;
     }
     seekingList.replaceChildren(...open.map(item => h("a", { class: "seeking-item", href: `#/post/${encodeURIComponent(item.slug)}` },
@@ -372,25 +375,27 @@ function sideRail(ctx, { onSeeking, onStats } = {}) {
         h("span", { "aria-hidden": "true" }, "·"),
         relativeTime(item.published_at || item.created_at)))));
   };
-  if (side.seeking) {
-    paintSeeking(side.seeking.items);
-    onSeeking?.(side.seeking.items);
-  } else {
-    // 骨架与真实列表差不多高，数据回来时下面的卡片不被推动。
-    seekingList.replaceChildren(...[0, 1, 2, 3].map(() => h("span", { class: "skel", style: { height: "74px", margin: "4px 8px", borderRadius: "12px" } })));
-  }
-  if (!fresh(side.seeking, SIDE_MS)) {
-    get(`/api/community/posts${query({ limit: 6, view: "seeking", include_oracle_summary: "true" })}`, { cache: "no-store" })
+  // 骨架与真实列表差不多高，数据回来时下面的卡片不被推动。
+  if (shown?.() === null) seekingBox.hidden = true;
+  else seekingList.replaceChildren(...[0, 1, 2, 3].map(() => h("span", { class: "skel", style: { height: "74px", margin: "4px 8px", borderRadius: "12px" } })));
+  if (side.seeking) paintSeeking(side.seeking.items);
+  // 右栏只在宽屏显示；窄屏不取这份数据，拉宽窗口时再取。
+  const wide = window.matchMedia?.("(min-width: 1080px)");
+  const loadSeeking = () => {
+    if ((wide && !wide.matches) || fresh(side.seeking, SIDE_MS) || !ctx.isCurrent()) return;
+    get(`/api/community/posts${query({ limit: 12, view: "seeking" })}`, { cache: "no-store" })
       .then(data => {
         side.seeking = { at: Date.now(), items: Array.isArray(data?.items) ? data.items : [] };
         if (!ctx.isCurrent()) return;
         paintSeeking(side.seeking.items);
-        onSeeking?.(side.seeking.items);
       })
       .catch(() => {
-        if (!side.seeking && ctx.isCurrent()) seekingList.replaceChildren(h("p", { class: "side-empty" }, "暂时加载不出来，稍后再看看。"));
+        if (!side.seeking && ctx.isCurrent() && shown?.() !== null) seekingList.replaceChildren(h("p", { class: "side-empty" }, "暂时加载不出来，稍后再看看。"));
       });
-  }
+  };
+  loadSeeking();
+  wide?.addEventListener?.("change", loadSeeking);
+  ctx.cleanup(() => wide?.removeEventListener?.("change", loadSeeking));
 
   const paintStats = stats => {
     const cell = (value, label) => h("div", { class: "pulse-cell" }, h("b", { class: "tnum" }, count(value)), h("span", null, label));
@@ -420,7 +425,7 @@ function sideRail(ctx, { onSeeking, onStats } = {}) {
         onStats?.(null);
       });
   }
-  return rail;
+  return { node: rail, refreshSeeking: () => { if (side.seeking) paintSeeking(side.seeking.items); } };
 }
 
 export function render(ctx) {
@@ -531,11 +536,8 @@ export function render(ctx) {
     pulse.setAttribute("aria-hidden", "true");
   }
   const heading = h("div", { class: "feed-heading" },
-    h("div", null,
-      pulse,
-      h("p", { class: "kicker" }, "玄枢广场"),
-      h("h1", { class: "feed-title" }, filter.view === "seeking" ? "这些问题在等你的判断" : filter.view === "popular" ? "大家都在看" : "大家正在问"),
-      h("p", { class: "feed-sub" }, "真实的问题，真人的讨论。看看别人怎么想，也说说你的看法。")));
+    h("h1", { class: "feed-title" }, "大家正在问"),
+    pulse);
 
   const center = h("div", { class: "feed-main" },
     heading,
@@ -546,45 +548,16 @@ export function render(ctx) {
     sentinel,
     announcer);
 
-  let seekingItems = [];
-  let seekingSig = "";
-  const seekingStrip = () => {
-    if (!seekingItems.length || filter.view === "seeking") return null;
-    return h("section", { class: "seeking-strip", "aria-label": "等你来答" },
-      h("div", { class: "seeking-strip-head" },
-        h("h2", null, icon("hand", "icon-sm"), "这些问题在等你来答"),
-        h("button", { type: "button", class: "link-btn", "data-filter": "strip:seeking", onClick: event => apply({ view: "seeking" }, event.currentTarget) }, "全部")),
-      h("div", { class: "seeking-strip-scroll" }, seekingItems.slice(0, 8).map(item => h("a", { class: "seeking-chip-card", href: `#/post/${encodeURIComponent(item.slug)}` },
-        h("span", { class: ["chip", item.system === "bazi" ? "chip-bazi" : "chip-liuyao"] }, item.system_label || "六爻"),
-        h("b", null, item.question),
-        h("span", { class: "seeking-chip-meta" }, Number(item.comment_count) ? `${item.comment_count} 条回答` : "还没有回答", " · ", relativeTime(item.published_at || item.created_at)),
-        h("span", { class: "seeking-chip-go" }, "去回答", icon("arrowRight", "icon-sm"))))));
-  };
-  const placeStrip = () => {
-    const previous = list.querySelector(".seeking-strip");
-    const scrollLeft = previous?.querySelector(".seeking-strip-scroll")?.scrollLeft || 0;
-    previous?.remove();
-    const strip = seekingStrip();
-    if (!strip) return;
-    const cards = list.querySelectorAll(":scope > .post-card:not(.is-skeleton)");
-    if (cards.length < 3) return;
-    cards[2].after(strip);
-    if (scrollLeft) strip.querySelector(".seeking-strip-scroll").scrollLeft = scrollLeft;
-  };
-  const node = h("div", { class: "feed-layout" }, topicRail(filter, apply), center, sideRail(ctx, {
-    onSeeking: items => {
-      const open = (items || []).filter(item => item.help_status !== "resolved");
-      const sig = open.map(item => `${item.slug}:${item.comment_count}`).join(",");
-      if (sig === seekingSig) return;
-      seekingSig = sig;
-      seekingItems = open;
-      // 条带在视口上方时换内容会挤动列表：保持当前看到的卡片不动。
-      const anchor = captureAnchor();
-      placeStrip();
-      restoreAnchor(anchor);
-    },
+  let listReady = false;
+  const rightRail = sideRail(ctx, {
+    shown: () => filter.view === "seeking" ? null : listReady ? new Set(feedState.items.map(item => item.slug)) : undefined,
     onStats: paintPulse,
-  }));
+  });
+  const listChanged = () => {
+    listReady = true;
+    rightRail.refreshSeeking();
+  };
+  const node = h("div", { class: "feed-layout" }, topicRail(filter, apply), center, rightRail.node);
   // 切换筛选：整页不再做入场动画，只让列表轻轻换一下。
   if (handoff) node.classList.add("is-quiet");
 
@@ -598,7 +571,7 @@ export function render(ctx) {
     const cards = items.map(item => postCard(item, { onLike }));
     if (append) list.append(...cards);
     else list.replaceChildren(...cards);
-    if (!append) placeStrip();
+    listChanged();
     return cards;
   }
 
@@ -629,6 +602,7 @@ export function render(ctx) {
           : seeking ? h("button", { type: "button", class: "btn btn-soft", "data-filter": "empty:latest", onClick: event => apply({ view: "latest" }, event.currentTarget) }, "看看最新讨论") : null,
       ].filter(Boolean),
     }));
+    listChanged();
   }
 
   function pagePath({ cursor = "", light = false } = {}) {
@@ -670,8 +644,10 @@ export function render(ctx) {
     } catch (error) {
       if (!ctx.isCurrent() || my !== gen) return;
       failed = true;
-      if (!feedState.items.length) list.replaceChildren(errorView(error, () => load({ reset: true })));
-      else {
+      if (!feedState.items.length) {
+        list.replaceChildren(errorView(error, () => load({ reset: true })));
+        listChanged();
+      } else {
         sentinel.replaceChildren(h("div", { class: "feed-end" }, h("span", null, error.message || "加载失败"), h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => load() }, icon("refresh"), "重试")));
       }
     } finally {
@@ -771,8 +747,7 @@ export function render(ctx) {
       const fields = PATCH_FIELDS.filter(field => field in item && item[field] !== existing[field]
         && !(liking.has(item.slug) && (field === "viewer_liked" || field === "like_count")));
       if (!fields.length) continue;
-      const structural = fields.some(field => STRUCTURAL.includes(field))
-        || (Number(existing.comment_count) === 0) !== (Number(item.comment_count) === 0);
+      const structural = fields.some(field => STRUCTURAL.includes(field));
       fields.forEach(field => { existing[field] = item[field]; });
       const card = list.querySelector(`:scope > .post-card[data-slug="${cssValue(item.slug)}"]`);
       if (!card) continue;
@@ -835,7 +810,7 @@ export function render(ctx) {
         feedState.items.unshift(...added);
         const cards = added.map(item => postCard(item, { onLike }));
         list.prepend(...cards);
-        placeStrip();
+        listChanged();
       }
       feedState.at = Date.now();
       patchItems(raw);
