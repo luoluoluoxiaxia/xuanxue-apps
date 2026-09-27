@@ -116,3 +116,36 @@ test('classic links map onto the new routes and back', async () => {
   assert.equal(classicUrl({ path: '/post/ly-abc', query: new URLSearchParams() }), './?post=ly-abc&ui=classic#gua-square');
   assert.equal(classicUrl({ path: '/ask/liuyao', query: new URLSearchParams('help=1') }), './?start=liuyao&community=help&ui=classic');
 });
+
+test('coming back online re-polls a live answer at once instead of waiting out the retry backoff', async () => {
+  const { Conversation } = await load('lib/interpret.js');
+  const realFetch = globalThis.fetch;
+  const taskId = 'b'.repeat(32);
+  let offline = true;
+  let taskCalls = 0;
+  globalThis.fetch = async path => {
+    if (!String(path).startsWith('/api/interpret/tasks/')) return new Response('{}', { status: 200 });
+    taskCalls += 1;
+    if (offline) throw new TypeError('Failed to fetch');
+    return new Response(JSON.stringify({ task_id: taskId, status: 'done', stage: 'done', answer: '可以推进。' }), { status: 200 });
+  };
+  const convo = new Conversation({ system: 'liuyao', sessionId: 's_0123456789abcdef' });
+  try {
+    const message = convo.newAi({ question: '本月能签下合同吗？', taskId });
+    convo.messages.push({ kind: 'user', text: '本月能签下合同吗？' }, message);
+    convo.poll(message, 0);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(taskCalls, 1);
+    assert.equal(message.streaming, true);
+    assert.match(message.waitNote, /网络中断/);
+    offline = false;
+    convo.reconnect();
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(taskCalls, 2);
+    assert.equal(message.status, 'done');
+    assert.equal(message.waitNote, '');
+  } finally {
+    convo.destroy();
+    globalThis.fetch = realFetch;
+  }
+});

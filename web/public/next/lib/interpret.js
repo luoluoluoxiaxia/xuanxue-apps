@@ -386,6 +386,15 @@ export class Conversation {
   }
 
   // 离开页面：只停止本地跟随，服务端任务继续，回到档案时会重新接上。
+  // 网络恢复时立即重试中断的轮询，不必等退避计时结束。
+  reconnect() {
+    if (this.destroyed) return;
+    this.messages.forEach(message => {
+      const entry = this.live.get(message.id);
+      if (message.streaming && message.taskId && entry?.failures) this.poll(message, 0);
+    });
+  }
+
   destroy() {
     this.destroyed = true;
     [...this.live.keys()].forEach(id => {
