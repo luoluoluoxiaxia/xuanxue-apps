@@ -36,7 +36,7 @@ function applyTheme() {
   document.documentElement.dataset.scheme = dark ? "dark" : "light";
   document.documentElement.dataset.schemePref = pref;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute("content", dark ? "#0E1311" : "#F3F4F2");
+  if (meta) meta.setAttribute("content", dark ? "#1A1A1C" : "#FFFFFF");
 }
 
 export function setTheme(pref) {

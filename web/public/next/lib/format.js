@@ -1,5 +1,5 @@
 // 文本与时间格式化（北京时间展示）。
-const AVATAR_TONES = ["#0B7A62", "#34528F", "#B8361F", "#94671C", "#6E4C8A", "#2F7A4F", "#8A5A3C", "#2C5A88", "#A23E5E", "#4F6B2A"];
+const AVATAR_TONES = ["#E51F3C", "#C2185B", "#C4410C", "#B23A55", "#8A5543", "#5F5F66", "#77478A", "#3F5A8A", "#A0402A", "#962A57"];
 
 export function initial(name) {
   const text = String(name || "").trim();

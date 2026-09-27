@@ -241,6 +241,7 @@ function liuyaoFlow(ctx) {
   function syncCast() {
     const done = state.lines.length;
     castButton.disabled = state.casting || done >= 6;
+    castButton.classList.toggle("is-done", !state.casting && done >= 6);
     castButton.replaceChildren(state.casting
       ? h("span", null, `第 ${done + 1} 爻 · 钱落…`)
       : done >= 6 ? h("span", null, icon("check"), "六爻已成") : h("span", null, `摇第 ${CN_NUM[done + 1]} 爻`, h("small", null, ` · 共六爻`)));
