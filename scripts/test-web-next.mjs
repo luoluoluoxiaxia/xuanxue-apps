@@ -157,3 +157,156 @@ test('coming back online re-polls a live answer at once instead of waiting out t
     globalThis.fetch = realFetch;
   }
 });
+
+test('a second 401 after re-login does not loop: one re-auth, one re-send of the same body, then it stops', async () => {
+  const { Conversation } = await load('lib/interpret.js');
+  const realFetch = globalThis.fetch;
+  const posts = [];
+  let reauths = 0;
+  globalThis.fetch = async (path, init = {}) => {
+    if (String(path) === '/api/interpret') {
+      posts.push(init.body);
+      // 保险：万一回归成循环重发，第 6 次起放行，让测试以断言失败结束而不是一直挂着。
+      if (posts.length > 5) return new Response(JSON.stringify({ task_id: 'd'.repeat(32), status: 'done', stage: 'done', answer: '好' }), { status: 200 });
+      return new Response(JSON.stringify({ detail: '请先登录后再继续' }), { status: 401 });
+    }
+    return new Response('{}', { status: 200 });
+  };
+  const convo = new Conversation({
+    system: 'bazi',
+    sessionId: 's_0123456789abcdef',
+    // 模拟「强制向服务端确认后仍显示已登录」：每次都立即返回 true，旧实现会无限重发。
+    requireReauth: async () => { reauths += 1; return true; },
+  });
+  try {
+    const message = await convo.ask('今年适合换工作吗？');
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(reauths, 1);
+    assert.equal(posts.length, 2);
+    assert.equal(posts[0], posts[1]);
+    assert.equal(JSON.parse(posts[1]).client_request_id, message.clientRequestId);
+    assert.equal(message.status, 'failed');
+    assert.equal(message.streaming, false);
+    assert.equal(message.authLost, false);
+    assert.equal(convo.busy, false);
+
+    // 关掉登录面板：不重发，问题标记为保留，由视图放回输入框。
+    posts.length = 0;
+    reauths = 0;
+    convo.requireReauth = async () => { reauths += 1; return false; };
+    const dismissed = await convo.ask('那明年呢？');
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(reauths, 1);
+    assert.equal(posts.length, 1);
+    assert.equal(dismissed.status, 'failed');
+    assert.equal(dismissed.error, '登录已失效，问题已保留。');
+    assert.equal(dismissed.authLost, true);
+  } finally {
+    convo.destroy();
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('a 401 while following a running answer re-authenticates at most once and never polls in a loop', async () => {
+  const { Conversation } = await load('lib/interpret.js');
+  const realFetch = globalThis.fetch;
+  const taskId = 'c'.repeat(32);
+  let polls = 0;
+  let reauths = 0;
+  globalThis.fetch = async path => {
+    if (String(path).startsWith('/api/interpret/tasks/')) {
+      polls += 1;
+      if (polls > 5) return new Response(JSON.stringify({ task_id: taskId, status: 'done', stage: 'done', answer: '好' }), { status: 200 });
+      return new Response(JSON.stringify({ detail: '请先登录后再继续' }), { status: 401 });
+    }
+    return new Response('{}', { status: 200 });
+  };
+  const convo = new Conversation({ system: 'liuyao', sessionId: 's_0123456789abcdef', requireReauth: async () => { reauths += 1; return true; } });
+  try {
+    const message = convo.newAi({ question: '本月能签下合同吗？', taskId });
+    convo.messages.push({ kind: 'user', text: '本月能签下合同吗？' }, message);
+    convo.poll(message, 0);
+    await new Promise(resolve => setTimeout(resolve, 80));
+    assert.equal(reauths, 1);
+    assert.equal(polls, 2);
+    assert.equal(message.status, 'failed');
+    assert.equal(message.streaming, false);
+    await new Promise(resolve => setTimeout(resolve, 50));
+    assert.equal(polls, 2);
+  } finally {
+    convo.destroy();
+    globalThis.fetch = realFetch;
+  }
+});
+
+// 以下几条从经典版（profile-workspace.js / chat-workspace.js）的测试迁移而来，规则不变。
+test('a completed Liuyao history resolves its existing session instead of opening an empty one', async () => {
+  const { resolveLiuyaoSession } = await load('lib/sessions.js');
+  const calls = [];
+  const sid = await resolveLiuyaoSession(
+    { system: 'liuyao', history: [{ task_id: 'completed-task', created_at: '2026-09-09T12:00:00' }], active_tasks: [] },
+    { fetchTask: async id => { calls.push(id); return { session_id: 's_1234567890abcdef' }; } },
+  );
+  assert.equal(sid, 's_1234567890abcdef');
+  assert.deepEqual(calls, ['completed-task']);
+});
+
+test('newer running/failed/cancelled tasks keep their own session; fresh or empty archives do not resume', async () => {
+  const { resolveLiuyaoSession } = await load('lib/sessions.js');
+  for (const status of ['running', 'failed', 'cancelled']) {
+    const calls = [];
+    const fetchTask = async id => { calls.push(id); return {}; };
+    const data = { system: 'liuyao', history: [{ task_id: 'old', created_at: '2026-09-08' }], active_tasks: [{ status, session_id: 's_1234567890abcdef', created_at: '2026-09-09' }] };
+    assert.equal(await resolveLiuyaoSession(data, { fetchTask }), 's_1234567890abcdef');
+    assert.equal(await resolveLiuyaoSession(data, { fetchTask, fresh: true }), '');
+    assert.equal(await resolveLiuyaoSession({ system: 'liuyao', history: [] }, { fetchTask }), '');
+    assert.deepEqual(calls, []);
+  }
+});
+
+test('unrecoverable history reports failure instead of silently starting a new paid interpretation', async () => {
+  const { resolveLiuyaoSession } = await load('lib/sessions.js');
+  const history = { system: 'liuyao', history: [{ task_id: 'expired', created_at: '2026-09-09' }] };
+  await assert.rejects(resolveLiuyaoSession(history, { fetchTask: async () => { throw new Error('404'); } }), /无法恢复/);
+  await assert.rejects(resolveLiuyaoSession(history, { fetchTask: async () => ({}), fetchConversations: async () => [] }), /无法恢复/);
+  // 任务记录已过期时，从这张盘的对话列表里取最近一段。
+  const sid = await resolveLiuyaoSession(history, {
+    fetchTask: async () => { throw new Error('404'); },
+    fetchConversations: async () => [
+      { session_id: 's_aaaaaaaaaaaaaaaa', updated_at: '2026-09-01T10:00:00+08:00' },
+      { session_id: 's_bbbbbbbbbbbbbbbb', updated_at: '2026-09-09T10:00:00+08:00' },
+      { session_id: 'not-a-session', updated_at: '2026-09-10T10:00:00+08:00' },
+    ],
+  });
+  assert.equal(sid, 's_bbbbbbbbbbbbbbbb');
+});
+
+test('composer drafts are isolated by chart and session, and removed on logout', async () => {
+  const { readingDraftKey } = await load('lib/sessions.js');
+  const a = readingDraftKey(1, 's_1111111111111111', { started: true });
+  const b = readingDraftKey(2, 's_2222222222222222', { started: true });
+  const aOther = readingDraftKey(1, 's_3333333333333333', { started: true });
+  const aNew = readingDraftKey(1, 's_1111111111111111', { started: false });
+  assert.equal(new Set([a, b, aOther, aNew]).size, 4);
+  assert.equal(readingDraftKey(1, 'bogus', { started: true }), aNew);
+  const store = new Map([[a, 'bazi draft'], [b, 'liuyao draft'], ['xz-next-theme', 'dark']]);
+  const previous = globalThis.localStorage;
+  globalThis.localStorage = {
+    getItem: key => (store.has(key) ? store.get(key) : null),
+    setItem: (key, value) => store.set(key, String(value)),
+    removeItem: key => store.delete(key),
+  };
+  Object.defineProperty(globalThis.localStorage, 'keys', { value: () => [...store.keys()] });
+  try {
+    const { clearPrivateDrafts } = await load('lib/store.js');
+    const keys = Object.keys;
+    // clearPrivateDrafts 遍历 Object.keys(localStorage)：用 Map 的键模拟。
+    Object.keys = target => (target === globalThis.localStorage ? [...store.keys()] : keys(target));
+    try { clearPrivateDrafts(); } finally { Object.keys = keys; }
+    assert.equal(store.has(a), false);
+    assert.equal(store.has(b), false);
+    assert.equal(store.get('xz-next-theme'), 'dark');
+  } finally {
+    globalThis.localStorage = previous;
+  }
+});

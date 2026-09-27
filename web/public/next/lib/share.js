@@ -43,8 +43,8 @@ export async function copyText(text) {
   return ok;
 }
 
-// 返回给用户看的提示文案。
-export async function sharePost({ slug, title }) {
+// 返回给用户看的提示文案。ref：分享来源（如 workbench_share），默认沿用页面地址里的 ref。
+export async function sharePost({ slug, title, ref = "" }) {
   const target = await shareTarget(slug);
   const heading = title || "玄枢卦帖";
   const text = `${heading}\n${target.url}`;
@@ -52,7 +52,7 @@ export async function sharePost({ slug, title }) {
   if (canNative) {
     try {
       await navigator.share({ title: heading, text, url: target.url });
-      trackShare(slug, "native");
+      trackShare(slug, "native", ref);
       return { ok: true, message: "分享已完成" };
     } catch (error) {
       if (error && error.name === "AbortError") return { ok: false, silent: true };
@@ -60,7 +60,7 @@ export async function sharePost({ slug, title }) {
   }
   const copied = await copyText(text);
   if (!copied) return { ok: false, message: "复制失败，请手动复制标题和链接" };
-  trackShare(slug, "copy");
+  trackShare(slug, "copy", ref);
   return {
     ok: true,
     message: target.attributed ? "邀请链接已复制，新用户激活后每日额度永久 +1" : "标题和链接已复制",

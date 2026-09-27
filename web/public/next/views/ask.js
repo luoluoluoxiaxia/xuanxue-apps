@@ -17,9 +17,10 @@ const readDraft = () => local.get(ASK_DRAFT, "");
 const writeDraft = text => (text.trim() ? local.set(ASK_DRAFT, text) : local.remove(ASK_DRAFT));
 
 // 摇到一半被打断（刷新、切走、登录）时保留已成的爻：一事一卦，不必重摇。只保留两小时，
-// 而且只还给同一个问题——换了问题就是另一卦，不能沿用。
+// 而且只还给同一个问题——换了问题就是另一卦，不能沿用。用户自己改过的回答方式也一并保留。
 const CAST_DRAFT = "xz-next-draft:cast";
 const CAST_TTL = 2 * 60 * 60 * 1000;
+const VISIBILITIES = ["help", "private", "public"];
 function readCast(question) {
   const saved = local.json(CAST_DRAFT, null);
   if (!saved || !Array.isArray(saved.lines) || !(Date.now() - Number(saved.at || 0) < CAST_TTL)) return null;
@@ -29,7 +30,12 @@ function readCast(question) {
     .slice(0, 6)
     .map(line => ({ value: Number(line.value), coins: (Array.isArray(line.coins) ? line.coins : []).filter(face => face === "背" || face === "字").slice(0, 3) }));
   if (!lines.length) return null;
-  return { lines, mode: saved.mode === "manual" ? "manual" : "coins", completedAt: lines.length === 6 ? String(saved.completedAt || "") : "" };
+  return {
+    lines,
+    mode: saved.mode === "manual" ? "manual" : "coins",
+    completedAt: lines.length === 6 ? String(saved.completedAt || "") : "",
+    visibility: VISIBILITIES.includes(saved.visibility) ? saved.visibility : "",
+  };
 }
 
 // 单选组（role="radiogroup"）：方向键切换选中项，只有选中项留在 Tab 顺序里。
@@ -160,7 +166,9 @@ function liuyaoFlow(ctx) {
     completedAt: restored?.completedAt || "",
     editing: null,                  // 手动录入时正在修改的爻位
     restored: !!restored,           // 这些爻是从上次未完成的起卦恢复的
-    visibility: wantsHelp ? "help" : "private",
+    // 与经典版一致默认「社区求助」（不调用 AI、不扣积分）；用户改过就沿用他的选择。
+    visibility: restored?.visibility || "help",
+    visibilityChosen: !!restored?.visibility,
     submitting: false,
     saved: null,                    // 已排好的盘：求助发布失败后重试时不再重复排盘
   };
@@ -184,9 +192,9 @@ function liuyaoFlow(ctx) {
   const manualPad = h("div", { class: "manual-pad", hidden: true });
 
   const visibilityOptions = [
+    ["help", "向社区求助", "选择即同意公开脱敏卦象和问题，由社区回答。", "hand"],
     ["private", "私密 AI 解读", "仅自己可见，不进入社区。", "lock"],
     ["public", "公开 AI 解读", "选择即同意公开问题、卦象和首轮 AI 解答到广场。", "globe"],
-    ["help", "向社区求助", "不调用 AI，不扣积分；公开脱敏卦象和问题，由卦友回答。", "hand"],
   ];
   const visibilityGroup = h("div", { class: "vis-grid", role: "radiogroup", "aria-label": "回答方式" });
   radioKeys(visibilityGroup);
@@ -198,18 +206,27 @@ function liuyaoFlow(ctx) {
     return quota.remaining > 0 ? `今日免费 ${quota.remaining}/${quota.total} 分` : `今日免费已用 · 充值 ${wallet?.balance ?? 0} 分`;
   };
   const renderVisibility = () => {
+    // 账户状态刷新时也会重画：焦点原本在选项上就留在选中项上。
+    const hadFocus = visibilityGroup.contains(document.activeElement);
     visibilityGroup.replaceChildren(...visibilityOptions.map(([value, label, copy, glyph]) => h("button", {
       type: "button",
       role: "radio",
       class: ["vis-card", `is-${value}`],
       "aria-checked": String(state.visibility === value),
       tabindex: state.visibility === value ? "0" : "-1",
-      onClick: () => { state.visibility = value; renderVisibility(); syncSubmit(); },
+      onClick: () => {
+        state.visibility = value;
+        state.visibilityChosen = true;
+        saveCast();
+        renderVisibility();
+        syncSubmit();
+      },
     },
     h("span", { class: "vis-icon" }, icon(glyph)),
     h("span", { class: "vis-copy" }, h("b", null, label), h("span", null, copy),
-      value === "private" ? h("small", null, quotaLabel()) : value === "public" ? h("small", null, "消耗积分 · 分享可增加每日额度") : h("small", null, "卦友回答后会提醒你")),
+      value === "private" ? h("small", null, quotaLabel()) : value === "public" ? h("small", null, "消耗积分 · 分享可增加每日额度") : h("small", null, "不调用 AI · 不扣积分")),
     h("span", { class: "vis-radio", "aria-hidden": "true" }))));
+    if (hadFocus) visibilityGroup.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
   };
   const submit = h("button", { type: "button", class: "btn btn-primary btn-lg btn-block submit-btn" });
   const submitError = h("p", { class: "field-error", hidden: true, role: "alert" });
@@ -251,7 +268,7 @@ function liuyaoFlow(ctx) {
   }
 
   function saveCast() {
-    if (state.lines.length) local.setJson(CAST_DRAFT, { lines: state.lines, mode: state.mode, completedAt: state.completedAt, question: question.value.trim(), at: Date.now() });
+    if (state.lines.length) local.setJson(CAST_DRAFT, { lines: state.lines, mode: state.mode, completedAt: state.completedAt, question: question.value.trim(), visibility: state.visibilityChosen ? state.visibility : "", at: Date.now() });
     else local.remove(CAST_DRAFT);
   }
 
@@ -486,13 +503,26 @@ function liuyaoFlow(ctx) {
     return "";
   }
 
+  // 积分用完（今日免费与充值都不够开始一次解读）：AI 解读暂不可用，求助不受影响。
+  const creditsOut = () => state.visibility !== "help" && session.get().authenticated && session.get().quota?.can_start_answer === false;
+
   function syncSubmit() {
     const labels = { help: "发布社区求助", private: "开始私密解读", public: "开始公开解读" };
     const missing = missingStep();
+    const exhausted = !missing && creditsOut();
     submit.disabled = state.submitting;
-    submit.classList.toggle("is-waiting", !!missing);
+    submit.classList.toggle("is-waiting", !!missing || exhausted);
     submit.setAttribute("aria-disabled", String(!!missing));
-    submit.replaceChildren(...[icon(state.visibility === "help" ? "hand" : "sparkle"), labels[state.visibility], missing && h("small", null, ` · ${missing}`)].filter(Boolean));
+    submit.replaceChildren(...[
+      icon(state.visibility === "help" ? "hand" : exhausted ? "coins" : "sparkle"),
+      exhausted ? "积分暂不可用 · 查看账户" : labels[state.visibility],
+      missing && h("small", null, ` · ${missing}`),
+    ].filter(Boolean));
+  }
+
+  function showCreditsOut() {
+    submitError.replaceChildren("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或充值后继续。 ", h("a", { class: "link-btn", href: "#/me/credits?topup=1" }, "去充值"));
+    submitError.hidden = false;
   }
 
   function showRitual(lines) {
@@ -527,12 +557,13 @@ function liuyaoFlow(ctx) {
       private: "私密提问，先登录或注册。",
       public: "登录后使用每日免费积分。分享公开问题可增加每日积分。",
     };
-    const ok = await ctx.requireAuth(reasons[state.visibility]);
+    // 与经典版一致：起卦提交时的登录默认停在「注册」。
+    const ok = await ctx.requireAuth(reasons[state.visibility], { mode: "register" });
     if (!ok || !ctx.isCurrent() || state.submitting) return;
     const quota = session.get().quota;
     if (!help && quota && quota.can_start_answer === false) {
-      submitError.replaceChildren("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或充值后继续。 ", h("a", { class: "link-btn", href: "#/me/credits" }, "去充值"));
-      submitError.hidden = false;
+      showCreditsOut();
+      syncSubmit();
       return;
     }
     state.submitting = true;
@@ -596,7 +627,7 @@ function liuyaoFlow(ctx) {
   renderVisibility();
   syncCast();
   syncSubmit();
-  ctx.subscribe(session, () => { renderVisibility(); });
+  ctx.subscribe(session, () => { renderVisibility(); syncSubmit(); });
   if (restored) toast(restored.lines.length >= 6 ? "已恢复刚才摇出的六爻" : `已恢复刚才摇出的 ${restored.lines.length} 爻，可以接着摇`);
   if (!question.value) requestAnimationFrame(() => question.focus({ preventScroll: true }));
   return { node, title: "六爻问事", layout: "focus" };
@@ -628,10 +659,14 @@ function readBirthDraft() {
 function baziFlow(ctx) {
   const setDefault = ctx.query.get("set_default") === "1";
   const editId = ctx.query.get("edit") || "";
+  // help=1（旧地址 ?start=bazi&community=help）：排好盘后直接打开「向社区求助」。
+  const wantsHelp = !editId && !setDefault && ctx.query.get("help") === "1";
   const node = h("div", { class: "ask-page is-birth" },
     editId
       ? focusHeader(ctx, "修改出生信息", "当前命盘资料已回填；提交后会更新此档案并按新信息重新排盘。")
-      : focusHeader(ctx, "八字看长期", "用出生时间排一张命盘，之后可以一直追问。"));
+      : wantsHelp
+        ? focusHeader(ctx, "排盘后请卦友帮看", "排好盘后，把脱敏命盘发到广场请卦友帮看；出生时间与地点不会公开。")
+        : focusHeader(ctx, "八字看长期", "用出生时间排一张命盘，之后可以一直追问。"));
   const body = h("div", { class: "birth-body" }, h("div", { class: "spinner-line" }, h("span", { class: "spinner" }), "正在准备…"));
   node.append(body);
 
@@ -674,8 +709,8 @@ function baziFlow(ctx) {
     } catch (_) {}
     if (!ctx.isCurrent()) return;
     body.replaceChildren(...[
-      profiles.length && !setDefault ? existingProfiles(ctx, profiles) : null,
-      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0 }),
+      profiles.length && !setDefault ? existingProfiles(ctx, profiles, { help: wantsHelp }) : null,
+      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0, help: wantsHelp }),
     ].filter(Boolean));
   };
   start();
@@ -691,14 +726,14 @@ function baziFlow(ctx) {
   return { node, title: "八字排盘", layout: "focus" };
 }
 
-function existingProfiles(ctx, profiles) {
+function existingProfiles(ctx, profiles, { help = false } = {}) {
   const question = readDraft();
   const list = profiles.slice().sort((a, b) => Number(b.is_default) - Number(a.is_default) || Number(b.id) - Number(a.id)).slice(0, 6);
   return h("section", { class: "flow-step" },
-    h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, icon("book", "icon-sm")), h("h2", null, "用已有命盘"), h("span", { class: "flow-hint" }, "同一张盘可以开新的对话")),
+    h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, icon("book", "icon-sm")), h("h2", null, "用已有命盘"), h("span", { class: "flow-hint" }, help ? "选一张盘，直接向卦友求助" : "同一张盘可以开新的对话")),
     h("div", { class: "recent-grid" }, list.map(item => h("a", {
       class: "recent-card",
-      href: `#/reading/${encodeURIComponent(item.id)}?fresh=1`,
+      href: `#/reading/${encodeURIComponent(item.id)}?fresh=1${help ? "&help=1" : ""}`,
       onClick: () => { if (question.trim()) { local.set(`xz-next-draft:reading:${item.id}`, question.trim()); writeDraft(""); } },
     },
     h("span", { class: "recent-top" },
@@ -709,7 +744,7 @@ function existingProfiles(ctx, profiles) {
     h("p", { class: "flow-or" }, h("span", null, "或者新建一张")));
 }
 
-function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = null } = {}) {
+function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = null, help = false } = {}) {
   const draft = editing ? null : readBirthDraft();
   const saved = editing?.input || draft || {};
   const savedGender = saved.gender === "male" ? "男" : saved.gender === "female" ? "女" : saved.gender;
@@ -718,7 +753,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     gender: editing || draft ? (savedGender === "男" || savedGender === "女" ? savedGender : "") : "男",
     calendar: saved.calendar === "lunar" ? "lunar" : "solar",
   };
-  const name = h("input", { class: "input", maxlength: 20, placeholder: "如 小秋、我的命盘；留空自动命名", autocomplete: "off", enterkeyhint: "next" });
+  const name = h("input", { class: "input", placeholder: "如 小秋、我的命盘；留空自动命名", autocomplete: "off", enterkeyhint: "next" });
   const genderSeg = h("div", { class: "seg seg-lg", role: "radiogroup", "aria-label": "性别" });
   const calendarSeg = h("div", { class: "seg", role: "radiogroup", "aria-label": "历法" });
   radioKeys(genderSeg);
@@ -749,8 +784,27 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   const moreSummary = h("span", { class: "birth-more-label" });
   const showBoundary = () => moreSummary.replaceChildren(...["更多设置", boundary.value !== "zi" && h("span", { class: "birth-more-value" }, boundary.selectedOptions[0]?.textContent || "")].filter(Boolean));
   boundary.addEventListener("change", showBoundary);
-  const pillarInputs = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]].map(([key, label]) => [key, label, h("input", { class: "input pillar-input", maxlength: 2, placeholder: key === "year" ? "如 甲子" : "", "aria-label": label, autocomplete: "off", enterkeyhint: key === "hour" ? "go" : "next" })]);
+  // 已知四柱：每一柱是可输入、也可点选的组合框；选择器先列天干，再只列同阴阳可配的地支。
+  const pickerId = `pillar-picker-${birthFormSeq}`;
+  const pillarHintId = `pillar-hint-${birthFormSeq}`;
+  const pillarInputs = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]].map(([key, label]) => [key, label, h("input", {
+    class: "input pillar-input",
+    maxlength: 2,
+    placeholder: key === "year" ? "如 甲子" : "",
+    "aria-label": label,
+    role: "combobox",
+    "aria-haspopup": "dialog",
+    "aria-expanded": "false",
+    "aria-controls": pickerId,
+    "aria-describedby": pillarHintId,
+    autocomplete: "off",
+    enterkeyhint: key === "hour" ? "go" : "next",
+  })]);
+  const pillarHint = h("p", { class: "field-hint", id: pillarHintId });
+  const picker = h("div", { class: "pillar-picker", id: pickerId, role: "dialog", hidden: true });
   const yearCandidates = h("div", { class: "year-candidates" });
+  // 修改已有命盘或恢复草稿时，沿用当时选定的生年（仍在候选里时）。
+  let preferredBirthYear = Number(saved.manual_birth_year) || null;
   let manualBirthYear = null;
   const error = h("p", { class: "field-error", hidden: true, role: "alert" });
   const submitLabel = editing ? "更新并重新排盘" : "生成命盘";
@@ -786,21 +840,183 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
 
   const updateCandidates = () => {
     const text = pillarInputs[0][2].value.replace(/\s/g, "");
-    manualBirthYear = null;
-    if (!text) { yearCandidates.replaceChildren(h("span", { class: "field-hint" }, "填写年柱后显示近 120 年候选。")); return; }
-    if (!validPillar(text)) { yearCandidates.replaceChildren(h("span", { class: "field-error" }, "年柱干支不合（阳干配阳支、阴干配阴支，如「乙巳」「甲子」），请检查。")); return; }
+    if (!text) { manualBirthYear = null; yearCandidates.replaceChildren(h("span", { class: "field-hint" }, "填写年柱后显示近 120 年候选。")); return; }
+    if (!validPillar(text)) {
+      manualBirthYear = null;
+      // 点选天干后还差地支时只是没选完，不算填错。
+      yearCandidates.replaceChildren(text.length === 1 && STEMS.includes(text)
+        ? h("span", { class: "field-hint" }, "选好地支后显示近 120 年候选。")
+        : h("span", { class: "field-error" }, "年柱干支不合（阳干配阳支、阴干配阴支，如「乙巳」「甲子」），请检查。"));
+      return;
+    }
     const now = new Date().getFullYear();
     const matches = [];
     for (let y = now; y > now - 120 && matches.length < 2; y -= 1) if (pillarForYear(y) === text) matches.push(y);
-    manualBirthYear = matches[0] || null;
+    // 已选的生年仍是候选就保留；否则用保存过的生年；都没有才默认本甲子。
+    if (!matches.includes(manualBirthYear)) manualBirthYear = matches.includes(preferredBirthYear) ? preferredBirthYear : matches[0] || null;
     const renderButtons = () => yearCandidates.replaceChildren(...matches.map((y, index) => h("button", {
       type: "button", class: ["pill-filter"], "aria-pressed": String(manualBirthYear === y),
-      onClick: () => { manualBirthYear = y; renderButtons(); },
+      onClick: () => { manualBirthYear = y; preferredBirthYear = y; renderButtons(); saveBirthDraft(); },
     }, `${text}年 · 公历 ${y}`, h("small", null, ` · ${index === 0 ? "本甲子" : "上一甲子"} · 虚岁约 ${now - y + 1}`))));
     renderButtons();
   };
   pillarInputs[0][2].addEventListener("input", updateCandidates);
   updateCandidates();
+
+  /* ---- 已知四柱：天干地支选择器 ---- */
+  // 手机和平板（< 1024px）只用点选，不弹输入法；桌面可以直接输入，也可以点选。
+  const pickerOnlyQuery = window.matchMedia?.("(max-width: 1023px)");
+  const pickerOnly = () => !!pickerOnlyQuery?.matches;
+  let pickKey = "";
+  let pickStem = "";
+  let suppressOpen = false;
+  let programmatic = false;
+  const pillarEntry = key => pillarInputs.find(([k]) => k === key);
+
+  function syncPickerMode() {
+    const only = pickerOnly();
+    pillarInputs.forEach(([key, , input]) => {
+      input.readOnly = only;
+      if (only) input.setAttribute("inputmode", "none");
+      else input.removeAttribute("inputmode");
+      input.placeholder = key === "year" ? "如 甲子" : only ? "点选" : "";
+    });
+    pillarHint.textContent = only
+      ? "点一柱，依次选天干、地支；地支只列与天干同阴阳的。"
+      : "可直接输入干支，也可点选（↓ 打开选择器）：先选天干，再选同阴阳的地支。";
+  }
+  syncPickerMode();
+  if (pickerOnlyQuery?.addEventListener) {
+    pickerOnlyQuery.addEventListener("change", syncPickerMode);
+    ctx.cleanup(() => pickerOnlyQuery.removeEventListener("change", syncPickerMode));
+  }
+
+  // 一组按钮只占一个 Tab 位，方向键在组内移动。
+  function rovingGroup(buttons) {
+    const current = buttons.find(button => button.getAttribute("aria-pressed") === "true") || buttons[0];
+    buttons.forEach(button => button.setAttribute("tabindex", button === current ? "0" : "-1"));
+    const move = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    buttons.forEach((button, index) => button.addEventListener("keydown", event => {
+      let next = -1;
+      if (event.key in move) next = (index + move[event.key] + buttons.length) % buttons.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = buttons.length - 1;
+      if (next < 0) return;
+      event.preventDefault();
+      buttons.forEach(item => item.setAttribute("tabindex", "-1"));
+      buttons[next].setAttribute("tabindex", "0");
+      buttons[next].focus();
+    }));
+    return current;
+  }
+
+  function renderPicker(focus = "") {
+    const entry = pillarEntry(pickKey);
+    pillarInputs.forEach(([key, , input]) => {
+      input.setAttribute("aria-expanded", String(!!entry && key === pickKey));
+      input.classList.toggle("is-picking", !!entry && key === pickKey);
+    });
+    if (!entry) { picker.hidden = true; picker.replaceChildren(); return; }
+    const [, label, input] = entry;
+    const value = input.value.replace(/\s/g, "");
+    const stem = pickStem || (value && STEMS.includes(value[0]) ? value[0] : "");
+    const chosenBranch = stem && value[0] === stem ? value[1] || "" : "";
+    const parity = STEMS.indexOf(stem) % 2;
+    const branches = stem ? [...BRANCHES].filter((_, index) => index % 2 === parity) : [];
+    const stemButtons = [...STEMS].map(char => h("button", { type: "button", class: "pk-btn", "aria-pressed": String(char === stem), onClick: () => chooseStem(char) }, char));
+    const branchButtons = branches.map(char => h("button", { type: "button", class: "pk-btn", "aria-pressed": String(char === chosenBranch), onClick: () => chooseBranch(char) }, char));
+    const firstStem = rovingGroup(stemButtons);
+    const firstBranch = branchButtons.length ? rovingGroup(branchButtons) : null;
+    picker.hidden = false;
+    picker.setAttribute("aria-label", `选择${label}`);
+    picker.replaceChildren(
+      h("div", { class: "pk-head" },
+        h("b", { class: "pk-title" }, `选${label}`),
+        h("span", { class: "pk-step" }, stem ? "第二步 · 选地支（仅列可配之支）" : "第一步 · 选天干"),
+        h("button", { type: "button", class: "btn btn-sm btn-ghost pk-done", onClick: () => closePicker(true) }, "完成")),
+      h("p", { class: "pk-label", id: `${pickerId}-stems` }, "天干"),
+      h("div", { class: "pk-row", role: "group", "aria-labelledby": `${pickerId}-stems` }, stemButtons),
+      h("p", { class: "pk-label", id: `${pickerId}-branches` }, stem ? `地支 · 可配${stem}` : "地支"),
+      branchButtons.length
+        ? h("div", { class: "pk-row is-branches", role: "group", "aria-labelledby": `${pickerId}-branches` }, branchButtons)
+        : h("p", { class: "pk-empty" }, "先选天干，再选同阴阳的地支。"));
+    if (focus === "stem") firstStem.focus({ preventScroll: true });
+    else if (focus === "branch") firstBranch?.focus({ preventScroll: true });
+  }
+
+  function openPicker(key, focus = "") {
+    if (state.mode !== "manual_pillars") return;
+    if (pickKey !== key) pickStem = "";
+    pickKey = key;
+    renderPicker(focus);
+  }
+
+  function closePicker(returnFocus = false) {
+    const input = pillarEntry(pickKey)?.[2];
+    pickKey = "";
+    pickStem = "";
+    renderPicker();
+    if (returnFocus && input) {
+      suppressOpen = true;
+      input.focus({ preventScroll: true });
+      suppressOpen = false;
+    }
+  }
+
+  // 程序写入后照常触发 input 事件：年柱刷新生年候选、保存草稿，填满一柱时跳到下一柱。
+  function writePillar(input, value) {
+    input.value = value;
+    input.removeAttribute("aria-invalid");
+    programmatic = true;
+    try { input.dispatchEvent(new Event("input", { bubbles: true })); } finally { programmatic = false; }
+  }
+
+  function chooseStem(char) {
+    const input = pillarEntry(pickKey)?.[2];
+    if (!input) return;
+    pickStem = char;
+    writePillar(input, char);
+    renderPicker("branch");
+  }
+
+  function chooseBranch(char) {
+    const entry = pillarEntry(pickKey);
+    if (!entry) return;
+    const [key, , input] = entry;
+    const stem = pickStem || input.value.replace(/\s/g, "")[0] || "";
+    if (!stem || !STEMS.includes(stem)) return;
+    pickStem = "";
+    writePillar(input, stem + char);
+    // 填满后 input 事件已把焦点带到下一柱（选择器随之切过去）；最后一柱选完就收起。
+    if (pickKey === key) closePicker(true);
+  }
+
+  picker.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    closePicker(true);
+  });
+
+  pillarInputs.forEach(([key, , input]) => {
+    input.addEventListener("focus", () => { if (!suppressOpen) openPicker(key); });
+    input.addEventListener("click", () => { if (pickKey !== key) openPicker(key); });
+    input.addEventListener("keydown", event => {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        openPicker(key, "stem");
+      } else if (event.key === "Escape" && pickKey === key) {
+        event.preventDefault();
+        closePicker(false);
+      }
+    });
+    // 桌面上直接输入时，选择器跟着显示已输入的天干。
+    input.addEventListener("input", () => {
+      if (programmatic || pickKey !== key) return;
+      const first = input.value.replace(/\s/g, "")[0] || "";
+      pickStem = STEMS.includes(first) && input.value.replace(/\s/g, "").length === 1 ? first : "";
+      renderPicker();
+    });
+  });
 
   const timeSection = h("div", { class: "birth-time" },
     h("div", { class: "birth-row" }, h("span", { class: "field-label" }, "历法"), calendarSeg, leapRow),
@@ -820,6 +1036,8 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       h("label", { class: "field" }, h("span", { class: "field-label" }, "换日规则"), boundary)));
   const manualSection = h("div", { class: "birth-manual", hidden: true },
     h("div", { class: "pillar-grid" }, pillarInputs.map(([, label, input]) => h("label", { class: "field" }, h("span", { class: "field-label" }, label), input))),
+    pillarHint,
+    picker,
     h("div", { class: "field" }, h("span", { class: "field-label" }, "生年（匹配出生锚点）"), yearCandidates));
   const modeSeg = h("div", { class: "seg", role: "tablist", "aria-label": "输入方式" });
   const renderMode = () => {
@@ -828,6 +1046,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "manual_pillars"), onClick: () => { state.mode = "manual_pillars"; renderMode(); saveBirthDraft(); } }, "已知四柱"));
     timeSection.hidden = state.mode !== "birth_time";
     manualSection.hidden = state.mode !== "manual_pillars";
+    if (state.mode !== "manual_pillars" && pickKey) closePicker(false);
   };
   renderMode();
 
@@ -926,6 +1145,11 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   });
   // 改动任何一项后，旧的提交错误就收起来。
   form.addEventListener("input", () => { if (!submit.disabled) error.hidden = true; });
+  // 焦点移到四柱以外的地方（其它输入项、提交按钮）时收起选择器。
+  form.addEventListener("focusin", event => {
+    if (!pickKey || picker.contains(event.target) || pillarInputs.some(entry => entry[2] === event.target)) return;
+    closePicker(false);
+  });
 
   function saveBirthDraft() {
     if (editing) return;
@@ -933,7 +1157,8 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     const snapshot = {
       name: name.value, gender: state.gender, input_mode: state.mode, calendar: state.calendar,
       year: year.value, month: month.value, day: day.value, hour: hour.value, minute: minute.value,
-      is_leap_month: leap.checked, day_boundary: boundary.value, location: location.value(), pillars, at: Date.now(),
+      is_leap_month: leap.checked, day_boundary: boundary.value, location: location.value(), pillars,
+      manual_birth_year: manualBirthYear, at: Date.now(),
     };
     const filled = [snapshot.name, snapshot.year, snapshot.month, snapshot.day, snapshot.hour, snapshot.minute, snapshot.location, ...Object.values(pillars)].some(value => String(value || "").trim());
     if (filled) local.setJson(BIRTH_DRAFT, snapshot);
@@ -949,6 +1174,9 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     boundary.value = "zi";
     showBoundary();
     location.reset();
+    closePicker(false);
+    preferredBirthYear = null;
+    manualBirthYear = null;
     Object.assign(state, { mode: "birth_time", gender: "男", calendar: "solar" });
     renderGender();
     renderCalendar();
@@ -1008,7 +1236,8 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       hour: Number(hour.value), minute: minute.value.trim() === "" ? 0 : Number(minute.value),
       is_leap_month: state.calendar === "lunar" && leap.checked,
       location: location.value() || null,
-      use_true_solar: true,
+      // 新盘默认校正真太阳时；修改旧盘时沿用当时的设置（经典版同样保留已保存的 false）。
+      use_true_solar: editing ? saved.use_true_solar !== false : true,
       day_boundary: boundary.value,
     };
   }
@@ -1063,7 +1292,8 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       }
       const draft = readDraft().trim();
       if (draft) { local.set(`xz-next-draft:reading:${profileId}`, draft); writeDraft(""); }
-      handoff(profileId, { system: "bazi", payload: chart, input: bodyPayload, sessionId: bodyPayload.session_id, name: chart.profile_name || bodyPayload.name || "" });
+      // help：解读页载入后直接打开「向社区求助」。
+      handoff(profileId, { system: "bazi", payload: chart, input: bodyPayload, sessionId: bodyPayload.session_id, name: chart.profile_name || bodyPayload.name || "", openHelp: help });
       ctx.navigate(`/reading/${encodeURIComponent(profileId)}`, { replace: true });
     } catch (error) {
       if (!ctx.isCurrent()) return;
