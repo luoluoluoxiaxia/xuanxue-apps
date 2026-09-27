@@ -4,11 +4,12 @@ import { icon } from "../lib/icons.js?v=n1";
 import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n1";
 import { session, displayName, local, refreshSession } from "../lib/store.js?v=n1";
 import { relativeTime, fullTime, count } from "../lib/format.js?v=n1";
-import { avatar, errorView, stateView } from "../ui/bits.js?v=n1";
+import { avatar, stateView } from "../ui/bits.js?v=n1";
 import { guaGlyph, elementClass } from "../ui/gua.js?v=n1";
 import { toast } from "../ui/toast.js?v=n1";
-import { sharePost, renderShareImage, trackShare } from "../lib/share.js?v=n1";
-import { openSheet, confirmDialog } from "../ui/overlay.js?v=n1";
+import { sharePost } from "../lib/share.js?v=n1";
+import { openShareSheet } from "../ui/share-sheet.js?v=n1";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n1";
 import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n1";
 
 const COMMENT_MAX = 500;
@@ -187,6 +188,13 @@ function clampLong(root, { skip = new Set(), expanded = new Set() } = {}) {
   });
 }
 
+// 服务端渲染的完整帖子页：举报与卦主「发布事情进展」在那里提交（取值由服务端页面给出，客户端不猜）。
+function fullPageUrl(post) {
+  const url = String(post?.url || "");
+  if (/^\/(?!\/)/.test(url) || url.startsWith(`${location.origin}/`)) return url;
+  return `/community/${encodeURIComponent(post?.slug || "")}`;
+}
+
 export function render(ctx) {
   const slug = ctx.params.slug;
   const path = detailPath(slug);
@@ -294,7 +302,15 @@ export function render(ctx) {
         text: "可能已被作者删除或暂时下线，去广场看看别的讨论吧。",
         actions: [h("a", { class: "btn btn-soft", href: "#/" }, icon("plaza"), "回到广场")],
       })
-      : errorView(error, retry, { title: "帖子没能加载出来" }));
+      : stateView({
+        tone: "error",
+        title: "帖子没能加载出来",
+        text: error?.message || "网络或服务暂时不可用",
+        actions: [
+          h("button", { type: "button", class: "btn btn-soft", onClick: retry }, icon("refresh"), "重试"),
+          h("a", { class: "btn btn-ghost", href: fullPageUrl({ slug }) }, icon("external"), "前往完整页面"),
+        ],
+      }));
   }
 
   function retry() {
@@ -384,6 +400,16 @@ export function render(ctx) {
     const shareBtn = h("button", { type: "button", class: "btn btn-sm" }, icon("share"), "分享");
     shareBtn.addEventListener("click", () => share(shareBtn));
     ui.share = shareBtn;
+    const moreBtn = h("button", { type: "button", class: "icon-btn post-more", "aria-label": "更多操作", "aria-haspopup": "menu", "aria-expanded": "false" }, icon("more"));
+    moreBtn.addEventListener("click", () => {
+      const full = fullPageUrl(post);
+      openMenu(moreBtn, [
+        { label: "在完整页面打开", icon: "external", href: full },
+        post.can_manage && post.system !== "bazi" ? { label: "发布事情进展", icon: "feather", href: full, meta: "完整页面" } : null,
+        "sep",
+        { label: "举报这条卦帖", icon: "flag", href: full, meta: "完整页面" },
+      ]);
+    });
     const primary = isHelp
       ? h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => focusComposer() }, icon("feather"), "写下判断")
       : h("a", { class: "btn btn-primary btn-sm", href: post.system === "bazi" ? "#/ask/bazi" : "#/ask/liuyao" }, icon("plus"), post.system === "bazi" ? "我也要排盘" : "我也要起卦");
@@ -435,7 +461,7 @@ export function render(ctx) {
         board,
         answer,
         updates,
-        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, h("span", { class: "post-actions-spacer" }), primary)),
+        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, moreBtn, h("span", { class: "post-actions-spacer" }), primary)),
       discussion);
     renderComments();
 
@@ -990,58 +1016,6 @@ export function render(ctx) {
       }
     },
   };
-}
-
-// 分享面板：先给出复制链接，同时生成一张带二维码的分享长图。
-function openShareSheet(post) {
-  const title = post.question || post.title || "玄枢卦帖";
-  const preview = h("div", { class: "share-preview", "aria-busy": "true" }, h("div", { class: "spinner-line" }, h("span", { class: "spinner", "aria-hidden": "true" }), "正在生成分享长图…"));
-  const actions = h("div", { class: "share-actions" });
-  const copyBtn = h("button", { type: "button", class: "btn" }, icon("copy"), "复制标题和链接");
-  let copying = false;
-  copyBtn.addEventListener("click", async () => {
-    if (copying) return;
-    copying = true;
-    try {
-      const result = await sharePost({ slug: post.slug, title });
-      if (!result.silent && result.message) toast(result.message, { type: result.ok ? "ok" : "error" });
-    } finally {
-      copying = false;
-    }
-  });
-  actions.append(copyBtn);
-  const sheet = openSheet({ title: "分享这条卦帖", body: h("div", { class: "share-sheet" }, preview, actions), wide: false, className: "sheet-share" });
-  let objectUrl = "";
-  const cleanup = () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  renderShareImage(post).then(image => {
-    if (!document.contains(sheet.panel)) return;
-    objectUrl = URL.createObjectURL(image.blob);
-    trackShare(post.slug, "image_preview", "community_share");
-    preview.removeAttribute("aria-busy");
-    preview.replaceChildren(h("img", { src: objectUrl, alt: `分享长图：${title}`, class: "share-image" }),
-      h("p", { class: "share-hint" }, window.matchMedia?.("(pointer: coarse)").matches ? "长按图片保存或发给朋友" : "图片里的二维码可以直接扫码查看全文", image.attributed ? " · 已记录你的邀请归因" : ""));
-    const file = typeof File === "function" ? new File([image.blob], image.filename || "玄枢卦帖.png", { type: "image/png" }) : null;
-    if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-      actions.prepend(h("button", { type: "button", class: "btn btn-primary", onClick: async () => {
-        try {
-          await navigator.share({ files: [file], title });
-          trackShare(post.slug, "image_native", "community_share");
-        } catch (error) {
-          if (error?.name !== "AbortError") toast("分享没有成功，可以先保存图片", { type: "error" });
-        }
-      } }, icon("share"), "分享图片"));
-    }
-    if (!window.matchMedia?.("(pointer: coarse)").matches) {
-      const save = h("a", { class: "btn btn-primary", href: objectUrl, download: image.filename || "玄枢卦帖.png", onClick: () => trackShare(post.slug, "image_save", "community_share") }, icon("arrowUp"), "保存图片");
-      save.querySelector(".icon")?.setAttribute("style", "transform: rotate(180deg)");
-      actions.prepend(save);
-    }
-  }).catch(error => {
-    preview.removeAttribute("aria-busy");
-    preview.replaceChildren(h("p", { class: "share-hint" }, error?.message || "长图生成失败，可以先复制链接分享"));
-  });
-  const observer = new MutationObserver(() => { if (!document.contains(sheet.panel)) { cleanup(); observer.disconnect(); } });
-  observer.observe(document.body, { childList: true });
 }
 
 export { liuyaoBoard, baziBoard, renderMarkdown };

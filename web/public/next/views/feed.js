@@ -182,7 +182,7 @@ export function postCard(item, { onLike } = {}) {
     h("footer", { class: "post-card-foot" },
       like,
       h("span", { class: "stat", title: "讨论", "data-stat": "comments" }, icon("comment"), h("span", { class: "tnum" }, count(item.comment_count)), h("span", { class: "sr-only" }, "条讨论")),
-      h("span", { class: "stat", title: "浏览", "data-stat": "views" }, icon("eye"), h("span", { class: "tnum" }, count(item.view_count)), h("span", { class: "sr-only" }, "次浏览")),
+      h("span", { class: "stat", title: "看过的人数", "data-stat": "views" }, icon("eye"), h("span", { class: "tnum" }, count(item.viewer_count ?? item.view_count)), h("span", { class: "sr-only" }, "人看过")),
       h("span", { class: "post-card-status" },
         item.is_featured ? h("span", { class: "chip chip-gold" }, icon("award"), "精选") : null,
         isHelp ? h("span", { class: ["chip", resolved ? "chip-ok" : "chip-help"] }, resolved ? icon("check") : icon("hand"), item.help_status_label || (resolved ? "已解决" : "求助中")) : null)));
@@ -312,8 +312,6 @@ function sideRail(ctx, { onSeeking, onStats } = {}) {
       h("li", null, h("b", null, "保护隐私"), h("span", null, "不留联系方式，不晒他人信息。"))));
   const foot = h("footer", { class: "side-foot" },
     h("button", { type: "button", class: "link-btn", "data-open-feedback": "" }, "意见反馈"),
-    h("span", { "aria-hidden": "true" }, "·"),
-    h("button", { type: "button", class: "link-btn", "data-switch-classic": "" }, "回到经典版"),
     h("p", null, "AI 解读仅供传统文化研究与娱乐参考，不替代医疗、法律、投资等专业意见。"));
   rail.append(todayBox, seekingBox, pulseBox, rules, foot);
 
@@ -760,7 +758,7 @@ export function render(ctx) {
     newbar.replaceChildren(h("span", { class: "feed-newpill is-status" }, h("span", { class: "spinner", "aria-hidden": "true" }), text));
   }
 
-  const PATCH_FIELDS = ["like_count", "viewer_liked", "comment_count", "view_count", "help_status", "help_status_label", "is_featured", "answer_excerpt"];
+  const PATCH_FIELDS = ["like_count", "viewer_liked", "comment_count", "view_count", "viewer_count", "help_status", "help_status_label", "is_featured", "answer_excerpt"];
   const STRUCTURAL = ["help_status", "is_featured", "answer_excerpt"];
 
   // 静默更新已在列表里的卡片（点赞、讨论数、求助状态）。只重建视口顶端以下的卡片，
@@ -786,7 +784,7 @@ export function render(ctx) {
         const comments = card.querySelector('[data-stat="comments"] .tnum');
         if (comments) comments.textContent = count(existing.comment_count);
         const views = card.querySelector('[data-stat="views"] .tnum');
-        if (views) views.textContent = count(existing.view_count);
+        if (views) views.textContent = count(existing.viewer_count ?? existing.view_count);
       }
     }
   }
@@ -972,7 +970,8 @@ export function render(ctx) {
 
   return {
     node,
-    title: filter.view === "seeking" ? "等你来答" : "广场",
+    // 首页（广场）用站点完整标题，便于搜索引擎收录。
+    title: filter.view === "seeking" ? "等你来答" : "",
     layout: "feed",
     onRestore(y) {
       restored = y;

@@ -360,7 +360,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
 .brand-mark { width: 32px; height: 32px; }
 .brand-name { font: 900 20px/1 var(--font-serif); letter-spacing: .14em; }
-.brand-tag { margin-left: -2px; padding: 3px 7px; color: var(--brand-ink); background: var(--brand-soft); border-radius: 999px; font: 700 10.5px/1 var(--font-sans); letter-spacing: .06em; }
 .nav-tabs { display: flex; align-items: center; gap: 4px; }
 .nav-tab {
   position: relative;
@@ -515,7 +514,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 @media (max-width: 1079px) {
   .topbar-inner { gap: 16px; padding: 0 20px; }
   .nav-tab { padding: 0 11px; }
-  .brand-tag { display: none; }
 }
 
 /* ---------- 响应式：手机 ---------- */
@@ -1060,8 +1058,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   .seeking-chip-go { display: inline-flex; align-items: center; gap: 4px; color: var(--accent-ink); font-size: 13px; font-weight: 700; }
 }
 
-/* 首次打开新版的介绍卡 */
-.intro-card {
+/* 浮动提示卡（邀请提示等） */
+.float-card {
   position: fixed; right: 24px; bottom: 24px; z-index: 60;
   width: min(380px, calc(100vw - 32px));
   display: grid; gap: 12px; padding: 18px;
@@ -1069,16 +1067,13 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   box-shadow: var(--shadow-pop);
   animation: sheet-in .36s var(--ease-out) both;
 }
-.intro-top { display: flex; gap: 12px; align-items: flex-start; }
-.intro-top .brand-mark { width: 40px; height: 40px; flex: none; }
-.intro-top h2 { font-size: 16px; font-weight: 800; }
-.intro-top p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
-.intro-list { display: grid; gap: 6px; padding-left: 52px; color: var(--ink-2); font-size: 13px; list-style: none; }
-.intro-list li { display: flex; gap: 8px; align-items: center; }
-.intro-list .icon { width: 16px; height: 16px; color: var(--brand); }
-.intro-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.float-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.invite-top { display: flex; gap: 12px; align-items: flex-start; }
+.invite-mark { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 12px; color: var(--brand-ink); background: var(--brand-soft); }
+.invite-top h2 { font-size: 16px; font-weight: 800; }
+.invite-top p { color: var(--ink-2); font-size: 13.5px; margin-top: 4px; }
 @media (max-width: 719px) {
-  .intro-card { left: 16px; right: 16px; width: auto; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px); }
+  .float-card { left: 16px; right: 16px; width: auto; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px); }
 }
 .feed-pulse { display: none; }
 @media (max-width: 1079px) {

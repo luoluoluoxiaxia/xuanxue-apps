@@ -343,9 +343,8 @@ function linksCard(ctx, { authenticated }) {
       row({ glyph: "coins", tone: "gold", label: "积分与充值", sub: "余额、明细与充值", href: "#/me/credits" }));
   }
   rows.push(
-    row({ glyph: "sliders", tone: "indigo", label: "设置", sub: "外观、昵称与界面版本", href: "#/me/settings" }),
-    row({ glyph: "message", tone: "brand", label: "意见反馈", sub: "断得准不准，直说无妨", onClick: () => openFeedback() }),
-    row({ glyph: "swap", tone: "neutral", label: "回到经典版", sub: "切换到经典界面，数据互通", onClick: () => ctx.switchToClassic() }));
+    row({ glyph: "sliders", tone: "indigo", label: "设置", sub: "外观、昵称与账户", href: "#/me/settings" }),
+    row({ glyph: "message", tone: "brand", label: "意见反馈", sub: "断得准不准，直说无妨", onClick: () => openFeedback() }));
   const syncUnread = state => {
     const count = Number(state?.unread) || 0;
     unread.hidden = !count;
@@ -689,9 +688,12 @@ function archivesView(ctx, body) {
     const isLy = systemOf(profile) === "liuyao";
     const unit = isLy ? "卦档" : "命盘";
     const history = Number(profile.history_count) || 0;
+    // 解读还在进行时，先提醒：删除会连同进行中的解读一起中断。
+    const running = profile.task_status === "pending" || profile.task_status === "running";
     const ok = await confirmDialog({
       title: `确定永久删除这份${unit}？`,
-      message: history ? `同时删除 ${history} 条历史解读，且无法恢复。` : `这份${unit}将从账户中移除，删除后无法恢复。`,
+      message: (running ? "这份档案还有一条解读正在进行，删除后会一并中断。" : "")
+        + (history ? `同时删除 ${history} 条历史解读，且无法恢复。` : `这份${unit}将从账户中移除，删除后无法恢复。`),
       confirmText: "永久删除",
       cancelText: "取消",
       danger: true,
@@ -1931,16 +1933,6 @@ function accountSection(ctx, state, nick) {
   ]);
 }
 
-function interfaceSection(ctx) {
-  return settingSection("界面版本", [settingRow({
-    glyph: "swap",
-    tone: "neutral",
-    label: "当前：新版",
-    text: "新版与经典版共用同一个账户和数据，可以随时切换。",
-    control: h("button", { type: "button", class: "btn btn-sm", onClick: () => ctx.switchToClassic() }, "回到经典版"),
-  })]);
-}
-
 function helpSection() {
   const copy = h("button", { type: "button", class: "btn btn-sm btn-ghost", "aria-label": "复制邮箱地址" }, icon("copy"), "复制");
   copy.addEventListener("click", async () => {
@@ -1994,7 +1986,7 @@ function settingsView(ctx, body) {
       nick = nicknameEditor(ctx, { variant: "row" });
       sections.push(accountSection(ctx, state, nick));
     }
-    sections.push(interfaceSection(ctx), helpSection(), h("p", { class: "me-disclaimer" }, icon("info", "icon-sm"), h("span", null, DISCLAIMER)));
+    sections.push(helpSection(), h("p", { class: "me-disclaimer" }, icon("info", "icon-sm"), h("span", null, DISCLAIMER)));
     body.replaceChildren(...sections);
   }
   paint();

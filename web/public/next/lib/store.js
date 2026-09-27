@@ -44,6 +44,7 @@ export function applyAccount(payload) {
     quota: authenticated ? data.private_quota || null : null,
     archive: authenticated ? data.archive_summary || null : null,
   });
+  if (previous.ready && previous.authenticated && !authenticated) clearPrivateDrafts();
   if (previous.ready && previous.authenticated !== authenticated) {
     document.dispatchEvent(new CustomEvent("xz:authchange", { detail: { authenticated } }));
   }
