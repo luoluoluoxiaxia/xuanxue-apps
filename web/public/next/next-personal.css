@@ -312,24 +312,6 @@
 /* 手动刷新时旧列表先变淡，新内容回来后恢复。 */
 .ib-list { transition: opacity .18s var(--ease); }
 .ib-list.is-refreshing { opacity: .55; }
-.ib-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-.ib-tile {
-  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center;
-  padding: 14px 16px;
-  text-align: left;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  transition: border-color .16s var(--ease), box-shadow .16s var(--ease);
-}
-.ib-tile:hover { border-color: var(--line-strong); box-shadow: var(--shadow-1); }
-.ib-tile:focus-visible { border-radius: var(--r-lg); }
-.ib-tile-icon { grid-row: span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 13px; }
-.ib-tile b { font-size: 22px; font-weight: 800; line-height: 1.15; }
-.ib-tile > span:last-child { color: var(--ink-3); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
-.ib-tile.is-like .ib-tile-icon { color: var(--accent-ink); background: var(--accent-soft); }
-.ib-tile.is-comment .ib-tile-icon { color: var(--indigo); background: var(--indigo-soft); }
-.ib-tile.is-unread .ib-tile-icon { color: var(--brand-ink); background: var(--brand-soft); }
 .ib-filters { display: flex; gap: 8px; margin: 0 -2px; padding: 2px; overflow-x: auto; scrollbar-width: none; }
 .ib-filters::-webkit-scrollbar { display: none; }
 .ib-filter { flex: none; }
@@ -392,7 +374,6 @@
 .ib-post { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink-3); font-size: 12.5px; }
 .ib-post .icon { width: 14px; height: 14px; flex: none; }
 .ib-post span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ib-tile-skel { width: 36px; height: 18px; margin: 3px 0 4px; }
 .ib-filter-empty { display: grid; justify-items: center; gap: 8px; padding: 32px 16px; color: var(--ink-3); text-align: center; background: var(--bg-elev); border: 1px dashed var(--line-strong); border-radius: var(--r-lg); }
 .ib-filter-empty .icon { width: 26px; height: 26px; color: var(--ink-4); }
 .ib-list > .state { background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); }
@@ -417,7 +398,6 @@
 .ib-anon-mark { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 20px; color: var(--accent-ink); background: var(--bg-elev); box-shadow: var(--shadow-2); }
 .ib-anon-mark .icon { width: 28px; height: 28px; }
 .ib-anon-title { font-size: 24px; font-weight: 800; }
-.ib-anon-text { max-width: 32ch; color: var(--ink-3); }
 .ib-anon-list { list-style: none; display: grid; gap: 10px; width: min(360px, 100%); margin: 8px 0; text-align: left; }
 .ib-anon-list li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: 14px; }
 .ib-anon-list .ib-kind { position: static; width: 34px; height: 34px; border: 0; flex: none; }
@@ -458,7 +438,7 @@
 .arc-list { transition: opacity .18s var(--ease); }
 .me-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; padding: 2px 2px 0; }
 .me-head-copy { min-width: 0; }
-.me-title { margin-top: 4px; font-size: 26px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
+.me-title { font-size: 26px; font-weight: 800; line-height: 1.25; letter-spacing: -.01em; }
 .me-sub { margin-top: 6px; color: var(--ink-3); font-size: 14.5px; }
 .me-head-actions { display: flex; gap: 8px; flex: none; }
 
@@ -508,9 +488,6 @@
 .me-quota-head { display: flex; justify-content: space-between; gap: 10px; color: var(--ink-3); font-size: 13px; }
 .me-quota-head b { color: var(--ink); }
 .me-quota-note { color: var(--ink-3); font-size: 12px; }
-.me-wallet-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 14px; font-weight: 600; }
-.me-wallet-foot:hover { color: var(--brand-ink); }
-.me-wallet-foot .icon { color: var(--ink-4); }
 
 .me-links { display: grid; padding: 8px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); }
 .me-links.is-skeleton { gap: 8px; padding: 14px; }
@@ -525,7 +502,6 @@
 .me-link-copy { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .me-link-copy b { font-size: 15px; font-weight: 700; }
 .me-link-copy span { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.me-link-badge { display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 7px; color: var(--on-brand); background: var(--accent); border-radius: 999px; font-size: 12px; font-weight: 800; }
 .me-link-go { color: var(--ink-4); }
 .me-foot { display: grid; gap: 10px; padding: 2px 6px; }
 .me-logout { justify-self: start; margin-left: -12px; color: var(--ink-3); }
@@ -942,11 +918,6 @@
   .td-feature { padding: 14px; }
 
   .ib-title, .me-title { font-size: 23px; }
-  .ib-summary { gap: 8px; }
-  .ib-tile { grid-template-columns: minmax(0, 1fr); justify-items: start; row-gap: 6px; padding: 12px; }
-  .ib-tile-icon { grid-row: auto; width: 32px; height: 32px; border-radius: 11px; }
-  .ib-tile-icon .icon { width: 18px; height: 18px; }
-  .ib-tile b { font-size: 20px; }
   .ib-item { gap: 10px; padding: 12px 14px; }
   .ib-anon { padding: 32px 18px; }
 
@@ -1012,6 +983,4 @@
   .sheet-checkout .sheet-foot > .btn-primary .icon { display: none; }
   .cr-pager { gap: 4px; }
   .cr-pager .btn { padding: 0 8px; }
-  .ib-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .ib-tile > span:last-child { font-size: 11.5px; }
 }

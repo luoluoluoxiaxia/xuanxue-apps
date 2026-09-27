@@ -3,7 +3,7 @@
 import { h, svg, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, put, patch, del, query } from "../lib/api.js?v=n1";
-import { session, inbox, applyAccount, refreshSession, displayName } from "../lib/store.js?v=n1";
+import { session, applyAccount, refreshSession, displayName } from "../lib/store.js?v=n1";
 import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n1";
 import { avatar, stateView, spinnerLine } from "../ui/bits.js?v=n1";
 import { pillarsToken } from "../ui/gua.js?v=n1";
@@ -75,10 +75,10 @@ function tabStrip(active) {
     }, icon(tab.glyph), h("span", null, tab.label))));
 }
 
-function pageHead({ kicker = "", title, sub = "", actions = null }) {
+// 眉题（档案 / 积分 / 设置）与上方标签重复，页头只放标题。
+function pageHead({ title, sub = "", actions = null }) {
   return h("header", { class: "me-head" },
     h("div", { class: "me-head-copy" },
-      kicker ? h("p", { class: "kicker" }, kicker) : null,
       h("h1", { class: "me-title" }, title),
       sub ? h("p", { class: "me-sub" }, sub) : null),
     actions ? h("div", { class: "me-head-actions" }, actions) : null);
@@ -317,43 +317,19 @@ function walletCard() {
         h("div", { class: "me-wallet-balance" },
           h("span", null, "当前余额"),
           h("p", null, h("b", { class: "tnum" }, number(state.wallet?.balance)), h("em", null, "分"))),
-        quotaMeter(state.quota)),
-      h("a", { class: "me-wallet-foot", href: "#/me/credits" },
-        h("span", null, "积分明细与充值记录"), icon("chevronRight")));
+        quotaMeter(state.quota)));
   }
   return { node, update };
 }
 
-function linksCard(ctx, { authenticated }) {
-  const row = ({ glyph, tone, label, sub, href, onClick, badge = null }) => {
-    const node = h(href ? "a" : "button", { class: "me-link", href: href || null, type: href ? null : "button" },
-      tile(glyph, tone),
-      h("span", { class: "me-link-copy" }, h("b", null, label), h("span", null, sub)),
-      badge,
-      h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
-    if (onClick) node.addEventListener("click", onClick);
-    return node;
-  };
-  const unread = h("span", { class: "me-link-badge tnum", hidden: true });
-  const rows = [];
-  if (authenticated) {
-    rows.push(
-      row({ glyph: "book", tone: "brand", label: "我的盘", sub: "八字命盘与六爻卦档", href: "#/me/archives" }),
-      row({ glyph: "bell", tone: "accent", label: "消息", sub: "赞、评论与回复", href: "#/inbox", badge: unread }),
-      row({ glyph: "coins", tone: "gold", label: "积分与充值", sub: "余额、明细与充值", href: "#/me/credits" }));
-  }
-  rows.push(
-    row({ glyph: "sliders", tone: "indigo", label: "设置", sub: "外观、昵称与账户", href: "#/me/settings" }),
-    row({ glyph: "message", tone: "brand", label: "意见反馈", sub: "断得准不准，直说无妨", onClick: () => openFeedback() }));
-  const syncUnread = state => {
-    const count = Number(state?.unread) || 0;
-    unread.hidden = !count;
-    unread.textContent = count > 99 ? "99+" : String(count || "");
-    unread.setAttribute("aria-label", `${count} 条未读`);
-  };
-  syncUnread(inbox.get());
-  ctx.subscribe(inbox, syncUnread);
-  return h("nav", { class: "me-links", "aria-label": "常用入口" }, rows);
+// 档案、积分、设置都在上方标签里，消息在底栏和铃铛里；这里只放标签里没有的意见反馈。
+function feedbackCard() {
+  const button = h("button", { class: "me-link", type: "button" },
+    tile("message", "brand"),
+    h("span", { class: "me-link-copy" }, h("b", null, "意见反馈"), h("span", null, "断得准不准，直说无妨")),
+    h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
+  button.addEventListener("click", () => openFeedback());
+  return h("div", { class: "me-links" }, button);
 }
 
 function overviewSkeleton() {
@@ -369,7 +345,7 @@ function overviewSkeleton() {
       h("section", { class: "me-wallet is-skeleton" }, h("span", { class: "skel", style: { height: "132px", borderRadius: "14px" } }))),
     h("div", { class: "me-col" },
       h("section", { class: "me-links is-skeleton" },
-        [0, 1, 2, 3, 4].map(() => h("span", { class: "skel", style: { height: "48px", borderRadius: "12px" } })))));
+        h("span", { class: "skel", style: { height: "48px", borderRadius: "12px" } }))));
 }
 
 function overviewView(ctx, body) {
@@ -389,7 +365,7 @@ function overviewView(ctx, body) {
       }
       if (key === "anon") {
         body.replaceChildren(
-          pageHead({ kicker: "个人中心", title: "我的" }),
+          pageHead({ title: "我的" }),
           h("div", { class: "me-overview" },
             h("div", { class: "me-col" },
               loginCard(ctx, {
@@ -398,14 +374,14 @@ function overviewView(ctx, body) {
                 text: "命盘、卦档、积分与消息都在这里，只对你本人可见。",
                 reason: "登录后查看你的命盘、积分与消息。",
               })),
-            h("div", { class: "me-col" }, linksCard(ctx, { authenticated: false }), overviewFoot(ctx, false))));
+            h("div", { class: "me-col" }, feedbackCard(), overviewFoot(ctx, false))));
         return;
       }
       profile = profileCard(ctx);
       wallet = walletCard();
       body.replaceChildren(h("div", { class: "me-overview" },
         h("div", { class: "me-col" }, profile.node, wallet.node),
-        h("div", { class: "me-col" }, linksCard(ctx, { authenticated: true }), overviewFoot(ctx, true))));
+        h("div", { class: "me-col" }, feedbackCard(), overviewFoot(ctx, true))));
     }
     if (state.authenticated) {
       profile?.update(state);
@@ -572,7 +548,7 @@ function archivesView(ctx, body) {
   const requested = ctx.query.get("tab");
   if (requested === "bazi" || requested === "liuyao") archiveTab = requested;
   const state = { profiles: null, requestId: 0, failed: false };
-  const head = pageHead({ kicker: "档案", title: "我的盘", sub: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。" });
+  const head = pageHead({ title: "我的盘", sub: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。" });
   const tabsNode = h("div", { class: "seg arc-tabs", role: "tablist", "aria-label": "档案类型" });
   const createSlot = h("div", { class: "arc-create" });
   const listNode = h("div", { class: "arc-list", id: "arc-panel", role: "tabpanel", "aria-live": "polite" });
@@ -944,10 +920,10 @@ function archivesView(ctx, body) {
       return;
     }
     if (key === "anon") {
-      body.replaceChildren(head, loginCard(ctx, {
+      body.replaceChildren(pageHead({ title: "我的盘" }), loginCard(ctx, {
         glyph: "book",
         title: "登录后查看档案",
-        text: "八字、六爻与历史只对本人可见。",
+        text: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。",
         reason: "登录后查看私人档案。",
       }));
       return;
@@ -1149,7 +1125,7 @@ function activityRow(item) {
       h("span", { class: "cr-row-desc", title: description }, description),
       h("span", { class: "cr-row-meta" },
         h("time", { datetime: item?.created_at || "" }, ledgerTime(item?.created_at)),
-        free > 0 ? h("span", null, `其中免费额度 ${free} 分`) : null)),
+        free > 0 ? h("span", null, free >= Math.abs(amount) ? "免费额度抵扣" : `免费额度抵扣 ${free} 分`) : null)),
     h("span", { class: "cr-row-side" },
       h("b", { class: ["cr-change", `is-${direction}`, "tnum"] }, signed(amount), h("span", { class: "sr-only" }, " 分")),
       h("span", { class: "cr-after tnum" }, `余额 ${number(item?.balance_after)}`)));
@@ -1192,7 +1168,7 @@ function creditsSkeleton() {
 }
 
 function creditsView(ctx, body) {
-  const head = pageHead({ kicker: "积分", title: "积分与充值", sub: "余额、每日免费积分、充值与明细，只对你本人可见。" });
+  const head = pageHead({ title: "积分与充值" });
   const summaryNode = h("div", { class: "cr-summary-slot" });
   const packsNode = h("section", { class: "cr-packs-section", id: "cr-packs", "aria-labelledby": "cr-packs-title", tabindex: "-1" });
   const ledgerTitleSub = h("p", { class: "cr-ledger-sub" });
@@ -1914,18 +1890,18 @@ function appearanceSection(ctx) {
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-scheme-pref"] });
     ctx.cleanup(() => observer.disconnect());
   }
+  // 分组已叫「外观」，这一行只说具体设置；三个选项自己能看懂，不再解释「跟随系统」。
   return settingSection("外观", [settingRow({
     glyph: "moon",
     tone: "indigo",
-    label: "界面外观",
-    text: "「跟随系统」会随设备的浅色 / 深色设置自动切换。",
-    control: h("div", { class: "seg set-theme", role: "group", "aria-label": "界面外观" }, buttons),
+    label: "深浅色",
+    control: h("div", { class: "seg set-theme", role: "group", "aria-label": "深浅色" }, buttons),
     className: "is-stack",
   })]);
 }
 
 function accountSection(ctx, state, nick) {
-  const logout = h("button", { type: "button", class: "btn btn-danger btn-sm", onClick: () => confirmLogout(ctx) }, icon("logout"), "退出登录");
+  const logout = h("button", { type: "button", class: "btn btn-danger btn-sm", onClick: () => confirmLogout(ctx), "aria-label": "退出登录" }, icon("logout"), "退出");
   return settingSection("账户", [
     h("div", { class: "set-row is-nick" }, nick.node),
     settingRow({ glyph: "user", tone: "brand", label: "登录邮箱", text: maskEmail(state.user?.email) || "—" }),
@@ -1940,11 +1916,11 @@ function helpSection() {
     toast(ok ? "邮箱地址已复制" : "复制失败，请手动选择邮箱地址", { type: ok ? "ok" : "error" });
   });
   return settingSection("帮助与反馈", [
+    // 「断得准不准……直说无妨」由反馈面板开头说，这一行只放入口。
     settingRow({
       glyph: "message",
       tone: "brand",
       label: "意见反馈",
-      text: "断得准不准、哪里不顺手、想要什么功能，直说无妨。",
       control: h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => openFeedback() }, "写反馈"),
     }),
     settingRow({
@@ -1969,7 +1945,7 @@ function settingsView(ctx, body) {
     }
     lastKey = key;
     nick = null;
-    const sections = [pageHead({ kicker: "设置", title: "设置", sub: "外观、昵称、界面版本与反馈。" }), appearanceSection(ctx)];
+    const sections = [pageHead({ title: "设置" }), appearanceSection(ctx)];
     if (key === "loading") {
       sections.push(h("section", { class: "set-card is-skeleton", "aria-hidden": "true" },
         h("span", { class: "skel skel-line", style: { width: "64px" } }),
@@ -1979,7 +1955,7 @@ function settingsView(ctx, body) {
       sections.push(loginCard(ctx, {
         glyph: "user",
         title: "登录后管理账户",
-        text: "登录后可以设置社区昵称，查看档案、积分与消息。",
+        text: "设置社区昵称，查看档案、积分与消息。",
         reason: "登录后管理你的账户。",
       }));
     } else {

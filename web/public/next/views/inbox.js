@@ -1,7 +1,7 @@
 // 消息：谁赞了、评论了、回复了或采纳了你的内容。
 // 按北京时间分成「今天 / 昨天 / 更早」；同一页内同一卦帖的赞合并成一条；点开后标记已读并跳到对应评论。
 // 从卦帖返回时先用上次的列表秒开并回到原位置，再静默拉取最新；再点一次底栏「消息」可手动刷新。
-import { h, on, reducedMotion } from "../lib/dom.js?v=n1";
+import { h, on } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, query } from "../lib/api.js?v=n1";
 import { session, inbox, refreshSession } from "../lib/store.js?v=n1";
@@ -16,7 +16,7 @@ const SNAPSHOT_TTL = 15 * 60 * 1000;
 const COMMENT_KINDS = ["post_comment", "comment_reply", "followed_post_comment"];
 const FILTERS = [
   { key: "all", label: "全部", empty: "" },
-  { key: "comment", label: "回复与评论", kinds: COMMENT_KINDS, empty: "回复与评论" },
+  { key: "comment", label: "评论与回复", kinds: COMMENT_KINDS, empty: "评论与回复" },
   { key: "like", label: "赞", kinds: ["post_like"], empty: "赞" },
   { key: "accepted", label: "采纳", kinds: ["answer_accepted"], empty: "采纳" },
 ];
@@ -114,7 +114,6 @@ function anonView(ctx) {
   return h("section", { class: "ib-anon" },
     h("div", { class: "ib-anon-mark", "aria-hidden": "true" }, icon("bell")),
     h("h1", { class: "ib-anon-title" }, "登录后查看消息"),
-    h("p", { class: "ib-anon-text" }, reason),
     h("ul", { class: "ib-anon-list" },
       h("li", null, h("span", { class: "ib-kind is-like", "aria-hidden": "true" }, icon("heart")), h("span", null, h("b", null, "赞"), "有人认同你的卦帖")),
       h("li", null, h("span", { class: "ib-kind is-reply", "aria-hidden": "true" }, icon("reply")), h("span", null, h("b", null, "评论与回复"), "卦友的判断和追问")),
@@ -142,20 +141,20 @@ export function render(ctx) {
 
   // 「全部已读」用 aria-disabled 而不是 disabled：点完后焦点仍停在按钮上，不会丢到页面顶端。
   const markAllButton = h("button", { type: "button", class: "btn btn-soft btn-sm ib-markall", "aria-disabled": "true" }, icon("check"), "全部已读");
-  const summaryNode = h("div", { class: "ib-summary" });
   const filterNode = h("div", { class: "ib-filters", role: "tablist", "aria-label": "消息类型" });
   const listNode = h("div", { class: "ib-list", "aria-live": "polite", "aria-busy": "false" });
   const moreNode = h("div", { class: "ib-more" });
   const liveNote = h("p", { class: "sr-only", role: "status" });
 
+  const statsNode = h("p", { class: "ib-sub tnum", hidden: true });
   const header = h("header", { class: "ib-head" },
     h("div", null,
       h("h1", { class: "ib-title" }, "消息"),
-      h("p", { class: "ib-sub" }, "赞、评论与回复")),
+      statsNode),
     markAllButton);
 
   function paintShell() {
-    root.replaceChildren(header, summaryNode, filterNode, listNode, moreNode, liveNote);
+    root.replaceChildren(header, filterNode, listNode, moreNode, liveNote);
   }
 
   function saveSnapshot() {
@@ -173,35 +172,12 @@ export function render(ctx) {
     const unread = unreadTotal();
     if (!marking) markAllButton.setAttribute("aria-disabled", String(!unread));
     markAllButton.hidden = !loaded;
-    summaryNode.hidden = !loaded && !!state.error;
     filterNode.hidden = !loaded && !!state.error;
-    const tile = (key, glyph, value, label, filter) => h("button", {
-      type: "button",
-      class: ["ib-tile", `is-${key}`],
-      onClick: () => {
-        if (key === "unread") {
-          setFilter("all");
-          requestAnimationFrame(() => {
-            const first = listNode.querySelector(".ib-item.is-unread");
-            if (first) {
-              first.scrollIntoView({ block: "center", behavior: reducedMotion() ? "auto" : "smooth" });
-              first.focus({ preventScroll: true });
-            } else {
-              toast("没有未读消息");
-            }
-          });
-        } else {
-          setFilter(filter);
-        }
-      },
-    },
-    h("span", { class: "ib-tile-icon", "aria-hidden": "true" }, icon(glyph)),
-    loaded ? h("b", { class: "tnum" }, count(value)) : h("span", { class: "skel skel-line ib-tile-skel", "aria-hidden": "true" }),
-    h("span", null, label));
-    summaryNode.replaceChildren(
-      tile("like", "heart", summary.received_like_count, "收到的赞", "like"),
-      tile("comment", "comment", summary.received_comment_count, "评论与回复", "comment"),
-      tile("unread", "bell", unread, "未读消息", "all"));
+    const likes = Number(summary.received_like_count) || 0;
+    const comments = Number(summary.received_comment_count) || 0;
+    const parts = [likes ? `收到 ${count(likes)} 个赞` : "", comments ? `${count(comments)} 条评论与回复` : ""].filter(Boolean);
+    statsNode.hidden = !loaded || !parts.length;
+    statsNode.textContent = parts.join(" · ");
   }
 
   function paintFilters() {
