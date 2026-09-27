@@ -69,7 +69,7 @@ function focusHeader(ctx, title, sub) {
    提问入口
    ========================================================================== */
 function hub(ctx) {
-  const textarea = h("textarea", { class: "ask-input", rows: 3, maxlength: 2000, placeholder: "例如：这个月能顺利签下合作合同吗？", "aria-label": "你想问什么" });
+  const textarea = h("textarea", { class: "ask-input", rows: 3, maxlength: 2000, placeholder: "写下一件放在心上的事，越具体越好判断", "aria-label": "你想问什么" });
   textarea.value = readDraft();
   textarea.addEventListener("input", () => writeDraft(textarea.value));
   autoGrow(textarea, 240);
@@ -80,7 +80,7 @@ function hub(ctx) {
   const recent = h("section", { class: "ask-recent", hidden: true });
   const methodTitle = h("h2", { class: "ask-section-title" }, "选一种方式来看");
   const node = h("div", { class: "ask-page" },
-    focusHeader(ctx, "你想问什么？", "写下一件放在心上的事。越具体，越好判断。"),
+    focusHeader(ctx, "你想问什么？"),
     h("section", { class: "ask-card" },
       textarea,
       h("div", { class: "ask-examples", role: "group", "aria-label": "例子" },
@@ -98,21 +98,21 @@ function hub(ctx) {
         h("span", { class: "method-icon" }, icon("gua")),
         h("span", { class: "method-copy" },
           h("b", null, "六爻问事"),
-          h("span", null, "适合一件具体的事：成不成、何时、怎么做。三钱六掷，当下成卦。"),
-          h("small", null, "AI 解读 · 或请卦友帮看")),
+          h("span", null, "一件具体的事：成不成、何时、怎么做。"),
+          h("small", null, "三钱六掷 · AI 解读")),
         icon("chevronRight", "method-go")),
       h("button", { type: "button", class: "method-card is-bazi", onClick: go("/ask/bazi") },
         h("span", { class: "method-icon" }, icon("pillars")),
         h("span", { class: "method-copy" },
           h("b", null, "八字看长期"),
-          h("span", null, "用出生时间排一张命盘：性格底色、事业财运、大运流年。"),
+          h("span", null, "用出生时间排盘：性格底色、事业财运、大运流年。"),
           h("small", null, "排盘免费 · 同一张盘可以一直追问")),
         icon("chevronRight", "method-go")),
       h("button", { type: "button", class: "method-card is-help", onClick: go("/ask/liuyao?help=1") },
         h("span", { class: "method-icon" }, icon("hand")),
         h("span", { class: "method-copy" },
           h("b", null, "向卦友求助"),
-          h("span", null, "起卦后把脱敏的卦象和问题发到广场，请懂的卦友帮你断。"),
+          h("span", null, "起卦后把脱敏的卦象发到广场，请卦友帮你断。"),
           h("small", null, "不调用 AI · 不扣积分")),
         icon("chevronRight", "method-go"))),
     recent);
@@ -236,9 +236,9 @@ function liuyaoFlow(ctx) {
     h("span", { class: "sr-only" }, "正在排盘，请稍候"));
 
   const node = h("div", { class: "ask-page is-cast" },
-    focusHeader(ctx, wantsHelp ? "起一卦，请卦友帮你断" : "六爻问事", "一事一卦：写清所问，静心摇六次。"),
+    focusHeader(ctx, wantsHelp ? "起一卦，请卦友帮你断" : "六爻问事"),
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "1"), h("h2", null, "所问之事"), h("span", { class: "flow-hint" }, "写清时间范围，一次只问一件事")),
+      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "1"), h("h2", null, "所问之事"), h("span", { class: "flow-hint" }, "一次只问一件事，写清时间范围")),
       question, questionError,
       h("p", { class: "ask-privacy" }, icon("lock", "icon-sm"), "不要填写姓名、电话、住址或证件号。")),
     h("section", { class: "flow-step" },
@@ -367,16 +367,16 @@ function liuyaoFlow(ctx) {
   function syncCast() {
     const done = state.lines.length;
     castButton.setAttribute("aria-disabled", String(state.casting || done >= 6));
-    castButton.classList.toggle("is-done", !state.casting && done >= 6);
+    castButton.hidden = !state.casting && done >= 6;
     castButton.replaceChildren(state.casting
       ? h("span", null, `第 ${done + 1} 爻 · 钱落…`)
-      : done >= 6 ? h("span", null, icon("check"), "六爻已成") : h("span", null, `摇第 ${CN_NUM[done + 1]} 爻`, h("small", null, ` · 共六爻`)));
+      : h("span", null, `摇第 ${CN_NUM[done + 1] || CN_NUM[6]} 爻`));
     const reset = done && !state.casting ? h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "重新摇一次") : null;
     castNote.replaceChildren(!done
-      ? h("span", null, "本机随机 · 自下而上六掷 · 背为三、字为二")
+      ? h("span", null, "自下而上 · 背为三、字为二")
       : done >= 6
         ? h("span", null, state.restored ? "已恢复刚才摇出的六爻 · " : null, reset)
-        : h("span", null, state.restored ? `已恢复刚才的 ${done} 爻` : `已摇 ${done}/6`, " · 继续自下而上", reset ? [" · ", reset] : null));
+        : h("span", null, state.restored ? `已恢复刚才的 ${done} 爻 · ` : null, reset));
   }
 
   function renderBuilder(animateIndex = -1) {
@@ -388,10 +388,12 @@ function liuyaoFlow(ctx) {
       const moving = line && (line.value === 6 || line.value === 9);
       const yin = line && (line.value === 6 || line.value === 8);
       const editing = manual && state.editing === index;
-      rows.push(h("li", { class: ["gb-row", line ? "is-filled" : "is-empty", moving && "is-moving", editing && "is-editing", index === animateIndex && "is-new"] },
+      // 空行不写「待摇」：下一爻用颜色标出，按钮上已经写着摇第几爻。
+      const next = !line && index === state.lines.length && state.editing === null;
+      rows.push(h("li", { class: ["gb-row", line ? "is-filled" : "is-empty", next && "is-next", moving && "is-moving", editing && "is-editing", index === animateIndex && "is-new"] },
         h("span", { class: "gb-pos" }, `${LY_POS[index]}爻`),
         h("span", { class: ["gb-bar", line ? (yin ? "is-yin" : "is-yang") : ""], "aria-hidden": "true" }, h("i"), h("i")),
-        h("span", { class: "gb-name" }, line ? LY_VALUE_NAME[line.value] : manual ? "待录入" : "待摇"),
+        h("span", { class: "gb-name" }, line ? LY_VALUE_NAME[line.value] : ""),
         // 手动录入：改某一爻只替换这一爻，不会让上面的爻往下错位。
         manual && line ? h("button", {
           type: "button",
@@ -404,7 +406,7 @@ function liuyaoFlow(ctx) {
     builder.replaceChildren(...rows);
     const moving = state.lines.filter(line => line.value === 6 || line.value === 9).length;
     banner.hidden = state.lines.length < 6;
-    banner.replaceChildren(h("span", { class: "gua-ready-seal", "aria-hidden": "true" }, "卦成"), h("span", null, h("b", null, "六爻已就绪"), h("small", null, `${moving ? `动爻 ${CN_NUM[moving]} 处` : "六爻安静"} · 下一步选择怎么回答`)));
+    banner.replaceChildren(h("span", { class: "gua-ready-seal" }, "卦成"), h("span", null, h("b", null, moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"), h("small", null, "下一步：选择怎么回答")));
   }
 
   function startEdit(index) {
@@ -450,8 +452,7 @@ function liuyaoFlow(ctx) {
     const target = editing ? state.editing : state.lines.length;
     if (target >= 6) {
       manualPad.append(
-        h("p", { class: "manual-title" }, "六爻已录满"),
-        h("p", { class: "cast-note" }, "录错了？点右侧「修改」只改那一爻。 ", h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "全部重录")));
+        h("p", { class: "cast-note" }, "录错了？点那一爻的「修改」 · ", h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "全部重录")));
       return;
     }
     const current = editing ? state.lines[target]?.value : null;
@@ -663,10 +664,10 @@ function baziFlow(ctx) {
   const wantsHelp = !editId && !setDefault && ctx.query.get("help") === "1";
   const node = h("div", { class: "ask-page is-birth" },
     editId
-      ? focusHeader(ctx, "修改出生信息", "当前命盘资料已回填；提交后会更新此档案并按新信息重新排盘。")
+      ? focusHeader(ctx, "修改出生信息")
       : wantsHelp
-        ? focusHeader(ctx, "排盘后请卦友帮看", "排好盘后，把脱敏命盘发到广场请卦友帮看；出生时间与地点不会公开。")
-        : focusHeader(ctx, "八字看长期", "用出生时间排一张命盘，之后可以一直追问。"));
+        ? focusHeader(ctx, "排盘后请卦友帮看", "广场只显示脱敏命盘，出生时间与地点不会公开。")
+        : focusHeader(ctx, "八字看长期"));
   const body = h("div", { class: "birth-body" }, h("div", { class: "spinner-line" }, h("span", { class: "spinner" }), "正在准备…"));
   node.append(body);
 
@@ -676,8 +677,8 @@ function baziFlow(ctx) {
     if (!ready.authenticated) {
       body.replaceChildren(stateView({
         glyph: "lock",
-        title: "私人排盘，先登录或注册",
-        text: "命盘只对本人可见，保存后可以跨设备继续追问。排盘本身不消耗积分。",
+        title: "登录后开始排盘",
+        text: "排盘免费，命盘只对你本人可见，换设备也能接着问。",
         actions: [h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth() }, "登录 / 注册")],
       }));
       return;
@@ -1099,7 +1100,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       timeSection,
       manualSection),
     h("div", { class: "flow-submit" }, error, submit),
-    h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后从新盘重新开始解读，原有解读不再挂在当前档案下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。"),
+    h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后按新信息重新排盘，原有解读不再挂在这份档案下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。"),
     ritual);
 
   function fail(message, field) {

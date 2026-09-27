@@ -104,10 +104,9 @@
 .cast-btn { min-width: 220px; }
 .cast-btn > span { display: inline-flex; align-items: center; gap: 8px; }
 .cast-btn small { opacity: .8; font-weight: 500; }
-/* 摇卦中、六爻已成用 aria-disabled（保留焦点）：摇卦中保持原色，摇完是完成状态而不是「不可用」。 */
+/* 摇卦中用 aria-disabled（保留焦点）并保持原色；六爻摇满后按钮收起，由结果条说「卦成」。 */
 .cast-btn[aria-disabled="true"] { cursor: default; }
 .cast-btn[aria-disabled="true"]:hover, .cast-btn[aria-disabled="true"]:active { --btn-bg: var(--brand); transform: none; }
-.cast-btn.is-done, .cast-btn.is-done:hover, .cast-btn.is-done:active { --btn-bg: var(--brand-soft); --btn-fg: var(--brand-ink); box-shadow: none; }
 .cast-note { color: var(--ink-3); font-size: 12.5px; text-align: center; }
 .gua-builder { list-style: none; display: grid; gap: 8px; padding: 14px 16px; background: var(--bg-sunken); border-radius: var(--r-lg); }
 .gb-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 86px 26px; align-items: center; gap: 10px; min-height: 30px; }
@@ -120,7 +119,8 @@
 .gb-row.is-empty .gb-bar i:last-child { display: none; }
 .gb-row.is-moving .gb-bar i { background: var(--accent); }
 .gb-name { color: var(--ink-2); font-size: 12.5px; font-weight: 600; white-space: nowrap; }
-.gb-row.is-empty .gb-name { color: var(--ink-3); font-weight: 500; }
+.gb-row.is-next .gb-pos { color: var(--brand-ink); }
+.gb-row.is-next .gb-bar i { border-color: color-mix(in srgb, var(--brand) 55%, var(--line-strong)); }
 .gb-row.is-moving .gb-name { color: var(--accent-ink); }
 .gb-row.is-new { animation: gb-in .42s var(--ease-out) both; }
 @keyframes gb-in { from { opacity: 0; transform: translateY(8px) scaleX(.92); } to { opacity: 1; transform: none; } }
