@@ -10,7 +10,7 @@
     "check:web": "node scripts/build-web.mjs && npm run test:web",
     "build:web": "node scripts/build-web.mjs",
     "package:web": "python3 scripts/package_web.py --output dist/web/xuanxue-web.tar.gz",
-    "test:web": "node --test scripts/test-web-state.mjs"
+    "test:web": "node --test scripts/test-web-state.mjs scripts/test-web-next.mjs"
   },
   "engines": {
     "node": ">=20"

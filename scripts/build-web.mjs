@@ -208,4 +208,43 @@ if (!forecast.includes('localStorage.removeItem("xz_forecast_cred")')) {
   fail("forecast page does not remove legacy stored credentials");
 }
 
+// 新版前端：独立页面 next.html + next/ 原生 ES 模块（零构建）。
+const nextHtmlPath = join(publicDir, "next.html");
+if (existsSync(nextHtmlPath)) {
+  const nextHtml = readFileSync(nextHtmlPath, "utf8");
+  const entry = /<script type="module" src="next\/app\.js\?v=([a-z0-9-]+)"><\/script>/.exec(nextHtml);
+  if (!entry) fail("next.html must load next/app.js as a versioned module");
+  const version = entry[1];
+  if (!nextHtml.includes('<meta name="robots" content="noindex">')) fail("next.html must stay out of search indexes while the classic page is canonical");
+  if (!nextHtml.includes("chat-render.js")) fail("next.html must load the shared answer renderer");
+  for (const sheet of ["next/next.css", "next/next-reading.css", "next/next-personal.css"]) {
+    if (!nextHtml.includes(`href="${sheet}?v=${version}"`)) fail(`next.html must load ${sheet} with version ${version}`);
+  }
+  const nextDir = join(publicDir, "next");
+  const nextModules = walk(nextDir).filter(path => path.endsWith(".js"));
+  for (const required of ["app.js", "lib/api.js", "lib/router.js", "lib/store.js", "lib/interpret.js", "views/feed.js", "views/post.js", "views/ask.js", "views/reading.js", "views/today.js", "views/inbox.js", "views/me.js", "views/feedback.js", "views/auth.js"]) {
+    if (!existsSync(join(nextDir, required))) fail(`next/${required} is missing`);
+  }
+  // 所有相对导入必须带同一个版本号，否则同一模块可能被浏览器加载两份、状态分裂。
+  for (const path of nextModules) {
+    const text = readFileSync(path, "utf8");
+    for (const match of text.matchAll(/(?:import|export)\s[^"']*?from\s+["'](\.{1,2}\/[^"']+)["']/g)) {
+      if (!match[1].endsWith(`.js?v=${version}`)) fail(`${relative(root, path)} imports ${match[1]} without ?v=${version}`);
+    }
+    for (const match of text.matchAll(/import\(\s*["'](\.{1,2}\/[^"']+)["']\s*\)/g)) {
+      if (!match[1].endsWith(`?v=${version}`)) fail(`${relative(root, path)} dynamically imports ${match[1]} without ?v=${version}`);
+    }
+  }
+  const nextSource = nextModules.map(path => readFileSync(path, "utf8")).join("\n");
+  for (const forbidden of ["cost_budget_usd_per_credit", "estimated_margin_percent", "/api/auth/invite-code", "invite_code", "session_token"]) {
+    if (nextSource.includes(forbidden)) fail(`next/ must not use ${forbidden}`);
+  }
+  for (const marker of ['"X-XuanShu-CSRF"', '"X-Xuanshu-Interaction"', '"same-origin-v1"']) {
+    if (!nextSource.includes(marker)) fail(`next/ lost request header ${marker}`);
+  }
+  if (/data-hero-nav="detailed"|data-open-detailed|personal-home\/cases/.test(nextSource)) {
+    fail("next/ must not expose the hidden detailed-reading entry");
+  }
+}
+
 console.log(`web check complete: ${files.length} static files verified`);
