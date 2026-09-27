@@ -17,7 +17,7 @@ import * as TodayView from "./views/today.js?v=n1";
 import * as InboxView from "./views/inbox.js?v=n1";
 import * as MeView from "./views/me.js?v=n1";
 import { openFeedback } from "./views/feedback.js?v=n1";
-import { routeFromLegacy } from "./lib/switch.js?v=n1";
+import { routeFromLegacy } from "./lib/legacy.js?v=n1";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -387,14 +387,8 @@ const ROUTES = [
 ];
 
 /* ---------- 启动 ---------- */
-// 旧版界面切换与介绍卡留下的本机记录，已不再使用。
-function forgetRetiredKeys() {
-  ["xz-ui", "xz-ui-intro-v1", "xz-next-intro-v1"].forEach(key => local.remove(key));
-}
-
 function boot() {
   applyTheme();
-  forgetRetiredKeys();
   const legacy = routeFromLegacy(location.search);
   if (legacy) {
     history.replaceState(history.state, "", `${location.pathname}${legacy}`);

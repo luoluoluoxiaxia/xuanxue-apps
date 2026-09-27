@@ -107,8 +107,8 @@ test('API errors turn validation arrays into readable text instead of "[object O
   }
 });
 
-test('classic links map onto the new routes and back', async () => {
-  const { routeFromLegacy, classicUrl } = await load('lib/switch.js');
+test('old home-page links map onto the new routes', async () => {
+  const { routeFromLegacy } = await load('lib/legacy.js');
   assert.equal(routeFromLegacy('?post=ly-abc&ref=post_share'), '?ref=post_share#/post/ly-abc');
   assert.equal(routeFromLegacy('?start=liuyao&community=help'), '#/ask/liuyao?help=1');
   assert.equal(routeFromLegacy('?view=credits&checkout=success&session_id=cs_1&order_id=o1'), '#/me/credits?checkout=success&session_id=cs_1&order_id=o1');
@@ -121,8 +121,7 @@ test('classic links map onto the new routes and back', async () => {
   assert.equal(routeFromLegacy('?view=credits&month=2026-08'), '#/me/credits?month=2026-08');
   assert.equal(routeFromLegacy('?post=ly-abc&ref=invite&inviter=u1'), '?ref=invite&inviter=u1#/post/ly-abc');
   assert.equal(routeFromLegacy(''), '');
-  assert.equal(classicUrl({ path: '/post/ly-abc', query: new URLSearchParams() }), './?post=ly-abc&ui=classic#gua-square');
-  assert.equal(classicUrl({ path: '/ask/liuyao', query: new URLSearchParams('help=1') }), './?start=liuyao&community=help&ui=classic');
+  assert.equal(routeFromLegacy('?ref=invite'), '');
 });
 
 test('coming back online re-polls a live answer at once instead of waiting out the retry backoff', async () => {
@@ -239,7 +238,7 @@ test('a 401 while following a running answer re-authenticates at most once and n
   }
 });
 
-// 以下几条从经典版（profile-workspace.js / chat-workspace.js）的测试迁移而来，规则不变。
+// 以下几条迁移自旧版首页的档案恢复与草稿测试，规则不变。
 test('a completed Liuyao history resolves its existing session instead of opening an empty one', async () => {
   const { resolveLiuyaoSession } = await load('lib/sessions.js');
   const calls = [];

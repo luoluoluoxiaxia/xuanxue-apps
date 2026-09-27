@@ -166,7 +166,7 @@ function liuyaoFlow(ctx) {
     completedAt: restored?.completedAt || "",
     editing: null,                  // 手动录入时正在修改的爻位
     restored: !!restored,           // 这些爻是从上次未完成的起卦恢复的
-    // 与经典版一致默认「社区求助」（不调用 AI、不扣积分）；用户改过就沿用他的选择。
+    // 默认「社区求助」（不调用 AI、不扣积分）；用户改过就沿用用户自己的选择。
     visibility: restored?.visibility || "help",
     visibilityChosen: !!restored?.visibility,
     submitting: false,
@@ -557,7 +557,7 @@ function liuyaoFlow(ctx) {
       private: "私密提问，先登录或注册。",
       public: "登录后使用每日免费积分。分享公开问题可增加每日积分。",
     };
-    // 与经典版一致：起卦提交时的登录默认停在「注册」。
+    // 起卦提交时的登录默认停在「注册」。
     const ok = await ctx.requireAuth(reasons[state.visibility], { mode: "register" });
     if (!ok || !ctx.isCurrent() || state.submitting) return;
     const quota = session.get().quota;
@@ -1236,7 +1236,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       hour: Number(hour.value), minute: minute.value.trim() === "" ? 0 : Number(minute.value),
       is_leap_month: state.calendar === "lunar" && leap.checked,
       location: location.value() || null,
-      // 新盘默认校正真太阳时；修改旧盘时沿用当时的设置（经典版同样保留已保存的 false）。
+      // 新盘默认校正真太阳时；修改旧盘时沿用当时保存的设置（包括已保存的 false）。
       use_true_solar: editing ? saved.use_true_solar !== false : true,
       day_boundary: boundary.value,
     };

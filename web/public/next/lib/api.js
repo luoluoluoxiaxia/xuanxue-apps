@@ -1,4 +1,4 @@
-// 与经典版相同的同域接口：HttpOnly Cookie 会话 + X-XuanShu-CSRF 令牌；
+// 同域接口：HttpOnly Cookie 会话 + X-XuanShu-CSRF 令牌；
 // 点赞、浏览、关注、采纳与反馈等互动额外携带同域互动证明头。
 let csrfToken = "";
 
