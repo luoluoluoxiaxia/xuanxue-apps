@@ -207,8 +207,30 @@ function splitTopLevel(text, open = 0) {
   parts.push(current);
   return { parts: parts.map(part => part.trim()).filter(Boolean), end: i };
 }
+// 拆掉包住整个表达式的多余括号，例如 ((ready && node))。
+function unwrap(text) {
+  let value = text.trim();
+  while (value.startsWith("(") && value.endsWith(")")) {
+    let depth = 0;
+    let quote = "";
+    let closesAt = -1;
+    for (let i = 0; i < value.length && closesAt < 0; i++) {
+      const ch = value[i];
+      if (quote) {
+        if (ch === "\\") i++;
+        else if (ch === quote) quote = "";
+      } else if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+      else if ("([{".includes(ch)) depth++;
+      else if (")]}".includes(ch) && --depth === 0) closesAt = i;
+    }
+    if (closesAt !== value.length - 1) break;
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
 function mayBeBlank(argument) {
-  const top = withoutNesting(argument);
+  // 括起来的 (null) / (false) 视同 null / false，免得和其余嵌套内容一起被略过。
+  const top = withoutNesting(unwrap(argument).replace(/\(\s*(null|undefined|false)\s*\)/g, "$1"));
   const ternary = /\?(?![.?])/.exec(top.replace(/\?\?/g, "  "));
   if (ternary) return /\?\s*(?:null|undefined|false)\s*:/.test(top) || /:\s*(?:null|undefined|false)\s*$/.test(top);
   return /&&|\|\|\s*(?:null|undefined|false)\s*$|\?\?\s*(?:null|undefined)\s*$/.test(top);
