@@ -1,5 +1,5 @@
 // 解读工作台：同一张盘上的一段对话。桌面左对话右命盘；手机顶部命盘速览，点开看完整盘面。
-import { h, on, autoGrow, reducedMotion } from "../lib/dom.js?v=n1";
+import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post } from "../lib/api.js?v=n1";
 import { session, local } from "../lib/store.js?v=n1";
@@ -33,6 +33,22 @@ function withCaret(container) {
   (target && /^(P|LI|H2|H3|H4|SUMMARY)$/.test(target.tagName) ? target : container).append(caret);
 }
 
+// 复制成纯文本：去掉标题井号与加粗星号，保留段落和列表的换行，贴到聊天或备忘录里仍然好读。
+function plainAnswer(markdown) {
+  return String(markdown || "")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// 流式输出到一半时，还没闭合的 **、只有井号或列表符号的半行先不显示，免得符号一闪而过。
+function tidyStreaming(text) {
+  let value = String(text || "").replace(/(^|\n)[ \t]*(#{1,6}|[-*]|\d+[.)])?[ \t]*$/, "$1");
+  if ((value.match(/\*\*/g) || []).length % 2) value = value.replace(/\*\*(?![\s\S]*\*\*)/, "");
+  return value;
+}
+
 function renderMarkdown(text) {
   const renderer = window.XuanxueChatRenderer;
   return renderer && typeof renderer.renderBody === "function" ? renderer.renderBody(text) : String(text || "").replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
@@ -61,6 +77,7 @@ export function render(ctx) {
     pendingBranch: null,
     autoStart: false,
     question: "",
+    lastConversation: null,   // 八字：同一张盘上最近的一段对话，空白页里给出「接着上次聊」
   };
   let nodes = {};
   let ticker = 0;
@@ -140,7 +157,7 @@ export function render(ctx) {
             sessionId = isSessionId(task?.session_id) ? task.session_id : "";
           }
           // 有历史却找不到会话：报错而不是打开空对话，避免重复发起付费解读。
-          if (!sessionId) throw new Error("历史对话缺少有效会话标识");
+          if (!sessionId) throw new Error("这卦的对话记录暂时无法恢复，请稍后重试。");
         }
       }
       if (sessionId) {
@@ -159,9 +176,19 @@ export function render(ctx) {
     } catch (error) {
       if (!ctx.isCurrent()) return;
       loadFailed = !!(error?.isNetwork || error?.status >= 500);
+      const gone = error?.status === 404;
+      // 404 重试没有意义，直接给回到「我的盘」的路；手机上页内返回链接是隐藏的，这里也要有出口。
       root.replaceChildren(
         h("a", { class: "back-link", href: "#/me/archives" }, icon("back"), "我的盘"),
-        errorView(error, () => { loadFailed = false; root.replaceChildren(loading); load(); }, { title: error.status === 404 ? "这份档案不存在或已删除" : "档案没能打开" }));
+        stateView({
+          tone: "error",
+          title: gone ? "这份档案不存在或已删除" : "档案没能打开",
+          text: error?.message || "网络或服务暂时不可用",
+          actions: [
+            gone ? null : h("button", { type: "button", class: "btn btn-soft", onClick: () => { loadFailed = false; root.replaceChildren(loading); load(); } }, icon("refresh"), "重试"),
+            h("a", { class: ["btn", gone ? "btn-primary" : "btn-ghost"], href: "#/me/archives" }, "回到我的盘"),
+          ].filter(Boolean),
+        }));
     }
   }
 
@@ -194,7 +221,34 @@ export function render(ctx) {
     if (serverMessages.length || activeTasks.length) {
       requestAnimationFrame(() => scrollToBottom(false));
       if (activeTasks.some(task => task.status === "pending" || task.status === "running")) toast("已恢复上次对话，解读继续");
+    } else if (state.system !== "liuyao" && state.profileId) {
+      loadLastConversation();
     }
+  }
+
+  // 从「我的盘」打开八字盘时是一段新对话；上次聊到哪里，在空白页里给一个接着聊的入口。
+  async function loadLastConversation() {
+    try {
+      const items = await get(`/api/profiles/${encodeURIComponent(state.profileId)}/conversations`, { cache: "no-store" });
+      if (!ctx.isCurrent()) return;
+      const rows = (Array.isArray(items) ? items : (items?.items || []))
+        .filter(item => isSessionId(item?.session_id) && item.session_id !== state.conversation?.sessionId)
+        .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")));
+      state.lastConversation = rows[0] || null;
+      nodes.thread?.querySelector(".rd-resume-slot")?.replaceChildren(...[resumeLink()].filter(Boolean));
+    } catch (_) {}
+  }
+
+  function resumeLink() {
+    const item = state.lastConversation;
+    if (!item || item.session_id === state.conversation?.sessionId) return null;
+    const running = item.status === "pending" || item.status === "running";
+    return h("a", { class: "rd-resume", href: `#/reading/${encodeURIComponent(state.profileId)}?session=${encodeURIComponent(item.session_id)}` },
+      h("span", { class: "rd-resume-icon", "aria-hidden": "true" }, icon("clock", "icon-sm")),
+      h("span", { class: "rd-resume-copy" },
+        h("small", null, running ? "上次的解读还在进行" : `接着上次聊 · ${relativeTime(item.updated_at)}`),
+        h("b", null, item.last_question || item.first_question || "本命解读")),
+      h("span", { class: "rd-resume-go" }, "继续", icon("chevronRight", "icon-sm")));
   }
 
   function buildLayout() {
@@ -237,13 +291,17 @@ export function render(ctx) {
     const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel);
     root.replaceChildren(h("div", { class: ["rd-layout", liuyao ? "is-liuyao" : "is-bazi"] }, conversationCol, side));
     nodes = { thread, composer, jump, panel, side, live };
-    const onScroll = () => {
-      const distance = document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
-      jump.hidden = distance < 420;
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    ctx.cleanup(() => window.removeEventListener("scroll", onScroll));
-    ctx.setTitle(title);
+    window.addEventListener("scroll", syncJump, { passive: true });
+    ctx.cleanup(() => window.removeEventListener("scroll", syncJump));
+    // 输入框高度会变（多行、参考声明）：「回到最新」和轻提示始终浮在它上方。
+    if ("ResizeObserver" in window) {
+      const rootStyle = document.documentElement.style;
+      const observer = new ResizeObserver(() => rootStyle.setProperty("--rd-composer-h", `${Math.round(composer.node.offsetHeight)}px`));
+      observer.observe(composer.node);
+      ctx.cleanup(() => { observer.disconnect(); rootStyle.removeProperty("--rd-composer-h"); });
+    }
+    // 首屏交接时这段代码在 render 返回前执行，外壳随后会写入默认标题；推迟一拍再写盘名。
+    Promise.resolve().then(() => { if (ctx.isCurrent()) ctx.setTitle(title); });
   }
 
   function openChartSheet() {
@@ -291,6 +349,7 @@ export function render(ctx) {
           h("button", { type: "button", class: "btn", onClick: () => fillComposer(state.question || LIUYAO_DEFAULT_QUESTION) }, "填入所问事项")));
     }
     return h("div", { class: "thread-empty" },
+      h("div", { class: "rd-resume-slot" }, resumeLink()),
       h("p", { class: "kicker" }, "同一命盘 · 一段对话"),
       h("h2", null, "你想先问哪件事？"),
       h("p", null, "从一个问题开始，之后在同一段对话里继续追问。"),
@@ -347,7 +406,7 @@ export function render(ctx) {
           h("span", { "data-wait": "" }, message.waitNote || waitingLine(message.stage, { liuyao: state.system === "liuyao", tick }))),
         h("div", { class: "ai-skeleton", "aria-hidden": "true" }, h("span"), h("span"), h("span")));
       } else {
-        body.innerHTML = renderMarkdown(message.body);
+        body.innerHTML = renderMarkdown(message.streaming ? tidyStreaming(message.body) : message.body);
         if (message.streaming) withCaret(body);
         children.push(body);
         if (message.streaming) children.push(h("p", { class: "ai-stream-status", "data-wait": "" }, message.waitNote || waitingLine(message.stage, { liuyao: state.system === "liuyao", tick })));
@@ -381,10 +440,7 @@ export function render(ctx) {
         children.push(h("div", { class: "ai-tools" },
           feedbackButton(message, "like"),
           feedbackButton(message, "dislike"),
-          h("button", { type: "button", class: "ai-tool", "aria-label": "复制回答", onClick: async () => {
-            const ok = await copyText(plainExcerpt(message.body, 100000));
-            toast(ok ? "已复制回答" : "复制失败", { type: ok ? "ok" : "error" });
-          } }, icon("copy"))));
+          copyButton(message)));
         if (message.followups && message.followups.length) {
           children.push(h("div", { class: "followups" }, message.followups.map(text => h("button", { type: "button", class: "followup", onClick: () => ask(text) }, icon("reply", "icon-sm"), text))));
         }
@@ -395,6 +451,22 @@ export function render(ctx) {
     node.replaceChildren(...children);
   }
 
+  function copyButton(message) {
+    const button = h("button", { type: "button", class: "ai-tool", "aria-label": "复制回答", title: "复制回答" }, icon("copy"));
+    let timer = 0;
+    button.addEventListener("click", async () => {
+      const ok = await copyText(plainAnswer(message.body));
+      toast(ok ? "已复制回答" : "复制没有成功，可以长按选中文字复制", { type: ok ? "ok" : "error" });
+      if (!ok) return;
+      // 图标短暂变成对勾，确认已经复制。
+      clearTimeout(timer);
+      button.classList.add("is-done");
+      button.replaceChildren(icon("check"));
+      timer = setTimeout(() => { button.classList.remove("is-done"); button.replaceChildren(icon("copy")); }, 1600);
+    });
+    return button;
+  }
+
   function feedbackButton(message, reaction) {
     const pressed = message.feedback === reaction;
     const button = h("button", {
@@ -402,8 +474,11 @@ export function render(ctx) {
       class: ["ai-tool", pressed && "is-on"],
       "aria-pressed": String(pressed),
       "aria-label": reaction === "like" ? "有帮助" : "没帮助",
+      title: reaction === "like" ? "有帮助" : "没帮助",
     }, icon(reaction === "like" ? "thumbUp" : "thumbDown"));
     button.addEventListener("click", async () => {
+      if (message._feedbackBusy || message.feedback === reaction) return;
+      message._feedbackBusy = true;
       const previous = message.feedback;
       message.feedback = reaction;
       repaint(message);
@@ -414,6 +489,8 @@ export function render(ctx) {
         message.feedback = previous;
         repaint(message);
         toast(error.message || "反馈没有记录成功", { type: "error" });
+      } finally {
+        message._feedbackBusy = false;
       }
     });
     return button;
@@ -446,7 +523,9 @@ export function render(ctx) {
       if (!message.streaming) return;
       if (message.body.length < target.length) {
         const last = message._last || now;
-        const chars = Math.max(1, Math.round(Math.min(250, now - last) * 0.05));
+        // 至少每秒约 50 字；积压越多打得越快，约一秒半追平，结束时不会整段突然跳出来。
+        const perMs = Math.max(0.05, (target.length - message.body.length) / 1500);
+        const chars = Math.max(1, Math.round(Math.min(250, now - last) * perMs));
         message._last = now;
         message.body = target.slice(0, message.body.length + chars);
         if (now - lastPaint > 60 || message.body.length >= target.length) {
@@ -471,11 +550,12 @@ export function render(ctx) {
       paintAi(node, message);
     } else {
       const openDetails = body.querySelector("details.ai-reasoning")?.open;
-      body.innerHTML = renderMarkdown(message.body);
+      body.innerHTML = renderMarkdown(tidyStreaming(message.body));
       withCaret(body);
       if (openDetails) body.querySelector("details.ai-reasoning")?.setAttribute("open", "");
     }
     if (nearBottom) scrollToBottom(false);
+    else syncJump();
   }
 
   function onMessageChange(message, change) {
@@ -503,6 +583,9 @@ export function render(ctx) {
     }
     // done / failed / stopped
     if (nodes.live) nodes.live.textContent = change === "done" ? "解读完成" : change === "failed" ? "这次解读没有完成" : "已停止生成";
+    // 页面在后台时，在标签页标题上提示一次。
+    if (change === "done") ctx.attention("解读完成");
+    else if (change === "failed") ctx.attention("解读中断");
     if (message._raf) cancelAnimationFrame(message._raf);
     message._raf = 0;
     const nearBottom = isNearBottom();
@@ -517,6 +600,7 @@ export function render(ctx) {
     syncComposer();
     syncUrl();
     if (nearBottom) scrollToBottom(false);
+    else syncJump();
     if (change === "done") {
       const node = nodeFor(message);
       if (node && (document.activeElement === document.body || nodes.composer.node.contains(document.activeElement))) {
@@ -542,23 +626,36 @@ export function render(ctx) {
     });
   }
 
+  function distanceFromBottom() {
+    return document.documentElement.scrollHeight - window.scrollY - window.innerHeight;
+  }
+
+  // 在底部附近才跟随新内容；用户往上翻时不打扰，只亮出「回到最新」。
   function isNearBottom() {
-    return document.documentElement.scrollHeight - window.scrollY - window.innerHeight < 160;
+    return distanceFromBottom() < 160;
+  }
+
+  // 生成中只要离开了底部就提示；平时翻得较远才出现，避免上下轻微滑动时来回闪。
+  function syncJump() {
+    if (!nodes.jump) return;
+    nodes.jump.hidden = distanceFromBottom() < (state.conversation?.busy ? 160 : 360);
   }
 
   function scrollToBottom(smooth) {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: smooth && !reducedMotion() ? "smooth" : "auto" });
+    if (nodes.jump) nodes.jump.hidden = true;
   }
 
   /* ---------- 输入框 ---------- */
   function buildComposer() {
     const liuyao = state.system === "liuyao";
     const draftKey = `xz-next-draft:reading:${id}`;
+    const placeholder = liuyao ? "就此卦追问：应期？对方心思？" : "问：今年适合换工作吗？";
     const textarea = h("textarea", {
       class: "rd-input",
       rows: 1,
       maxlength: 2000,
-      placeholder: liuyao ? "就此卦追问：应期？对方心思？" : "问：今年适合换工作吗？",
+      placeholder,
       "aria-label": "输入问题",
     });
     textarea.value = local.get(draftKey, "");
@@ -576,29 +673,37 @@ export function render(ctx) {
         topics,
         textarea,
         send));
+    const sendDraft = () => {
+      const text = textarea.value.trim();
+      if (!text) { textarea.focus(); return; }
+      ask(text, {
+        // 一受理就清空：生成过程中接着写的下一句不会被冲掉。手机上收起键盘，留出位置看回答。
+        onAccepted: () => {
+          if (textarea.value.trim() === text) {
+            textarea.value = "";
+            local.remove(draftKey);
+            fit();
+          }
+          if (coarsePointer()) textarea.blur();
+        },
+      });
+    };
     form.addEventListener("submit", event => {
       event.preventDefault();
+      // 生成中这个按钮是「停止」。
       if (state.conversation?.busy) {
         state.conversation.stop();
         return;
       }
-      const text = textarea.value.trim();
-      if (!text) { textarea.focus(); return; }
-      ask(text).then(started => {
-        if (started) {
-          textarea.value = "";
-          local.remove(draftKey);
-          fit();
-        }
-      });
+      sendDraft();
     });
-    textarea.addEventListener("keydown", event => {
-      if (event.key !== "Enter" || event.shiftKey || event.isComposing || event.keyCode === 229) return;
-      if (window.matchMedia?.("(pointer: coarse)").matches) return;
-      event.preventDefault();
-      form.requestSubmit();
+    // 回车发送、Shift+回车换行，手机键盘的回车键显示「发送」；输入法选词时的回车不会发送。
+    submitOnEnter(textarea, () => {
+      // 生成中可以先写下一句，但回车不会打断正在进行的解读。
+      if (state.conversation?.busy) { toast("这条解读完成后再发送；想中止请点「停止」"); return; }
+      sendDraft();
     });
-    return { node: form, textarea, send, ackSlot, fit, draftKey };
+    return { node: form, textarea, send, ackSlot, fit, draftKey, placeholder };
   }
 
   function openTopics(anchor) {
@@ -616,12 +721,13 @@ export function render(ctx) {
     const composer = nodes.composer;
     if (!composer) return;
     const busy = !!state.conversation?.busy;
-    composer.textarea.disabled = busy;
+    // 生成中输入框不锁：可以先写下一个问题；发送键变成带字的「停止」。
+    composer.textarea.placeholder = busy ? "解读进行中，可以先写下一个问题" : composer.placeholder;
     composer.send.classList.toggle("is-stop", busy);
     composer.send.setAttribute("aria-label", busy ? "停止生成" : "发送");
-    composer.send.replaceChildren(icon(busy ? "stop" : "send", busy ? "icon-fill" : ""));
+    composer.send.replaceChildren(...[icon(busy ? "stop" : "send", busy ? "icon-fill" : ""), busy && h("span", { class: "rd-send-label", "aria-hidden": "true" }, "停止")].filter(Boolean));
     const needsAck = !riskAccepted() && state.conversation?.messages.length;
-    composer.ackSlot.replaceChildren(needsAck ? riskAckControl(syncComposer) : "");
+    composer.ackSlot.replaceChildren(...(needsAck ? [riskAckControl(syncComposer)] : []));
   }
 
   function fillComposer(text) {
@@ -644,6 +750,10 @@ export function render(ctx) {
   async function preflight() {
     if (state.conversation?.busy) {
       toast("请先等待当前解读完成");
+      return false;
+    }
+    if (navigator.onLine === false) {
+      toast("网络已断开，恢复后再发送；问题会留在输入框里", { type: "error" });
       return false;
     }
     if (state.system === "liuyao" && state.input?.visibility && state.input.visibility !== "private"
@@ -673,13 +783,18 @@ export function render(ctx) {
     return true;
   }
 
-  async function ask(text, options = {}) {
+  async function ask(text, { onAccepted, ...options } = {}) {
     if (!(await preflight())) return false;
+    onAccepted?.();
+    await begin(text, options);
+    return true;
+  }
+
+  async function begin(text, options = {}) {
     const branch = state.pendingBranch;
     state.pendingBranch = null;
     await state.conversation.ask(text, { ...options, branch });
     syncUrl();
-    return true;
   }
 
   async function startFirst() {
@@ -689,12 +804,13 @@ export function render(ctx) {
     syncUrl();
   }
 
-  function retry(message) {
-    if (state.conversation.busy) { toast("请先等待当前解读完成"); return; }
+  // 先过检查再移除失败的这一轮：断网或额度不足时，失败记录和问题都还在。
+  async function retry(message) {
+    if (!(await preflight())) return;
     const question = message.question;
     state.conversation.removePair(message);
     renderThread();
-    ask(question);
+    await begin(question);
   }
 
   function editQuestion(message) {

@@ -29,7 +29,7 @@
 .ask-examples { display: flex; flex-wrap: wrap; gap: 8px; }
 .ask-examples .pill-filter { min-height: 32px; font-size: 13px; font-weight: 550; }
 .ask-privacy { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12.5px; }
-.ask-section-title { margin-top: 8px; font-size: 16px; font-weight: 800; }
+.ask-section-title { margin-top: 8px; font-size: 16px; font-weight: 800; scroll-margin-top: calc(var(--topbar-h) + 12px); }
 .method-grid { display: grid; gap: 10px; }
 .method-card {
   display: flex; align-items: center; gap: 16px;
@@ -72,6 +72,9 @@
 .flow-or { display: flex; align-items: center; gap: 12px; color: var(--ink-3); font-size: 13px; }
 .flow-or::before, .flow-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .submit-btn:disabled { opacity: .45; box-shadow: none; }
+/* 还差一步时不是灰掉看不清，而是说明差什么；点一下会带到那一步。 */
+.submit-btn.is-waiting, .submit-btn.is-waiting:hover, .submit-btn.is-waiting:active { --btn-bg: var(--bg-elev); --btn-fg: var(--ink-3); --btn-line: var(--line-strong); box-shadow: none; transform: none; }
+.submit-btn small { font-size: 14px; font-weight: 600; }
 
 /* 三钱六掷 */
 .cast-layout { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
@@ -101,10 +104,10 @@
 .cast-btn { min-width: 220px; }
 .cast-btn > span { display: inline-flex; align-items: center; gap: 8px; }
 .cast-btn small { opacity: .8; font-weight: 500; }
-/* 六爻摇完：不是“不可用”，而是完成状态，保持清晰可读。 */
-/* 摇卦过程中按钮只是暂时忙碌，保持原色与清晰文字。 */
-.cast-btn:disabled { opacity: 1; }
-.cast-btn.is-done:disabled { opacity: 1; --btn-bg: var(--brand-soft); --btn-fg: var(--brand-ink); box-shadow: none; }
+/* 摇卦中、六爻已成用 aria-disabled（保留焦点）：摇卦中保持原色，摇完是完成状态而不是「不可用」。 */
+.cast-btn[aria-disabled="true"] { cursor: default; }
+.cast-btn[aria-disabled="true"]:hover, .cast-btn[aria-disabled="true"]:active { --btn-bg: var(--brand); transform: none; }
+.cast-btn.is-done, .cast-btn.is-done:hover, .cast-btn.is-done:active { --btn-bg: var(--brand-soft); --btn-fg: var(--brand-ink); box-shadow: none; }
 .cast-note { color: var(--ink-3); font-size: 12.5px; text-align: center; }
 .gua-builder { list-style: none; display: grid; gap: 8px; padding: 14px 16px; background: var(--bg-sunken); border-radius: var(--r-lg); }
 .gb-row { display: grid; grid-template-columns: 38px minmax(0, 1fr) 86px 26px; align-items: center; gap: 10px; min-height: 30px; }
@@ -121,10 +124,15 @@
 .gb-row.is-moving .gb-name { color: var(--accent-ink); }
 .gb-row.is-new { animation: gb-in .42s var(--ease-out) both; }
 @keyframes gb-in { from { opacity: 0; transform: translateY(8px) scaleX(.92); } to { opacity: 1; transform: none; } }
-.gb-clear { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 999px; color: var(--ink-4); }
-.gb-clear:hover { color: var(--danger); background: var(--danger-soft); }
-.gua-ready { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 14px; color: var(--ink); background: var(--brand-soft); border-radius: 14px; animation: gb-in .4s var(--ease-out) both; }
-.gua-ready-seal { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 12px; color: var(--on-brand); background: var(--brand); font: 900 13px/1.1 var(--font-serif); letter-spacing: .1em; writing-mode: vertical-rl; }
+.gua-builder.is-manual .gb-row { grid-template-columns: 38px minmax(0, 1fr) 86px 48px; }
+.gb-row.is-editing { margin: 0 -8px; padding: 0 8px; border-radius: 10px; background: var(--brand-tint); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand) 45%, transparent); }
+.gb-edit { min-height: 30px; padding: 0 6px; border-radius: 999px; color: var(--ink-3); font-size: 12.5px; font-weight: 650; white-space: nowrap; transition: background .16s var(--ease), color .16s var(--ease); }
+.gb-edit:hover, .gb-edit[aria-pressed="true"] { color: var(--brand-ink); background: var(--brand-soft); }
+.manual-grid .btn[aria-pressed="true"] { --btn-bg: var(--brand-tint); --btn-fg: var(--brand-ink); --btn-line: var(--brand); }
+/* 卦成提示滚进视野时，给吸底的开始按钮留出位置。 */
+.gua-ready { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 14px; color: var(--ink); background: var(--brand-soft); border-radius: 14px; animation: gb-in .4s var(--ease-out) both; scroll-margin-top: calc(var(--topbar-h) + 16px); scroll-margin-bottom: 116px; }
+/* 两个字竖排：用窄内容宽度逐字换行，不依赖竖排字体（网络字体加载失败时竖排会错位）。 */
+.gua-ready-seal { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding-inline: 15px; border-radius: 12px; color: var(--on-brand); background: var(--brand); font: 900 13px/1.15 var(--font-serif); text-align: center; }
 .gua-ready b { display: block; font-size: 15px; }
 .gua-ready small { color: var(--ink-2); font-size: 12.5px; }
 .manual-pad { display: grid; gap: 12px; padding: 18px; background: var(--bg-sunken); border-radius: var(--r-lg); }
@@ -167,6 +175,8 @@
 .date-grid { display: grid; grid-template-columns: 1.5fr repeat(4, minmax(0, 1fr)); gap: 8px; }
 .date-cell { position: relative; display: block; }
 .date-cell .input { padding-right: 30px; text-align: center; font-size: 17px; font-weight: 650; font-variant-numeric: tabular-nums; }
+/* 占位是范围提示，用常规字重，免得看起来像已填好的值。 */
+.date-cell .input::placeholder { font-weight: 400; }
 .date-cell span { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-3); font-size: 13px; pointer-events: none; }
 .birth-more { border: 1px solid var(--line); border-radius: var(--r); padding: 0 14px; }
 .birth-more summary { display: flex; align-items: center; gap: 8px; min-height: 46px; cursor: pointer; color: var(--ink-2); font-weight: 650; font-size: 14px; list-style: none; }
@@ -174,6 +184,8 @@
 .birth-more summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); transition: transform .2s var(--ease); }
 .birth-more[open] summary::after { transform: rotate(-135deg); }
 .birth-more[open] { padding-bottom: 14px; }
+.birth-more-label { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
+.birth-more-value { padding: 2px 8px; color: var(--ink); background: var(--bg-sunken); border-radius: 999px; font-size: 13px; font-weight: 650; }
 .loc { display: grid; gap: 8px; }
 .loc-selects { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .loc-preview { color: var(--ink-3); font-size: 13px; }
@@ -254,7 +266,7 @@
 .followup:hover { color: var(--brand-ink); border-color: var(--brand); }
 .followup .icon { color: var(--ink-4); }
 
-.rd-composer { position: sticky; bottom: 0; z-index: 6; display: grid; gap: 8px; padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--bg) 72%, color-mix(in srgb, var(--bg) 0%, transparent)); }
+.rd-composer { position: sticky; bottom: 0; z-index: 6; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; padding: 12px 0 calc(16px + env(safe-area-inset-bottom, 0px)); background: linear-gradient(to top, var(--bg) 72%, color-mix(in srgb, var(--bg) 0%, transparent)); }
 .rd-ack:empty { display: none; }
 .rd-box { display: flex; align-items: flex-end; gap: 8px; padding: 8px 8px 8px 10px; background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 24px; box-shadow: var(--shadow-2); transition: border-color .16s var(--ease), box-shadow .16s var(--ease); }
 .rd-box:focus-within { border-color: var(--brand); box-shadow: var(--focus), var(--shadow-2); }
@@ -268,8 +280,11 @@
 .rd-send:hover { background: color-mix(in srgb, var(--brand) 86%, #000); }
 .rd-send:active { transform: scale(.94); }
 .rd-send .icon { width: 20px; height: 20px; stroke-width: 2.2; }
-.rd-send.is-stop { background: var(--ink); color: var(--bg-elev); }
-.jump-latest { position: sticky; bottom: 96px; z-index: 7; justify-self: center; align-self: center; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; margin: -8px auto 0; color: var(--ink); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: var(--shadow-2); font-size: 13px; font-weight: 650; }
+.rd-send.is-stop { width: auto; grid-auto-flow: column; gap: 6px; padding: 0 14px 0 12px; background: var(--ink); color: var(--bg-elev); }
+.rd-send.is-stop:hover { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+.rd-send.is-stop .icon { width: 14px; height: 14px; }
+.rd-send-label { font-size: 14px; font-weight: 700; }
+.jump-latest { position: sticky; bottom: calc(var(--rd-composer-h, 84px) + 12px); z-index: 7; justify-self: center; align-self: center; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; margin: -8px auto 0; color: var(--ink); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 999px; box-shadow: var(--shadow-2); font-size: 13px; font-weight: 650; }
 .jump-latest .icon { transform: rotate(180deg); }
 
 .conv-list { display: grid; gap: 8px; }
@@ -285,6 +300,15 @@
 .help-lead .chip { justify-self: start; }
 .help-status { color: var(--ink-3); font-size: 13px; }
 .help-status:empty { display: none; }
+.rd-resume-slot:empty { display: none; }
+.rd-resume { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; background: var(--bg-sunken); border: 1px solid transparent; border-radius: 14px; transition: border-color .16s var(--ease); }
+.rd-resume:hover { border-color: var(--line-strong); }
+.rd-resume-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: var(--brand-ink); background: var(--bg-elev); flex: none; }
+.rd-resume-copy { flex: 1; min-width: 0; display: grid; gap: 1px; }
+.rd-resume-copy small { color: var(--ink-3); font-size: 12px; }
+.rd-resume-copy b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rd-resume-go { display: inline-flex; align-items: center; gap: 2px; flex: none; color: var(--brand-ink); font-size: 13.5px; font-weight: 700; }
+.ai-tool.is-done { color: var(--ink); }
 
 /* ==========================================================================
    命盘 / 卦盘面板
@@ -428,7 +452,9 @@
   .rd-main { min-height: calc(100dvh - var(--topbar-h)); }
   .rd-head { padding-top: 2px; }
   .rd-title h1 { font-size: 19px; }
-  .rd-action-label { display: none; }
+  /* 手机上操作只显示图标，文字留给读屏；六爻只有两个操作，放得下就直接显示文字。 */
+  .rd-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .rd-layout.is-liuyao .rd-action-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .rd-actions .btn { padding: 0 10px; }
   .starters { grid-template-columns: minmax(0, 1fr); }
   .thread-empty { padding: 18px 16px; border-radius: 20px; }
@@ -452,4 +478,41 @@
 .gloss-item dt { display: flex; align-items: center; gap: 8px; }
 .gloss-item dt b { font: 800 15px/1.3 var(--font-serif); }
 .gloss-item dd { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.7; }
-body[data-layout="reading"] .toasts { bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
+body[data-layout="reading"] .toasts { bottom: calc(var(--rd-composer-h, 96px) + 16px); }
+
+@media (max-width: 719px), (pointer: coarse) {
+  /* 手机输入框至少 16px，聚焦时 iOS 不会放大页面。 */
+  .rd-input { font-size: 16px; }
+  /* 键盘弹起时开始按钮不吸底，免得浮在键盘上方挡住正在填的格子。 */
+  .is-typing .flow-submit { position: relative; }
+}
+/* 很窄的屏幕上手动录入多一列「修改」，收紧其它列，爻线不至于缩成两个点。 */
+@media (max-width: 359px) {
+  .gua-builder.is-manual .gb-row { grid-template-columns: 30px minmax(0, 1fr) 74px 44px; gap: 6px; }
+  .gb-edit { padding: 0 4px; font-size: 12px; }
+}
+/* 触屏没有真正的悬停：点过的控件不停留在悬停色，按下时立即给出反馈。 */
+@media (hover: none) {
+  .gb-edit:hover { color: var(--ink-3); background: transparent; }
+  .gb-edit[aria-pressed="true"] { color: var(--brand-ink); background: var(--brand-soft); }
+  .ai-tool:hover { color: var(--ink-3); background: transparent; }
+  .ai-tool.is-on { color: var(--brand); }
+  .ai-tool.is-done { color: var(--ink); }
+  .followup:hover { color: var(--ink-2); border-color: var(--line-strong); }
+  .starter:hover { background: var(--bg-sunken); border-color: transparent; }
+  .rd-topic:hover { color: var(--ink-3); background: transparent; }
+  .rd-send:hover { background: var(--brand); }
+  .rd-send.is-stop:hover { background: var(--ink); }
+  .gb-edit:active, .ai-tool:active, .rd-topic:active { background: var(--bg-press); }
+  .followup:active, .starter:active, .vis-card:active, .recent-card:active, .rd-resume:active { background: var(--bg-press); }
+}
+/* 触屏：本页的小按钮也保证够大的点按区域。 */
+@media (pointer: coarse) {
+  .ask-examples .pill-filter { min-height: 38px; }
+  .ask-page .seg button { min-height: 40px; }
+  .gb-edit { min-height: 38px; }
+  .ai-tool { width: 40px; height: 40px; }
+  .followup { min-height: 40px; }
+  .jump-latest { height: 40px; }
+  .cp-mode button { min-height: 36px; }
+}

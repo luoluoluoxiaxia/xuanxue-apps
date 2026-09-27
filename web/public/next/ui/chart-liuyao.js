@@ -1,5 +1,6 @@
 // 六爻卦盘面板。起卦接口的 yaos 自下而上（yaos[0] 为初爻），展示时自上而下。
 import { h } from "../lib/dom.js?v=n1";
+import { icon } from "../lib/icons.js?v=n1";
 import { guaGlyph, elementClass } from "./gua.js?v=n1";
 import { LY_POS, CN_NUM } from "../lib/copy.js?v=n1";
 import { openGlossary } from "./glossary.js?v=n1";
@@ -68,7 +69,7 @@ export function liuyaoPanel(payload) {
             yao.fu_shen ? h("span", null, `伏 ${yao.fu_shen.liu_qin || ""}${yao.fu_shen.najia || ""}`) : null,
             yao.bian ? h("span", null, `→ ${yao.bian.liu_qin || ""}${yao.bian.najia || ""}${yao.bian.wuxing || ""}`) : null)))))),
     h("p", { class: "cp-note" }, "纳甲六亲依京房八宫 · 六神依日干起法"),
-    h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("liuyao") }, "名词解释"));
+    h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("liuyao") }, icon("book"), "名词解释"));
 }
 
 export function liuyaoStrip(payload) {
