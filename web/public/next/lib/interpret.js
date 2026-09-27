@@ -10,7 +10,6 @@ const INPUT_KEYS = [
   "system", "input_mode", "calendar", "year", "month", "day", "hour", "minute", "is_leap_month", "gender", "location",
   "longitude", "tz_offset", "timezone", "use_true_solar", "day_boundary", "as_of", "manual_birth_year", "pillars",
   "year_pillar", "month_pillar", "day_pillar", "hour_pillar", "visibility", "public_consent", "public_consent_version",
-  "personal_case_id",
 ];
 
 let localId = 0;
