@@ -413,32 +413,6 @@
 
 .cp-question { margin: 0; padding: 12px 14px; color: var(--ink); background: var(--bg-sunken); border-radius: 12px; font-size: 14.5px; line-height: 1.6; }
 .cp-question span { display: block; color: var(--ink-3); font-size: 11.5px; font-weight: 700; letter-spacing: .1em; margin-bottom: 2px; }
-.cp-gua { display: flex; align-items: center; justify-content: center; gap: 22px; padding: 6px 0; }
-.cp-gua figure { margin: 0; display: grid; justify-items: center; gap: 8px; color: var(--ink); }
-.cp-gua figcaption { color: var(--ink-3); font-size: 11.5px; font-weight: 700; letter-spacing: .16em; }
-.cp-gua b { font: 800 17px/1.2 var(--font-serif); letter-spacing: .1em; }
-.cp-gua-arrow { color: var(--ink-4); font-size: 20px; }
-.cp-quiet { display: grid; place-items: center; width: 52px; height: 51px; color: var(--ink-3); font: 800 22px/1 var(--font-serif); border: 1.5px dashed var(--line-strong); border-radius: 10px; }
-.ly-scroll { overflow-x: auto; }
-.ly-table { width: 100%; min-width: 320px; border-collapse: collapse; font-size: 13px; }
-.ly-extra { color: var(--ink-3); font-size: 12px; }
-.ly-extra span { display: block; }
-.cp-facts .is-wide { grid-column: span 2; }
-.ly-table th { color: var(--ink-3); font-size: 11.5px; font-weight: 700; text-align: left; padding: 6px 6px; border-bottom: 1px solid var(--line); }
-.ly-table td { padding: 8px 6px; border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); white-space: nowrap; }
-.ly-table tr.is-moving { background: color-mix(in srgb, var(--accent-soft) 70%, transparent); }
-.ly-table b { font-weight: 800; }
-.ly-glyph { display: inline-flex; align-items: center; gap: 6px; }
-.ly-bar { display: inline-flex; gap: 4px; width: 40px; }
-.ly-bar i { height: 5px; flex: 1; border-radius: 2px; background: var(--ink); }
-.ly-bar.is-yang i:last-child { display: none; }
-.is-moving .ly-bar i { background: var(--accent); }
-.ly-glyph em { color: var(--accent-ink); font-style: normal; font-weight: 800; }
-.ly-tags { display: inline-flex; align-items: center; gap: 4px; }
-.ly-tag { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 11px; font-weight: 800; }
-.ly-tag.is-shi { color: var(--on-brand); background: var(--brand); }
-.ly-tag.is-ying { color: var(--indigo); background: var(--indigo-soft); }
-.ly-tag.is-kong { color: var(--ink-3); background: var(--bg-sunken); }
 
 .chart-strip { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .strip-pillars { display: inline-flex; gap: 8px; }

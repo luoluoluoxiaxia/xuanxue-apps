@@ -323,7 +323,7 @@ export function render(ctx) {
 
   function buildLayout() {
     const liuyao = state.system === "liuyao";
-    const panel = liuyao ? liuyaoPanel(state.payload) : baziPanel(state.payload, { name: state.name, input: state.input });
+    const panel = liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input });
     const title = liuyao ? liuyaoTitle(state.payload) : (state.name || state.payload?.profile_name || "我的命盘");
     // 解读进行中不能重新起卦 / 开新对话；按钮在 syncComposer 里随忙碌状态切换。
     const restart = liuyao
@@ -413,7 +413,7 @@ export function render(ctx) {
     const liuyao = state.system === "liuyao";
     openSheet({
       title: liuyao ? "卦盘" : "命盘",
-      body: liuyao ? liuyaoPanel(state.payload) : baziPanel(state.payload, { name: state.name, input: state.input }),
+      body: liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input }),
       wide: true,
       className: "sheet-chart",
     });
