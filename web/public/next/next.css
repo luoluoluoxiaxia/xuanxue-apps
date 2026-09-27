@@ -886,9 +886,14 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .prose strong { color: var(--ink); font-weight: 700; }
 .prose ul, .prose ol { padding-left: 1.3em; display: grid; gap: .4em; }
 .prose li::marker { color: var(--brand); }
-.prose details.ai-reasoning { margin-top: 1.2em; padding: 12px 16px; background: var(--bg-sunken); border-radius: 14px; }
-.prose details.ai-reasoning summary { cursor: pointer; color: var(--ink); font-weight: 700; }
-.prose .ai-reasoning-body { margin-top: .6em; }
+/* 「为什么这么判断」：一行轻量的展开链接，展开后左侧一条细线，不再是整块底色。 */
+.prose details.ai-reasoning { margin-top: 1em; }
+.prose details.ai-reasoning summary { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; color: var(--ink-3); font-size: 14px; font-weight: 600; cursor: pointer; list-style: none; }
+.prose details.ai-reasoning summary::-webkit-details-marker { display: none; }
+.prose details.ai-reasoning summary::after { content: ""; width: 7px; height: 7px; margin-top: -3px; border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor; transform: rotate(45deg); transition: transform .2s var(--ease), margin .2s var(--ease); }
+.prose details.ai-reasoning[open] summary::after { margin-top: 3px; transform: rotate(-135deg); }
+.prose details.ai-reasoning summary:hover { color: var(--ink); }
+.prose .ai-reasoning-body { margin-top: .4em; padding-left: 14px; border-left: 2px solid var(--line-strong); }
 
 /* 后续 */
 .updates { display: grid; gap: 12px; }

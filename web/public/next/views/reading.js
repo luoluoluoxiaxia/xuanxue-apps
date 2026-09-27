@@ -10,7 +10,7 @@ import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, wa
 import { takeHandoff } from "../lib/handoff.js?v=n1";
 import { relativeTime, plainExcerpt } from "../lib/format.js?v=n1";
 import { errorView, stateView } from "../ui/bits.js?v=n1";
-import { openSheet } from "../ui/overlay.js?v=n1";
+import { openSheet, openMenu } from "../ui/overlay.js?v=n1";
 import { toast } from "../ui/toast.js?v=n1";
 import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n1";
 import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n1";
@@ -333,14 +333,18 @@ export function render(ctx) {
       } }, icon("refresh"), h("span", { class: "rd-action-label" }, "重新起卦"))
       : h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: newConversation }, icon("plus"), h("span", { class: "rd-action-label" }, "新对话"));
     const helpSlot = h("span", { class: "rd-help-slot" });
-    const headActions = h("div", { class: "rd-actions" },
-      restart,
-      !liuyao ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: openConversations }, icon("clock"), h("span", { class: "rd-action-label" }, "对话记录")) : null,
-      !liuyao ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: () => {
+    // 常用的「新对话」「求助」留在标题右侧；对话记录、修改信息这类偶尔用的收进「⋯」。
+    const more = !liuyao
+      ? h("button", { type: "button", class: "btn btn-sm btn-ghost rd-more", "aria-label": "更多操作", "aria-haspopup": "menu", "aria-expanded": "false", title: "更多操作" }, icon("more"))
+      : null;
+    more?.addEventListener("click", () => openMenu(more, [
+      { label: "对话记录", icon: "clock", onSelect: openConversations },
+      { label: "修改出生信息", icon: "edit", onSelect: () => {
         if (state.conversation?.busy) { toast("请先停止当前解读，再修改出生信息"); return; }
         ctx.navigate(`/ask/bazi?edit=${encodeURIComponent(state.profileId)}`);
-      } }, icon("edit"), h("span", { class: "rd-action-label" }, "修改信息")) : null,
-      helpSlot);
+      } },
+    ]));
+    const headActions = h("div", { class: "rd-actions" }, restart, helpSlot, more);
     const isPublic = state.visibility === "public";
     const strip = h("button", { type: "button", class: "rd-strip", onClick: openChartSheet, "aria-label": "查看完整盘面" },
       liuyao ? liuyaoStrip(state.payload) : baziStrip(state.payload),
@@ -352,14 +356,14 @@ export function render(ctx) {
     const jump = h("button", { type: "button", class: "jump-latest", hidden: true, onClick: () => scrollToBottom(true) }, icon("arrowUp", "icon-sm"), "回到最新");
     const conversationCol = h("section", { class: "rd-main", "aria-label": "对话" },
       h("header", { class: "rd-head" },
-        h("a", { class: "back-link", href: "#/me/archives" }, icon("back"), "我的盘"),
         h("div", { class: "rd-title" },
+          h("a", { class: "back-link rd-back", href: "#/me/archives", "aria-label": "返回我的盘", title: "返回我的盘" }, icon("back")),
           h("span", { class: ["chip", liuyao ? "chip-liuyao" : "chip-bazi"] }, liuyao ? "六爻" : "八字"),
           // 六爻卦档分公开 / 私密：公开的首轮解答会发布到广场。
           liuyao ? h("span", { class: ["chip", "chip-outline", "rd-vis"], title: isPublic ? "公开卦：首轮解答发布到广场" : "私密卦：仅自己可见" }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
-          h("h1", null, title),
-          liuyao && state.question ? h("p", { class: "rd-question" }, `所问：${state.question}`) : null),
-        headActions),
+          h("h1", null, title)),
+        headActions,
+        liuyao && state.question ? h("p", { class: "rd-question" }, `所问：${state.question}`) : null),
       strip,
       thread,
       live,
@@ -398,7 +402,7 @@ export function render(ctx) {
     slot.dataset.key = key;
     slot.replaceChildren(post
       ? h("a", { class: "btn btn-sm btn-ghost", href: `#/post/${encodeURIComponent(post.slug)}` }, icon("globe"), h("span", { class: "rd-action-label" }, "查看卦帖"))
-      : h("button", { type: "button", class: "btn btn-sm btn-soft", onClick: openHelp }, icon("hand"), h("span", { class: "rd-action-label" }, "向社区求助")));
+      : h("button", { type: "button", class: "btn btn-sm btn-ghost rd-help", onClick: openHelp }, icon("hand"), h("span", { class: "rd-action-label" }, "向社区求助")));
   }
 
   // 本次对话里公开解答刚发布：记下卦帖，头部随之切换。
@@ -488,7 +492,7 @@ export function render(ctx) {
     const label = conversation.label(message);
     const head = h("header", { class: "ai-head" },
       h("span", { class: "ai-mark", "aria-hidden": "true" }, "玄"),
-      h("span", { class: "ai-label" }, `推演 · ${label}`),
+      h("span", { class: "ai-label" }, label),
       h("span", { class: "ai-elapsed tnum", "data-elapsed": "" }, elapsedLabel(message)));
     const body = h("div", { class: "ai-body prose" });
     const children = [head];
@@ -535,26 +539,30 @@ export function render(ctx) {
       }
       if (message.status === "done") {
         const credits = message.credits;
-        if (credits && Number(credits.required_credits) > 0) {
-          children.push(h("p", { class: "ai-credits" }, credits.platform_covered > 0
-            ? "本次回答已完整送达 · 积分扣至 0，不足部分免扣。"
-            : `本次消耗 ${credits.required_credits} 分 · ${credits.daily_free_spent || credits.paid_spent ? `今日免费 ${credits.daily_free_spent} + 充值积分 ${credits.paid_spent}` : "未扣充值积分"} · 今日免费剩余 ${credits.daily_remaining} 分 · 充值剩余 ${credits.paid_balance_after} 分`));
-        }
+        // 只留关键数字：这次花了多少、还剩多少；免费与充值各扣多少可以在积分明细里看。和工具图标同一行。
+        const spent = credits && Number(credits.required_credits) > 0
+          ? h("p", { class: "ai-credits" }, credits.platform_covered > 0
+            ? "本次回答已完整送达 · 积分扣至 0，不足部分免扣"
+            : `本次 ${credits.required_credits} 分 · 今日免费剩余 ${credits.daily_remaining ?? 0} 分 · 充值剩余 ${credits.paid_balance_after ?? 0} 分`)
+          : null;
         children.push(h("div", { class: "ai-tools" },
           feedbackButton(message, "like"),
           feedbackButton(message, "dislike"),
           copyButton(message),
-          h("button", { type: "button", class: "ai-tool", "aria-label": "反馈这条解读", title: "反馈这条解读", onClick: () => sendFeedback(message) }, icon("message"))));
+          // 点了「没帮助」再给出写具体意见的入口，不单独占一个图标。
+          message.feedback === "dislike" ? h("button", { type: "button", class: "link-btn ai-tool-more", onClick: () => sendFeedback(message) }, "补充说明") : null,
+          spent));
         if (message.followups && message.followups.length) {
-          // 追问建议只填进输入框，由用户确认（可先修改）后再发送，避免误点直接发起一次解读。
-          children.push(h("div", { class: "followups-wrap" },
-            h("p", { class: "followups-hint", id: `followups-hint-${message.id}` }, "点选后填入输入框，可修改后再发送"),
-            h("div", { class: "followups" }, message.followups.map(text => h("button", {
+          // 追问建议只填进输入框，由用户确认（可先修改）后再发送，避免误点直接发起一次解读；
+          // 填入时有提示和撤销，这里不再放一行说明文字（读屏仍会读到）。
+          children.push(h("div", { class: "followups" },
+            h("p", { class: "sr-only", id: `followups-hint-${message.id}` }, "追问建议：点选后填入输入框，可修改后再发送"),
+            message.followups.map(text => h("button", {
               type: "button",
               class: "followup",
               "aria-describedby": `followups-hint-${message.id}`,
               onClick: () => useFollowup(text),
-            }, icon("reply", "icon-sm"), text)))));
+            }, text))));
         }
       }
     }
