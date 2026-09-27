@@ -1,5 +1,5 @@
 // 广场：社区问题流。桌面三栏（话题 / 问题流 / 今日与等你来答），手机单栏 + 话题横滑。
-import { h, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n1";
+import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n1";
 import { session, displayName, local } from "../lib/store.js?v=n1";
@@ -326,7 +326,7 @@ function sideRail(ctx, { onSeeking, onStats } = {}) {
         h("a", { class: "btn btn-soft btn-sm", href: "#/today" }, "查看今日", icon("arrowRight")));
       return;
     }
-    todayBox.replaceChildren(
+    fill(todayBox,
       h("div", { class: "side-today-mark", "aria-hidden": "true" }, icon("sun")),
       h("h2", null, `今日 · ${[daily.date_label, daily.weekday_label].filter(Boolean).join(" ")}`),
       suitable.length ? h("p", { class: "side-today-line" }, h("b", { class: "yi" }, "宜"), suitable.slice(0, 3).join("、")) : null,

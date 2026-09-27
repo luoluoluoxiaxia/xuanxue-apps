@@ -1,5 +1,5 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n1";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n1";
 import { session, displayName, local, refreshSession } from "../lib/store.js?v=n1";
@@ -359,7 +359,8 @@ export function render(ctx) {
     const on = !!post.viewer_following;
     button.classList.toggle("btn-soft", on);
     button.setAttribute("aria-pressed", String(on));
-    button.replaceChildren(icon("bookmark"), on ? "已关注" : "关注进展", post.follow_count ? h("span", { class: "tnum follow-count" }, String(post.follow_count)) : null);
+    const followers = Number(post.follow_count) || 0;
+    fill(button, icon("bookmark"), on ? "已关注" : "关注进展", followers > 0 && h("span", { class: "tnum follow-count" }, String(followers)));
   }
 
   function patchCounts() {
