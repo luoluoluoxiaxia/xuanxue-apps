@@ -5,7 +5,8 @@ import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } 
 import { session, displayName, local, refreshSession } from "../lib/store.js?v=n1";
 import { relativeTime, fullTime, count } from "../lib/format.js?v=n1";
 import { avatar, stateView } from "../ui/bits.js?v=n1";
-import { guaGlyph, elementClass } from "../ui/gua.js?v=n1";
+import { elementClass } from "../ui/gua.js?v=n1";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n1";
 import { toast } from "../ui/toast.js?v=n1";
 import { sharePost } from "../lib/share.js?v=n1";
 import { openShareSheet } from "../ui/share-sheet.js?v=n1";
@@ -48,46 +49,10 @@ function keepPlace(find, change) {
 }
 
 /* ---------- 卦象面板 ---------- */
-function liuyaoBoard(oracle, { compact = false } = {}) {
+// 卦名、卦画与六爻排布合成一张排盘（ui/chart-liuyao.js，与解读页同一套）。
+function liuyaoBoard(oracle) {
   if (!oracle || !Array.isArray(oracle.lines) || !oracle.lines.length) return null;
-  const changed = !!oracle.has_changed;
-  const facts = [
-    ["动爻", oracle.moving_label],
-    ["世应", oracle.shi_ying_label],
-    ["月建", oracle.month_jian],
-    ["日辰", oracle.day_chen],
-  ];
-  const board = h("section", { class: ["board", "board-liuyao", compact && "is-compact"], "aria-label": "卦象" },
-    h("div", { class: "board-figures" },
-      h("figure", { class: "board-figure" },
-        h("figcaption", null, "本卦"),
-        guaGlyph(oracle.lines, { size: compact ? "md" : "lg", label: `本卦 ${oracle.ben_name || ""}` }),
-        h("b", { class: "board-name" }, oracle.ben_name || "本卦")),
-      h("span", { class: "board-arrow", "aria-hidden": "true" }, changed ? icon("arrowRight") : null),
-      changed
-        ? h("figure", { class: "board-figure" },
-          h("figcaption", null, "变卦"),
-          guaGlyph(oracle.lines, { changed: true, size: compact ? "md" : "lg", label: `变卦 ${oracle.bian_name || ""}` }),
-          h("b", { class: "board-name" }, oracle.bian_name || "变卦"))
-        : h("figure", { class: "board-figure is-quiet" }, h("figcaption", null, "变卦"), h("span", { class: "board-quiet" }, "静"), h("b", { class: "board-name" }, "六爻安静"))),
-    h("p", { class: "board-caption" }, [oracle.palace_label, oracle.method_label].filter(Boolean).join(" · ")),
-    h("dl", { class: "board-facts" }, facts.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, value || "—")))));
-  if (!compact) {
-    const rows = oracle.lines.map(line => h("tr", { class: line.moving ? "is-moving" : "" },
-      h("th", { scope: "row" }, `${line.position_label || ""}爻`),
-      h("td", null, line.liu_shen || ""),
-      h("td", null, h("span", { class: "ledger-line" }, h("span", { class: ["ledger-bar", line.yin ? "is-yin" : "is-yang"] }, h("i"), h("i")), line.moving ? h("em", null, line.moving_mark || "动") : null)),
-      h("td", null, h("span", { class: elementClass(line.wuxing) }, `${line.liu_qin || ""} ${line.najia || ""}${line.wuxing || ""}`)),
-      h("td", { class: "ledger-change" }, line.changed_label ? `→ ${line.changed_label}` : ""),
-      h("td", { class: "ledger-roles" }, [line.roles, line.kong ? "空" : ""].filter(Boolean).join(" "))));
-    board.append(h("details", { class: "board-ledger" },
-      h("summary", null, "完整六爻排布", h("span", { class: "muted" }, [oracle.method_label, oracle.xun_kong ? `空亡 ${oracle.xun_kong}` : ""].filter(Boolean).join(" · "))),
-      h("div", { class: "ledger-scroll" },
-        h("table", { class: "ledger" },
-          h("thead", null, h("tr", null, ["爻位", "六神", "爻", "六亲纳甲", "变", "世应"].map(label => h("th", { scope: "col" }, label)))),
-          h("tbody", null, rows)))));
-  }
-  return board;
+  return h("section", { class: ["board", "board-liuyao"], "aria-label": "卦象" }, liuyaoPaipan(paipanFromOracle(oracle)));
 }
 
 function baziBoard(chart, { compact = false } = {}) {
