@@ -404,7 +404,7 @@ function liuyaoFlow(ctx) {
     builder.replaceChildren(...rows);
     const moving = state.lines.filter(line => line.value === 6 || line.value === 9).length;
     banner.hidden = state.lines.length < 6;
-    banner.replaceChildren(h("span", { class: "gua-ready-seal", "aria-hidden": "true" }, "卦成"), h("span", null, h("b", null, "六爻已就绪"), h("small", null, `动爻 ${CN_NUM[moving]} 处 · 下一步选择怎么回答`)));
+    banner.replaceChildren(h("span", { class: "gua-ready-seal", "aria-hidden": "true" }, "卦成"), h("span", null, h("b", null, "六爻已就绪"), h("small", null, `${moving ? `动爻 ${CN_NUM[moving]} 处` : "六爻安静"} · 下一步选择怎么回答`)));
   }
 
   function startEdit(index) {
