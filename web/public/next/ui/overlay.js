@@ -29,8 +29,8 @@ document.addEventListener("keydown", event => {
   }
 });
 
-export function openSheet({ title = "", body, footer = null, wide = false, dismissible = true, onClose, label, className = "" } = {}) {
-  const returnFocus = document.activeElement;
+export function openSheet({ title = "", body, footer = null, wide = false, dismissible = true, onClose, label, className = "", returnFocus: focusBack = null } = {}) {
+  const returnFocus = focusBack || document.activeElement;
   const titleId = `sheet-title-${Math.random().toString(36).slice(2, 8)}`;
   const closeButton = dismissible
     ? h("button", { type: "button", class: "icon-btn", "aria-label": "关闭" }, icon("close"))
@@ -77,6 +77,7 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
   stack.push(entry);
   lockScroll();
   document.body.append(overlay);
+  keepAboveKeyboard(overlay, entry);
   requestAnimationFrame(() => {
     const target = panel.querySelector("[autofocus]") || panel.querySelector(".sheet-body " + FOCUSABLE) || closeButton || panel;
     if (target === panel) panel.setAttribute("tabindex", "-1");
@@ -129,11 +130,30 @@ function enableSwipeDown(panel, close) {
   });
 }
 
+// iOS 弹出键盘时只缩小可视区域，底部面板会被挡住；按键盘高度把面板往上推。
+// Android（viewport 设了 interactive-widget=resizes-content）会直接缩小页面，此时算出的高度为 0。
+function keepAboveKeyboard(overlay, entry) {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  const sync = () => {
+    if (!document.body.contains(overlay)) {
+      viewport.removeEventListener("resize", sync);
+      viewport.removeEventListener("scroll", sync);
+      return;
+    }
+    const covered = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+    overlay.style.paddingBottom = covered > 80 ? `${Math.round(covered)}px` : "";
+    entry.panel.style.maxHeight = covered > 80 ? `${Math.round(viewport.height - 12)}px` : "";
+  };
+  viewport.addEventListener("resize", sync);
+  viewport.addEventListener("scroll", sync);
+}
+
 export function closeAllSheets() {
   [...stack].reverse().forEach(entry => entry.close("route"));
 }
 
-export function confirmDialog({ title, message = "", confirmText = "确定", cancelText = "取消", danger = false } = {}) {
+export function confirmDialog({ title, message = "", confirmText = "确定", cancelText = "取消", danger = false, returnFocus = null } = {}) {
   return new Promise(resolve => {
     let decided = false;
     const done = value => {
@@ -150,6 +170,7 @@ export function confirmDialog({ title, message = "", confirmText = "确定", can
       footer: [cancel, confirm],
       onClose: () => { if (!decided) { decided = true; resolve(false); } },
       className: "sheet-confirm",
+      returnFocus,
     });
     requestAnimationFrame(() => confirm.focus());
   });
@@ -167,7 +188,11 @@ export function openMenu(anchor, items, { head = null, align = "end" } = {}) {
       role: "menuitem",
       type: item.href ? null : "button",
       href: item.href || null,
-      onClick: event => { closeMenus(); item.onSelect?.(event); },
+      onClick: event => {
+        if (document.contains(anchor)) anchor.focus({ preventScroll: true });
+        closeMenus();
+        item.onSelect?.(event);
+      },
     }, item.icon ? icon(item.icon) : null, h("span", null, item.label), item.meta ? h("span", { class: "menu-meta" }, item.meta) : null);
     menu.append(node);
   });
