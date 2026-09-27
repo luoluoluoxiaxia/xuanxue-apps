@@ -18,7 +18,14 @@ export function toast(message, { type = "info", action = null, duration = 2800 }
     icon(glyph),
     h("span", null, message),
     action ? h("button", { type: "button", onClick: () => { action.onClick(); dismiss(); } }, action.label) : null);
-  ensureHost().append(node);
+  const stackHost = ensureHost();
+  // 同一条提示不重复堆叠；最多同时显示三条，多出的最早一条先收起。
+  Array.from(stackHost.children).forEach(existing => {
+    if (existing.dataset.message === String(message)) existing.remove();
+  });
+  node.dataset.message = String(message);
+  stackHost.append(node);
+  while (stackHost.children.length > 3) stackHost.firstElementChild.remove();
   let timer = setTimeout(dismiss, action ? duration + 2400 : duration);
   function dismiss() {
     clearTimeout(timer);

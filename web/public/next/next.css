@@ -504,9 +504,9 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 }
 .toast.is-leaving { animation: toast-out .2s var(--ease) both; }
 .toast .icon { width: 18px; height: 18px; }
-.toast-ok .icon { color: var(--brand); }
-:root[data-scheme="dark"] .toast-ok .icon { color: #0B7A62; }
+.toast-ok .icon { color: inherit; }
 .toast-error .icon { color: #FF8A76; }
+:root[data-scheme="dark"] .toast-error .icon { color: #C4122F; }
 .toast button { margin-left: 6px; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(10px) scale(.97); } to { opacity: 1; transform: none; } }
 @keyframes toast-out { to { opacity: 0; transform: translateY(6px); } }
@@ -1096,3 +1096,55 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .share-image { width: 100%; max-width: 360px; height: auto; border-radius: 12px; box-shadow: var(--shadow-2); }
 .share-hint { color: var(--ink-3); font-size: 12.5px; text-align: center; }
 .share-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+
+/* ---------- 触屏与输入体验 ---------- */
+/* 断网提示条：贴在顶栏下方，恢复后自动收起。 */
+.net-banner {
+  position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); z-index: 39;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 16px;
+  color: var(--ink); background: var(--brand-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--brand) 18%, var(--line));
+  font-size: 13.5px; font-weight: 600; text-align: center;
+}
+.net-banner .icon { flex: none; width: 16px; height: 16px; color: var(--brand-ink); }
+
+/* 锚点跳转时不被吸顶栏挡住。 */
+[id], .is-target { scroll-margin-top: calc(var(--topbar-h) + 16px); }
+
+a, button, summary, label, select, [role="button"], [role="tab"] { touch-action: manipulation; }
+.sheet-grip, .sheet-head { touch-action: none; }
+
+/* 手机上输入框至少 16px，避免 iOS 聚焦时自动放大页面。 */
+@media (max-width: 719px), (pointer: coarse) {
+  .input, .textarea, .select, .composer-input, .rd-input, .cr-month-select { font-size: 16px; }
+}
+
+/* 触屏：常用小按钮的可点区域不小于 36–40px。 */
+@media (pointer: coarse) {
+  .btn-sm { min-height: 38px; }
+  .pill-filter { min-height: 38px; }
+  .react { min-height: 40px; }
+  .comment-action { height: 38px; }
+  .link-btn { padding-block: 8px; }
+  summary { min-height: 40px; }
+}
+
+/* 触屏没有真正的悬停：点过的按钮不应停留在悬停色。 */
+@media (hover: none) {
+  .btn:hover { --btn-bg: var(--bg-elev); }
+  .btn-primary:hover { --btn-bg: var(--brand); }
+  .btn-ink:hover { --btn-bg: var(--ink); }
+  .btn-soft:hover { --btn-bg: var(--brand-soft); }
+  .btn-ghost:hover { --btn-bg: transparent; --btn-fg: var(--ink-2); }
+  .react:hover { color: var(--ink-3); background: transparent; }
+  .react.is-on:hover { color: var(--accent); }
+  .link-btn:hover { text-decoration: none; }
+  /* 按下时给出即时反馈 */
+  .btn:active:not(:disabled) { --btn-bg: var(--bg-press); }
+  .btn-primary:active:not(:disabled) { --btn-bg: color-mix(in srgb, var(--brand) 86%, #000); }
+  .btn-soft:active:not(:disabled) { --btn-bg: color-mix(in srgb, var(--brand-soft) 85%, var(--brand)); }
+  .btn-ink:active:not(:disabled) { --btn-bg: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+  .react:active, .comment-action:active { background: var(--bg-press); }
+}
+
