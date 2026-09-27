@@ -153,25 +153,29 @@ function heroNode(payload, { onCity }) {
         icon("book", "icon-sm"), h("span", null, `依据「${profile.name || "未命名命盘"}」`)) : null));
 }
 
-function chipList(items, tone) {
+// seal：本月宜忌的印章排在词条最前面，当作这一组的小标题（读屏读隐藏的 h3）。
+function chipList(items, tone, seal = "") {
   const list = (items || []).map(item => String(item || "").trim()).filter(Boolean);
-  if (!list.length) return h("p", { class: "td-none" }, "暂无");
-  return h("ul", { class: ["td-chips", `is-${tone}`] }, list.map(text => h("li", null, text)));
+  if (!list.length && !seal) return h("p", { class: "td-none" }, "暂无");
+  return h("ul", { class: ["td-chips", `is-${tone}`] },
+    seal ? h("li", { class: "td-chip-seal", "aria-hidden": "true" }, seal) : null,
+    list.length ? list.map(text => h("li", null, text)) : h("li", { class: "td-chip-none" }, "暂无"));
 }
 
-function dayCard(tone, seal, title, sub, items) {
+function dayCard(tone, seal, title, items) {
   return h("article", { class: ["td-card", `is-${tone}`] },
     h("header", { class: "td-card-head" },
       h("span", { class: "td-seal", "aria-hidden": "true" }, seal),
-      h("div", null, h("h2", null, title), h("p", null, sub))),
+      h("h2", null, title)),
     chipList(items, tone));
 }
 
-function pendingCard(tone, seal, title, sub = "正在准备…") {
+// 「正在准备」由卡片上方的状态行说一次，卡片里只留骨架。
+function pendingCard(tone, seal, title) {
   return h("article", { class: ["td-card", `is-${tone}`, "is-pending"], "aria-hidden": "true" },
     h("header", { class: "td-card-head" },
       h("span", { class: "td-seal" }, seal),
-      h("div", null, h("h2", null, title), sub ? h("p", null, sub) : h("span", { class: "skel skel-line", style: { width: "96px", marginTop: "6px" } }))),
+      h("h2", null, title)),
     h("div", { class: "td-skel-chips" },
       [68, 52, 84, 60].map(width => h("span", { class: "skel", style: { width: `${width}%` } }))));
 }
@@ -190,8 +194,8 @@ function dayBlock(payload, actions) {
   const state = dayState(daily);
   if (state === "ready") {
     return h("section", { class: "td-duo", "aria-label": "今日宜忌" },
-      dayCard("good", "宜", "今日宜", "今天适合做的事", daily.content.suitable),
-      dayCard("bad", "忌", "今日忌", "今天少碰的事", daily.content.avoid));
+      dayCard("good", "宜", "今日宜", daily.content.suitable),
+      dayCard("bad", "忌", "今日忌", daily.content.avoid));
   }
   if (state === "pending") {
     return h("section", { class: "td-duo-wrap", "aria-label": "今日宜忌", "aria-busy": "true" },
@@ -203,7 +207,7 @@ function dayBlock(payload, actions) {
     issueCard({
       tone: failed ? "error" : "quiet",
       title: failed ? "今日宜忌生成失败" : "今日宜忌暂未生成",
-      text: daily.message || (failed ? "可以重新生成，不消耗 AI 回答积分。" : "点一下就开始准备，不消耗 AI 回答积分。"),
+      text: daily.message || "不消耗 AI 回答积分。",
       button: failed ? "重新生成今日" : "生成今日宜忌",
       busyText: "正在重新生成",
       onRetry: (buttonNode, busy, label) => actions.regenerate("day", buttonNode, busy, label),
@@ -271,7 +275,7 @@ function monthBlock(payload, actions, view) {
   const period = [month.period_label, solar].map(text => String(text || "").trim()).filter(Boolean).join(" · ");
   const head = h("header", { class: "td-month-head" },
     h("div", null,
-      h("p", { class: "kicker" }, ["本月", month.month_label].filter(Boolean).join(" · ")),
+      month.month_label ? h("p", { class: "kicker" }, month.month_label) : null,
       h("h2", { class: "td-month-title" }, "本月提示"),
       period ? h("p", { class: "td-month-period" }, icon("calendar", "icon-sm"), h("span", null, period)) : null));
   if (state === "ready") {
@@ -279,8 +283,8 @@ function monthBlock(payload, actions, view) {
     return h("section", { class: "td-month", "aria-label": "本月提示" },
       head,
       h("div", { class: "td-month-lists" },
-        h("div", { class: "td-list is-good" }, h("h3", null, h("span", { class: "td-mini-seal", "aria-hidden": "true" }, "宜"), "本月宜"), chipList(content.suitable, "good")),
-        h("div", { class: "td-list is-bad" }, h("h3", null, h("span", { class: "td-mini-seal", "aria-hidden": "true" }, "忌"), "本月忌"), chipList(content.avoid, "bad"))),
+        h("div", { class: "td-list is-good" }, h("h3", { class: "sr-only" }, "本月宜"), chipList(content.suitable, "good", "宜")),
+        h("div", { class: "td-list is-bad" }, h("h3", { class: "sr-only" }, "本月忌"), chipList(content.avoid, "bad", "忌"))),
       h("div", { class: "td-month-extras" },
         outfitSection(content.outfit, view),
         braceletSection(content.outfit)));
@@ -300,7 +304,7 @@ function monthBlock(payload, actions, view) {
     issueCard({
       tone: failed ? "error" : "quiet",
       title: failed ? "本月内容生成失败" : "本月内容暂未生成",
-      text: month.message || (failed ? "可以重新生成，不消耗 AI 回答积分。" : "点一下就开始准备，不消耗 AI 回答积分。"),
+      text: month.message || "不消耗 AI 回答积分。",
       button: failed ? "重新生成本月" : "生成本月内容",
       busyText: "正在重新生成",
       onRetry: (buttonNode, busy, label) => actions.regenerate("month", buttonNode, busy, label),
@@ -311,7 +315,6 @@ function gateNode(kind, payload, actions) {
   const generation = payload?.generation || {};
   const shell = ({ tone = "", mark, title, text, body = null }) => h("section", { class: ["td-gate", tone && `is-${tone}`] },
     h("div", { class: "td-gate-mark", "aria-hidden": "true" }, mark),
-    h("p", { class: "kicker" }, "观象台"),
     h("h2", { class: "td-gate-title" }, title),
     text ? h("p", { class: "td-gate-text" }, text) : null,
     body);
@@ -358,10 +361,10 @@ function gateNode(kind, payload, actions) {
       tone: paused ? "" : "error",
       mark: icon(paused ? "clock" : "alert"),
       title: paused ? "今日与本月尚未更新" : "本次生成失败",
-      text: generation.message || (paused ? "未自动生成，按需更新。" : "内容准备失败。"),
+      text: generation.message || "",
       body: h("div", { class: "td-gate-actions" },
         button,
-        paused ? h("p", { class: "td-gate-note" }, "点击后才开始准备，不消耗 AI 回答积分。") : null),
+        paused ? h("p", { class: "td-gate-note" }, "不消耗 AI 回答积分。") : null),
     });
   }
   const refresh = h("button", { type: "button", class: "btn btn-ghost btn-sm" }, icon("refresh"), "刷新看看");
@@ -370,7 +373,7 @@ function gateNode(kind, payload, actions) {
     tone: "preparing",
     mark: h("span", { class: "td-gate-spin" }, icon("sun")),
     title: "正在准备今日与本月",
-    text: generation.message || "正在根据默认命盘准备内容。",
+    text: generation.message || "",
     body: h("div", { class: "td-gate-actions" }, h("p", { class: "td-gate-note" }, "完成后自动保存。"), refresh),
   });
 }
@@ -394,17 +397,17 @@ function skeletonView() {
 function anonView(ctx) {
   const reason = "登录后，每天为你准备今日宜忌与本月提示。";
   const features = [
-    ["good", h("span", { class: "td-feature-seal" }, "宜"), "今日宜忌", "每天按你的命盘准备，做事心里有数"],
+    ["good", h("span", { class: "td-feature-seal" }, "宜"), "今日宜忌", "今天适合做什么、少碰什么"],
     ["month", h("span", { class: "td-feature-seal" }, "月"), "本月提示", "按节气划分的本月宜与忌"],
     ["color", glyph("palette"), "穿搭配色", "本月适合的颜色，以及为什么是它"],
-    ["bead", glyph("beads"), "手串材质", "适合本月佩戴的材质与缘由"],
+    ["bead", glyph("beads"), "手镯材质", "适合本月佩戴的材质与缘由"],
   ];
   return h("div", { class: "td-anon" },
     h("section", { class: "td-anon-hero" },
       h("div", { class: "td-hero-mark", "aria-hidden": "true" }, icon("sun")),
       h("p", { class: "kicker" }, "观象台"),
       h("h1", { class: "td-anon-title" }, "每天一份属于你的宜忌"),
-      h("p", { class: "td-anon-text" }, "登录并保存一张本人八字命盘，观象台会按你的命盘，每天准备今日宜忌，每月准备本月提示、穿搭配色与手串材质。"),
+      h("p", { class: "td-anon-text" }, "登录后排一张本人八字（排盘免费），之后每天自动更新。"),
       h("div", { class: "td-anon-actions" },
         h("button", { type: "button", class: "btn btn-primary btn-lg", onClick: () => ctx.openAuth({ reason }) }, icon("user"), "登录 / 注册"),
         h("a", { class: "btn btn-ghost btn-lg", href: "#/" }, "先逛逛广场"))),
@@ -412,12 +415,6 @@ function anonView(ctx) {
       h("span", { class: "td-feature-mark", "aria-hidden": "true" }, mark),
       h("b", null, title),
       h("span", null, text)))),
-    h("section", { class: "td-how", "aria-labelledby": "td-how-title" },
-      h("h2", { class: "td-section-title", id: "td-how-title" }, "三步开始"),
-      h("ol", { class: "td-how-steps" },
-        h("li", null, h("b", null, "登录账户"), h("span", null, "注册即赠送积分")),
-        h("li", null, h("b", null, "排一张本人八字"), h("span", null, "设为默认命盘，不扣积分")),
-        h("li", null, h("b", null, "每天打开「今日」"), h("span", null, "宜忌与本月提示自动准备好")))),
     actionRail());
 }
 
@@ -510,8 +507,7 @@ export function render(ctx) {
   const daySlot = h("div", { class: "td-slot" });
   const monthSlot = h("div", { class: "td-slot" });
   const railSlot = h("div", { class: "td-slot" }, actionRail());
-  const foot = h("p", { class: "td-foot" }, icon("info", "icon-sm"), "内容依据你的默认命盘自动准备，仅供传统文化参考；更换默认命盘请到",
-    h("a", { class: "link-btn", href: "#/me/archives" }, "我的盘"), "。");
+  const foot = h("p", { class: "td-foot" }, icon("info", "icon-sm"), "内容按默认命盘自动准备，仅供传统文化参考。");
 
   const signatures = new Map();
   function setSlot(slot, signature, build) {

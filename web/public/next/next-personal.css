@@ -88,7 +88,6 @@
 .td-card.is-bad { background: var(--bg-elev); border-color: var(--line); }
 .td-card-head { display: flex; align-items: center; gap: 12px; }
 .td-card-head h2 { font-size: 18px; font-weight: 800; }
-.td-card-head p { color: var(--ink-3); font-size: 13px; }
 .td-seal {
   display: grid; place-items: center; flex: none;
   width: 46px; height: 46px; border-radius: 14px;
@@ -145,9 +144,11 @@
 .td-list h3 { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 800; }
 .td-list .td-chips li { background: var(--bg-elev); }
 .td-list.is-skeleton { background: var(--bg-elev); border: 1px solid var(--line); }
-.td-mini-seal { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; font: 900 14px/1 var(--font-serif); }
-.td-list.is-good .td-mini-seal { color: var(--on-brand); background: var(--brand); }
-.td-list.is-bad .td-mini-seal { color: var(--bg-elev); background: var(--ink-2); }
+/* 本月宜忌：印章排在词条最前面当小标题，不单占一行，也不再写「本月宜」。 */
+.td-chips .td-chip-seal { display: grid; place-items: center; align-self: center; width: 30px; height: 30px; padding: 0; border-radius: 9px; font: 900 15px/1 var(--font-serif); }
+.td-chips.is-good .td-chip-seal { color: var(--on-brand); background: var(--brand); border-color: transparent; }
+.td-chips.is-bad .td-chip-seal { color: var(--bg-elev); background: var(--ink-2); }
+.td-chips li.td-chip-none { color: var(--ink-3); background: none; border-color: transparent; font-weight: 500; }
 .td-month-extras { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 14px; }
 .td-extra { display: grid; gap: 10px; align-content: start; padding: 18px; border: 1px solid var(--line); border-radius: var(--r-lg); }
 .td-sub-title { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 800; }
@@ -293,19 +294,6 @@
 .td-feature.is-bead .td-feature-mark { color: var(--accent-ink); background: var(--accent-soft); }
 .td-feature b { font-size: 15.5px; }
 .td-feature > span:last-child { color: var(--ink-3); font-size: 13px; }
-.td-how { display: grid; gap: 10px; }
-.td-how-steps { list-style: none; counter-reset: td-step; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
-.td-how-steps li {
-  counter-increment: td-step;
-  display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: center;
-  padding: 14px 16px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-}
-.td-how-steps li::before { content: counter(td-step); grid-row: span 2; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; color: var(--brand-ink); background: var(--brand-soft); font-weight: 800; }
-.td-how-steps b { font-size: 14.5px; }
-.td-how-steps span { color: var(--ink-3); font-size: 12.5px; }
 
 .sheet-city { width: min(440px, 100%); }
 .td-city-form { display: grid; gap: 14px; }
@@ -943,7 +931,7 @@
   .td-date { font-size: 13.5px; }
   .td-hero-chips { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
   .td-chip { max-width: 100%; }
-  .td-duo, .td-month-lists, .td-month-extras, .td-rail, .td-how-steps { grid-template-columns: minmax(0, 1fr); }
+  .td-duo, .td-month-lists, .td-month-extras, .td-rail { grid-template-columns: minmax(0, 1fr); }
   .td-card { padding: 16px; gap: 14px; border-radius: 20px; }
   .td-seal { width: 42px; height: 42px; font-size: 22px; }
   .td-month { padding: 16px; gap: 16px; border-radius: 20px; }
