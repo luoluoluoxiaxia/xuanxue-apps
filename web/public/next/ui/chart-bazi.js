@@ -501,7 +501,8 @@ export function baziMeta(payload, input = {}) {
   ].filter(Boolean).join(" · ");
 }
 
-export function baziPanel(payload, { name = "", input = {} } = {}) {
+// beside：摆在解读页标题旁边（桌面右栏），命盘名页面上已经有了，盘头只留出生信息和层级切换。
+export function baziPanel(payload, { name = "", input = {}, beside = false } = {}) {
   // relationsOpen / endpointsOpen：进阶里「作用关系」默认展开、「逐柱落点」默认收起，重绘时沿用用户的选择。
   const state = {
     dayun: null,
@@ -532,8 +533,8 @@ export function baziPanel(payload, { name = "", input = {} } = {}) {
     root.replaceChildren(...[
       h("header", { class: "cp-head" },
         h("div", { class: "cp-title" },
-          h("p", { class: "kicker" }, "八字命盘"),
-          h("h2", null, name || payload?.profile_name || "我的命盘"),
+          beside ? null : h("p", { class: "kicker" }, "八字命盘"),
+          beside ? null : h("h2", null, name || payload?.profile_name || "我的命盘"),
           h("p", { class: "cp-meta" }, baziMeta(payload, input))),
         modeSeg),
       caveat ? h("p", { class: "cp-caveat" }, icon("info", "icon-sm"), h("span", null, caveat)) : null,

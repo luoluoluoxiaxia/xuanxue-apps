@@ -422,7 +422,6 @@
 .strip-pillars .gz { font-size: 16px; }
 .strip-pillars .gz.is-day { padding: 1px 4px; border-radius: 6px; background: var(--brand-soft); }
 .strip-dm { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.strip-names { font-size: 15px; font-weight: 800; letter-spacing: .06em; white-space: nowrap; }
 
 @media (max-width: 1179px) {
   .rd-layout { grid-template-columns: minmax(0, 1fr); }
@@ -469,7 +468,7 @@
   .cp-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .chart-panel { padding: 16px; gap: 16px; }
   .strip-pillars .gz { font-size: 15px; }
-  .strip-dm { display: none; }
+  .strip-dm:not(.is-liuyao) { display: none; }
 }
 
 /* 名词解释 */
