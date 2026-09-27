@@ -91,3 +91,39 @@ export function query(params) {
   const text = search.toString();
   return text ? `?${text}` : "";
 }
+
+// 短时读缓存：悬停或按下卡片时预取详情，打开时先用缓存秒开，再由页面自行刷新。
+const memo = new Map();
+
+export function cachedGet(path, { ttl = 30000 } = {}) {
+  const hit = memo.get(path);
+  if (hit && Date.now() - hit.at < ttl) return hit.promise;
+  const entry = { at: Date.now() };
+  entry.promise = get(path, { cache: "no-store" }).then(value => {
+    entry.value = value;
+    return value;
+  }, error => {
+    if (memo.get(path) === entry) memo.delete(path);
+    throw error;
+  });
+  memo.set(path, entry);
+  return entry.promise;
+}
+
+export function prefetch(path, options) {
+  cachedGet(path, options).catch(() => {});
+}
+
+// 同步取出仍有效且已完成的缓存（没有则返回 undefined）。
+export function peekCached(path, { ttl = 30000 } = {}) {
+  const hit = memo.get(path);
+  if (!hit || Date.now() - hit.at >= ttl || !("value" in hit)) return undefined;
+  return hit.value;
+}
+
+export function invalidateCached(prefix) {
+  for (const key of memo.keys()) if (key.startsWith(prefix)) memo.delete(key);
+}
+
+// 登录状态变化后，缓存里的个人字段（是否点赞等）不再可信。
+if (typeof document !== "undefined") document.addEventListener?.("xz:authchange", () => memo.clear());

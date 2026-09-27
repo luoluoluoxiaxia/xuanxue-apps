@@ -1,6 +1,6 @@
 // 玄枢新版前端入口：页面外壳、路由、账户会话与主题。
 // 新版是独立页面（next.html），与经典版共用同一套公开接口；界面版本由用户在两边的切换按钮决定。
-import { h, $, on } from "./lib/dom.js?v=n1";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n1";
 import { icon, brandMark } from "./lib/icons.js?v=n1";
 import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n1";
 import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n1";
@@ -89,10 +89,38 @@ function buildShell() {
     h("a", { class: "tab", href: "#/inbox", "data-tab": "inbox" }, icon("bell"), h("span", null, "消息"), tabBadge),
     h("a", { class: "tab", href: "#/me", "data-tab": "me" }, icon("user"), h("span", null, "我")));
   const skip = h("a", { class: "skip-link", href: "#main", onClick: event => { event.preventDefault(); main.focus(); } }, "跳到主要内容");
-  app.replaceChildren(skip, topbar, main, tabbar);
+  const netBanner = h("div", { class: "net-banner", role: "status", hidden: true }, icon("alert"), h("span", null, "网络已断开，恢复后会自动重试"));
+  app.replaceChildren(skip, topbar, netBanner, main, tabbar);
   app.dataset.state = "ready";
-  Object.assign(shell, { app, topbar, main, tabbar, accountSlot });
+  Object.assign(shell, { app, topbar, main, tabbar, accountSlot, netBanner });
+  // 再点一次当前所在的导航：先回到顶部；已在顶部时刷新当前页。
+  topbar.addEventListener("click", onNavTap);
+  tabbar.addEventListener("click", onNavTap);
 }
+
+function onNavTap(event) {
+  const link = event.target instanceof Element ? event.target.closest('a[href^="#/"]') : null;
+  if (!link || event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  const current = location.hash && location.hash !== "#" ? location.hash : "#/";
+  if (link.getAttribute("href") !== current) return;
+  event.preventDefault();
+  if (window.scrollY > 8) {
+    window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" });
+    return;
+  }
+  if (refreshHandlers.length) refreshHandlers.forEach(fn => { try { fn(); } catch (_) {} });
+  else renderRoute(currentRoute(), currentRoute(), {});
+}
+
+/* ---------- 网络状态 ---------- */
+function syncNetwork(recovered = false) {
+  const offline = navigator.onLine === false;
+  if (shell.netBanner) shell.netBanner.hidden = !offline;
+  document.documentElement.classList.toggle("is-offline", offline);
+  if (recovered && !offline) toast("网络已恢复", { type: "ok" });
+}
+window.addEventListener("offline", () => syncNetwork());
+window.addEventListener("online", () => syncNetwork(true));
 
 function renderAccountSlot() {
   const state = session.get();
@@ -185,7 +213,31 @@ function syncInboxBadge({ unread }) {
     badge.hidden = !unread;
     badge.textContent = unread > 99 ? "99+" : String(unread || "");
   });
+  applyTitle();
 }
+
+/* ---------- 标签页标题 ---------- */
+let baseTitle = "玄枢 · 问事与讨论";
+let attentionLabel = "";
+
+function applyTitle() {
+  const unread = inbox.get().unread || 0;
+  const prefix = attentionLabel ? `【${attentionLabel}】` : unread ? `(${unread > 99 ? "99+" : unread}) ` : "";
+  document.title = prefix + baseTitle;
+}
+
+// 页面在后台时（例如解读完成），在标签页标题上提示一次，回到页面后自动清除。
+export function attention(label) {
+  if (document.visibilityState === "visible" || !label) return;
+  attentionLabel = label;
+  applyTitle();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && attentionLabel) {
+    attentionLabel = "";
+    applyTitle();
+  }
+});
 
 function scheduleInbox() {
   clearInterval(inboxTimer);
@@ -199,6 +251,7 @@ function scheduleInbox() {
 let active = null;
 let renderToken = 0;
 const activeCleanups = [];
+const refreshHandlers = [];
 
 const ctxBase = {
   navigate,
@@ -212,8 +265,10 @@ const ctxBase = {
   setTheme,
   themePreference,
   logout: () => doLogout(),
+  attention,
   setTitle(title) {
-    document.title = title ? `${title} · 玄枢` : "玄枢 · 问事与讨论";
+    baseTitle = title ? `${title} · 玄枢` : "玄枢 · 问事与讨论";
+    applyTitle();
   },
 };
 
@@ -225,6 +280,7 @@ function renderRoute(match, previous, { restoreScroll } = {}) {
   try { active?.destroy?.(); } catch (_) {}
   try { activeCleanups.splice(0).forEach(fn => fn()); } catch (_) {}
   active = null;
+  refreshHandlers.length = 0;
   const view = match.route?.view || FeedView;
   const ctx = {
     ...ctxBase,
@@ -239,6 +295,8 @@ function renderRoute(match, previous, { restoreScroll } = {}) {
       return stop;
     },
     cleanup(fn) { activeCleanups.push(fn); },
+    // 用户再次点当前导航且已在顶部时调用（例如重新拉取最新内容）。
+    onRefresh(fn) { if (token === renderToken) refreshHandlers.push(fn); },
   };
   syncNav(match.path);
   const result = view.render(ctx) || {};
@@ -300,6 +358,7 @@ function boot() {
     history.replaceState(history.state, "", `${location.pathname}${legacy}`);
   }
   buildShell();
+  syncNetwork();
   renderAccountSlot();
   session.subscribe(state => {
     renderAccountSlot();

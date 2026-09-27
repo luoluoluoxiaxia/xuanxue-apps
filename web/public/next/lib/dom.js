@@ -97,3 +97,22 @@ export function whenVisible(element, callback, rootMargin = "600px 0px") {
   observer.observe(element);
   return () => observer.disconnect();
 }
+
+export const coarsePointer = () => window.matchMedia?.("(pointer: coarse)").matches === true;
+
+// 输入框回车行为（中文输入法选词时的回车从不触发发送）：
+// - "chat"：回车发送、Shift+回车换行，手机键盘的回车键显示为「发送」；
+// - "compose"：回车换行，Ctrl/⌘+回车发送（长评论、正文）。
+export function submitOnEnter(field, submit, { mode = "chat" } = {}) {
+  field.setAttribute("enterkeyhint", mode === "chat" ? "send" : "enter");
+  const listener = event => {
+    if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+    const modifier = event.metaKey || event.ctrlKey;
+    if (modifier || (mode === "chat" && !event.shiftKey)) {
+      event.preventDefault();
+      submit();
+    }
+  };
+  field.addEventListener("keydown", listener);
+  return () => field.removeEventListener("keydown", listener);
+}

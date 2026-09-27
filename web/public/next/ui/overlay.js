@@ -73,6 +73,7 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
   overlay.addEventListener("mousedown", event => {
     if (event.target === overlay && dismissible) entry.close("backdrop");
   });
+  if (dismissible) enableSwipeDown(panel, () => entry.close("swipe"));
   stack.push(entry);
   lockScroll();
   document.body.append(overlay);
@@ -82,6 +83,50 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
     target.focus({ preventScroll: true });
   });
   return { close: entry.close, panel, body: bodyNode, footer: footNode };
+}
+
+// 手机底部面板：按住把手或标题栏向下拖动即可关闭，拖得不够远则弹回。
+function enableSwipeDown(panel, close) {
+  const handles = panel.querySelectorAll(".sheet-grip, .sheet-head");
+  let startY = 0;
+  let startTime = 0;
+  let offset = 0;
+  let pointer = null;
+  const isBottomSheet = () => window.matchMedia?.("(max-width: 719px)").matches;
+  const down = event => {
+    if (event.pointerType === "mouse" || !isBottomSheet()) return;
+    if (event.target instanceof Element && event.target.closest("button, a, input, textarea, select")) return;
+    pointer = event.pointerId;
+    startY = event.clientY;
+    startTime = performance.now();
+    offset = 0;
+    try { event.currentTarget.setPointerCapture?.(pointer); } catch (_) {}
+    panel.style.transition = "none";
+    panel.style.animation = "none";
+  };
+  const move = event => {
+    if (event.pointerId !== pointer) return;
+    offset = Math.max(0, event.clientY - startY);
+    panel.style.transform = `translateY(${offset}px)`;
+  };
+  const up = event => {
+    if (event.pointerId !== pointer) return;
+    pointer = null;
+    const speed = offset / Math.max(1, performance.now() - startTime);
+    panel.style.transition = "transform .22s cubic-bezier(.16, 1, .3, 1)";
+    if (offset > 110 || (offset > 30 && speed > 0.6)) {
+      panel.style.transform = "translateY(100%)";
+      close();
+    } else {
+      panel.style.transform = "";
+    }
+  };
+  handles.forEach(node => {
+    node.addEventListener("pointerdown", down);
+    node.addEventListener("pointermove", move);
+    node.addEventListener("pointerup", up);
+    node.addEventListener("pointercancel", up);
+  });
 }
 
 export function closeAllSheets() {
