@@ -1,9 +1,11 @@
 // 六爻卦盘面板。起卦接口的 yaos 自下而上（yaos[0] 为初爻），展示时自上而下。
+// 点一行（或行里的「几爻」按钮）看这一爻的排盘事实与古典释读（ui/popover.js）。
 import { h } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { guaGlyph, elementClass } from "./gua.js?v=n1";
 import { LY_POS, CN_NUM } from "../lib/copy.js?v=n1";
 import { openGlossary } from "./glossary.js?v=n1";
+import { yaoPop } from "./popover.js?v=n1";
 
 // 转成社区卦象同样的「上爻在前」线条结构，复用卦形绘制。
 export function linesFromYaos(yaos) {
@@ -22,6 +24,37 @@ export function liuyaoTitle(payload) {
   const moving = Array.isArray(payload?.dong_yao) && payload.dong_yao.length;
   const bian = moving ? payload?.bian_gua?.name : "";
   return bian ? `${ben} 之 ${bian}` : ben;
+}
+
+// 表格行保留表格语义；键盘与读屏用「位」一栏里的按钮，鼠标和触屏点整行任意处都可打开。
+function yaoRow(yao) {
+  const pos = posLabel(yao.pos);
+  const trigger = h("button", {
+    type: "button",
+    class: "ly-pos-btn",
+    "aria-label": `${pos} ${yao.liu_qin || ""}${yao.najia || ""}${yao.wuxing || ""}，查看释读`,
+  }, pos, icon("info", "icon-sm"));
+  return h("tr", {
+    class: [yao.moving && "is-moving", "is-clickable"],
+    onClick: event => {
+      // 在行里拖选文字时不弹出。
+      const selecting = !(event.target instanceof Element && event.target.closest("button")) && String(window.getSelection?.() || "").trim();
+      if (!selecting) yaoPop(yao, { returnFocus: trigger });
+    },
+  },
+  h("td", null, yao.liu_shen || ""),
+  h("td", null, h("span", null, yao.liu_qin || ""), " ", h("b", { class: elementClass(yao.wuxing) }, `${yao.najia || ""}${yao.wuxing || ""}`)),
+  h("td", null, h("span", { class: "ly-glyph" },
+    h("span", { class: ["ly-bar", yao.yin_yang === "阴" ? "is-yin" : "is-yang"], "aria-label": yao.yin_yang === "阴" ? "阴爻" : "阳爻" }, h("i"), h("i")),
+    yao.moving ? h("em", null, yao.old_young === "老阳" ? "○" : "×") : null)),
+  h("td", null, h("span", { class: "ly-tags" },
+    trigger,
+    yao.shi ? h("span", { class: "ly-tag is-shi" }, "世") : null,
+    yao.ying ? h("span", { class: "ly-tag is-ying" }, "应") : null,
+    yao.kong ? h("span", { class: "ly-tag is-kong" }, "空") : null)),
+  h("td", { class: "ly-extra" },
+    yao.fu_shen ? h("span", null, `伏 ${yao.fu_shen.liu_qin || ""}${yao.fu_shen.najia || ""}`) : null,
+    yao.bian ? h("span", null, `→ ${yao.bian.liu_qin || ""}${yao.bian.najia || ""}${yao.bian.wuxing || ""}`) : null));
 }
 
 export function liuyaoPanel(payload) {
@@ -52,23 +85,10 @@ export function liuyaoPanel(payload) {
       h("div", null, h("dt", null, "动爻"), h("dd", null, `${CN_NUM[moving.length] || moving.length}处`))),
     h("div", { class: "ly-scroll" },
       h("table", { class: "ly-table" },
-        h("caption", { class: "sr-only" }, "六爻排布（自上而下）"),
+        h("caption", { class: "sr-only" }, "六爻排布（自上而下，每行可看这一爻的释读）"),
         h("thead", null, h("tr", null, ["六神", "六亲 纳甲", "爻", "位", "伏 · 变"].map(label => h("th", { scope: "col" }, label)))),
-        h("tbody", null, rows.map(yao => h("tr", { class: yao.moving ? "is-moving" : "" },
-          h("td", null, yao.liu_shen || ""),
-          h("td", null, h("span", null, yao.liu_qin || ""), " ", h("b", { class: elementClass(yao.wuxing) }, `${yao.najia || ""}${yao.wuxing || ""}`)),
-          h("td", null, h("span", { class: "ly-glyph" },
-            h("span", { class: ["ly-bar", yao.yin_yang === "阴" ? "is-yin" : "is-yang"], "aria-label": yao.yin_yang === "阴" ? "阴爻" : "阳爻" }, h("i"), h("i")),
-            yao.moving ? h("em", null, yao.old_young === "老阳" ? "○" : "×") : null)),
-          h("td", null, h("span", { class: "ly-tags" },
-            h("span", { class: "ly-pos" }, posLabel(yao.pos)),
-            yao.shi ? h("span", { class: "ly-tag is-shi" }, "世") : null,
-            yao.ying ? h("span", { class: "ly-tag is-ying" }, "应") : null,
-            yao.kong ? h("span", { class: "ly-tag is-kong" }, "空") : null)),
-          h("td", { class: "ly-extra" },
-            yao.fu_shen ? h("span", null, `伏 ${yao.fu_shen.liu_qin || ""}${yao.fu_shen.najia || ""}`) : null,
-            yao.bian ? h("span", null, `→ ${yao.bian.liu_qin || ""}${yao.bian.najia || ""}${yao.bian.wuxing || ""}`) : null)))))),
-    h("p", { class: "cp-note" }, "纳甲六亲依京房八宫 · 六神依日干起法"),
+        h("tbody", null, rows.map(yaoRow)))),
+    h("p", { class: "cp-note" }, "纳甲六亲依京房八宫 · 六神依日干起法 · 点一爻看释读"),
     h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("liuyao") }, icon("book"), "名词解释"));
 }
 

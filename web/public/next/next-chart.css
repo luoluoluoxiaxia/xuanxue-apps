@@ -1,0 +1,209 @@
+/* ==========================================================================
+   玄枢 · 命盘与卦盘面板的进阶内容与古典解读浮层（next.html）
+   只通过 next.css 中的令牌取色；五行色（el-*）只用于命盘数据本身。
+   ========================================================================== */
+
+/* ---------- 四柱：整柱可点，打开古典解读 ---------- */
+.cp-pillar {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  color: inherit;
+  cursor: pointer;
+  transition: background .16s var(--ease), box-shadow .16s var(--ease), transform .12s var(--ease);
+}
+.cp-pillar:active { transform: scale(.98); }
+.cp-pillar:focus-visible { box-shadow: var(--focus); }
+.cp-pillar.is-day:focus-visible { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand) 40%, transparent), var(--focus); }
+@media (hover: hover) {
+  .cp-pillar:hover { background: var(--bg-press); }
+  .cp-pillar.is-day:hover { background: color-mix(in srgb, var(--brand-soft) 90%, var(--brand)); }
+}
+
+/* 手动四柱的近似锚点说明：常驻在盘头下方。 */
+.cp-caveat {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 10px 12px;
+  color: var(--ink-2); background: var(--bg-sunken);
+  border-radius: 12px;
+  font-size: 12.5px; line-height: 1.6;
+}
+.cp-caveat .icon { margin-top: 2px; color: var(--brand-ink); }
+
+/* ---------- 五行：第四列写明「表层有 / 藏干见 / 未见」 ---------- */
+.cp-wx { grid-template-columns: 22px minmax(0, 1fr) 44px 40px; }
+.cp-wx-state { color: var(--ink-3); font-size: 11.5px; font-weight: 600; text-align: right; white-space: nowrap; }
+.cp-wx.is-absent .cp-wx-state { color: var(--ink-2); }
+
+/* ---------- 走势：所选一格的横轴文字加深 ---------- */
+.trend-x.is-num { font: 600 10px var(--font-sans); font-variant-numeric: tabular-nums; }
+.trend-x.is-selected { fill: var(--ink); font-weight: 800; }
+.cp-trend-note b { margin-right: 2px; color: var(--ink-2); font-weight: 700; }
+
+/* 运内流年的小标题与「大运释义 / 流年释义」按钮 */
+.cp-sub-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; padding-top: 12px; border-top: 1px solid var(--line); }
+.cp-sub-title { display: grid; gap: 1px; min-width: 0; }
+.cp-sub-title h4 { font-size: 14px; font-weight: 800; letter-spacing: .02em; }
+.cp-sub-title .muted { font-size: 12px; }
+.cp-info { flex: none; min-height: 30px; padding: 0 10px 0 8px; gap: 4px; font-size: 12.5px; color: var(--ink-2); }
+.cp-info .icon { width: 15px; height: 15px; color: var(--ink-3); }
+.cp-info:hover { color: var(--ink); }
+.cp-pick { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.cp-pick .liunian-detail { min-width: 0; line-height: 1.6; }
+.cp-pick-kicker { margin-right: 6px; color: var(--ink-3); font-size: 12px; font-weight: 700; }
+
+/* 关系、神煞之类的文字标签允许换行，窄屏上不撑破面板。 */
+.cp-chips .chip { height: auto; min-height: 24px; padding: 4px 9px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+
+/* ---------- 没有大运时：今年流年 / 当前流月 两格 ---------- */
+.cp-stage { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cp-stage-card {
+  position: relative;
+  display: grid; justify-items: start; align-content: start; gap: 3px;
+  min-width: 0; padding: 12px 14px;
+  text-align: left; color: inherit;
+  background: var(--bg-sunken);
+  border: 1.5px solid transparent; border-radius: 14px;
+  transition: background .16s var(--ease), border-color .16s var(--ease);
+}
+.cp-stage-card.is-current { background: var(--bg-elev); border-color: var(--brand); }
+.cp-stage-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+.cp-stage-kicker { color: var(--ink-3); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+.cp-stage-badge { flex: none; padding: 0 7px; color: var(--ink-2); background: var(--bg-elev); border-radius: 999px; font-size: 11px; font-weight: 800; line-height: 18px; }
+.cp-stage-card.is-current .cp-stage-badge { color: var(--on-brand); background: var(--brand); }
+.cp-stage-gz { margin-top: 2px; font-size: 24px; letter-spacing: .04em; }
+.cp-stage-god { color: var(--ink-2); font-size: 13px; font-weight: 600; }
+.cp-stage-range { color: var(--ink-3); font-size: 12px; }
+.cp-stage-hint { color: var(--ink-2); }
+.cp-inline-icon { display: inline-flex; vertical-align: -3px; margin: 0 2px; color: var(--ink-2); }
+@media (hover: hover) {
+  .cp-stage-card:hover { background: var(--bg-press); }
+  .cp-stage-card.is-current:hover { background: var(--brand-tint); }
+}
+
+/* ---------- 进阶：所选大运 · 机械事实 ---------- */
+.dym { display: grid; gap: 10px; margin-top: 4px; padding: 14px; border: 1px solid var(--line-strong); border-radius: 16px; }
+.dym-head { display: grid; gap: 4px; min-width: 0; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+.dym-kicker { color: var(--brand-ink); font-size: 12px; font-weight: 700; letter-spacing: .08em; }
+.dym-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 10px; }
+.dym-title .gz { font-size: 22px; letter-spacing: .04em; }
+.dym-title .muted { font-size: 12px; }
+.dym-badge { color: var(--ink-3); font-size: 11.5px; line-height: 1.5; }
+.dym-tier { display: flex; justify-content: space-between; gap: 8px; color: var(--ink-3); font-size: 12px; font-weight: 700; }
+.dym-tier span:last-child { font-weight: 500; }
+.dym-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.dym-cell { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 9px 11px; background: var(--bg-sunken); border-radius: 12px; }
+.dym-cell.is-wide { grid-column: 1 / -1; }
+.dym-cell dt { color: var(--ink-3); font-size: 11.5px; }
+.dym-cell dd { margin: 0; font: 700 15px/1.35 var(--font-serif); overflow-wrap: anywhere; }
+.dym-stems { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; }
+/* 藏干字号按大字号标准取色对比（≥ 18.66px 粗体）。 */
+.dym-stem b { font: 800 19px/1.2 var(--font-serif); }
+.dym-stem small { margin-left: 4px; color: var(--ink-3); font: 500 11.5px/1.2 var(--font-sans); }
+.dym-empty { color: var(--ink-3); font: 500 13px var(--font-sans); }
+.dym-level { border-top: 1px solid var(--line); }
+.dym-level > summary {
+  display: flex; align-items: center; gap: 10px;
+  min-height: 44px;
+  cursor: pointer; list-style: none;
+  font-size: 13.5px; font-weight: 750;
+}
+.dym-level > summary::-webkit-details-marker { display: none; }
+.dym-level > summary .muted { margin-left: auto; font-size: 12px; font-weight: 500; }
+.dym-level > summary::after {
+  content: ""; flex: none;
+  width: 7px; height: 7px; margin: 0 4px 4px 0;
+  border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3);
+  transform: rotate(45deg);
+  transition: transform .2s var(--ease);
+}
+.dym-level[open] > summary::after { margin: 4px 4px 0 0; transform: rotate(-135deg); }
+.dym-level-body { display: grid; gap: 10px; padding: 0 0 8px; }
+.dym-group { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 8px; align-items: start; }
+.dym-group > span { padding-top: 3px; color: var(--ink-3); font-size: 12px; font-weight: 600; }
+.dym-endpoints { display: grid; gap: 6px; list-style: none; }
+.dym-endpoint { display: grid; gap: 2px; min-width: 0; padding: 8px 10px; background: var(--bg-sunken); border-radius: 10px; }
+.dym-endpoint span { color: var(--ink-3); font-size: 12px; }
+.dym-endpoint b { font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
+.dym-endpoint em { color: var(--ink-2); font-size: 12.5px; font-style: normal; overflow-wrap: anywhere; }
+
+/* ---------- 进阶：当前流月引动与十二流月 ---------- */
+.cp-liuyue-head { margin-top: 6px; }
+.lm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.lm-cell {
+  position: relative;
+  display: grid; justify-items: center; gap: 2px;
+  min-width: 0; padding: 9px 2px 8px;
+  color: inherit;
+  border: 1px solid var(--line-strong); border-radius: 12px;
+  transition: background .16s var(--ease), border-color .16s var(--ease);
+}
+.lm-cell.is-current { background: var(--brand-tint); border-color: var(--brand); }
+.lm-name { color: var(--ink-3); font-size: 11.5px; font-weight: 700; }
+.lm-gz { font-size: 17px; }
+.lm-god { color: var(--ink-2); font-size: 11.5px; }
+.lm-now { position: absolute; top: -8px; right: -2px; padding: 1px 6px; color: var(--on-brand); background: var(--brand); border-radius: 999px; font-size: 10px; font-weight: 800; line-height: 1.4; }
+@media (hover: hover) {
+  .lm-cell:hover { background: var(--bg-hover); }
+  .lm-cell.is-current:hover { background: var(--brand-soft); }
+}
+
+/* ---------- 六爻：整行可点，键盘用「位」一栏的按钮 ---------- */
+.ly-table tr.is-clickable { cursor: pointer; }
+.ly-pos-btn {
+  display: inline-flex; align-items: center; gap: 3px;
+  min-height: 28px; margin-left: -6px; padding: 0 6px;
+  color: var(--ink-2); border-radius: 8px;
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+}
+.ly-pos-btn .icon { width: 14px; height: 14px; color: var(--ink-3); }
+@media (hover: hover) {
+  .ly-table tbody tr.is-clickable:hover td { background: var(--bg-hover); }
+  .ly-pos-btn:hover { color: var(--ink); }
+}
+
+/* ---------- 古典解读浮层（桌面对话框 / 手机底部面板） ---------- */
+.sheet-pop { width: min(500px, 100%); }
+.pop { display: grid; gap: 16px; }
+.pop-hero { display: flex; align-items: center; gap: 16px; }
+.pop-gz { display: inline-flex; gap: 2px; font: 800 46px/1.05 var(--font-serif); letter-spacing: .02em; }
+.pop-hero-meta { display: grid; justify-items: start; gap: 6px; min-width: 0; }
+.pop-god { height: 26px; padding: 0 11px; font-size: 13px; }
+.pop-el { color: var(--ink-3); font-size: 12.5px; }
+.pop-sub { color: var(--ink-3); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+.pop-tags { display: grid; gap: 8px; }
+.pop-tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.pop-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  min-height: 30px; padding: 3px 11px;
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  font-size: 13px; line-height: 1.35; overflow-wrap: anywhere;
+}
+.pop-tag b { font: 800 16px/1 var(--font-serif); }
+.pop-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.pop-facts div { display: grid; gap: 2px; min-width: 0; padding: 9px 11px; background: var(--bg-sunken); border-radius: 12px; }
+.pop-facts dt { color: var(--ink-3); font-size: 11.5px; }
+.pop-facts dd { margin: 0; font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.pop-classic { display: grid; gap: 8px; }
+.pop-classic p { padding: 2px 0 2px 14px; color: var(--ink); border-left: 3px solid var(--brand); font: 500 15px/1.9 var(--font-serif); }
+.pop-note { padding: 10px 12px; color: var(--ink-3); background: var(--bg-sunken); border-radius: 12px; font-size: 12.5px; line-height: 1.65; }
+.sheet-pop .sheet-foot .btn { min-width: 96px; }
+
+@media (max-width: 719px) {
+  .pop-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pop-gz { font-size: 42px; }
+  .sheet-pop .sheet-foot .btn { flex: 1; }
+}
+@media (max-width: 359px) {
+  .cp-stage { grid-template-columns: minmax(0, 1fr); }
+  .cp-wx { grid-template-columns: 20px minmax(0, 1fr) 40px 38px; gap: 8px; }
+  .dym { padding: 12px; }
+  .dym-group { grid-template-columns: minmax(0, 1fr); gap: 4px; }
+}
+
+/* 触屏：小按钮保证够大的点按区域。 */
+@media (pointer: coarse) {
+  .cp-info { min-height: 36px; }
+  .ly-pos-btn { min-height: 36px; }
+}
