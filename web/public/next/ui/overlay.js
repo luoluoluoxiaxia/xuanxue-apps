@@ -1,8 +1,17 @@
 // 浮层：桌面为居中对话框，手机为底部面板；统一处理焦点、Esc、背景滚动锁与层叠。
 import { h } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
+import { holdNavigation } from "../lib/router.js?v=n1";
 
 const stack = [];
+let historyToken = 0;
+
+// 手机返回键 / 浏览器后退：先关掉最上层的面板，而不是离开页面。
+window.addEventListener("popstate", () => {
+  const top = stack[stack.length - 1];
+  if (!top || !top.historyToken) return;
+  if (history.state?.xzOverlay !== top.historyToken) top.close("back");
+});
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function lockScroll() {
@@ -53,11 +62,21 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
   const entry = {
     panel,
     dismissible,
+    historyToken: 0,
     close(reason = "close") {
       if (closed) return;
       closed = true;
       const index = stack.indexOf(entry);
       if (index >= 0) stack.splice(index, 1);
+      // 用按钮、Esc、下滑等方式关闭时，顺手退掉面板占用的那条历史记录；路由切换或返回键关闭时不用。
+      if (entry.historyToken && reason !== "route" && reason !== "back" && history.state?.xzOverlay === entry.historyToken) {
+        holdNavigation(new Promise(resolve => {
+          const done = () => { window.removeEventListener("popstate", done); resolve(); };
+          window.addEventListener("popstate", done);
+          setTimeout(done, 600);
+          history.back();
+        }));
+      }
       overlay.classList.add("is-closing");
       const finish = () => {
         overlay.remove();
@@ -78,6 +97,11 @@ export function openSheet({ title = "", body, footer = null, wide = false, dismi
   lockScroll();
   document.body.append(overlay);
   keepAboveKeyboard(overlay, entry);
+  if (dismissible) {
+    entry.historyToken = ++historyToken;
+    const state = history.state && typeof history.state === "object" ? history.state : {};
+    history.pushState({ ...state, xzOverlay: entry.historyToken }, "");
+  }
   requestAnimationFrame(() => {
     const target = panel.querySelector("[autofocus]") || panel.querySelector(".sheet-body " + FOCUSABLE) || closeButton || panel;
     if (target === panel) panel.setAttribute("tabindex", "-1");

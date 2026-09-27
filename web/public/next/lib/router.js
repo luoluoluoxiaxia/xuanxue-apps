@@ -40,7 +40,20 @@ export function href(path, params) {
   return `#${path}${search ? `?${search}` : ""}`;
 }
 
+// 浮层关闭时会先后退掉自己的那条历史记录；这期间发起的跳转要等后退完成，否则会被这次后退撤销。
+let historyHold = null;
+
+export function holdNavigation(promise) {
+  const current = Promise.resolve(promise).catch(() => {});
+  historyHold = current;
+  current.then(() => { if (historyHold === current) historyHold = null; });
+}
+
 export function navigate(to, { replace = false } = {}) {
+  if (historyHold) {
+    historyHold.then(() => navigate(to, { replace }));
+    return;
+  }
   const target = to.startsWith("#") ? to : `#${to}`;
   if (target === location.hash) {
     handle();
@@ -56,6 +69,10 @@ export function navigate(to, { replace = false } = {}) {
 }
 
 export function back(fallback = "/") {
+  if (historyHold) {
+    historyHold.then(() => back(fallback));
+    return;
+  }
   if (index > 0) history.back();
   else navigate(fallback, { replace: true });
 }

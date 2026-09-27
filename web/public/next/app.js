@@ -1,5 +1,5 @@
-// 玄枢新版前端入口：页面外壳、路由、账户会话与主题。
-// 新版是独立页面（next.html），与经典版共用同一套公开接口；界面版本由用户在两边的切换按钮决定。
+// 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
+// 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
 import { h, $, on, reducedMotion } from "./lib/dom.js?v=n1";
 import { icon, brandMark } from "./lib/icons.js?v=n1";
 import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n1";
@@ -17,10 +17,9 @@ import * as TodayView from "./views/today.js?v=n1";
 import * as InboxView from "./views/inbox.js?v=n1";
 import * as MeView from "./views/me.js?v=n1";
 import { openFeedback } from "./views/feedback.js?v=n1";
-import { classicUrl, routeFromLegacy } from "./lib/switch.js?v=n1";
+import { routeFromLegacy } from "./lib/switch.js?v=n1";
 
 const THEME_KEY = "xz-next-theme";
-const UI_KEY = "xz-ui";
 
 /* ---------- 主题 ---------- */
 const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)");
@@ -45,16 +44,23 @@ export function setTheme(pref) {
 }
 systemDark?.addEventListener?.("change", applyTheme);
 
-/* ---------- 界面版本 ---------- */
-export function switchToClassic() {
-  local.set(UI_KEY, "classic");
-  location.href = classicUrl(currentRoute());
-}
-
 /* ---------- 登录门槛 ---------- */
-export async function requireAuth(reason) {
-  if (session.get().authenticated) return true;
-  return openAuth({ reason });
+// force：服务端已返回 401 时先向服务器确认登录状态，避免本地仍以为已登录而反复重试。
+// mode：打开登录面板时默认停在哪个方式（如 "register"）。
+let reauthing = false;
+
+export async function requireAuth(reason, { mode = "", force = false } = {}) {
+  // 重新登录的过程中会话会先变为未登录；这时留在原页面等用户登录，不当作会话失效处理。
+  reauthing = true;
+  try {
+    if (force) {
+      try { await refreshSession(); } catch (_) {}
+    }
+    if (session.get().authenticated) return true;
+    return await openAuth(mode ? { reason, mode } : { reason });
+  } finally {
+    reauthing = false;
+  }
 }
 
 /* ---------- 外壳 ---------- */
@@ -73,7 +79,7 @@ function buildShell() {
   const topbar = h("header", { class: "topbar" },
     h("div", { class: "topbar-inner" },
       h("button", { type: "button", class: "icon-btn topbar-back", "aria-label": "返回", onClick: () => back("/") }, icon("back")),
-      h("a", { class: "brand", href: "#/", "aria-label": "玄枢首页" }, brandMark(), h("span", { class: "brand-name" }, "玄枢"), h("span", { class: "brand-tag" }, "新版")),
+      h("a", { class: "brand", href: "#/", "aria-label": "玄枢首页" }, brandMark(), h("span", { class: "brand-name" }, "玄枢")),
       h("nav", { class: "nav-tabs", "aria-label": "主导航" },
         NAV.map(item => h("a", { class: "nav-tab", href: item.href, "data-nav": item.key }, item.label))),
       h("div", { class: "topbar-actions" },
@@ -171,7 +177,6 @@ export function openAccountMenu(anchor) {
     "sep",
     { label: "外观", icon: pref === "dark" ? "moon" : pref === "light" ? "sun" : "monitor", meta: themeLabel[pref], onSelect: () => { setTheme(nextTheme); toast(`外观：${themeLabel[nextTheme]}`); } },
     { label: "意见反馈", icon: "message", onSelect: () => openFeedback() },
-    { label: "回到经典版", icon: "swap", onSelect: switchToClassic },
     "sep",
     { label: "退出登录", icon: "logout", onSelect: doLogout },
   ], {
@@ -179,7 +184,10 @@ export function openAccountMenu(anchor) {
   });
 }
 
+let loggingOut = false;
+
 export async function doLogout() {
+  loggingOut = true;
   try {
     await logout();
     toast("已退出登录");
@@ -188,7 +196,41 @@ export async function doLogout() {
     else renderRoute(currentRoute(), null, {});
   } catch (error) {
     toast(error.message || "退出没有成功，请稍后再试", { type: "error" });
+  } finally {
+    loggingOut = false;
   }
+}
+
+// 会话自己结束（过期、在其他标签页退出）：离开只属于本人的页面，并提示重新登录。
+function onSessionEnded() {
+  if (loggingOut || reauthing) return;
+  const path = currentRoute()?.path || "/";
+  if (/^\/(me|reading|inbox)/.test(path)) navigate("/", { replace: true });
+  toast("登录已失效，请重新登录", { type: "error", action: { label: "登录", onClick: () => openAuth() } });
+}
+
+/* ---------- 邀请提示 ---------- */
+// 通过好友分享链接（?ref=invite）进来的游客：提示注册领取每日免费积分；登录后自动收起。
+const INVITE_DISMISS_KEY = "xz-invite-dismissed";
+let inviteCard = null;
+
+function showInvitePrompt() {
+  const ref = new URLSearchParams(location.search).get("ref");
+  if (ref !== "invite" || session.get().authenticated || inviteCard) return;
+  try { if (sessionStorage.getItem(INVITE_DISMISS_KEY) === "1") return; } catch (_) {}
+  const close = () => {
+    try { sessionStorage.setItem(INVITE_DISMISS_KEY, "1"); } catch (_) {}
+    inviteCard?.remove();
+    inviteCard = null;
+  };
+  inviteCard = h("aside", { class: "float-card invite-card", "aria-label": "好友邀请" },
+    h("div", { class: "invite-top" },
+      h("span", { class: "invite-mark", "aria-hidden": "true" }, icon("users")),
+      h("div", null, h("h2", null, "朋友分享了一条真实卦帖"), h("p", null, "注册后领取每日免费积分，也能和卦友一起讨论。"))),
+    h("div", { class: "float-actions" },
+      h("button", { type: "button", class: "btn btn-ghost btn-sm", onClick: close }, "稍后"),
+      h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => openAuth({ mode: "register", reason: "首次有效提问会为分享者增加每日积分。" }) }, "注册")));
+  document.body.append(inviteCard);
 }
 
 function syncNav(path) {
@@ -234,7 +276,7 @@ function syncInboxBadge({ unread }) {
 }
 
 /* ---------- 标签页标题 ---------- */
-let baseTitle = "玄枢 · 问事与讨论";
+let baseTitle = "玄枢 · 免费八字排盘与六爻起卦 AI 解读";
 let attentionLabel = "";
 
 function applyTitle() {
@@ -261,7 +303,7 @@ function scheduleInbox() {
   if (!session.get().authenticated) return;
   inboxTimer = setInterval(() => {
     if (document.visibilityState === "visible") refreshInbox();
-  }, 90 * 1000);
+  }, 60 * 1000);
 }
 
 /* ---------- 路由渲染 ---------- */
@@ -277,14 +319,13 @@ const ctxBase = {
   openAuth,
   session,
   toast,
-  switchToClassic,
   refreshInbox,
   setTheme,
   themePreference,
   logout: () => doLogout(),
   attention,
   setTitle(title) {
-    baseTitle = title ? `${title} · 玄枢` : "玄枢 · 问事与讨论";
+    baseTitle = title ? `${title} · 玄枢` : "玄枢 · 免费八字排盘与六爻起卦 AI 解读";
     applyTitle();
   },
 };
@@ -345,31 +386,15 @@ const ROUTES = [
   { path: "/me/:tab", view: MeView },
 ];
 
-/* ---------- 首次打开的介绍卡 ---------- */
-const INTRO_KEY = "xz-next-intro-v1";
-
-function showIntro() {
-  if (local.get(INTRO_KEY, "") === "1") return;
-  const close = () => {
-    local.set(INTRO_KEY, "1");
-    card.remove();
-  };
-  const card = h("aside", { class: "intro-card", role: "dialog", "aria-label": "新版介绍" },
-    h("div", { class: "intro-top" }, brandMark(),
-      h("div", null, h("h2", null, "欢迎来到新版玄枢"), h("p", null, "重新设计的问事社区：写下心事、起一卦，和卦友一起讨论。"))),
-    h("ul", { class: "intro-list" },
-      h("li", null, icon("plaza"), "广场：看看大家在问什么，说说你的判断"),
-      h("li", null, icon("plus"), "提问：六爻问一件事，八字看长期"),
-      h("li", null, icon("sparkle"), "解读：同一张盘上一直追问")),
-    h("div", { class: "intro-actions" },
-      h("button", { type: "button", class: "btn btn-ghost btn-sm", onClick: () => { close(); switchToClassic(); } }, "回到经典版"),
-      h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: close }, "开始体验")));
-  document.body.append(card);
+/* ---------- 启动 ---------- */
+// 旧版界面切换与介绍卡留下的本机记录，已不再使用。
+function forgetRetiredKeys() {
+  ["xz-ui", "xz-ui-intro-v1", "xz-next-intro-v1"].forEach(key => local.remove(key));
 }
 
-/* ---------- 启动 ---------- */
 function boot() {
   applyTheme();
+  forgetRetiredKeys();
   const legacy = routeFromLegacy(location.search);
   if (legacy) {
     history.replaceState(history.state, "", `${location.pathname}${legacy}`);
@@ -382,17 +407,29 @@ function boot() {
     scheduleInbox();
   });
   inbox.subscribe(syncInboxBadge);
-  document.addEventListener("xz:authchange", () => refreshInbox());
-  document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && session.get().authenticated) refreshInbox();
+  document.addEventListener("xz:authchange", event => {
+    refreshInbox();
+    if (event.detail?.authenticated) {
+      inviteCard?.remove();
+      inviteCard = null;
+    } else {
+      onSessionEnded();
+    }
   });
-  on(document, "click", "[data-switch-classic]", event => { event.preventDefault(); switchToClassic(); });
+  let lastCheck = Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible" || !session.get().authenticated) return;
+    refreshInbox();
+    if (Date.now() - lastCheck > 60 * 1000) {
+      lastCheck = Date.now();
+      refreshSession().catch(() => {});
+    }
+  });
   on(document, "click", "[data-open-auth]", event => { event.preventDefault(); openAuth(); });
   on(document, "click", "[data-open-feedback]", event => { event.preventDefault(); openFeedback(); });
   defineRoutes(ROUTES, renderRoute);
-  setTimeout(showIntro, 900);
   refreshSession()
-    .then(() => refreshInbox())
+    .then(() => { refreshInbox(); showInvitePrompt(); })
     .catch(() => toast("暂时连不上服务器，部分内容可能无法加载", { type: "error" }))
     .finally(() => startRouterOnce());
   // 会话请求慢时也先把页面渲染出来，账户状态回来后再刷新相关区域。

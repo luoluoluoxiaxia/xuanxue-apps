@@ -31,7 +31,8 @@ function writeDraft(draft) {
 
 let current = null;
 
-export function openFeedback() {
+// context：从解读页打开时带上档案、盘、对话与任务编号，方便定位是哪一次解读（不带出生信息）。
+export function openFeedback(context = {}) {
   if (current) {
     current.panel.querySelector("textarea")?.focus({ preventScroll: true });
     return current;
@@ -188,6 +189,7 @@ export function openFeedback() {
         message: text,
         contact: contactText,
         page: `next:${location.hash.slice(0, 180)}`,
+        ...feedbackContext(context),
       }, { interaction: true });
       sent = true;
       local.remove(DRAFT_KEY);
@@ -205,4 +207,14 @@ export function openFeedback() {
   });
 
   return sheet;
+}
+
+function feedbackContext({ profileId, chartId, sessionId, taskId } = {}) {
+  const out = {};
+  const toId = value => (Number.isInteger(Number(value)) && Number(value) > 0 ? Number(value) : null);
+  if (toId(profileId)) out.profile_id = toId(profileId);
+  if (toId(chartId)) out.chart_id = toId(chartId);
+  if (typeof sessionId === "string" && /^s_[a-f0-9]{16}$/.test(sessionId)) out.session_id = sessionId;
+  if (typeof taskId === "string" && /^[A-Za-z0-9_-]{1,80}$/.test(taskId)) out.task_id = taskId;
+  return out;
 }

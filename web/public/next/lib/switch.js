@@ -36,21 +36,26 @@ export function routeFromLegacy(search) {
   let route = "";
   const extra = new URLSearchParams();
   if (params.get("post")) {
-    route = `#/post/${encodeURIComponent(params.get("post"))}`;
+    // 通知与旧链接里的 target=comment-<id> 一并带进帖子路由，打开后定位到那条评论。
+    const target = params.get("target") || "";
+    if (/^comment-\d+$/.test(target)) extra.set("target", target);
+    route = `#/post/${encodeURIComponent(params.get("post"))}${extra.toString() ? `?${extra}` : ""}`;
     params.delete("post");
-  } else if (params.get("start") === "liuyao") {
-    route = params.get("community") === "help" ? "#/ask/liuyao?help=1" : "#/ask/liuyao";
-    params.delete("start");
-    params.delete("community");
-  } else if (params.get("start") === "bazi") {
-    route = "#/ask/bazi";
-    params.delete("start");
+    params.delete("target");
+  } else if (params.get("start") === "liuyao" || params.get("start") === "bazi") {
+    const system = params.get("start");
+    if (params.get("community") === "help") extra.set("help", "1");
+    if (system === "bazi" && params.get("set_default") === "1") extra.set("set_default", "1");
+    route = `#/ask/${system}${extra.toString() ? `?${extra}` : ""}`;
+    ["start", "community", "set_default", "from"].forEach(key => params.delete(key));
   } else if (params.get("view") === "credits" || ["success", "cancelled"].includes(params.get("checkout"))) {
-    // 支付返回地址可能只带 checkout / session_id / order_id，同样落到积分页。
+    // 支付返回地址可能只带 checkout / session_id / order_id，同样落到积分页；month 定位到对应月份的明细。
     ["checkout", "session_id", "checkout_session_id", "order_id"].forEach(key => {
       if (params.get(key)) extra.set(key, params.get(key));
       params.delete(key);
     });
+    if (/^\d{4}-\d{2}$/.test(params.get("month") || "")) extra.set("month", params.get("month"));
+    params.delete("month");
     route = `#/me/credits${extra.toString() ? `?${extra}` : ""}`;
     params.delete("view");
   } else if (params.get("view") === "archives") {

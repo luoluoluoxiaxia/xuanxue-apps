@@ -409,7 +409,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
         h("div", { class: "auth-seal", "aria-hidden": "true" }, "玄"),
         h("h2", { class: "auth-title" }, config.title),
         h("p", { class: "auth-sub" }, isRegister
-          ? "验证邮箱后创建账户，注册即赠送积分。"
+          ? (reason ? `${reason} 验证邮箱后创建账户，注册即赠送积分。` : "验证邮箱后创建账户，注册即赠送积分。")
           : isReset ? "验证邮箱后设置一个新密码。" : reason || "登录后可以保存命盘、参与讨论、接收回复。")),
       methodSwitch,
       h("div", methodSwitch ? { id: `${uid}-panel`, role: "tabpanel", "aria-labelledby": `${uid}-tab-${state.mode}` } : null, form),

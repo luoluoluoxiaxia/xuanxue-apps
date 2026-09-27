@@ -114,6 +114,12 @@ test('classic links map onto the new routes and back', async () => {
   assert.equal(routeFromLegacy('?view=credits&checkout=success&session_id=cs_1&order_id=o1'), '#/me/credits?checkout=success&session_id=cs_1&order_id=o1');
   assert.equal(routeFromLegacy('?checkout=cancelled&order_id=o2'), '#/me/credits?checkout=cancelled&order_id=o2');
   assert.equal(routeFromLegacy('?checkout=bogus'), '');
+  assert.equal(routeFromLegacy('?post=ly-abc&target=comment-94505'), '#/post/ly-abc?target=comment-94505');
+  assert.equal(routeFromLegacy('?post=ly-abc&target=javascript:alert(1)'), '#/post/ly-abc');
+  assert.equal(routeFromLegacy('?start=bazi&community=help'), '#/ask/bazi?help=1');
+  assert.equal(routeFromLegacy('?start=bazi&set_default=1&from=personal_home'), '#/ask/bazi?set_default=1');
+  assert.equal(routeFromLegacy('?view=credits&month=2026-08'), '#/me/credits?month=2026-08');
+  assert.equal(routeFromLegacy('?post=ly-abc&ref=invite&inviter=u1'), '?ref=invite&inviter=u1#/post/ly-abc');
   assert.equal(routeFromLegacy(''), '');
   assert.equal(classicUrl({ path: '/post/ly-abc', query: new URLSearchParams() }), './?post=ly-abc&ui=classic#gua-square');
   assert.equal(classicUrl({ path: '/ask/liuyao', query: new URLSearchParams('help=1') }), './?start=liuyao&community=help&ui=classic');
