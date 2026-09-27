@@ -119,6 +119,8 @@ export class Conversation {
       serverDone: false,
       error: "",
       stopped: false,
+      authLost: false,              // 发起时登录失效且没有重新登录：问题由视图退回输入框
+      branch: null,
       credits: null,
       publicPost: null,
       feedback: "",
@@ -164,7 +166,8 @@ export class Conversation {
       this.emit(user, "new");
     }
     const clientRequestId = newRequestId();
-    const message = this.newAi({ question: text, topic, clientRequestId });
+    // 记下分叉信息：登录失效、问题退回输入框时，重发仍按原来的分叉点继续。
+    const message = this.newAi({ question: text, topic, clientRequestId, branch });
     this.messages.push(message);
     this.emit(message, "new");
     const body = this.buildBody(text, { topic, branch, clientRequestId });
@@ -172,7 +175,8 @@ export class Conversation {
     return message;
   }
 
-  async send(message, body) {
+  // reauthed：这一轮已经重新登录过一次。之后再收到 401 就停下报错，不再弹登录、不再重发。
+  async send(message, body, { reauthed = false } = {}) {
     const controller = new AbortController();
     this.live.set(message.id, { controller });
     let task;
@@ -180,22 +184,32 @@ export class Conversation {
       task = await api("/api/interpret", { method: "POST", body, signal: controller.signal });
     } catch (error) {
       if (error && error.name === "AbortError") return;
-      if (error instanceof ApiError && error.status === 401) {
-        message.waitNote = "登录已失效，重新登录后继续。";
-        this.emit(message, "status");
-        const ok = await this.requireReauth();
-        if (ok && !message.stopped) {
-          message.waitNote = "";
-          return this.send(message, body);
-        }
-        return this.fail(message, "登录已失效，问题已保留。");
-      }
+      if (message.stopped || this.destroyed || !message.streaming) return;
+      if (error instanceof ApiError && error.status === 401) return this.resend(message, body, reauthed);
       return this.fail(message, humanizeError(error && error.message));
     }
     if (message.stopped || this.destroyed) return;
     if (!task || !task.task_id) return this.fail(message, "后端没有返回解读任务 ID");
     this.applyTask(message, task);
     if (!TERMINAL.has(task.status)) this.follow(message, true);
+  }
+
+  // 发起时 401：先向服务端确认登录状态（必要时弹出登录），成功后用同一请求体（同一 client_request_id）
+  // 只重发一次；关掉登录面板则保留问题、不再重试。
+  async resend(message, body, reauthed) {
+    if (reauthed) return this.fail(message, "登录状态没有生效，问题已保留；请刷新页面后再试。");
+    message.waitNote = "登录已失效，重新登录后继续。";
+    this.emit(message, "status");
+    let ok = false;
+    try { ok = !!(await this.requireReauth()); } catch (_) { ok = false; }
+    if (message.stopped || this.destroyed || !message.streaming) return;
+    if (!ok) {
+      message.authLost = true;
+      return this.fail(message, "登录已失效，问题已保留。");
+    }
+    message.waitNote = "";
+    this.emit(message, "status");
+    return this.send(message, body, { reauthed: true });
   }
 
   /* ---------- 跟随任务 ---------- */
@@ -237,14 +251,31 @@ export class Conversation {
         this.applyTask(message, snapshot);
         if (!TERMINAL.has(snapshot.status)) this.poll(message);
       } catch (error) {
+        if (!message.streaming || this.destroyed) return;
         if (error instanceof ApiError && error.status === 404) return this.fail(message, "这次解读任务已经不存在了，请重新提问。");
-        if (error instanceof ApiError && error.status === 401) return this.fail(message, "登录已失效，重新登录后可从档案继续查看。");
+        if (error instanceof ApiError && error.status === 401) return this.pollReauth(message, entry);
         entry.failures = (entry.failures || 0) + 1;
         message.waitNote = "网络中断，正在重试；解读仍在继续。";
         this.emit(message, "status");
         this.poll(message, Math.min(10000, 1000 * 2 ** Math.min(entry.failures, 3)));
       }
     }, wait);
+  }
+
+  // 跟随中 401：服务端任务仍在继续。每条回答最多重新登录一次后接着查询；再次 401 或放弃登录就停下，
+  // 回到档案时会重新接上。
+  async pollReauth(message, entry) {
+    if (entry.reauthed) return this.fail(message, "登录已失效，重新登录后可从档案继续查看。");
+    entry.reauthed = true;
+    message.waitNote = "登录已失效，重新登录后继续。";
+    this.emit(message, "status");
+    let ok = false;
+    try { ok = !!(await this.requireReauth()); } catch (_) { ok = false; }
+    if (!message.streaming || this.destroyed) return;
+    if (!ok) return this.fail(message, "登录已失效，重新登录后可从档案继续查看。");
+    message.waitNote = "";
+    this.emit(message, "status");
+    this.poll(message, 0);
   }
 
   closeLive(message) {

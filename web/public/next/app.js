@@ -54,7 +54,7 @@ export async function requireAuth(reason, { mode = "", force = false } = {}) {
   reauthing = true;
   try {
     if (force) {
-      try { await refreshSession(); } catch (_) {}
+      try { await refreshSession({ force: true }); } catch (_) {}
     }
     if (session.get().authenticated) return true;
     return await openAuth(mode ? { reason, mode } : { reason });

@@ -191,6 +191,24 @@
 .loc-preview { color: var(--ink-3); font-size: 13px; }
 .pillar-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .pillar-input { text-align: center; font: 700 20px/1 var(--font-serif); letter-spacing: .12em; }
+.pillar-input::placeholder { font: 400 15px/1 var(--font-sans); letter-spacing: 0; }
+.pillar-input[readonly] { cursor: pointer; caret-color: transparent; }
+/* 正在点选的那一柱：焦点移到选择器里时也看得出在选哪一柱。 */
+.pillar-input.is-picking { border-color: var(--brand); box-shadow: var(--focus); }
+.pillar-picker { display: grid; gap: 8px; padding: 12px 14px 14px; background: var(--bg-sunken); border-radius: var(--r-lg); }
+.pillar-picker[hidden] { display: none; }
+.pk-head { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
+.pk-title { font-size: 15px; font-weight: 800; }
+.pk-step { color: var(--ink-3); font-size: 12.5px; }
+.pk-done { margin-left: auto; }
+.pk-label { margin-top: 2px; color: var(--ink-3); font-size: 12px; font-weight: 700; letter-spacing: .12em; }
+.pk-row { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; }
+.pk-btn { min-height: 44px; padding: 0; color: var(--ink); background: var(--bg-elev); border: 1px solid var(--line-strong); border-radius: 12px; font: 800 18px/1 var(--font-serif); transition: border-color .16s var(--ease), background .16s var(--ease), color .16s var(--ease); }
+.pk-btn:hover { color: var(--brand-ink); border-color: var(--brand); }
+.pk-btn[aria-pressed="true"] { color: var(--on-brand); background: var(--brand); border-color: var(--brand); }
+/* 键盘在两组干支间移动时，焦点要一眼看得出来（深色下光晕偏淡，再描一道边）。 */
+.pk-btn:focus-visible { border-color: var(--brand); }
+.pk-empty { color: var(--ink-3); font-size: 12.5px; }
 .year-candidates { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* ==========================================================================
@@ -206,6 +224,9 @@
 .rd-title h1 { font-size: 22px; font-weight: 800; line-height: 1.3; }
 .rd-question { flex-basis: 100%; color: var(--ink-2); font-size: 14.5px; }
 .rd-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+/* 「向社区求助 / 查看卦帖」会随卦帖发布切换，占位容器不参与排版。 */
+.rd-help-slot { display: contents; }
+.rd-vis { color: var(--ink-2); }
 .rd-strip { display: none; }
 .rd-side { position: sticky; top: calc(var(--topbar-h) + 16px); max-height: calc(100dvh - var(--topbar-h) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; border-radius: var(--r-xl); }
 .thread { flex: 1; display: grid; align-content: start; gap: 24px; padding: 22px 0 18px; }
@@ -388,7 +409,6 @@
 .liunian.is-current { border-color: var(--ink-3); background: var(--bg-elev); }
 .liunian.is-selected { border-color: var(--brand); background: var(--brand-tint); }
 .liunian-detail { color: var(--ink-2); font-size: 13px; }
-.cp-year-row { display: flex; gap: 10px; align-items: center; }
 .cp-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 
 .cp-question { margin: 0; padding: 12px 14px; color: var(--ink); background: var(--bg-sunken); border-radius: 12px; font-size: 14.5px; line-height: 1.6; }
@@ -415,7 +435,6 @@
 .is-moving .ly-bar i { background: var(--accent); }
 .ly-glyph em { color: var(--accent-ink); font-style: normal; font-weight: 800; }
 .ly-tags { display: inline-flex; align-items: center; gap: 4px; }
-.ly-pos { color: var(--ink-3); font-size: 12px; margin-right: 2px; }
 .ly-tag { display: grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 11px; font-weight: 800; }
 .ly-tag.is-shi { color: var(--on-brand); background: var(--brand); }
 .ly-tag.is-ying { color: var(--indigo); background: var(--indigo-soft); }
@@ -454,6 +473,9 @@
   .date-grid .date-cell:first-child { grid-column: span 3; }
   .loc-selects { grid-template-columns: minmax(0, 1fr); }
   .pillar-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pillar-picker { padding: 10px 12px 12px; }
+  .pk-row { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .pk-row.is-branches { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .rd-main { min-height: calc(100dvh - var(--topbar-h)); }
   .rd-head { padding-top: 2px; }
   .rd-title h1 { font-size: 19px; }
@@ -509,6 +531,10 @@ body[data-layout="reading"] .toasts { bottom: calc(var(--rd-composer-h, 96px) + 
   .rd-send:hover { background: var(--brand); }
   .rd-send.is-stop:hover { background: var(--ink); }
   .gb-edit:active, .ai-tool:active, .rd-topic:active { background: var(--bg-press); }
+  .pk-btn:hover { color: var(--ink); border-color: var(--line-strong); }
+  .pk-btn[aria-pressed="true"] { color: var(--on-brand); border-color: var(--brand); }
+  .pk-btn:active { background: var(--bg-press); }
+  .pk-btn[aria-pressed="true"]:active { background: var(--brand); }
   .followup:active, .starter:active, .vis-card:active, .recent-card:active, .rd-resume:active { background: var(--bg-press); }
 }
 /* 触屏：本页的小按钮也保证够大的点按区域。 */

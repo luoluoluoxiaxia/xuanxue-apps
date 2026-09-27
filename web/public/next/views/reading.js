@@ -4,6 +4,7 @@ import { icon } from "../lib/icons.js?v=n1";
 import { get, post } from "../lib/api.js?v=n1";
 import { session, local } from "../lib/store.js?v=n1";
 import { newSessionId, isSessionId } from "../lib/ids.js?v=n1";
+import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n1";
 import { Conversation, humanizeError } from "../lib/interpret.js?v=n1";
 import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n1";
 import { takeHandoff } from "../lib/handoff.js?v=n1";
@@ -14,6 +15,12 @@ import { toast } from "../ui/toast.js?v=n1";
 import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n1";
 import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n1";
 import { copyText, sharePost } from "../lib/share.js?v=n1";
+import { openShareSheet } from "../ui/share-sheet.js?v=n1";
+import { openFeedback } from "./feedback.js?v=n1";
+
+const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
+// 从解读页分享卦帖时记录的来源。
+const SHARE_REF = "workbench_share";
 
 const riskAccepted = () => local.get(RISK_ACK_KEY, "") === "1";
 
@@ -76,6 +83,7 @@ export function render(ctx) {
     conversation: null,
     pendingBranch: null,
     autoStart: false,
+    openHelp: false,          // 排盘后直接向社区求助（旧地址 ?start=bazi&community=help）
     question: "",
     lastConversation: null,   // 八字：同一张盘上最近的一段对话，空白页里给出「接着上次聊」
   };
@@ -85,6 +93,16 @@ export function render(ctx) {
 
   // 断线恢复：网络恢复后重新打开没载入的档案，或立即接上仍在进行的解读。
   let loadFailed = false;
+  // 打开档案时登录失效：向服务端确认并登录后只自动重试一次。
+  let authRetried = false;
+  // 未登录挡板：在别处登录后自动载入。
+  let lockedOut = false;
+  ctx.subscribe(session, s => {
+    if (!lockedOut || !s.authenticated) return;
+    lockedOut = false;
+    root.replaceChildren(loading);
+    load();
+  });
   const onOnline = () => {
     if (!ctx.isCurrent()) return;
     if (loadFailed) {
@@ -115,6 +133,7 @@ export function render(ctx) {
           chartId: fresh.payload?.chart_id || null,
           visibility: fresh.payload?.visibility || fresh.input?.visibility || "private",
           autoStart: !!fresh.autoStart,
+          openHelp: !!fresh.openHelp,
           question: fresh.question || "",
         });
         setup(fresh.sessionId || newSessionId(), []);
@@ -124,8 +143,7 @@ export function render(ctx) {
       if (!session.get().authenticated) {
         const ok = await ctx.requireAuth("登录后查看私人档案。");
         if (!ok) {
-          if (!ctx.isCurrent()) return;
-          root.replaceChildren(stateView({ glyph: "lock", title: "登录后查看这份档案", text: "命盘、卦档与对话只对本人可见。", actions: [h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth() }, "登录 / 注册")] }));
+          if (ctx.isCurrent()) showLockedOut();
           return;
         }
       }
@@ -146,19 +164,14 @@ export function render(ctx) {
       const wanted = ctx.query.get("session");
       const freshConversation = ctx.query.get("fresh") === "1";
       let sessionId = isSessionId(wanted) ? wanted : "";
-      if (!sessionId && !freshConversation && state.system === "liuyao") {
-        const candidates = [...(detail.active_tasks || []), ...(detail.history || [])]
-          .sort((a, b) => String(b.created_at || "").localeCompare(String(a.created_at || "")));
-        const latest = candidates[0];
-        if (latest) {
-          sessionId = isSessionId(latest.session_id) ? latest.session_id : "";
-          if (!sessionId && latest.task_id) {
-            const task = await get(`/api/interpret/tasks/${encodeURIComponent(latest.task_id)}`).catch(() => null);
-            sessionId = isSessionId(task?.session_id) ? task.session_id : "";
-          }
-          // 有历史却找不到会话：报错而不是打开空对话，避免重复发起付费解读。
-          if (!sessionId) throw new Error("这卦的对话记录暂时无法恢复，请稍后重试。");
-        }
+      if (!sessionId && state.system === "liuyao") {
+        // 有历史却找不到会话时会报错，而不是打开空对话，避免重复发起付费解读。
+        sessionId = await resolveLiuyaoSession(detail, {
+          fresh: freshConversation,
+          fetchTask: taskId => get(`/api/interpret/tasks/${encodeURIComponent(taskId)}`),
+          fetchConversations: () => get(`/api/profiles/${encodeURIComponent(id)}/conversations`, { cache: "no-store" }),
+        });
+        if (!ctx.isCurrent()) return;
       }
       if (sessionId) {
         const batch = await post("/api/resume", { items: [{ key: state.system === "liuyao" ? "断卦" : "解读", chart_id: state.chartId, session_id: sessionId, profile_id: state.profileId, limit: 200 }] });
@@ -168,13 +181,26 @@ export function render(ctx) {
         if (item.input) state.input = item.input;
         if (item.payload) state.payload = item.payload;
         if (item.chart_id) state.chartId = item.chart_id;
-        setup(sessionId, item.messages || [], item.active_task ? [item.active_task] : []);
+        setup(sessionId, item.messages || [], item.active_task ? [item.active_task] : [], { opened: "resumed" });
       } else {
         const active = freshConversation ? [] : (detail.active_tasks || []).slice().sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
-        setup(newSessionId(), [], active);
+        setup(newSessionId(), [], active, { opened: freshConversation ? "fresh" : "archive" });
       }
     } catch (error) {
       if (!ctx.isCurrent()) return;
+      // 登录失效（本地仍以为已登录）：先向服务端确认，需要时弹出登录，成功后只自动重试一次，不会循环。
+      if (error?.status === 401 && !authRetried) {
+        authRetried = true;
+        const ok = await ctx.requireAuth("登录已失效，重新登录后继续查看。", { force: true });
+        if (!ctx.isCurrent()) return;
+        if (ok) {
+          root.replaceChildren(loading);
+          load();
+        } else {
+          showLockedOut();
+        }
+        return;
+      }
       loadFailed = !!(error?.isNetwork || error?.status >= 500);
       const gone = error?.status === 404;
       // 404 重试没有意义，直接给回到「我的盘」的路；手机上页内返回链接是隐藏的，这里也要有出口。
@@ -192,8 +218,26 @@ export function render(ctx) {
     }
   }
 
+  function showLockedOut() {
+    lockedOut = true;
+    root.replaceChildren(stateView({
+      glyph: "lock",
+      title: "登录后查看这份档案",
+      text: "命盘、卦档与对话只对本人可见。",
+      actions: [h("button", { type: "button", class: "btn btn-primary", onClick: async () => {
+        const ok = await ctx.requireAuth("登录后查看私人档案。");
+        if (ok && ctx.isCurrent() && lockedOut) {
+          lockedOut = false;
+          root.replaceChildren(loading);
+          load();
+        }
+      } }, "登录 / 注册")],
+    }));
+  }
+
   /* ---------- 工作台 ---------- */
-  function setup(sessionId, serverMessages, activeTasks = []) {
+  // opened：从档案打开的方式——resumed 接上某段对话、fresh 新对话、archive 直接打开档案；刚排好的盘为空。
+  function setup(sessionId, serverMessages, activeTasks = [], { opened = "" } = {}) {
     const conversation = new Conversation({
       system: state.system,
       sessionId,
@@ -201,7 +245,8 @@ export function render(ctx) {
       profileId: state.profileId,
       input: state.input,
       onChange: (message, change) => onMessageChange(message, change),
-      requireReauth: () => ctx.requireAuth("登录已失效；重新登录后自动继续。"),
+      // force：服务端已返回 401，先向服务端确认登录状态，本地仍显示已登录时也会弹出登录。
+      requireReauth: () => ctx.requireAuth(REAUTH_REASON, { force: true }),
     });
     state.conversation = conversation;
     conversation.restore(serverMessages);
@@ -218,11 +263,36 @@ export function render(ctx) {
         requestAnimationFrame(() => nodes.thread.querySelector("[data-risk-ack]")?.focus());
       }
     }
+    const liuyao = state.system === "liuyao";
+    const running = activeTasks.some(task => task.status === "pending" || task.status === "running");
     if (serverMessages.length || activeTasks.length) {
       requestAnimationFrame(() => scrollToBottom(false));
-      if (activeTasks.some(task => task.status === "pending" || task.status === "running")) toast("已恢复上次对话，解读继续");
-    } else if (state.system !== "liuyao" && state.profileId) {
+    } else if (!liuyao && state.profileId) {
       loadLastConversation();
+    }
+    // 从档案打开时说明打开的是哪段对话、上次的解读停在哪里（与经典版一致）。
+    if (opened === "resumed" && (serverMessages.length || activeTasks.length)) {
+      toast(running ? "已恢复上次对话，解读继续" : `已恢复这段${liuyao ? "六爻" : "八字"}对话，继续追问`);
+    } else if (opened === "fresh") {
+      toast(`已用这份${liuyao ? "卦档" : "八字"}开启新对话`);
+    } else if (opened === "archive" && activeTasks.length) {
+      const statuses = activeTasks.map(task => task.status);
+      if (running) toast("档案已打开，解读正在继续");
+      else if (statuses.includes("failed")) toast("档案已打开，可重试上次解读");
+      else if (statuses.includes("cancelled")) toast("档案已打开，上次解读已停止");
+    }
+    // 排好盘后直接向社区求助：刚排好的盘由交接带来标记；选已有命盘时带 help=1。
+    const helpQuery = ctx.query.get("help") === "1";
+    if ((state.openHelp || helpQuery) && state.profileId) {
+      state.openHelp = false;
+      if (helpQuery) {
+        // 去掉 help=1，刷新或返回时不再自动弹出。
+        const params = new URLSearchParams(ctx.query);
+        params.delete("help");
+        const search = params.toString();
+        replaceUrl(`#/reading/${encodeURIComponent(id)}${search ? `?${search}` : ""}`);
+      }
+      requestAnimationFrame(() => { if (ctx.isCurrent()) openHelp(); });
     }
   }
 
@@ -255,18 +325,23 @@ export function render(ctx) {
     const liuyao = state.system === "liuyao";
     const panel = liuyao ? liuyaoPanel(state.payload) : baziPanel(state.payload, { name: state.name, input: state.input });
     const title = liuyao ? liuyaoTitle(state.payload) : (state.name || state.payload?.profile_name || "我的命盘");
+    // 解读进行中不能重新起卦 / 开新对话（与经典版一致）；按钮在 syncComposer 里随忙碌状态切换。
+    const restart = liuyao
+      ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: () => {
+        if (state.conversation?.busy) { toast("请先等待当前解读完成，或停止后再重新起卦"); return; }
+        ctx.navigate("/ask/liuyao");
+      } }, icon("refresh"), h("span", { class: "rd-action-label" }, "重新起卦"))
+      : h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: newConversation }, icon("plus"), h("span", { class: "rd-action-label" }, "新对话"));
+    const helpSlot = h("span", { class: "rd-help-slot" });
     const headActions = h("div", { class: "rd-actions" },
-      liuyao
-        ? h("a", { class: "btn btn-sm btn-ghost", href: "#/ask/liuyao" }, icon("refresh"), h("span", { class: "rd-action-label" }, "重新起卦"))
-        : h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: newConversation }, icon("plus"), h("span", { class: "rd-action-label" }, "新对话")),
+      restart,
       !liuyao ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: openConversations }, icon("clock"), h("span", { class: "rd-action-label" }, "对话记录")) : null,
       !liuyao ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: () => {
         if (state.conversation?.busy) { toast("请先停止当前解读，再修改出生信息"); return; }
         ctx.navigate(`/ask/bazi?edit=${encodeURIComponent(state.profileId)}`);
       } }, icon("edit"), h("span", { class: "rd-action-label" }, "修改信息")) : null,
-      state.visibility === "public" && state.publicPost?.slug
-        ? h("a", { class: "btn btn-sm btn-ghost", href: `#/post/${encodeURIComponent(state.publicPost.slug)}` }, icon("globe"), h("span", { class: "rd-action-label" }, "查看卦帖"))
-        : h("button", { type: "button", class: "btn btn-sm btn-soft", onClick: openHelp }, icon("hand"), h("span", { class: "rd-action-label" }, "向社区求助")));
+      helpSlot);
+    const isPublic = state.visibility === "public";
     const strip = h("button", { type: "button", class: "rd-strip", onClick: openChartSheet, "aria-label": "查看完整盘面" },
       liuyao ? liuyaoStrip(state.payload) : baziStrip(state.payload),
       h("span", { class: "rd-strip-go" }, "看盘", icon("chevronDown", "icon-sm")));
@@ -280,6 +355,8 @@ export function render(ctx) {
         h("a", { class: "back-link", href: "#/me/archives" }, icon("back"), "我的盘"),
         h("div", { class: "rd-title" },
           h("span", { class: ["chip", liuyao ? "chip-liuyao" : "chip-bazi"] }, liuyao ? "六爻" : "八字"),
+          // 六爻卦档分公开 / 私密：公开的首轮解答会发布到广场。
+          liuyao ? h("span", { class: ["chip", "chip-outline", "rd-vis"], title: isPublic ? "公开卦：首轮解答发布到广场" : "私密卦：仅自己可见" }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
           h("h1", null, title),
           liuyao && state.question ? h("p", { class: "rd-question" }, `所问：${state.question}`) : null),
         headActions),
@@ -290,7 +367,8 @@ export function render(ctx) {
       composer.node);
     const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel);
     root.replaceChildren(h("div", { class: ["rd-layout", liuyao ? "is-liuyao" : "is-bazi"] }, conversationCol, side));
-    nodes = { thread, composer, jump, panel, side, live };
+    nodes = { thread, composer, jump, panel, side, live, restart, helpSlot };
+    syncHelpAction();
     window.addEventListener("scroll", syncJump, { passive: true });
     ctx.cleanup(() => window.removeEventListener("scroll", syncJump));
     // 输入框高度会变（多行、参考声明）：「回到最新」和轻提示始终浮在它上方。
@@ -302,6 +380,33 @@ export function render(ctx) {
     }
     // 首屏交接时这段代码在 render 返回前执行，外壳随后会写入默认标题；推迟一拍再写盘名。
     Promise.resolve().then(() => { if (ctx.isCurrent()) ctx.setTitle(title); });
+  }
+
+  // 已有发布到广场的卦帖（公开卦的首轮解答、已发布的求助帖）时，头部显示「查看卦帖」，否则「向社区求助」。
+  function publishedPost() {
+    const post = state.publicPost;
+    if (!post?.slug) return null;
+    return state.visibility === "public" || post.status === "published" ? post : null;
+  }
+
+  function syncHelpAction() {
+    const slot = nodes.helpSlot;
+    if (!slot) return;
+    const post = publishedPost();
+    const key = post ? `post:${post.slug}` : "help";
+    if (slot.dataset.key === key) return;
+    slot.dataset.key = key;
+    slot.replaceChildren(post
+      ? h("a", { class: "btn btn-sm btn-ghost", href: `#/post/${encodeURIComponent(post.slug)}` }, icon("globe"), h("span", { class: "rd-action-label" }, "查看卦帖"))
+      : h("button", { type: "button", class: "btn btn-sm btn-soft", onClick: openHelp }, icon("hand"), h("span", { class: "rd-action-label" }, "向社区求助")));
+  }
+
+  // 本次对话里公开解答刚发布：记下卦帖，头部随之切换。
+  function notePublished(message) {
+    const post = message?.publicPost;
+    if (!post?.slug || post.status !== "published" || state.publicPost?.slug === post.slug) return;
+    state.publicPost = post;
+    syncHelpAction();
   }
 
   function openChartSheet() {
@@ -395,9 +500,10 @@ export function render(ctx) {
       children.push(h("div", { class: "ai-error", role: "alert" },
         h("b", null, message.body ? "解读中断，现有内容已保留" : "这次解读没有完成"),
         h("p", null, message.error || "解读没有完成"),
-        message.question ? h("div", { class: "ai-error-actions" },
-          h("button", { type: "button", class: "btn btn-sm btn-primary", onClick: () => retry(message) }, icon("refresh"), "重新解读"),
-          h("button", { type: "button", class: "btn btn-sm", onClick: () => editQuestion(message) }, icon("edit"), "编辑问题")) : null));
+        h("div", { class: "ai-error-actions" },
+          message.question ? h("button", { type: "button", class: "btn btn-sm btn-primary", onClick: () => retry(message) }, icon("refresh"), "重新解读") : null,
+          message.question ? h("button", { type: "button", class: "btn btn-sm", onClick: () => editQuestion(message) }, icon("edit"), "编辑问题") : null,
+          h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: () => sendFeedback(message) }, icon("message"), "反馈问题"))));
     } else {
       const waiting = message.streaming && !message.body;
       if (waiting) {
@@ -422,10 +528,7 @@ export function render(ctx) {
             icon("globe", "icon-sm"),
             h("span", null, "已发布到社区"),
             h("a", { class: "link-btn", href: `#/post/${encodeURIComponent(message.publicPost.slug)}` }, "查看卦帖"),
-            h("button", { type: "button", class: "link-btn", onClick: async () => {
-              const result = await sharePost({ slug: message.publicPost.slug, title: message.question });
-              if (!result.silent && result.message) toast(result.message, { type: result.ok ? "ok" : "error" });
-            } }, "分享")));
+            h("button", { type: "button", class: "link-btn", onClick: event => sharePublished(message, event.currentTarget) }, "分享")));
         } else if (message.streaming) {
           children.push(h("div", { class: "ai-public is-pending" }, icon("globe", "icon-sm"), h("span", null, "完成后公开发布")));
         }
@@ -440,7 +543,8 @@ export function render(ctx) {
         children.push(h("div", { class: "ai-tools" },
           feedbackButton(message, "like"),
           feedbackButton(message, "dislike"),
-          copyButton(message)));
+          copyButton(message),
+          h("button", { type: "button", class: "ai-tool", "aria-label": "反馈这条解读", title: "反馈这条解读", onClick: () => sendFeedback(message) }, icon("message"))));
         if (message.followups && message.followups.length) {
           // 追问建议只填进输入框，由用户确认（可先修改）后再发送，避免误点直接发起一次解读。
           children.push(h("div", { class: "followups-wrap" },
@@ -473,6 +577,39 @@ export function render(ctx) {
       timer = setTimeout(() => { button.classList.remove("is-done"); button.replaceChildren(icon("copy")); }, 1600);
     });
     return button;
+  }
+
+  // 意见反馈带上档案、盘、对话与任务编号，方便定位是哪一次解读（不带出生信息）。
+  function sendFeedback(message) {
+    const conversation = state.conversation;
+    openFeedback({
+      profileId: state.profileId,
+      chartId: conversation?.chartId || state.chartId,
+      sessionId: conversation?.sessionId || "",
+      taskId: message?.taskId || "",
+    });
+  }
+
+  // 分享已发布的卦帖：AI 公开卦帖用分享面板（长图 + 复制链接），取不到帖子详情时退回复制标题和链接。
+  let sharing = false;
+  async function sharePublished(message, button) {
+    const slug = message.publicPost?.slug;
+    if (!slug || sharing || document.querySelector(".sheet-share")) return;
+    sharing = true;
+    button?.setAttribute("aria-busy", "true");
+    try {
+      const detail = await get(`/api/community/posts/${encodeURIComponent(slug)}`, { cache: "no-store" }).catch(() => null);
+      if (!ctx.isCurrent()) return;
+      if (detail?.slug && detail.post_kind === "ai" && detail.system === "liuyao" && detail.answer && detail.oracle) {
+        openShareSheet(detail, { ref: SHARE_REF });
+        return;
+      }
+      const result = await sharePost({ slug, title: detail?.question || state.question || message.question, ref: SHARE_REF });
+      if (!result.silent && result.message) toast(result.message, { type: result.ok ? "ok" : "error" });
+    } finally {
+      sharing = false;
+      button?.removeAttribute("aria-busy");
+    }
   }
 
   function feedbackButton(message, reaction) {
@@ -584,12 +721,15 @@ export function render(ctx) {
       return;
     }
     if (change === "status") {
+      notePublished(message);
       const wait = nodeFor(message)?.querySelector("[data-wait]");
       if (wait) wait.textContent = message.waitNote || waitingLine(message.stage, { liuyao: state.system === "liuyao", tick });
       else repaint(message);
       return;
     }
     // done / failed / stopped
+    notePublished(message);
+    if (change === "failed" && message.authLost && returnQuestion(message)) return;
     if (nodes.live) nodes.live.textContent = change === "done" ? "解读完成" : change === "failed" ? "这次解读没有完成" : "已停止生成";
     // 页面在后台时，在标签页标题上提示一次。
     if (change === "done") ctx.attention("解读完成");
@@ -655,9 +795,14 @@ export function render(ctx) {
   }
 
   /* ---------- 输入框 ---------- */
+  // 这段对话是否已在服务端落地（发出过问题）；落地前的草稿记在「新对话」名下。
+  function conversationStarted() {
+    return !!state.conversation?.messages.some(message => message.kind === "ai" && (message.taskId || message.messageId || message.stopped));
+  }
+
   function buildComposer() {
     const liuyao = state.system === "liuyao";
-    const draftKey = `xz-next-draft:reading:${id}`;
+    const currentDraftKey = () => readingDraftKey(id, state.conversation?.sessionId, { started: conversationStarted() });
     const placeholder = liuyao ? "就此卦追问：应期？对方心思？" : "问：今年适合换工作吗？";
     const textarea = h("textarea", {
       class: "rd-input",
@@ -666,10 +811,10 @@ export function render(ctx) {
       placeholder,
       "aria-label": "输入问题",
     });
-    textarea.value = local.get(draftKey, "");
+    textarea.value = local.get(currentDraftKey(), "");
     textarea.addEventListener("input", () => {
-      if (textarea.value.trim()) local.set(draftKey, textarea.value);
-      else local.remove(draftKey);
+      if (textarea.value.trim()) local.set(currentDraftKey(), textarea.value);
+      else local.remove(currentDraftKey());
     });
     const fit = autoGrow(textarea, 180);
     const send = h("button", { type: "submit", class: "rd-send", "aria-label": "发送" }, icon("send"));
@@ -689,7 +834,7 @@ export function render(ctx) {
         onAccepted: () => {
           if (textarea.value.trim() === text) {
             textarea.value = "";
-            local.remove(draftKey);
+            clearDrafts();
             fit();
           }
           if (coarsePointer()) textarea.blur();
@@ -711,7 +856,12 @@ export function render(ctx) {
       if (state.conversation?.busy) { toast("这条解读完成后再发送；想中止请点「停止」"); return; }
       sendDraft();
     });
-    return { node: form, textarea, send, ackSlot, fit, draftKey, placeholder };
+    // 发出后清掉这份草稿：落地前记在「新对话」名下的那份也一并清除。
+    function clearDrafts() {
+      local.remove(readingDraftKey(id, state.conversation?.sessionId, { started: false }));
+      local.remove(currentDraftKey());
+    }
+    return { node: form, textarea, send, ackSlot, fit, placeholder, clearDrafts, get draftKey() { return currentDraftKey(); } };
   }
 
   function openTopics(anchor) {
@@ -736,6 +886,12 @@ export function render(ctx) {
     composer.send.replaceChildren(...[icon(busy ? "stop" : "send", busy ? "icon-fill" : ""), busy && h("span", { class: "rd-send-label", "aria-hidden": "true" }, "停止")].filter(Boolean));
     const needsAck = !riskAccepted() && state.conversation?.messages.length;
     composer.ackSlot.replaceChildren(...(needsAck ? [riskAckControl(syncComposer)] : []));
+    // 解读进行中：「重新起卦」「新对话」不可用（先等完成或停止）。
+    if (nodes.restart) {
+      nodes.restart.disabled = busy;
+      if (busy) nodes.restart.setAttribute("title", "解读进行中，完成或停止后可用");
+      else nodes.restart.removeAttribute("title");
+    }
   }
 
   function fillComposer(text) {
@@ -765,11 +921,34 @@ export function render(ctx) {
     }
   }
 
+  // 改地址但不新增历史记录。面板（登录、看盘等）打开时占着一条历史记录，关面板会后退掉它；这时改地址会被
+  // 那次后退撤销并触发整页重载，所以等面板关掉、回到页面自己的那条记录后再改（期间只保留最后一次要改的地址）。
+  let pendingUrl = "";
+  function replaceUrl(target) {
+    if (history.state?.xzOverlay) {
+      const waiting = !!pendingUrl;
+      pendingUrl = target;
+      if (waiting) return;
+      const later = () => {
+        window.removeEventListener("popstate", later);
+        setTimeout(() => {
+          const next = pendingUrl;
+          pendingUrl = "";
+          if (ctx.isCurrent() && next) replaceUrl(next);
+        }, 0);
+      };
+      window.addEventListener("popstate", later);
+      ctx.cleanup(() => window.removeEventListener("popstate", later));
+      return;
+    }
+    if (location.hash !== target) history.replaceState(history.state, "", target);
+  }
+
+  // 地址记下当前对话，刷新后接着这段对话。服务端还没有这段对话的任何回答（例如登录失效、请求没发出去）时不改。
   function syncUrl() {
     const sid = state.conversation?.sessionId;
-    if (!isSessionId(sid)) return;
-    const target = `#/reading/${encodeURIComponent(id)}?session=${sid}`;
-    if (location.hash !== target) history.replaceState(history.state, "", target);
+    if (!isSessionId(sid) || !state.conversation.messages.some(message => message.kind === "ai" && (message.taskId || message.messageId || message.stopped))) return;
+    replaceUrl(`#/reading/${encodeURIComponent(id)}?session=${sid}`);
   }
 
   /* ---------- 发起前检查 ---------- */
@@ -794,19 +973,25 @@ export function render(ctx) {
     }
     const quota = session.get().quota;
     if (quota && quota.can_start_answer === false) {
-      toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", { type: "error", action: { label: "去充值", onClick: () => ctx.navigate("/me/credits") } });
+      creditsExhausted();
       return false;
     }
     if (!session.get().authenticated) {
-      const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后使用每日免费积分解读。");
+      // 与经典版一致：解读前的登录默认停在「注册」。
+      const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后使用每日免费积分解读。", { mode: "register" });
       if (!ok) return false;
       const again = session.get().quota;
       if (again && again.can_start_answer === false) {
-        toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", { type: "error" });
+        creditsExhausted();
         return false;
       }
     }
     return true;
+  }
+
+  // 积分用完：「去充值」直接打开积分页的充值档位。
+  function creditsExhausted() {
+    toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", { type: "error", action: { label: "去充值", onClick: () => ctx.navigate("/me/credits?topup=1") } });
   }
 
   async function ask(text, { onAccepted, ...options } = {}) {
@@ -826,7 +1011,15 @@ export function render(ctx) {
   async function startFirst() {
     if (state.conversation.messages.length) return;
     if (!(await preflight())) return;
-    await state.conversation.ask(state.question || LIUYAO_DEFAULT_QUESTION, { showQuestion: false });
+    const question = state.question || LIUYAO_DEFAULT_QUESTION;
+    // 输入框里放着的正是这一问（登录失效时退回的）：开始解读后就不再留着。
+    const composer = nodes.composer;
+    if (composer && composer.textarea.value.trim() === question) {
+      composer.textarea.value = "";
+      local.remove(composer.draftKey);
+      composer.fit();
+    }
+    await state.conversation.ask(question, { showQuestion: false });
     syncUrl();
   }
 
@@ -837,6 +1030,27 @@ export function render(ctx) {
     state.conversation.removePair(message);
     renderThread();
     await begin(question);
+  }
+
+  // 发起时登录失效、又关掉了登录：这一问没有发出去。撤下这一轮，把问题放回输入框（分叉信息一并保留）；
+  // 输入框里已经写了别的内容时不覆盖，保留失败记录，问题仍可用「编辑问题」取回。
+  function returnQuestion(message) {
+    const composer = nodes.composer;
+    const text = String(message.question || "");
+    const draft = composer?.textarea.value.trim() || "";
+    if (!composer || !text || (draft && draft !== text)) return false;
+    state.conversation.removePair(message);
+    if (message.branch) state.pendingBranch = message.branch;
+    renderThread();
+    composer.textarea.value = text;
+    local.set(composer.draftKey, text);
+    composer.fit();
+    syncComposer();
+    toast("登录已失效，问题已保留。", {
+      type: "error",
+      action: { label: "登录", onClick: () => ctx.requireAuth("问题已保留在输入框，登录后点发送继续。", { force: true }) },
+    });
+    return true;
   }
 
   function editQuestion(message) {
@@ -854,10 +1068,10 @@ export function render(ctx) {
     toast("已回到停止点，可编辑后重发");
   }
 
+  // 新页面打开后会提示「已用这份八字开启新对话」。
   function newConversation() {
     if (state.conversation?.busy) { toast("请先等待当前解读完成"); return; }
     ctx.navigate(`/reading/${encodeURIComponent(id)}?fresh=1`, { replace: true });
-    toast("已开启新的八字对话");
   }
 
   async function openConversations() {
@@ -914,7 +1128,7 @@ export function render(ctx) {
       const text = question.value.trim();
       if (text.length < 8) { status.textContent = "请至少写 8 个字，说清楚想请大家看什么。"; question.focus(); return; }
       if (!consent.checked) { status.textContent = "请先勾选隐私确认。"; consent.focus(); return; }
-      const ok = await ctx.requireAuth("登录并验证邮箱后可免费求助，不调用 AI，不扣积分。");
+      const ok = await ctx.requireAuth("登录并验证邮箱后可免费求助，不调用 AI，不扣积分。", { mode: "register" });
       if (!ok) return;
       submit.disabled = true;
       submit.textContent = "正在发布…";

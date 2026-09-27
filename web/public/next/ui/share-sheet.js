@@ -21,7 +21,7 @@ export function openShareSheet(post, { ref = "" } = {}) {
     if (copying) return;
     copying = true;
     try {
-      const result = await sharePost({ slug: post.slug, title });
+      const result = await sharePost({ slug: post.slug, title, ref: source });
       if (!result.silent && result.message) toast(result.message, { type: result.ok ? "ok" : "error" });
     } finally {
       copying = false;

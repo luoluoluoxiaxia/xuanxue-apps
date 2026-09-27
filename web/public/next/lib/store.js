@@ -52,7 +52,9 @@ export function applyAccount(payload) {
   return session.get();
 }
 
-export function refreshSession() {
+// force：服务端刚返回 401 时，进行中的旧请求可能还带着「已登录」，等它结束后再重新拉一次。
+export function refreshSession({ force = false } = {}) {
+  if (force && refreshing) return refreshing.catch(() => {}).then(() => refreshSession());
   if (!refreshing) {
     refreshing = get("/api/auth/me")
       .then(applyAccount)
