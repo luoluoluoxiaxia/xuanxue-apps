@@ -25,7 +25,8 @@ function loadTree() {
   return loading;
 }
 
-export function locationPicker({ initial = "" } = {}) {
+// onChange(text)：选择变化时回传当前地点文字，方便折叠标题里显示已选的出生地。
+export function locationPicker({ initial = "", onChange } = {}) {
   const province = h("select", { class: "select", "aria-label": "省 / 国家 / 地区" }, h("option", { value: "" }, "正在加载…"));
   const city = h("select", { class: "select", "aria-label": "市 / 地区", disabled: true }, h("option", { value: "" }, "请选择城市"));
   const county = h("select", { class: "select", "aria-label": "区 / 县 / 城市", disabled: true }, h("option", { value: "" }, "请选择区县"));
@@ -67,6 +68,7 @@ export function locationPicker({ initial = "" } = {}) {
 
   async function refreshPreview() {
     const text = value();
+    onChange?.(text);
     const mine = ++seq;
     if (!text) { preview.textContent = "未选择出生地"; return; }
     preview.textContent = `已选：${text}`;
@@ -110,12 +112,19 @@ export function locationPicker({ initial = "" } = {}) {
   });
   county.addEventListener("change", refreshPreview);
 
-  loadTree().then(data => {
-    tree = [...(Array.isArray(data) ? data : []), ...OVERSEAS];
-    fill(province, tree, "请选择地区");
-  }).catch(() => {
-    province.replaceChildren(option("", "地区数据加载失败"));
-  });
+  function load() {
+    province.replaceChildren(option("", "正在加载…"));
+    loadTree().then(data => {
+      tree = [...(Array.isArray(data) ? data : []), ...OVERSEAS];
+      fill(province, tree, "请选择地区");
+      if (!value() || value() === saved) preview.textContent = saved ? `已保存：${saved}` : "未选择出生地";
+    }).catch(() => {
+      province.replaceChildren(option("", "地区数据加载失败"));
+      preview.replaceChildren("地区数据没能加载。", h("button", { type: "button", class: "link-btn", onClick: load }, "重试"));
+    });
+  }
+  load();
+  if (initial) onChange?.(initial);
 
   return { node, value, reset() { saved = ""; province.value = ""; province.dispatchEvent(new Event("change")); } };
 }

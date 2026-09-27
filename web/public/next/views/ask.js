@@ -1,5 +1,5 @@
 // 提问：先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow } from "../lib/dom.js?v=n1";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n1";
 import { icon } from "../lib/icons.js?v=n1";
 import { get, post, put } from "../lib/api.js?v=n1";
 import { session, local, refreshSession } from "../lib/store.js?v=n1";
@@ -9,11 +9,42 @@ import { handoff } from "../lib/handoff.js?v=n1";
 import { humanizeError } from "../lib/interpret.js?v=n1";
 import { stateView } from "../ui/bits.js?v=n1";
 import { toast } from "../ui/toast.js?v=n1";
+import { confirmDialog } from "../ui/overlay.js?v=n1";
 import { locationPicker } from "../ui/location.js?v=n1";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 const readDraft = () => local.get(ASK_DRAFT, "");
 const writeDraft = text => (text.trim() ? local.set(ASK_DRAFT, text) : local.remove(ASK_DRAFT));
+
+// 摇到一半被打断（刷新、切走、登录）时保留已成的爻：一事一卦，不必重摇。只保留两小时，
+// 而且只还给同一个问题——换了问题就是另一卦，不能沿用。
+const CAST_DRAFT = "xz-next-draft:cast";
+const CAST_TTL = 2 * 60 * 60 * 1000;
+function readCast(question) {
+  const saved = local.json(CAST_DRAFT, null);
+  if (!saved || !Array.isArray(saved.lines) || !(Date.now() - Number(saved.at || 0) < CAST_TTL)) return null;
+  if (String(saved.question || "") !== String(question || "").trim()) return null;
+  const lines = saved.lines
+    .filter(line => [6, 7, 8, 9].includes(Number(line?.value)))
+    .slice(0, 6)
+    .map(line => ({ value: Number(line.value), coins: (Array.isArray(line.coins) ? line.coins : []).filter(face => face === "背" || face === "字").slice(0, 3) }));
+  if (!lines.length) return null;
+  return { lines, mode: saved.mode === "manual" ? "manual" : "coins", completedAt: lines.length === 6 ? String(saved.completedAt || "") : "" };
+}
+
+// 单选组（role="radiogroup"）：方向键切换选中项，只有选中项留在 Tab 顺序里。
+function radioKeys(group) {
+  const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+  group.addEventListener("keydown", event => {
+    if (!(event.key in step)) return;
+    const radios = Array.from(group.querySelectorAll('[role="radio"]'));
+    const index = radios.indexOf(document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    radios[(index + step[event.key] + radios.length) % radios.length].click();
+    group.querySelector('[role="radio"][aria-checked="true"]')?.focus();
+  });
+}
 
 export function render(ctx) {
   const system = ctx.params.system;
@@ -41,14 +72,21 @@ function hub(ctx) {
     ctx.navigate(target);
   };
   const recent = h("section", { class: "ask-recent", hidden: true });
+  const methodTitle = h("h2", { class: "ask-section-title" }, "选一种方式来看");
   const node = h("div", { class: "ask-page" },
     focusHeader(ctx, "你想问什么？", "写下一件放在心上的事。越具体，越好判断。"),
     h("section", { class: "ask-card" },
       textarea,
       h("div", { class: "ask-examples", role: "group", "aria-label": "例子" },
-        ASK_EXAMPLES.map(example => h("button", { type: "button", class: "pill-filter", onClick: () => { textarea.value = example; writeDraft(example); textarea.dispatchEvent(new Event("input")); textarea.focus(); } }, example))),
+        ASK_EXAMPLES.map(example => h("button", { type: "button", class: "pill-filter", onClick: () => {
+          textarea.value = example;
+          writeDraft(example);
+          textarea.dispatchEvent(new Event("input"));
+          textarea.focus();
+          textarea.setSelectionRange(example.length, example.length);
+        } }, example))),
       h("p", { class: "ask-privacy" }, icon("lock", "icon-sm"), "不要写姓名、电话、住址或证件号。")),
-    h("h2", { class: "ask-section-title" }, "选一种方式来看"),
+    methodTitle,
     h("div", { class: "method-grid" },
       h("button", { type: "button", class: "method-card is-liuyao", onClick: go("/ask/liuyao") },
         h("span", { class: "method-icon" }, icon("gua")),
@@ -72,6 +110,14 @@ function hub(ctx) {
           h("small", null, "不调用 AI · 不扣积分")),
         icon("chevronRight", "method-go"))),
     recent);
+
+  // 回车是「下一步」：写完问题直接去选方式（Shift+回车换行；输入法选词时的回车不算）。
+  submitOnEnter(textarea, () => {
+    if (!textarea.value.trim()) return;
+    node.querySelector(".method-card")?.focus({ preventScroll: true });
+    methodTitle.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+  });
+  textarea.setAttribute("enterkeyhint", "next");
 
   const loadRecent = () => {
     if (!session.get().authenticated) { recent.hidden = true; return; }
@@ -106,17 +152,21 @@ function hub(ctx) {
    ========================================================================== */
 function liuyaoFlow(ctx) {
   const wantsHelp = ctx.query.get("help") === "1";
+  const restored = readCast(readDraft());
   const state = {
-    mode: "coins",
-    lines: [],            // 自下而上：{ value, coins: ["背","字",…] }
+    mode: restored?.mode || "coins",
+    lines: restored?.lines || [],   // 自下而上：{ value, coins: ["背","字",…] }
     casting: false,
-    completedAt: "",
+    completedAt: restored?.completedAt || "",
+    editing: null,                  // 手动录入时正在修改的爻位
+    restored: !!restored,           // 这些爻是从上次未完成的起卦恢复的
     visibility: wantsHelp ? "help" : "private",
     submitting: false,
+    saved: null,                    // 已排好的盘：求助发布失败后重试时不再重复排盘
   };
   const question = h("textarea", { class: "ask-input", rows: 2, maxlength: 2000, placeholder: "例如：本月能否签下这个合同？", "aria-label": "所问之事" });
   question.value = readDraft();
-  question.addEventListener("input", () => { writeDraft(question.value); questionError.hidden = true; question.removeAttribute("aria-invalid"); syncSubmit(); });
+  question.addEventListener("input", () => { writeDraft(question.value); if (state.lines.length) saveCast(); questionError.hidden = true; question.removeAttribute("aria-invalid"); syncSubmit(); });
   autoGrow(question, 200);
   const questionError = h("p", { class: "field-error", hidden: true, role: "alert" });
 
@@ -124,11 +174,12 @@ function liuyaoFlow(ctx) {
     h("span", { class: "coin-face is-front" }, h("img", { src: "assets/qianlong_coin_front_transparent_512.png", alt: "", draggable: "false" })),
     h("span", { class: "coin-face is-back" }, h("img", { src: "assets/qianlong_coin_back_transparent_512.png", alt: "", draggable: "false" }))));
   const coinTags = h("div", { class: "coin-tags", "aria-live": "polite" });
+  // 摇卦期间不用 disabled：按钮一旦禁用就会丢焦点，键盘用户下一次按空格会变成滚动页面。
   const castButton = h("button", { type: "button", class: "btn btn-primary btn-lg cast-btn" });
   const castNote = h("p", { class: "cast-note" });
   const modeSeg = h("div", { class: "seg", role: "group", "aria-label": "起卦方式" });
   const builder = h("ol", { class: "gua-builder", "aria-label": "六爻（自上而下显示，自下而上成卦）" });
-  const banner = h("div", { class: "gua-ready", hidden: true, role: "status" });
+  const banner = h("div", { class: "gua-ready", hidden: true, role: "status", tabindex: "-1" });
   const stage = h("div", { class: "cast-stage" }, h("div", { class: "coins" }, coins), coinTags, castButton, castNote);
   const manualPad = h("div", { class: "manual-pad", hidden: true });
 
@@ -138,6 +189,7 @@ function liuyaoFlow(ctx) {
     ["help", "向社区求助", "不调用 AI，不扣积分；公开脱敏卦象和问题，由卦友回答。", "hand"],
   ];
   const visibilityGroup = h("div", { class: "vis-grid", role: "radiogroup", "aria-label": "回答方式" });
+  radioKeys(visibilityGroup);
   const quotaLabel = () => {
     const quota = session.get().quota;
     const wallet = session.get().wallet;
@@ -151,6 +203,7 @@ function liuyaoFlow(ctx) {
       role: "radio",
       class: ["vis-card", `is-${value}`],
       "aria-checked": String(state.visibility === value),
+      tabindex: state.visibility === value ? "0" : "-1",
       onClick: () => { state.visibility = value; renderVisibility(); syncSubmit(); },
     },
     h("span", { class: "vis-icon" }, icon(glyph)),
@@ -160,7 +213,10 @@ function liuyaoFlow(ctx) {
   };
   const submit = h("button", { type: "button", class: "btn btn-primary btn-lg btn-block submit-btn" });
   const submitError = h("p", { class: "field-error", hidden: true, role: "alert" });
-  const ritual = h("div", { class: "ritual", hidden: true, role: "status", "aria-live": "polite" }, h("span", { class: "ritual-mark", "aria-hidden": "true" }), h("span", { class: "ritual-text" }));
+  const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
+    h("span", { class: "ritual-mark", "aria-hidden": "true" }),
+    h("span", { class: "ritual-text", "aria-hidden": "true" }),
+    h("span", { class: "sr-only" }, "正在排盘，请稍候"));
 
   const node = h("div", { class: "ask-page is-cast" },
     focusHeader(ctx, wantsHelp ? "起一卦，请卦友帮你断" : "六爻问事", "一事一卦：写清所问，静心摇六次。"),
@@ -194,6 +250,22 @@ function liuyaoFlow(ctx) {
     return false;
   }
 
+  function saveCast() {
+    if (state.lines.length) local.setJson(CAST_DRAFT, { lines: state.lines, mode: state.mode, completedAt: state.completedAt, question: question.value.trim(), at: Date.now() });
+    else local.remove(CAST_DRAFT);
+  }
+
+  // 问题写好后回车：去摇下一爻；六爻已成就去选回答方式。
+  function focusNextStep() {
+    if (state.lines.length < 6 || state.editing !== null) {
+      (state.mode === "manual" ? manualPad.querySelector(".manual-grid .btn") : castButton)?.focus();
+    } else {
+      visibilityGroup.querySelector('[aria-checked="true"]')?.focus();
+    }
+  }
+  submitOnEnter(question, () => { if (question.value.trim()) focusNextStep(); });
+  question.setAttribute("enterkeyhint", "next");
+
   function castOnce() {
     if (state.casting || state.lines.length >= 6) return;
     if (!requireQuestion("掷铜钱")) return;
@@ -207,7 +279,7 @@ function liuyaoFlow(ctx) {
       coin.classList.add("is-spinning");
     });
     coinTags.replaceChildren();
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const reduce = reducedMotion();
     setTimeout(() => {
       coins.forEach((coin, index) => {
         coin.classList.remove("is-spinning");
@@ -216,81 +288,171 @@ function liuyaoFlow(ctx) {
       });
     }, reduce ? 0 : 760);
     setTimeout(() => {
+      if (!ctx.isCurrent()) return;
       const value = faces.reduce((sum, face) => sum + (face === "背" ? 3 : 2), 0);
       state.lines.push({ value, coins: faces });
+      state.restored = false;
       coinTags.replaceChildren(...faces.map(face => h("span", { class: ["coin-tag", face === "背" && "is-back"] }, face)),
         h("span", { class: "coin-result" }, `${LY_POS[state.lines.length - 1]}爻 · ${LY_VALUE_NAME[value]}`));
       if (state.lines.length === 6) state.completedAt = localDateTimeISO();
       state.casting = false;
+      saveCast();
       syncCast();
-      renderBuilder(true);
+      renderBuilder(state.lines.length - 1);
       syncSubmit();
+      if (state.lines.length === 6) revealReady(castButton);
     }, reduce ? 50 : 1150);
+  }
+
+  // 卦成：把「六爻已就绪」带进视野（不被吸底的开始按钮挡住），焦点也移到这条提示上。
+  function revealReady(from) {
+    const reduce = reducedMotion();
+    setTimeout(() => {
+      if (!ctx.isCurrent() || banner.hidden) return;
+      const active = document.activeElement;
+      const rect = banner.getBoundingClientRect();
+      // 按钮区约 116px（见 .gua-ready 的 scroll-margin-bottom）；block: "nearest" 判断可见时不算这段边距，所以自己判断。
+      if (rect.top < 0 || rect.bottom > window.innerHeight - 116) banner.scrollIntoView({ block: "end", behavior: reduce ? "auto" : "smooth" });
+      if (!active || active === document.body || from.contains(active)) banner.focus({ preventScroll: true });
+    }, reduce ? 0 : 450);
   }
 
   function resetCast() {
     state.lines = [];
     state.completedAt = "";
+    state.editing = null;
+    state.restored = false;
+    state.saved = null;
     coins.forEach(coin => coin.classList.remove("is-back", "is-landed", "is-spinning"));
     coinTags.replaceChildren();
+    saveCast();
     syncCast();
     renderBuilder();
+    renderManual();
     syncSubmit();
+  }
+
+  // 清空已成的爻之前先确认，避免误触丢掉一卦。
+  async function confirmReset() {
+    if (state.casting || !state.lines.length) return;
+    const manual = state.mode === "manual";
+    const ok = await confirmDialog({
+      title: manual ? "全部重新录入？" : "重新摇一次？",
+      message: `已${manual ? "录入" : "摇出"}的 ${state.lines.length} 爻会清空，从初爻重新开始。`,
+      confirmText: "清空重来",
+      danger: true,
+    });
+    if (!ok || !ctx.isCurrent()) return;
+    resetCast();
+    (manual ? manualPad.querySelector(".manual-grid .btn") : castButton)?.focus();
   }
 
   function syncCast() {
     const done = state.lines.length;
-    castButton.disabled = state.casting || done >= 6;
+    castButton.setAttribute("aria-disabled", String(state.casting || done >= 6));
     castButton.classList.toggle("is-done", !state.casting && done >= 6);
     castButton.replaceChildren(state.casting
       ? h("span", null, `第 ${done + 1} 爻 · 钱落…`)
       : done >= 6 ? h("span", null, icon("check"), "六爻已成") : h("span", null, `摇第 ${CN_NUM[done + 1]} 爻`, h("small", null, ` · 共六爻`)));
-    castNote.replaceChildren(done >= 6
-      ? h("button", { type: "button", class: "link-btn", onClick: resetCast }, "重新摇一次")
-      : h("span", null, done ? `已完成 ${done}/6 · 下一爻继续自下而上` : "本机随机 · 自下而上六掷 · 背为三、字为二"));
+    const reset = done && !state.casting ? h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "重新摇一次") : null;
+    castNote.replaceChildren(!done
+      ? h("span", null, "本机随机 · 自下而上六掷 · 背为三、字为二")
+      : done >= 6
+        ? h("span", null, state.restored ? "已恢复刚才摇出的六爻 · " : null, reset)
+        : h("span", null, state.restored ? `已恢复刚才的 ${done} 爻` : `已摇 ${done}/6`, " · 继续自下而上", reset ? [" · ", reset] : null));
   }
 
-  function renderBuilder(animateLast = false) {
+  function renderBuilder(animateIndex = -1) {
+    const manual = state.mode === "manual";
+    builder.classList.toggle("is-manual", manual);
     const rows = [];
     for (let index = 5; index >= 0; index -= 1) {
       const line = state.lines[index];
       const moving = line && (line.value === 6 || line.value === 9);
       const yin = line && (line.value === 6 || line.value === 8);
-      rows.push(h("li", { class: ["gb-row", line ? "is-filled" : "is-empty", moving && "is-moving", animateLast && index === state.lines.length - 1 && "is-new"] },
+      const editing = manual && state.editing === index;
+      rows.push(h("li", { class: ["gb-row", line ? "is-filled" : "is-empty", moving && "is-moving", editing && "is-editing", index === animateIndex && "is-new"] },
         h("span", { class: "gb-pos" }, `${LY_POS[index]}爻`),
         h("span", { class: ["gb-bar", line ? (yin ? "is-yin" : "is-yang") : ""], "aria-hidden": "true" }, h("i"), h("i")),
-        h("span", { class: "gb-name" }, line ? LY_VALUE_NAME[line.value] : state.mode === "manual" ? "待录入" : "待摇"),
-        state.mode === "manual" && line ? h("button", { type: "button", class: "gb-clear", "aria-label": `清除${LY_POS[index]}爻`, onClick: () => { state.lines.splice(index, 1); renderBuilder(); renderManual(); syncSubmit(); } }, icon("close", "icon-sm")) : null));
+        h("span", { class: "gb-name" }, line ? LY_VALUE_NAME[line.value] : manual ? "待录入" : "待摇"),
+        // 手动录入：改某一爻只替换这一爻，不会让上面的爻往下错位。
+        manual && line ? h("button", {
+          type: "button",
+          class: "gb-edit",
+          "aria-pressed": String(editing),
+          "aria-label": `修改${LY_POS[index]}爻（现为${LY_VALUE_NAME[line.value]}）`,
+          onClick: () => startEdit(index),
+        }, editing ? "修改中" : "修改") : null));
     }
     builder.replaceChildren(...rows);
     const moving = state.lines.filter(line => line.value === 6 || line.value === 9).length;
     banner.hidden = state.lines.length < 6;
-    banner.replaceChildren(h("span", { class: "gua-ready-seal", "aria-hidden": "true" }, "卦成"), h("span", null, h("b", null, "六爻已就绪"), h("small", null, `动爻 ${CN_NUM[moving]} 处 · 本卦与变卦由排盘给出`)));
+    banner.replaceChildren(h("span", { class: "gua-ready-seal", "aria-hidden": "true" }, "卦成"), h("span", null, h("b", null, "六爻已就绪"), h("small", null, `动爻 ${CN_NUM[moving]} 处 · 下一步选择怎么回答`)));
   }
 
-  function renderManual() {
+  function startEdit(index) {
+    if (state.editing === index) { cancelEdit(); return; }
+    state.editing = index;
+    renderBuilder();
+    renderManual();
+    (manualPad.querySelector('.manual-grid .btn[aria-pressed="true"]') || manualPad.querySelector(".manual-grid .btn"))?.focus();
+  }
+
+  function cancelEdit() {
+    const index = state.editing;
+    state.editing = null;
+    renderBuilder();
+    renderManual();
+    builder.querySelectorAll(".gb-row")[5 - index]?.querySelector(".gb-edit")?.focus();
+  }
+
+  function pickManual(value, buttonIndex) {
+    if (!requireQuestion("录入六爻")) return;
+    const editing = state.editing;
+    if (editing !== null) {
+      state.lines[editing] = { value, coins: [] };
+      state.editing = null;
+    } else {
+      state.lines.push({ value, coins: [] });
+    }
+    if (state.lines.length === 6 && !state.completedAt) state.completedAt = localDateTimeISO();
+    state.restored = false;
+    const full = state.lines.length === 6 && editing === null;
+    saveCast();
+    renderBuilder(editing ?? state.lines.length - 1);
+    // 连续录入时焦点留在同一个选项上，键盘可以一路按下去。
+    renderManual(full ? -1 : buttonIndex);
+    syncSubmit();
+    if (full) revealReady(manualPad);
+  }
+
+  function renderManual(focusIndex = -1) {
     manualPad.replaceChildren();
     if (state.mode !== "manual") return;
-    const next = state.lines.length;
-    if (next >= 6) {
-      manualPad.append(h("p", { class: "cast-note" }, "六爻已录满。点右侧某一爻可清除重选。"));
+    const editing = state.editing !== null;
+    const target = editing ? state.editing : state.lines.length;
+    if (target >= 6) {
+      manualPad.append(
+        h("p", { class: "manual-title" }, "六爻已录满"),
+        h("p", { class: "cast-note" }, "录错了？点右侧「修改」只改那一爻。 ", h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "全部重录")));
       return;
     }
+    const current = editing ? state.lines[target]?.value : null;
+    const buttons = [[7, "少阳"], [8, "少阴"], [9, "老阳 ○"], [6, "老阴 ✕"]].map(([value, label], index) => h("button", {
+      type: "button",
+      class: "btn",
+      "aria-pressed": editing ? String(current === value) : null,
+      onClick: () => pickManual(value, index),
+    }, label));
     manualPad.append(
-      h("p", { class: "manual-title" }, `录入${LY_POS[next]}爻`),
-      h("div", { class: "manual-grid" }, [[7, "少阳"], [8, "少阴"], [9, "老阳 ○"], [6, "老阴 ✕"]].map(([value, label]) => h("button", {
-        type: "button",
-        class: "btn",
-        onClick: () => {
-          if (!requireQuestion("录入六爻")) return;
-          state.lines.push({ value, coins: [] });
-          if (state.lines.length === 6) state.completedAt = localDateTimeISO();
-          renderBuilder(true);
-          renderManual();
-          syncSubmit();
-        },
-      }, label))),
-      h("p", { class: "cast-note" }, "自下而上逐爻点选"));
+      h("p", { class: "manual-title" }, editing ? `修改${LY_POS[target]}爻` : `录入${LY_POS[target]}爻`),
+      h("div", { class: "manual-grid" }, buttons),
+      h("p", { class: "cast-note" }, editing
+        ? h("button", { type: "button", class: "link-btn", onClick: cancelEdit }, "取消修改")
+        : state.lines.length
+          ? ["自下而上逐爻点选 · ", h("button", { type: "button", class: "link-btn", onClick: confirmReset }, "全部重录")]
+          : "自下而上逐爻点选"));
+    if (focusIndex >= 0) buttons[focusIndex]?.focus({ preventScroll: true });
   }
 
   function renderMode() {
@@ -304,20 +466,33 @@ function liuyaoFlow(ctx) {
   function switchMode(mode) {
     if (state.casting || state.mode === mode) return;
     state.mode = mode;
+    state.editing = null;
+    saveCast();
     renderMode();
     renderManual();
     renderBuilder();
     syncCast();
+    modeSeg.querySelector('[aria-pressed="true"]')?.focus();
   }
 
   castButton.addEventListener("click", castOnce);
   coins.forEach(coin => coin.addEventListener("click", castOnce));
 
   /* ---- 提交 ---- */
+  // 还不能开始时，按钮说明差哪一步；点一下直接带到那一步。
+  function missingStep() {
+    if (!question.value.trim()) return "先写下所问之事";
+    if (state.lines.length < 6) return `还差 ${6 - state.lines.length} 爻`;
+    return "";
+  }
+
   function syncSubmit() {
     const labels = { help: "发布社区求助", private: "开始私密解读", public: "开始公开解读" };
-    submit.replaceChildren(icon(state.visibility === "help" ? "hand" : "sparkle"), labels[state.visibility]);
-    submit.disabled = state.submitting || state.lines.length < 6 || !question.value.trim();
+    const missing = missingStep();
+    submit.disabled = state.submitting;
+    submit.classList.toggle("is-waiting", !!missing);
+    submit.setAttribute("aria-disabled", String(!!missing));
+    submit.replaceChildren(...[icon(state.visibility === "help" ? "hand" : "sparkle"), labels[state.visibility], missing && h("small", null, ` · ${missing}`)].filter(Boolean));
   }
 
   function showRitual(lines) {
@@ -330,14 +505,20 @@ function liuyaoFlow(ctx) {
   }
 
   submit.addEventListener("click", async () => {
+    if (state.submitting) return;
     submitError.hidden = true;
     const text = question.value.trim();
     if (!requireQuestion("起卦")) return;
-    if (state.lines.length < 6) { toast("先自下而上摇满六爻，再开始"); return; }
+    if (state.lines.length < 6) {
+      toast(`还差 ${6 - state.lines.length} 爻，自下而上摇满六爻再开始`);
+      focusNextStep();
+      return;
+    }
     const help = state.visibility === "help";
     if (help && text.length < 8) {
       questionError.textContent = "向社区求助时，问题至少写 8 个字，让卦友看得明白。";
       questionError.hidden = false;
+      question.setAttribute("aria-invalid", "true");
       question.focus();
       return;
     }
@@ -347,7 +528,7 @@ function liuyaoFlow(ctx) {
       public: "登录后使用每日免费积分。分享公开问题可增加每日积分。",
     };
     const ok = await ctx.requireAuth(reasons[state.visibility]);
-    if (!ok || !ctx.isCurrent()) return;
+    if (!ok || !ctx.isCurrent() || state.submitting) return;
     const quota = session.get().quota;
     if (!help && quota && quota.can_start_answer === false) {
       submitError.replaceChildren("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或充值后继续。 ", h("a", { class: "link-btn", href: "#/me/credits" }, "去充值"));
@@ -369,23 +550,33 @@ function liuyaoFlow(ctx) {
       session_id: sessionId,
       yaos: state.lines.map(line => line.value),
     };
+    const signature = JSON.stringify([body.question, body.yaos, body.method, body.visibility]);
+    let charted = false;
     try {
-      const chart = await post("/api/chart", body);
+      // 同一卦同一问已经排过（只是求助没发出去）就直接复用，避免重复建档。
+      const reuse = state.saved?.signature === signature ? state.saved : null;
+      const chart = reuse ? reuse.chart : await post("/api/chart", body);
       if (!ctx.isCurrent()) return;
       const profileId = chart?.profile_id;
       if (!profileId) throw new Error("排盘已完成，但没有拿到档案编号，请到「我的盘」查看。");
-      writeDraft("");
+      charted = true;
+      state.saved = { signature, chart };
       refreshSession().catch(() => {});
       if (help) {
         ritual.querySelector(".ritual-text").textContent = "正在检查隐私并生成公开帖子…";
         const result = await post("/api/community/help-posts", { profile_id: Number(profileId), question: text, consent_version: "community-help-v1" }, { interaction: true });
         stop();
+        writeDraft("");
+        local.remove(CAST_DRAFT);
+        if (!ctx.isCurrent()) return;
         toast("求助已发布，卦友回答后会提醒你", { type: "ok" });
         if (result?.post?.slug) ctx.navigate(`/post/${encodeURIComponent(result.post.slug)}`, { replace: true });
         else ctx.navigate(`/reading/${encodeURIComponent(profileId)}`, { replace: true });
         return;
       }
       stop();
+      writeDraft("");
+      local.remove(CAST_DRAFT);
       handoff(profileId, { system: "liuyao", payload: chart, input: body, sessionId: chart.session_id || sessionId, autoStart: true, question: text, name: chart.profile_name || "" });
       ctx.navigate(`/reading/${encodeURIComponent(profileId)}`, { replace: true });
     } catch (error) {
@@ -393,7 +584,8 @@ function liuyaoFlow(ctx) {
       if (!ctx.isCurrent()) return;
       state.submitting = false;
       syncSubmit();
-      submitError.textContent = `起卦失败：${humanizeError(error.message, "请稍后再试")}`;
+      const reason = humanizeError(error.message, "请稍后再试");
+      submitError.textContent = charted ? `求助没有发出去：${reason}（卦已保存，重试不会重复排盘）` : `起卦失败：${reason}`;
       submitError.hidden = false;
     }
   });
@@ -405,6 +597,7 @@ function liuyaoFlow(ctx) {
   syncCast();
   syncSubmit();
   ctx.subscribe(session, () => { renderVisibility(); });
+  if (restored) toast(restored.lines.length >= 6 ? "已恢复刚才摇出的六爻" : `已恢复刚才摇出的 ${restored.lines.length} 爻，可以接着摇`);
   if (!question.value) requestAnimationFrame(() => question.focus({ preventScroll: true }));
   return { node, title: "六爻问事", layout: "focus" };
 }
@@ -422,6 +615,15 @@ const validPillar = text => {
   return s >= 0 && b >= 0 && s % 2 === b % 2;
 };
 const pillarForYear = year => STEMS[((year - 4) % 10 + 10) % 10] + BRANCHES[((year - 4) % 12 + 12) % 12];
+let birthFormSeq = 0;
+
+// 新建命盘时暂存已填的出生信息（一天内有效）：切出去问家人时辰、页面被系统回收，回来不用重填。
+const BIRTH_DRAFT = "xz-next-draft:birth";
+const BIRTH_TTL = 24 * 60 * 60 * 1000;
+function readBirthDraft() {
+  const draft = local.json(BIRTH_DRAFT, null);
+  return draft && typeof draft === "object" && Date.now() - Number(draft.at || 0) < BIRTH_TTL ? draft : null;
+}
 
 function baziFlow(ctx) {
   const setDefault = ctx.query.get("set_default") === "1";
@@ -452,7 +654,16 @@ function baziFlow(ctx) {
         body.replaceChildren(birthForm(ctx, { editing: { id: editId, input: detail?.input || {}, name: detail?.name || "" } }));
       } catch (error) {
         if (!ctx.isCurrent()) return;
-        body.replaceChildren(stateView({ tone: "error", title: "档案没能打开", text: error.message || "请稍后重试" }));
+        const gone = error?.status === 404;
+        body.replaceChildren(stateView({
+          tone: "error",
+          title: gone ? "这份档案不存在或已删除" : "档案没能打开",
+          text: error.message || "请稍后重试",
+          actions: [
+            gone ? null : h("button", { type: "button", class: "btn btn-soft", onClick: () => { body.replaceChildren(h("div", { class: "spinner-line", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }), "正在打开…")); start(); } }, icon("refresh"), "重试"),
+            h("a", { class: ["btn", gone ? "btn-primary" : "btn-ghost"], href: "#/me/archives" }, "回到我的盘"),
+          ].filter(Boolean),
+        }));
       }
       return;
     }
@@ -499,39 +710,58 @@ function existingProfiles(ctx, profiles) {
 }
 
 function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = null } = {}) {
-  const saved = editing?.input || {};
+  const draft = editing ? null : readBirthDraft();
+  const saved = editing?.input || draft || {};
   const savedGender = saved.gender === "male" ? "男" : saved.gender === "female" ? "女" : saved.gender;
   const state = {
     mode: saved.input_mode === "manual_pillars" ? "manual_pillars" : "birth_time",
-    gender: editing ? (savedGender === "男" || savedGender === "女" ? savedGender : "") : "男",
+    gender: editing || draft ? (savedGender === "男" || savedGender === "女" ? savedGender : "") : "男",
     calendar: saved.calendar === "lunar" ? "lunar" : "solar",
   };
-  const name = h("input", { class: "input", maxlength: 20, placeholder: "如 小秋、我的命盘；留空自动命名", autocomplete: "off" });
+  const name = h("input", { class: "input", maxlength: 20, placeholder: "如 小秋、我的命盘；留空自动命名", autocomplete: "off", enterkeyhint: "next" });
   const genderSeg = h("div", { class: "seg seg-lg", role: "radiogroup", "aria-label": "性别" });
   const calendarSeg = h("div", { class: "seg", role: "radiogroup", "aria-label": "历法" });
+  radioKeys(genderSeg);
+  radioKeys(calendarSeg);
   const leap = h("input", { type: "checkbox" });
   const leapRow = h("label", { class: "check", hidden: true }, leap, h("span", null, "闰月"));
-  const num = (placeholder, label, max) => h("input", { class: "input num-input", inputmode: "numeric", maxlength: max, placeholder, "aria-label": label, autocomplete: "off" });
-  const year = num("1990", "出生年", 4);
-  const month = num("1", "出生月", 2);
-  const day = num("1", "出生日", 2);
+  const dateHintId = `birth-date-hint-${++birthFormSeq}`;
+  // 占位符写成范围，避免看起来像已经填好的值。
+  const num = (placeholder, label, max, last = false) => h("input", { class: "input num-input", inputmode: "numeric", maxlength: max, placeholder, "aria-label": label, autocomplete: "off", enterkeyhint: last ? "go" : "next", "aria-describedby": dateHintId });
+  const year = num("如 1990", "出生年", 4);
+  const month = num("1–12", "出生月", 2);
+  const day = num("1–31", "出生日", 2);
   const hour = num("0–23", "出生小时", 2);
-  const minute = num("0", "出生分钟", 2);
+  const minute = num("0–59", "出生分钟", 2, true);
+  const DATE_HINT = "小时必填，分钟留空按 00 分；时辰不确定可先填 12。";
+  const dateHint = h("p", { class: "field-hint", id: dateHintId, "aria-live": "polite" }, DATE_HINT);
   const boundary = h("select", { class: "select", "aria-label": "换日规则" },
     h("option", { value: "zi" }, "子时换日（23:00）"),
     h("option", { value: "midnight" }, "零点换日（00:00）"),
     h("option", { value: "late_zi" }, "零点换日 + 夜子时"));
-  const location = locationPicker({ initial: editing ? String(saved.location || "") : "" });
-  const pillarInputs = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]].map(([key, label]) => [key, label, h("input", { class: "input pillar-input", maxlength: 2, placeholder: key === "year" ? "如 甲子" : "", "aria-label": label, autocomplete: "off" })]);
+  // 折叠时也能看到已选的出生地与换日规则。
+  const locationSummary = h("span", { class: "birth-more-label" });
+  const showLocation = text => locationSummary.replaceChildren(...(text
+    ? ["出生地", h("span", { class: "birth-more-value" }, text)]
+    : ["出生地（选填 · 用于真太阳时）"]));
+  showLocation("");
+  const location = locationPicker({ initial: editing || draft ? String(saved.location || "") : "", onChange: showLocation });
+  const moreSummary = h("span", { class: "birth-more-label" });
+  const showBoundary = () => moreSummary.replaceChildren(...["更多设置", boundary.value !== "zi" && h("span", { class: "birth-more-value" }, boundary.selectedOptions[0]?.textContent || "")].filter(Boolean));
+  boundary.addEventListener("change", showBoundary);
+  const pillarInputs = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]].map(([key, label]) => [key, label, h("input", { class: "input pillar-input", maxlength: 2, placeholder: key === "year" ? "如 甲子" : "", "aria-label": label, autocomplete: "off", enterkeyhint: key === "hour" ? "go" : "next" })]);
   const yearCandidates = h("div", { class: "year-candidates" });
   let manualBirthYear = null;
   const error = h("p", { class: "field-error", hidden: true, role: "alert" });
   const submitLabel = editing ? "更新并重新排盘" : "生成命盘";
   const submit = h("button", { type: "submit", class: "btn btn-primary btn-lg btn-block submit-btn" }, icon("sparkle"), submitLabel);
-  const ritual = h("div", { class: "ritual", hidden: true, role: "status" }, h("span", { class: "ritual-mark", "aria-hidden": "true" }), h("span", { class: "ritual-text" }));
+  const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
+    h("span", { class: "ritual-mark", "aria-hidden": "true" }),
+    h("span", { class: "ritual-text", "aria-hidden": "true" }),
+    h("span", { class: "sr-only" }, "正在排盘，请稍候"));
 
-  if (editing) {
-    name.value = editing.name || saved.name || "";
+  if (editing || draft) {
+    name.value = editing?.name || saved.name || "";
     const put = (input, value) => { if (value !== undefined && value !== null && value !== "") input.value = String(value); };
     put(year, saved.year); put(month, saved.month); put(day, saved.day); put(hour, saved.hour); put(minute, saved.minute);
     leap.checked = !!saved.is_leap_month;
@@ -539,15 +769,16 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     const pillars = saved.pillars || {};
     pillarInputs.forEach(([key, , input]) => put(input, pillars[key] || saved[`${key}_pillar`]));
   }
+  showBoundary();
   const radio = (group, current, options, onPick) => {
     group.replaceChildren(...options.map(([value, label]) => h("button", {
-      type: "button", role: "radio", "aria-checked": String(current() === value),
+      type: "button", role: "radio", "aria-checked": String(current() === value), tabindex: current() === value ? "0" : "-1",
       onClick: () => { onPick(value); },
     }, label)));
   };
-  const renderGender = () => radio(genderSeg, () => state.gender, [["男", "男"], ["女", "女"], ["", "不透露"]], value => { state.gender = value; renderGender(); });
+  const renderGender = () => radio(genderSeg, () => state.gender, [["男", "男"], ["女", "女"], ["", "不透露"]], value => { state.gender = value; renderGender(); saveBirthDraft(); });
   const renderCalendar = () => {
-    radio(calendarSeg, () => state.calendar, [["solar", "公历"], ["lunar", "农历"]], value => { state.calendar = value; renderCalendar(); });
+    radio(calendarSeg, () => state.calendar, [["solar", "公历"], ["lunar", "农历"]], value => { state.calendar = value; renderCalendar(); saveBirthDraft(); if (day.value) checkDateField(day); });
     leapRow.hidden = state.calendar !== "lunar";
   };
   renderGender();
@@ -579,13 +810,13 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       h("label", { class: "date-cell" }, day, h("span", null, "日")),
       h("label", { class: "date-cell" }, hour, h("span", null, "时")),
       h("label", { class: "date-cell" }, minute, h("span", null, "分"))),
-    h("p", { class: "field-hint" }, "小时必填，分钟留空按 00 分；时辰不确定可先填 12。"),
+    dateHint,
     h("details", { class: "birth-more" },
-      h("summary", null, "出生地（选填 · 用于真太阳时）"),
+      h("summary", null, locationSummary),
       location.node,
       h("p", { class: "field-hint" }, "海外请选择城市；留空或未识别时不做经度修正。")),
     h("details", { class: "birth-more" },
-      h("summary", null, "更多设置"),
+      h("summary", null, moreSummary),
       h("label", { class: "field" }, h("span", { class: "field-label" }, "换日规则"), boundary)));
   const manualSection = h("div", { class: "birth-manual", hidden: true },
     h("div", { class: "pillar-grid" }, pillarInputs.map(([, label, input]) => h("label", { class: "field" }, h("span", { class: "field-label" }, label), input))),
@@ -593,8 +824,8 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   const modeSeg = h("div", { class: "seg", role: "tablist", "aria-label": "输入方式" });
   const renderMode = () => {
     modeSeg.replaceChildren(
-      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "birth_time"), onClick: () => { state.mode = "birth_time"; renderMode(); } }, "按出生时间"),
-      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "manual_pillars"), onClick: () => { state.mode = "manual_pillars"; renderMode(); } }, "已知四柱"));
+      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "birth_time"), onClick: () => { state.mode = "birth_time"; renderMode(); saveBirthDraft(); } }, "按出生时间"),
+      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "manual_pillars"), onClick: () => { state.mode = "manual_pillars"; renderMode(); saveBirthDraft(); } }, "已知四柱"));
     timeSection.hidden = state.mode !== "birth_time";
     manualSection.hidden = state.mode !== "manual_pillars";
   };
@@ -619,8 +850,118 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     if (field) { field.setAttribute("aria-invalid", "true"); field.focus(); }
   }
 
+  /* ---- 出生时间：数字格 ---- */
+  const DATE_FIELDS = [year, month, day, hour, minute];
+  // 首位已不可能再接第二位时（月份 2–9、日期 4–9、小时 3–9）也算填完。
+  const EARLY = new Map([[month, 2], [day, 4], [hour, 3]]);
+
+  // 离开某一格时就检查范围，不必等到提交才发现。
+  function dateProblem(input) {
+    const text = input.value.trim();
+    if (!text) return "";
+    const value = Number(text);
+    if (input === year) return value >= 1 ? "" : "请填写有效的出生年份";
+    if (input === month) return value >= 1 && value <= 12 ? "" : "月份应在 1–12 之间";
+    if (input === hour) return value <= 23 ? "" : "小时应在 0–23 之间";
+    if (input === minute) return value <= 59 ? "" : "分钟应在 0–59 之间";
+    if (value < 1 || value > 31) return "日期应在 1–31 之间";
+    if (state.calendar === "lunar") return value > 30 ? "农历日期应在 1–30 之间" : "";
+    const y = Number(year.value);
+    const m = Number(month.value);
+    if (!(y >= 1000) || !(m >= 1 && m <= 12)) return "";
+    return new Date(Date.UTC(y, m - 1, value)).getUTCDate() === value ? "" : "该公历日期不存在，请检查月份和日期";
+  }
+
+  function refreshDateHint() {
+    const first = DATE_FIELDS.find(input => input.getAttribute("aria-invalid") === "true" && dateProblem(input));
+    const problem = first ? dateProblem(first) : "";
+    dateHint.className = problem ? "field-error" : "field-hint";
+    dateHint.textContent = problem || DATE_HINT;
+  }
+
+  function checkDateField(input) {
+    if (dateProblem(input)) input.setAttribute("aria-invalid", "true");
+    else input.removeAttribute("aria-invalid");
+    refreshDateHint();
+  }
+
+  DATE_FIELDS.forEach((input, index) => {
+    input.addEventListener("input", event => {
+      const digits = input.value.replace(/\D/g, "").slice(0, input.maxLength);
+      if (digits !== input.value) input.value = digits;
+      if (input.hasAttribute("aria-invalid")) { input.removeAttribute("aria-invalid"); refreshDateHint(); }
+      // 写满就跳到下一格（只在往后打字时跳，删改和粘贴不跳）。
+      const next = DATE_FIELDS[index + 1];
+      if (!next || event.inputType !== "insertText" || input.selectionEnd !== digits.length) return;
+      if (digits.length >= input.maxLength || (EARLY.has(input) && digits.length === 1 && Number(digits) >= EARLY.get(input))) {
+        next.focus();
+        next.select();
+      }
+    });
+    input.addEventListener("blur", () => {
+      checkDateField(input);
+      if ((input === year || input === month) && day.value) checkDateField(day);
+    });
+  });
+
+  // 已知四柱：一柱写成有效干支后跳到下一柱（输入法上屏后才判断）。
+  pillarInputs.forEach(([, , input], index) => {
+    input.addEventListener("input", event => {
+      const next = pillarInputs[index + 1]?.[2];
+      if (!next || event.isComposing || !validPillar(input.value)) return;
+      next.focus();
+      next.select();
+    });
+  });
+
+  // 回车 = 下一格（输入法选词时的回车不算）；最后一格回车直接生成，不再从第一格就提交出错。
+  form.addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.isComposing || event.keyCode === 229) return;
+    const fields = state.mode === "manual_pillars" ? [name, ...pillarInputs.map(entry => entry[2])] : [name, ...DATE_FIELDS];
+    const index = fields.indexOf(event.target);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = fields[index + 1];
+    if (next) { next.focus(); next.select(); } else form.requestSubmit();
+  });
+  // 改动任何一项后，旧的提交错误就收起来。
+  form.addEventListener("input", () => { if (!submit.disabled) error.hidden = true; });
+
+  function saveBirthDraft() {
+    if (editing) return;
+    const pillars = Object.fromEntries(pillarInputs.map(([key, , input]) => [key, input.value]));
+    const snapshot = {
+      name: name.value, gender: state.gender, input_mode: state.mode, calendar: state.calendar,
+      year: year.value, month: month.value, day: day.value, hour: hour.value, minute: minute.value,
+      is_leap_month: leap.checked, day_boundary: boundary.value, location: location.value(), pillars, at: Date.now(),
+    };
+    const filled = [snapshot.name, snapshot.year, snapshot.month, snapshot.day, snapshot.hour, snapshot.minute, snapshot.location, ...Object.values(pillars)].some(value => String(value || "").trim());
+    if (filled) local.setJson(BIRTH_DRAFT, snapshot);
+    else local.remove(BIRTH_DRAFT);
+  }
+  form.addEventListener("input", saveBirthDraft);
+  form.addEventListener("change", saveBirthDraft);
+
+  function clearBirthForm() {
+    local.remove(BIRTH_DRAFT);
+    [name, year, month, day, hour, minute, ...pillarInputs.map(entry => entry[2])].forEach(input => { input.value = ""; input.removeAttribute("aria-invalid"); });
+    leap.checked = false;
+    boundary.value = "zi";
+    showBoundary();
+    location.reset();
+    Object.assign(state, { mode: "birth_time", gender: "男", calendar: "solar" });
+    renderGender();
+    renderCalendar();
+    renderMode();
+    updateCandidates();
+    refreshDateHint();
+    name.focus({ preventScroll: true });
+  }
+  if (draft) toast("已恢复上次没填完的出生信息", { action: { label: "清空重填", onClick: clearBirthForm } });
+
   function validate() {
     [year, month, day, hour, minute, ...pillarInputs.map(entry => entry[2])].forEach(input => input.removeAttribute("aria-invalid"));
+    refreshDateHint();
     error.hidden = true;
     if (state.mode === "manual_pillars") {
       for (const [, label, input] of pillarInputs) {
@@ -710,6 +1051,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       if (!ctx.isCurrent()) return;
       const profileId = chart?.profile_id;
       if (!profileId) throw new Error("排盘已完成，但没有拿到档案编号，请到「我的盘」查看。");
+      local.remove(BIRTH_DRAFT);
       refreshSession().catch(() => {});
       const warning = Array.isArray(chart.warnings) && chart.warnings[0];
       if (warning) toast(String(warning));

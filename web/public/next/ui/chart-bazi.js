@@ -10,6 +10,36 @@ const MODE_KEY = "xz-next-bazi-mode";
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
 const WUXING = ["木", "火", "土", "金", "水"];
 
+// 横向滑动条里让选中项露出来（只滚动条本身，不带动页面）。
+function revealSelected(strip) {
+  const run = () => {
+    const item = strip.querySelector(".is-selected");
+    if (!item || !strip.clientWidth) return;
+    const box = strip.getBoundingClientRect();
+    const rect = item.getBoundingClientRect();
+    if (rect.left < box.left) strip.scrollLeft -= box.left - rect.left + 12;
+    else if (rect.right > box.right) strip.scrollLeft += rect.right - box.right + 12;
+  };
+  if (strip.isConnected) run(); else requestAnimationFrame(run);
+}
+
+// 局部重绘前记下焦点与滑动位置，重绘后还原：点选大运、流年时不丢焦点，滑动条也不跳回开头。
+function snapshot(container) {
+  const active = document.activeElement;
+  const strips = {};
+  container.querySelectorAll("[data-strip]").forEach(strip => { strips[strip.dataset.strip] = strip.scrollLeft; });
+  return { focus: active && container.contains(active) ? active.dataset.key || "" : "", strips };
+}
+
+function restore(container, keep) {
+  container.querySelectorAll("[data-strip]").forEach(strip => {
+    const left = keep?.strips[strip.dataset.strip];
+    if (left !== undefined && strip.isConnected) strip.scrollLeft = left;
+    revealSelected(strip);
+  });
+  if (keep?.focus) container.querySelector(`[data-key="${keep.focus}"]`)?.focus({ preventScroll: true });
+}
+
 function ganzhi(text, stemElement, branchElement, className = "") {
   const chars = Array.from(String(text || ""));
   return h("span", { class: ["gz", className] },
@@ -167,14 +197,14 @@ function dayunBlock(payload, state, rerender) {
       h("span", { class: "muted" }, `${list.length} 步 · ${dy.forward ? "顺排" : "逆排"} · ${dy.start_age ?? "—"} 岁起运`)),
     trendChart(list, selected, select),
     h("p", { class: "cp-note" }, "曲线把十神倾向压成相对节律，只作示意，不是吉凶定论。"),
-    h("div", { class: "dayun-cards", role: "listbox", "aria-label": "大运" },
+    h("div", { class: "dayun-cards", role: "group", "aria-label": "大运（选一步查看流年）", "data-strip": "dayun" },
       list.map((item, index) => {
         const current = item.ganzhi === dy.current;
         const card = h("button", {
           type: "button",
-          role: "option",
           class: ["dayun-card", index === selected && "is-selected", current && "is-current"],
-          "aria-selected": String(index === selected),
+          "aria-pressed": String(index === selected),
+          "data-key": `dy-${index}`,
           onClick: () => select(index),
         },
         h("span", { class: "dayun-age tnum" }, `${item.age_range || `${item.start_age ?? ""}–${item.end_age ?? ""}`}岁`),
@@ -199,12 +229,13 @@ function dayunBlock(payload, state, rerender) {
     const isThisYear = chosen && Number(chosen.year) === Number(payload?.liu_nian?.year);
     const clm = payload?.current_liu_yue;
     section.append(
-      h("div", { class: "liunian-strip", role: "listbox", "aria-label": `${step.ganzhi || ""}大运的流年` },
+      h("div", { class: "liunian-strip", role: "group", "aria-label": `${step.ganzhi || ""}大运的流年`, "data-strip": `liunian-${selected}` },
         years.map((item, index) => h("button", {
           type: "button",
-          role: "option",
           class: ["liunian", index === yearIndex && "is-selected", item.current && "is-current"],
-          "aria-selected": String(index === yearIndex),
+          "aria-pressed": String(index === yearIndex),
+          "aria-label": `${item.year || ""}年 ${item.pillar || ""}${item.stem_ten_god ? ` ${item.stem_ten_god}` : ""}${item.current ? "（今年）" : ""}`,
+          "data-key": `ln-${selected}-${index}`,
           onClick: () => { state.year = index; rerender(); },
         }, h("span", { class: "tnum" }, String(item.year || "")), ganzhi(item.pillar, item.stem_element, item.branch_element), h("small", null, item.stem_ten_god || "")))),
       chosen ? h("p", { class: "liunian-detail" },
@@ -237,10 +268,23 @@ export function baziMeta(payload, input = {}) {
 export function baziPanel(payload, { name = "", input = {} } = {}) {
   const state = { dayun: null, year: null, advanced: local.get(MODE_KEY, "basic") === "advanced" };
   const root = h("section", { class: "chart-panel is-bazi", "aria-label": "八字命盘" });
+  let dayun = null;
+  // 选大运、流年只重绘这一段，其余盘面不动。
+  const renderDayun = () => {
+    const keep = dayun ? snapshot(dayun) : null;
+    const next = dayunBlock(payload, state, renderDayun);
+    if (dayun?.isConnected) dayun.replaceWith(next);
+    dayun = next;
+    if (keep) restore(next, keep);
+    return next;
+  };
   const render = () => {
+    const keep = snapshot(root);
+    const setMode = advanced => { state.advanced = advanced; local.set(MODE_KEY, advanced ? "advanced" : "basic"); render(); };
     const modeSeg = h("div", { class: "seg cp-mode", role: "group", "aria-label": "显示层级" },
-      h("button", { type: "button", "aria-pressed": String(!state.advanced), onClick: () => { state.advanced = false; local.set(MODE_KEY, "basic"); render(); } }, "基础"),
-      h("button", { type: "button", "aria-pressed": String(state.advanced), onClick: () => { state.advanced = true; local.set(MODE_KEY, "advanced"); render(); } }, "进阶"));
+      h("button", { type: "button", "aria-pressed": String(!state.advanced), "data-key": "mode-basic", onClick: () => setMode(false) }, "基础"),
+      h("button", { type: "button", "aria-pressed": String(state.advanced), "data-key": "mode-advanced", onClick: () => setMode(true) }, "进阶"));
+    dayun = null;
     root.replaceChildren(
       h("header", { class: "cp-head" },
         h("div", { class: "cp-title" },
@@ -251,9 +295,10 @@ export function baziPanel(payload, { name = "", input = {} } = {}) {
       pillarsBlock(payload, state.advanced),
       factsBlock(payload),
       wuxingBlock(payload),
-      dayunBlock(payload, state, render),
+      renderDayun(),
       state.advanced ? shenshaBlock(payload) : h("p", { class: "cp-hint" }, icon("info", "icon-sm"), "想看藏干、地势纳音与神煞，切到「进阶」。"),
       h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("bazi") }, icon("book"), "名词解释"));
+    restore(root, keep);
   };
   render();
   return root;
