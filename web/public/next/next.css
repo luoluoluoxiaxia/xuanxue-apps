@@ -884,7 +884,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .board-pillar { display: grid; justify-items: center; gap: 6px; padding: 14px 6px; background: color-mix(in srgb, var(--bg-elev) 86%, transparent); border-radius: 14px; }
 .board-pillar.is-day { background: var(--brand-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--brand) 40%, transparent); }
 .board-pillar-label { color: var(--ink-3); font-size: 12px; font-weight: 700; letter-spacing: .1em; }
-.board-pillar-gz { font: 800 26px/1.15 var(--font-serif); letter-spacing: .12em; writing-mode: vertical-rl; text-orientation: upright; }
+/* 干支两字上下排：用最窄宽度让每字自成一行，不依赖字体的竖排度量（网络字体加载不了时竖排会塌成一行高）。 */
+.board-pillar-gz { width: min-content; font: 800 26px/1.12 var(--font-serif); letter-spacing: 0; text-align: center; }
 .board-pillar-nayin { color: var(--ink-3); font-size: 12px; }
 .board-wuxing { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
 .wx { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; }
@@ -941,7 +942,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .composer-tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding-left: 38px; }
 .composer-check { font-size: 13px; font-weight: 600; }
 .composer-identity { color: var(--ink-3); font-size: 12.5px; }
-.composer-count { margin-left: auto; color: var(--ink-3); font-size: 12px; }
+.composer-meta { margin-left: auto; display: inline-flex; align-items: center; gap: 10px; }
+.composer-count { color: var(--ink-3); font-size: 12px; }
 .composer-status { padding-left: 38px; color: var(--ink-3); font-size: 13px; min-height: 0; }
 .composer-status:empty { display: none; }
 .reply-chip { display: inline-flex; align-items: center; gap: 6px; justify-self: start; height: 28px; padding: 0 6px 0 10px; color: var(--brand-ink); background: var(--brand-soft); border-radius: 999px; font-size: 12.5px; font-weight: 650; }
@@ -1153,3 +1155,97 @@ a, button, summary, label, select, [role="button"], [role="tab"] { touch-action:
   .react:active, .comment-action:active { background: var(--bg-press); }
 }
 
+
+/* ---------- 交互打磨：广场与帖子 ---------- */
+/* 切换筛选、从帖子返回：整页不做入场动画，只让列表内容轻轻换上。 */
+.feed-layout.is-quiet { animation: none; }
+.feed-list.is-swapping { animation: feed-swap .22s var(--ease-out) both; }
+@keyframes feed-swap { from { opacity: .4; } to { opacity: 1; } }
+/* 加载中的列表先占住高度：切换筛选后控件停在原处，不被页面收缩带着跳。 */
+.feed-list[aria-busy="true"] { min-height: min(70vh, 720px); }
+.feed-stream { position: relative; min-width: 0; }
+
+/* 按下卡片立即有反馈；触屏没有真正的悬停，点过的卡片不留阴影。 */
+.post-card:has(.post-card-link:active) { background: var(--bg-hover); border-color: var(--line-strong); }
+@media (hover: none) {
+  .post-card:hover { border-color: var(--line); box-shadow: none; }
+}
+.post-card.is-fresh { animation: fresh-in .32s var(--ease-out) both; }
+@keyframes fresh-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* 「有新帖子」与刷新状态：贴在顶栏下方、悬浮在列表上，不挤动内容。 */
+.feed-newbar {
+  position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px) + 10px); z-index: 6;
+  height: 0;
+  display: flex; justify-content: center;
+}
+.feed-newpill {
+  position: absolute; top: 0;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 16px;
+  color: var(--on-brand); background: var(--brand);
+  border: 1px solid transparent; border-radius: 999px;
+  box-shadow: 0 10px 24px -10px color-mix(in srgb, var(--brand) 75%, transparent);
+  font-size: 13.5px; font-weight: 700; white-space: nowrap;
+  animation: newpill-in .24s var(--ease-out) both;
+}
+.feed-newpill .icon { width: 16px; height: 16px; stroke-width: 2.2; }
+button.feed-newpill:active { transform: scale(.97); }
+.feed-newpill.is-status { color: var(--ink-2); background: var(--bg-elev); border-color: var(--line); box-shadow: var(--shadow-2); font-weight: 600; }
+.feed-newpill .spinner { width: 14px; height: 14px; }
+@keyframes newpill-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+/* 手机脉搏数据还没到时的占位，数据回来不挤动标题。 */
+@media (max-width: 1079px) {
+  .feed-pulse.is-loading:not([hidden]) {
+    display: block; width: 188px; height: 33px; margin-bottom: 10px; padding: 0;
+    border-color: transparent;
+    background: linear-gradient(90deg, var(--bg-sunken) 0%, color-mix(in srgb, var(--bg-sunken) 55%, var(--bg-elev)) 50%, var(--bg-sunken) 100%);
+    background-size: 220% 100%;
+  }
+}
+
+/* 评论编辑器：Ctrl / ⌘ + 回车提示只给有实体键盘的桌面；接近字数上限时提醒。 */
+.composer-hint { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+@media (hover: none), (pointer: coarse), (max-width: 719px) {
+  .composer-hint { display: none; }
+}
+.composer-count.is-near { color: var(--brand-ink); font-weight: 700; }
+.composer-status[data-tone="error"] { color: var(--danger); }
+.composer-submit.is-busy { cursor: progress; }
+.composer-submit .spinner { width: 14px; height: 14px; }
+/* 回复某条评论时，编辑器搬到这条讨论串末尾，与评论正文对齐；窄屏占满整行。 */
+.composer.is-inline { margin: 0 0 16px 38px; padding: 12px; animation: fresh-in .2s var(--ease-out) both; }
+@media (max-width: 719px) {
+  .composer.is-inline { margin-left: 0; }
+}
+.composer.is-inline .composer-row > .avatar,
+.composer.is-inline .composer-row > .composer-mark { display: none; }
+.composer.is-inline .composer-tools,
+.composer.is-inline .composer-status { padding-left: 0; }
+@media (pointer: coarse) {
+  .reply-chip { height: 36px; padding-right: 0; }
+  .reply-cancel { width: 40px; height: 36px; }
+}
+
+/* 评论：发送中、刚发出的那条、长评论收起。 */
+.comment.is-pending .comment-body { color: var(--ink-2); }
+.comment-sending { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-3); font-size: 12.5px; }
+.comment-sending .spinner { width: 12px; height: 12px; }
+.comment.is-new { animation: target-flash 1.6s var(--ease) both; }
+.comment[tabindex="-1"]:focus-visible { border-radius: 12px; }
+.comment-body.is-clamped { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 8; overflow: hidden; }
+.comment-more { justify-self: start; min-height: 32px; margin-top: -4px; color: var(--brand-ink); font-size: 13.5px; font-weight: 650; border-radius: 8px; }
+.comment-more:hover { text-decoration: underline; text-underline-offset: 3px; }
+@media (pointer: coarse) {
+  .comment-more { min-height: 40px; }
+}
+
+/* 关注后书签实心，不只靠颜色区分状态。 */
+.follow-btn[aria-pressed="true"] .icon { fill: currentColor; }
+.post-actions .btn[aria-busy="true"] { cursor: progress; }
+
+/* 手机：输入时收起底部评论栏，键盘上方只留输入框。 */
+@media (max-width: 719px) {
+  .is-typing .post-mobilebar { display: none; }
+}
