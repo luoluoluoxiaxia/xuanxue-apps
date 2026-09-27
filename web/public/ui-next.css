@@ -2274,7 +2274,6 @@ html[data-ui="next"] body[data-screen="dash"] .chat-thread{
   color:var(--nx-text);
   background:var(--nx-surface);
 }
-html[data-ui="next"] body[data-screen="dash"] .msg-user{animation:nx-rise .3s var(--nx-ease) both}
 html[data-ui="next"] body[data-screen="dash"] .msg-user .bubble{
   max-width:min(80%,620px);
   padding:12px 18px;
@@ -2286,7 +2285,9 @@ html[data-ui="next"] body[data-screen="dash"] .msg-user .bubble{
   font-size:15.5px;
   line-height:1.75;
 }
-html[data-ui="next"] body[data-screen="dash"] .msg-ai{max-width:none;padding-top:40px;animation:nx-rise .36s var(--nx-ease) both}
+html[data-ui="next"] body[data-screen="dash"] .msg-ai{max-width:none;padding-top:40px}
+/* 入场动画只给第一次出现的消息（ui-shell.js 标记 .nx-enter）；流式重绘不会重播，避免闪烁。 */
+html[data-ui="next"] body[data-screen="dash"] :is(.msg-user,.msg-ai).nx-enter{animation:nx-rise .36s var(--nx-ease) both}
 html[data-ui="next"] body[data-screen="dash"] .ai-byline{
   display:flex;
   align-items:center;
@@ -3348,8 +3349,8 @@ html[data-ui="next"] .comment{
   position:relative;
   padding:18px 0 14px;
   border-bottom:1px solid var(--nx-line);
-  animation:nx-rise .3s var(--nx-ease) both;
 }
+html[data-ui="next"] .comment.nx-enter{animation:nx-rise .3s var(--nx-ease) both}
 html[data-ui="next"] .comment-meta{align-items:center;gap:4px 10px;color:var(--nx-faint);font-size:12.5px}
 html[data-ui="next"] .comment-meta>.nx-avatar{width:30px;height:30px;font-size:13px}
 html[data-ui="next"] .comment-meta b{color:var(--nx-ink);font-size:14.5px;font-weight:600}
