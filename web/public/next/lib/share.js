@@ -66,3 +66,26 @@ export async function sharePost({ slug, title }) {
     message: target.attributed ? "邀请链接已复制，新用户激活后每日额度永久 +1" : "标题和链接已复制",
   };
 }
+
+// 分享长图：复用站内已有的长图绘制（share-card.js），按需加载。
+let cardLoading = null;
+export function loadShareCard() {
+  if (window.XuanxueShareCard) return Promise.resolve(window.XuanxueShareCard);
+  if (!cardLoading) {
+    cardLoading = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "share-card.js?v=share-card-7";
+      script.onload = () => (window.XuanxueShareCard ? resolve(window.XuanxueShareCard) : reject(new Error("长图组件没有加载成功")));
+      script.onerror = () => { cardLoading = null; reject(new Error("长图组件加载失败，请稍后再试")); };
+      document.head.append(script);
+    });
+  }
+  return cardLoading;
+}
+
+export async function renderShareImage(post) {
+  const card = await loadShareCard();
+  const target = await shareTarget(post.slug);
+  const result = await card.render(post, { slug: post.slug, shareUrl: target.url });
+  return { ...result, attributed: target.attributed, shareUrl: target.url };
+}
