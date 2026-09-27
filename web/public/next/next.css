@@ -1,6 +1,6 @@
 /* ==========================================================================
-   玄枢 · 新版前端（next.html）
-   独立于经典版的页面结构；视觉为简约红白：白底、中性灰字，红色只用于主操作、
+   玄枢 · Web 前端（index.html + next/）
+   视觉为简约红白：白底、中性灰字，红色只用于主操作、
    选中、点赞与提醒。五行色只用于命盘数据。浅色 / 深色两套令牌，组件只通过令牌取色。
    ========================================================================== */
 
@@ -793,6 +793,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .boot-mark { width: 44px; height: 44px; border-radius: 14px; background: var(--brand); box-shadow: 0 12px 30px -12px color-mix(in srgb, var(--brand) 80%, transparent); animation: boot-breathe 1.4s ease-in-out infinite; }
 @keyframes boot-breathe { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(.92); opacity: .72; } }
 .boot-noscript { padding: 24px; text-align: center; }
+.boot-noscript ul { display: grid; gap: 8px; max-width: 36em; margin: 16px auto; padding-left: 1.2em; text-align: left; }
+.boot-noscript a { color: var(--brand-ink); text-decoration: underline; text-underline-offset: 3px; }
 .page-narrow { max-width: 720px; margin: 0 auto; }
 .spinner-line { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 14px; padding: 16px 0; }
 .state-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 4px; }
