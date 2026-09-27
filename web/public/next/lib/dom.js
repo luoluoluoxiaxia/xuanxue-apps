@@ -1,4 +1,4 @@
-// 新版前端的 DOM 工具：零构建环境下创建元素、转义文本与事件委托。
+// DOM 工具：零构建环境下创建元素、转义文本与事件委托。
 // 所有来自接口的文本都以 textContent 或 esc() 写入，不直接拼接未转义的 HTML。
 
 export function esc(value) {

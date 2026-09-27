@@ -270,7 +270,7 @@ export function render(ctx) {
     } else if (!liuyao && state.profileId) {
       loadLastConversation();
     }
-    // 从档案打开时说明打开的是哪段对话、上次的解读停在哪里（与经典版一致）。
+    // 从档案打开时说明打开的是哪段对话、上次的解读停在哪里。
     if (opened === "resumed" && (serverMessages.length || activeTasks.length)) {
       toast(running ? "已恢复上次对话，解读继续" : `已恢复这段${liuyao ? "六爻" : "八字"}对话，继续追问`);
     } else if (opened === "fresh") {
@@ -325,7 +325,7 @@ export function render(ctx) {
     const liuyao = state.system === "liuyao";
     const panel = liuyao ? liuyaoPanel(state.payload) : baziPanel(state.payload, { name: state.name, input: state.input });
     const title = liuyao ? liuyaoTitle(state.payload) : (state.name || state.payload?.profile_name || "我的命盘");
-    // 解读进行中不能重新起卦 / 开新对话（与经典版一致）；按钮在 syncComposer 里随忙碌状态切换。
+    // 解读进行中不能重新起卦 / 开新对话；按钮在 syncComposer 里随忙碌状态切换。
     const restart = liuyao
       ? h("button", { type: "button", class: "btn btn-sm btn-ghost", onClick: () => {
         if (state.conversation?.busy) { toast("请先等待当前解读完成，或停止后再重新起卦"); return; }
@@ -977,7 +977,7 @@ export function render(ctx) {
       return false;
     }
     if (!session.get().authenticated) {
-      // 与经典版一致：解读前的登录默认停在「注册」。
+      // 解读前的登录默认停在「注册」。
       const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后使用每日免费积分解读。", { mode: "register" });
       if (!ok) return false;
       const again = session.get().quota;

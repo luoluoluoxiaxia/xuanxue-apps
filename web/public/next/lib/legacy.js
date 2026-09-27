@@ -1,35 +1,7 @@
-// 新版与经典版之间的地址映射：切换时尽量停留在同一内容上。
-// 经典版地址形如 /?post=slug#gua-square、/?start=liuyao、/?view=credits；新版使用哈希路由。
+// 旧版首页的地址（/?post=slug#gua-square、/?start=liuyao、/?view=credits 等）映射到哈希路由，
+// 通知、分享和收藏里的旧链接仍能打开对应内容。
 
-export function classicBase() {
-  return typeof window.XZ_CLASSIC_URL === "string" && window.XZ_CLASSIC_URL ? window.XZ_CLASSIC_URL : "./";
-}
-
-export function classicUrl(match) {
-  const base = classicBase();
-  const path = match?.path || "/";
-  const params = new URLSearchParams();
-  let hash = "";
-  const post = /^\/post\/([^/]+)/.exec(path);
-  if (post) {
-    params.set("post", decodeURIComponent(post[1]));
-    hash = "#gua-square";
-  } else if (path.startsWith("/ask/liuyao")) {
-    params.set("start", "liuyao");
-    if (match?.query?.get("help") === "1") params.set("community", "help");
-  } else if (path.startsWith("/ask/bazi")) {
-    params.set("start", "bazi");
-  } else if (path.startsWith("/me/credits")) {
-    params.set("view", "credits");
-  } else if (path.startsWith("/me/archives") || path.startsWith("/reading")) {
-    params.set("view", "archives");
-  }
-  params.set("ui", "classic");
-  const search = params.toString();
-  return `${base}${search ? `?${search}` : ""}${hash}`;
-}
-
-// 从经典版查询参数得到新版路由；没有可识别的参数时返回空字符串。
+// 从旧版查询参数得到新版路由；没有需要改写的参数时返回空字符串。
 export function routeFromLegacy(search) {
   if (location.hash && location.hash !== "#" && location.hash !== "#gua-square") return "";
   const params = new URLSearchParams(search || "");
@@ -65,7 +37,6 @@ export function routeFromLegacy(search) {
     route = "#/";
   }
   if (!route) return "";
-  params.delete("ui");
   const rest = params.toString();
   return `${rest ? `?${rest}` : ""}${route}`;
 }

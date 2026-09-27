@@ -55,7 +55,7 @@ function maskEmail(email) {
   return `${head}***${tail}${text.slice(at)}`;
 }
 
-// 带时区的时间换算成北京时间；不带时区的字符串按原样截取（与经典版一致）。
+// 带时区的时间换算成北京时间；不带时区的字符串按原样截取。
 function stamp(value) {
   const text = String(value || "").trim();
   if (!text) return "时间未记录";
