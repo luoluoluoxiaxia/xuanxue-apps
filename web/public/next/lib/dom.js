@@ -38,6 +38,14 @@ export function h(tag, props, ...children) {
   return el;
 }
 
+// 整体替换子节点：和 h() 一样跳过 null / undefined / 布尔值。原生 replaceChildren、append
+// 会把这些值写成「null」「false」文字，子节点里有条件表达式时用这个。
+export function fill(parent, ...children) {
+  parent.replaceChildren();
+  appendChildren(parent, children);
+  return parent;
+}
+
 export function frag(...children) {
   const fragment = document.createDocumentFragment();
   appendChildren(fragment, children);

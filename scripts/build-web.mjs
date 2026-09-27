@@ -158,6 +158,81 @@ if (/data-hero-nav="detailed"|data-open-detailed|personal-home\/cases|personal_c
 // 会话只由服务端的 HttpOnly Cookie 承担，前端不写 Cookie。
 if (/document\.cookie\s*=/.test(nextSource)) fail("next/ must not write cookies");
 
+// 原生 replaceChildren / append 等会把 null、undefined、布尔值写成「null」「false」文字（曾在线上的
+// 「关注进展」按钮上出现）。顶层参数不能是可能落成这些值的条件表达式；这种情况用 lib/dom.js 的 fill()。
+function withoutNesting(text) {
+  let out = "";
+  let depth = 0;
+  let quote = "";
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if ("([{".includes(ch)) depth++;
+    else if (")]}".includes(ch)) depth--;
+    else if (depth === 0) out += ch;
+  }
+  return out;
+}
+function splitTopLevel(text, open = 0) {
+  const parts = [];
+  let depth = 0;
+  let quote = "";
+  let current = "";
+  let i = open;
+  for (; i < text.length; i++) {
+    const ch = text[i];
+    if (quote) {
+      current += ch;
+      if (ch === "\\") current += text[++i] || "";
+      else if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if ("([{".includes(ch)) depth++;
+    else if (")]}".includes(ch)) {
+      if (depth === 0) break;
+      depth--;
+    } else if (ch === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return { parts: parts.map(part => part.trim()).filter(Boolean), end: i };
+}
+function mayBeBlank(argument) {
+  const top = withoutNesting(argument);
+  const ternary = /\?(?![.?])/.exec(top.replace(/\?\?/g, "  "));
+  if (ternary) return /\?\s*(?:null|undefined|false)\s*:/.test(top) || /:\s*(?:null|undefined|false)\s*$/.test(top);
+  return /&&|\|\|\s*(?:null|undefined|false)\s*$|\?\?\s*(?:null|undefined)\s*$/.test(top);
+}
+for (const path of nextModules) {
+  const text = readFileSync(path, "utf8");
+  for (const match of text.matchAll(/\.(?:replaceChildren|append|prepend|before|after|replaceWith)\(/g)) {
+    const { parts } = splitTopLevel(text, match.index + match[0].length);
+    for (const part of parts) {
+      let risky = false;
+      if (part.startsWith("...[")) {
+        // 展开的数组字面量：末尾有 .filter(Boolean) 就安全，否则逐项检查。
+        if (!/\]\s*\.filter\(Boolean\)\s*$/.test(part)) risky = splitTopLevel(part, 4).parts.some(mayBeBlank);
+      } else if (!part.startsWith("...")) {
+        risky = mayBeBlank(part);
+      }
+      if (risky) {
+        const line = text.slice(0, match.index).split("\n").length;
+        fail(`${relative(root, path)}:${line} passes a value that may be null/false to a native DOM insert; use fill() from lib/dom.js`);
+      }
+    }
+  }
+}
+
 // 点赞、浏览、关注、采纳与反馈都要带同域互动证明。
 for (const [file, call] of [
   ["views/feed.js", /\/like`/],
