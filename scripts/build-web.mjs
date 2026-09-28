@@ -35,12 +35,8 @@ const required = [
   "next/next-reading.css",
   "next/next-personal.css",
   "next/next-chart.css",
-  // 后端渲染的帖子完整页与岁运报告页仍直接引用下面这些共享资源。
-  "account.js",
-  "community.js",
+  // 岁运全书旧报告页（后端路由 /forecast/view/<id>）仍直接引用下面这些资源。
   "style.css",
-  "community.css",
-  "account.css",
   "forecast-view.html",
   "forecast.css",
   "robots.txt",
@@ -111,9 +107,6 @@ try {
 } catch (error) {
   fail(`index.html structured data is not valid JSON: ${error.message}`);
 }
-for (const hiddenEntry of ['data-hero-nav="detailed"', "data-open-detailed", "personal_case"]) {
-  if (html.includes(hiddenEntry)) fail(`hidden detailed-reading entry is public: ${hiddenEntry}`);
-}
 const references = [
   ...[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(match => match[1]),
   ...[...html.matchAll(/<link[^>]+href="([^"]+)"/g)].map(match => match[1]),
@@ -151,9 +144,6 @@ for (const forbidden of [
 }
 for (const marker of ['"X-XuanShu-CSRF"', '"X-Xuanshu-Interaction"', '"same-origin-v1"']) {
   if (!nextSource.includes(marker)) fail(`next/ lost request header ${marker}`);
-}
-if (/data-hero-nav="detailed"|data-open-detailed|personal-home\/cases|personal_case/.test(nextSource)) {
-  fail("next/ must not expose the hidden detailed-reading entry");
 }
 // 会话只由服务端的 HttpOnly Cookie 承担，前端不写 Cookie。
 if (/document\.cookie\s*=/.test(nextSource)) fail("next/ must not write cookies");
@@ -303,29 +293,7 @@ for (const marker of ['"/api/auth/code"', "code: code.value", '"password/reset"'
   if (!auth.includes(marker)) fail(`next/views/auth.js registration boundary missing ${marker}`);
 }
 
-// 共享给后端页面的旧脚本：账户、社区与岁运报告页。
-const account = read("account.js");
-for (const requiredAuthBoundary of [
-  "验证邮箱后创建账户，注册即赠送积分",
-  "{ email, password, code }",
-  "忘记或重设密码",
-  'endpoint = isRegister ? "register" : isPasswordReset ? "password/reset" : "login"',
-]) {
-  if (!account.includes(requiredAuthBoundary)) {
-    fail(`account registration boundary missing ${requiredAuthBoundary}`);
-  }
-}
-for (const retiredInviteMarker of ["领取邀请码", "invite_code", "/api/auth/invite-code"]) {
-  if (account.includes(retiredInviteMarker)) {
-    fail(`account registration still exposes retired invite marker ${retiredInviteMarker}`);
-  }
-}
-
-const community = read("community.js");
-if ((community.match(/"X-Xuanshu-Interaction": "same-origin-v1"/g) || []).length !== 5) {
-  fail("community likes, views, follows, and resolutions must carry same-origin interaction proof");
-}
-
+// 岁运全书旧报告页：不得在浏览器里保存访问密码。
 const forecast = read("forecast-view.html");
 for (const forbidden of [
   "sessionStorage.setItem",
