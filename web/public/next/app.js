@@ -1,22 +1,22 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n2";
-import { icon, brandMark } from "./lib/icons.js?v=n2";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n2";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n2";
-import { get } from "./lib/api.js?v=n2";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n2";
-import { toast } from "./ui/toast.js?v=n2";
-import { openAuth } from "./views/auth.js?v=n2";
-import * as FeedView from "./views/feed.js?v=n2";
-import * as PostView from "./views/post.js?v=n2";
-import * as AskView from "./views/ask.js?v=n2";
-import * as ReadingView from "./views/reading.js?v=n2";
-import * as TodayView from "./views/today.js?v=n2";
-import * as InboxView from "./views/inbox.js?v=n2";
-import * as MeView from "./views/me.js?v=n2";
-import { openFeedback } from "./views/feedback.js?v=n2";
-import { routeFromLegacy } from "./lib/legacy.js?v=n2";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n3";
+import { icon, brandMark } from "./lib/icons.js?v=n3";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n3";
+import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n3";
+import { get } from "./lib/api.js?v=n3";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n3";
+import { toast } from "./ui/toast.js?v=n3";
+import { openAuth } from "./views/auth.js?v=n3";
+import * as FeedView from "./views/feed.js?v=n3";
+import * as PostView from "./views/post.js?v=n3";
+import * as AskView from "./views/ask.js?v=n3";
+import * as ReadingView from "./views/reading.js?v=n3";
+import * as TodayView from "./views/today.js?v=n3";
+import * as InboxView from "./views/inbox.js?v=n3";
+import * as MeView from "./views/me.js?v=n3";
+import { openFeedback } from "./views/feedback.js?v=n3";
+import { routeFromLegacy } from "./lib/legacy.js?v=n3";
 
 const THEME_KEY = "xz-next-theme";
 

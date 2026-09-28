@@ -16,7 +16,7 @@ next/app.js           外壳、导航、会话与路由装配
   └─ views/           每个页面一个模块：广场、帖子、提问、解读、今日、消息、我的、登录、反馈
 ```
 
-- 所有相对导入都带同一个版本号（当前 `?v=n2`，与 `index.html` 中的入口脚本和样式表一致），发布新版本时统一替换。`scripts/build-web.mjs` 检查版本一致性和导入目标是否存在，防止同一模块被加载两份或缺模块导致整页打不开。
+- 所有相对导入都带同一个版本号（当前 `?v=n3`，与 `index.html` 中的入口脚本和样式表一致），发布新版本时统一替换。`scripts/build-web.mjs` 检查版本一致性和导入目标是否存在，防止同一模块被加载两份或缺模块导致整页打不开。
 - 路由使用哈希，静态托管无需改写：`#/` 广场、`#/post/<slug>` 帖子讨论、`#/ask`（`/liuyao`、`/bazi`）提问、`#/reading/<档案 id>[?session=]` 解读工作台、`#/today` 今日、`#/inbox` 消息、`#/me`（`/archives`、`/credits`、`/settings`）。
 - 旧版首页的地址在启动时映射过来（`next/lib/legacy.js`）：`?post=<slug>[&target=comment-<id>]`、`?start=liuyao|bazi[&community=help][&set_default=1]`、`?view=credits|archives`（含支付返回参数和 `month`）、`#gua-square`。
 - 外观跟随系统，也可以在账户菜单或设置里固定浅色 / 深色（`localStorage.xz-next-theme`）。
