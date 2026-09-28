@@ -314,7 +314,6 @@ export function render(ctx) {
     if (!item || item.session_id === state.conversation?.sessionId) return null;
     const running = item.status === "pending" || item.status === "running";
     return h("a", { class: "rd-resume", href: `#/reading/${encodeURIComponent(state.profileId)}?session=${encodeURIComponent(item.session_id)}` },
-      h("span", { class: "rd-resume-icon", "aria-hidden": "true" }, icon("clock", "icon-sm")),
       h("span", { class: "rd-resume-copy" },
         h("small", null, running ? "上次的解读还在进行" : `接着上次聊 · ${relativeTime(item.updated_at)}`),
         h("b", null, item.last_question || item.first_question || "本命解读")),
@@ -499,7 +498,6 @@ export function render(ctx) {
     const conversation = state.conversation;
     const label = conversation.label(message);
     const head = h("header", { class: "ai-head" },
-      h("span", { class: "ai-mark", "aria-hidden": "true" }, "玄"),
       h("span", { class: "ai-label" }, label),
       h("span", { class: "ai-elapsed tnum", "data-elapsed": "" }, elapsedLabel(message)));
     const body = h("div", { class: "ai-body prose" });

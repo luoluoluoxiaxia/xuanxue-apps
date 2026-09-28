@@ -226,7 +226,6 @@ function showInvitePrompt() {
   };
   inviteCard = h("aside", { class: "float-card invite-card", "aria-label": "好友邀请" },
     h("div", { class: "invite-top" },
-      h("span", { class: "invite-mark", "aria-hidden": "true" }, icon("users")),
       h("div", null, h("h2", null, "朋友分享了一条真实卦帖"), h("p", null, "注册后领取每日免费积分，也能和卦友一起讨论。"))),
     h("div", { class: "float-actions" },
       h("button", { type: "button", class: "btn btn-ghost btn-sm", onClick: close }, "稍后"),

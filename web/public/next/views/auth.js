@@ -2,7 +2,7 @@
 // 交互：字段就地校验（中文提示，聚焦第一个有误的字段）；回车依次前进到下一个待填项；
 // 验证码可整段粘贴；提交中按钮保持焦点；面板在请求途中被关掉时，等请求结束再回报结果。
 import { h, svg } from "../lib/dom.js?v=n2";
-import { icon } from "../lib/icons.js?v=n2";
+import { icon, brandMark } from "../lib/icons.js?v=n2";
 import { post } from "../lib/api.js?v=n2";
 import { applyAccount } from "../lib/store.js?v=n2";
 import { openSheet } from "../ui/overlay.js?v=n2";
@@ -406,7 +406,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
     // replaceChildren 会把 null 当成文字「null」，这里先滤掉空位。
     content.replaceChildren(...[
       h("div", { class: "auth-hero" },
-        h("div", { class: "auth-seal", "aria-hidden": "true" }, "玄"),
+        brandMark(),
         h("h2", { class: "auth-title" }, config.title),
         h("p", { class: "auth-sub" }, isRegister
           ? (reason ? `${reason} 验证邮箱后创建账户，注册即赠送积分。` : "验证邮箱后创建账户，注册即赠送积分。")

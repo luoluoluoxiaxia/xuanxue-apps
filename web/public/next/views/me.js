@@ -1,6 +1,6 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, svg, reducedMotion } from "../lib/dom.js?v=n2";
+import { h, reducedMotion } from "../lib/dom.js?v=n2";
 import { icon } from "../lib/icons.js?v=n2";
 import { get, post, put, patch, del, query } from "../lib/api.js?v=n2";
 import { session, applyAccount, refreshSession } from "../lib/store.js?v=n2";
@@ -84,9 +84,8 @@ function pageHead({ title, sub = "", actions = null }) {
     actions ? h("div", { class: "me-head-actions" }, actions) : null);
 }
 
-function loginCard(ctx, { glyph = "user", title, text, reason }) {
+function loginCard(ctx, { title, text, reason }) {
   return h("section", { class: "me-login" },
-    h("span", { class: "me-login-mark", "aria-hidden": "true" }, icon(glyph)),
     h("h2", { class: "me-login-title" }, title),
     h("p", { class: "me-login-text" }, text),
     h("div", { class: "me-login-actions" },
@@ -103,20 +102,6 @@ function retryState({ title, text, onRetry, label = "重新加载" }) {
   });
 }
 
-// 图标库里没有的少量字形（与 icons.js 相同的 24×24 描边风格）。
-const GLYPHS = {
-  mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m4.5 7.5 7.5 5.5 7.5-5.5"/>',
-};
-
-function glyphIcon(name) {
-  return GLYPHS[name]
-    ? svg(`<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${GLYPHS[name]}</svg>`)
-    : icon(name);
-}
-
-function tile(glyph, tone) {
-  return h("span", { class: ["me-tile", `is-${tone}`], "aria-hidden": "true" }, glyphIcon(glyph));
-}
 
 async function confirmLogout(ctx) {
   const ok = await confirmDialog({
@@ -154,7 +139,6 @@ function nicknameEditor(ctx, { variant = "row" } = {}) {
   const view = hero
     ? h("div", { class: "me-nick-view is-hero" }, nameNode, editButton)
     : h("div", { class: "me-nick-view" },
-      tile("feather", "brand"),
       h("div", { class: "me-nick-copy" }, h("span", { class: "me-nick-label" }, "社区昵称"), nameNode, hint),
       editButton);
   const form = h("form", { class: ["me-nick-form", hero && "is-hero"], id: `${id}-form`, hidden: true, novalidate: true },
@@ -307,7 +291,6 @@ function walletCard() {
   function update(state) {
     node.replaceChildren(
       h("div", { class: "me-wallet-head" },
-        tile("coins", "gold"),
         h("h2", { id: "me-wallet-title" }, "积分"),
         h("a", { class: "btn btn-primary btn-sm", href: "#/me/credits?topup=1" }, icon("plus"), "充值")),
       h("div", { class: "me-wallet-body" },
@@ -322,7 +305,6 @@ function walletCard() {
 // 档案、积分、设置都在上方标签里，消息在底栏和铃铛里；这里只放标签里没有的意见反馈。
 function feedbackCard() {
   const button = h("button", { class: "me-link", type: "button" },
-    tile("message", "brand"),
     h("span", { class: "me-link-copy" }, h("b", null, "意见反馈"), h("span", null, "断得准不准，直说无妨")),
     h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
   button.addEventListener("click", () => openFeedback());
@@ -365,7 +347,6 @@ function overviewView(ctx, body) {
           h("div", { class: "me-overview" },
             h("div", { class: "me-col" },
               loginCard(ctx, {
-                glyph: "user",
                 title: "登录后查看你的主页",
                 text: "命盘、卦档、积分与消息都在这里，只对你本人可见。",
                 reason: "登录后查看你的命盘、积分与消息。",
@@ -463,8 +444,7 @@ function answerPreview(value, limit = 150) {
 function archiveSkeleton() {
   return h("div", { class: "arc-grid", "aria-hidden": "true" },
     [0, 1, 2, 3].map(() => h("article", { class: "arc-card is-skeleton" },
-      h("div", { class: "arc-card-head" }, h("span", { class: "skel", style: { width: "36px", height: "36px", borderRadius: "12px" } }), h("span", { class: "skel skel-line", style: { width: "88px" } })),
-      h("span", { class: "skel skel-title", style: { width: "70%" } }),
+      h("span", { class: "skel skel-title", style: { width: "40%" } }),
       h("span", { class: "skel", style: { height: "44px", width: "62%", borderRadius: "12px" } }),
       h("span", { class: "skel skel-line", style: { width: "48%" } }),
       h("div", { class: "arc-actions" }, h("span", { class: "skel", style: { width: "96px", height: "32px", borderRadius: "999px" } }), h("span", { class: "skel", style: { width: "84px", height: "32px", borderRadius: "999px" } })))));
@@ -807,15 +787,18 @@ function archivesView(ctx, body) {
       : null;
     defaultButton?.addEventListener("click", () => setDefault(profile, defaultButton));
 
+    // 没有标签时不留空行：「更多」按钮始终跟名字同一行。
+    const badges = [
+      !isLy && profile.is_default ? h("span", { class: "chip chip-gold" }, icon("sun"), "默认命盘") : null,
+      isLy || isPublic ? h("span", { class: ["chip", isPublic ? "chip-liuyao" : "chip-outline"] }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
+      task ? h("span", { class: ["chip", "arc-task", `is-${task.tone}`] }, task.tone === "active" ? h("span", { class: "arc-pulse", "aria-hidden": "true" }) : null, task.label) : null,
+    ].filter(Boolean);
+
     return h("article", { class: ["arc-card", isLy ? "is-liuyao" : "is-bazi", profile.is_default && !isLy && "is-default"], "data-id": Number(profile.id) },
+      badges.length ? h("div", { class: "arc-badges" }, badges) : null,
       h("header", { class: "arc-card-head" },
-        h("span", { class: "arc-card-mark", "aria-hidden": "true" }, icon(isLy ? "gua" : "pillars")),
-        h("div", { class: "arc-badges" },
-          !isLy && profile.is_default ? h("span", { class: "chip chip-gold" }, icon("sun"), "默认命盘") : null,
-          isLy || isPublic ? h("span", { class: ["chip", isPublic ? "chip-liuyao" : "chip-outline"] }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
-          task ? h("span", { class: ["chip", "arc-task", `is-${task.tone}`] }, task.tone === "active" ? h("span", { class: "arc-pulse", "aria-hidden": "true" }) : null, task.label) : null),
+        h("h3", { class: "arc-name" }, name),
         moreButton),
-      h("h3", { class: "arc-name" }, name),
       visual,
       question && question !== name ? h("p", { class: "arc-question" }, question) : null,
       !visual && !question ? h("p", { class: "arc-question" }, isLy ? "六爻卦盘" : "四柱命盘") : null,
@@ -917,7 +900,6 @@ function archivesView(ctx, body) {
     }
     if (key === "anon") {
       body.replaceChildren(pageHead({ title: "我的盘" }), loginCard(ctx, {
-        glyph: "book",
         title: "登录后查看档案",
         text: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。",
         reason: "登录后查看私人档案。",
@@ -962,7 +944,6 @@ const CHECKOUT_TTL_MS = 24 * 60 * 60 * 1000;
 const CHECKOUT_PARAMS = ["checkout", "session_id", "checkout_session_id", "order_id"];
 const LEDGER_FILTERS = [["all", "全部"], ["usage", "消耗"], ["credit", "获得"], ["orders", "充值"]];
 const ENTRY_LABEL = { answer_usage: "AI 回答", checkout_purchase: "充值", welcome_bonus: "注册赠送", admin_credit: "积分补发", admin_debit: "积分调整" };
-const ENTRY_GLYPH = { answer_usage: "sparkle", checkout_purchase: "wallet", welcome_bonus: "award", admin_credit: "plus", admin_debit: "sliders" };
 const ORDER_STATUS = { paid: ["已到账", "ok"], pending: ["待支付", "gold"], expired: ["已失效", "muted"] };
 const EMPTY_LEDGER = { all: "本月暂无积分记录", usage: "本月暂无消耗", credit: "本月暂无获得记录", orders: "本月暂无充值记录" };
 const STATUS_COPY = {
@@ -1077,7 +1058,6 @@ function checkoutSteps(active) {
     class: [i < index && "is-done", i === index && "is-active"],
     "aria-current": i === index ? "step" : null,
   },
-  h("b", { "aria-hidden": "true" }, i < index ? icon("check") : String(i + 1)),
   h("span", null, label),
   i < index ? h("span", { class: "sr-only" }, "（已完成）") : null)));
 }
@@ -1118,7 +1098,6 @@ function activityRow(item) {
   const free = type === "answer_usage" ? Number(item?.daily_free_spent) || 0 : 0;
   const direction = amount > 0 ? "plus" : amount < 0 ? "minus" : "zero";
   return h("li", { class: "cr-row" },
-    h("span", { class: ["cr-row-icon", `is-${direction}`], "aria-hidden": "true" }, icon(ENTRY_GLYPH[type] || (amount >= 0 ? "plus" : "coins"))),
     h("span", { class: "cr-row-main" },
       h("span", { class: "cr-row-lead", title: lead }, lead),
       h("span", { class: "cr-row-meta" },
@@ -1139,7 +1118,6 @@ function orderRow(item) {
   const change = status === "paid" ? credits : 0;
   const when = item?.paid_at || item?.expired_at || item?.created_at;
   return h("li", { class: "cr-row" },
-    h("span", { class: ["cr-row-icon", change > 0 ? "is-plus" : "is-zero"], "aria-hidden": "true" }, icon("wallet")),
     // 「充值」标签页里每行都是充值：先写金额和积分，状态跟在后面。
     h("span", { class: "cr-row-main" },
       h("span", { class: "cr-row-title" }, `${currency} ${((Number(item?.amount_total) || 0) / 100).toFixed(2)} · ${credits} 分`, h("span", { class: "sr-only" }, " · "), h("span", { class: ["chip", "cr-order-chip", `is-${tone}`] }, statusLabel)),
@@ -1494,13 +1472,11 @@ function creditsView(ctx, body) {
     const sheet = checkoutSheet("充值状态");
     const title = kind === "paid" && display.credits ? `${display.credits} 积分已到账` : copy.title;
     const heading = h("h3", { class: "cr-status-title", tabindex: "-1" }, title);
-    const markGlyph = { ok: "check", wait: "clock", muted: "info", error: "alert" }[copy.tone];
     const balance = Number(status?.wallet?.balance ?? session.get().wallet?.balance ?? 0);
     const price = display.amount ? money(display.amount, display.currency) : "";
     sheet.body.removeAttribute("aria-busy");
     sheet.body.replaceChildren(h("div", { class: ["cr-status", `is-${copy.tone}`] },
       h("div", { class: "cr-status-top", "aria-live": "polite" },
-        h("span", { class: "cr-status-mark", "aria-hidden": "true" }, markGlyph ? icon(markGlyph) : h("span", { class: "spinner" })),
         h("span", { class: "cr-status-eyebrow" }, copy.eyebrow),
         heading,
         copy.text ? h("p", { class: "cr-status-text" }, copy.text) : null,
@@ -1763,7 +1739,6 @@ function creditsView(ctx, body) {
         : EMPTY_LEDGER[ledger.filter] || EMPTY_LEDGER.all;
       if (!items.length) {
         listNode.replaceChildren(h("div", { class: "cr-empty" },
-          h("span", { class: "cr-empty-mark", "aria-hidden": "true" }, icon(isOrders ? "wallet" : "coins")),
           h("b", null, EMPTY_LEDGER[ledger.filter] || EMPTY_LEDGER.all),
           h("span", null, "有新的积分变动后会显示在这里。")));
       } else {
@@ -1806,7 +1781,6 @@ function creditsView(ctx, body) {
         checkout.sheet?.close("logout");
         const reason = pendingReturn ? "登录后查看充值状态。" : "登录后管理积分。";
         body.replaceChildren(head, loginCard(ctx, {
-          glyph: "coins",
           title: pendingReturn ? "登录后查看充值状态" : "登录后管理积分",
           text: "积分余额、充值与流水只对本人可见。",
           reason,
@@ -1862,9 +1836,8 @@ function settingSection(title, rows) {
     h("div", { class: "set-rows" }, rows));
 }
 
-function settingRow({ glyph, tone = "neutral", label, text = "", control = null, className = "" }) {
+function settingRow({ label, text = "", control = null, className = "" }) {
   return h("div", { class: ["set-row", className] },
-    tile(glyph, tone),
     h("div", { class: "set-row-copy" }, h("b", null, label), text ? h("span", null, text) : null),
     control ? h("div", { class: "set-row-control" }, control) : null);
 }
@@ -1892,8 +1865,6 @@ function appearanceSection(ctx) {
   }
   // 分组已叫「外观」，这一行只说具体设置；三个选项自己能看懂，不再解释「跟随系统」。
   return settingSection("外观", [settingRow({
-    glyph: "moon",
-    tone: "indigo",
     label: "深浅色",
     control: h("div", { class: "seg set-theme", role: "group", "aria-label": "深浅色" }, buttons),
     className: "is-stack",
@@ -1904,8 +1875,8 @@ function accountSection(ctx, state, nick) {
   const logout = h("button", { type: "button", class: "btn btn-danger btn-sm", onClick: () => confirmLogout(ctx), "aria-label": "退出登录" }, icon("logout"), "退出");
   return settingSection("账户", [
     h("div", { class: "set-row is-nick" }, nick.node),
-    settingRow({ glyph: "user", tone: "brand", label: "登录邮箱", text: maskEmail(state.user?.email) || "—" }),
-    settingRow({ glyph: "logout", tone: "danger", label: "退出登录", text: "在这台设备上退出当前账户。", control: logout }),
+    settingRow({ label: "登录邮箱", text: maskEmail(state.user?.email) || "—" }),
+    settingRow({ label: "退出登录", text: "在这台设备上退出当前账户。", control: logout }),
   ]);
 }
 
@@ -1918,14 +1889,10 @@ function helpSection() {
   return settingSection("帮助与反馈", [
     // 「断得准不准……直说无妨」由反馈面板开头说，这一行只放入口。
     settingRow({
-      glyph: "message",
-      tone: "brand",
       label: "意见反馈",
       control: h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => openFeedback() }, "写反馈"),
     }),
     settingRow({
-      glyph: "mail",
-      tone: "gold",
       label: "邮件联系",
       text: h("span", { class: "set-mail" }, MAIL),
       control: copy,
@@ -1953,7 +1920,6 @@ function settingsView(ctx, body) {
         h("span", { class: "skel", style: { height: "56px", borderRadius: "12px", marginTop: "10px" } })));
     } else if (key === "anon") {
       sections.push(loginCard(ctx, {
-        glyph: "user",
         title: "登录后管理账户",
         text: "设置社区昵称，查看档案、积分与消息。",
         reason: "登录后管理你的账户。",
