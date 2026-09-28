@@ -10,7 +10,7 @@ import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n4";
 import { toast } from "../ui/toast.js?v=n4";
 import { sharePost } from "../lib/share.js?v=n4";
 import { openShareSheet } from "../ui/share-sheet.js?v=n4";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n4";
+import { confirmDialog } from "../ui/overlay.js?v=n4";
 import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n4";
 
 const COMMENT_MAX = 500;
@@ -152,12 +152,6 @@ function clampLong(root, { skip = new Set(), expanded = new Set() } = {}) {
   });
 }
 
-// 服务端渲染的完整帖子页：举报与卦主「发布事情进展」在那里提交（取值由服务端页面给出，客户端不猜）。
-function fullPageUrl(post) {
-  const url = String(post?.url || "");
-  if (/^\/(?!\/)/.test(url) || url.startsWith(`${location.origin}/`)) return url;
-  return `/community/${encodeURIComponent(post?.slug || "")}`;
-}
 
 export function render(ctx) {
   const slug = ctx.params.slug;
@@ -272,7 +266,6 @@ export function render(ctx) {
         text: error?.message || "网络或服务暂时不可用",
         actions: [
           h("button", { type: "button", class: "btn btn-soft", onClick: retry }, icon("refresh"), "重试"),
-          h("a", { class: "btn btn-ghost", href: fullPageUrl({ slug }) }, icon("external"), "前往完整页面"),
         ],
       }));
   }
@@ -365,16 +358,8 @@ export function render(ctx) {
     const shareBtn = h("button", { type: "button", class: "btn btn-sm" }, icon("share"), "分享");
     shareBtn.addEventListener("click", () => share(shareBtn));
     ui.share = shareBtn;
-    const moreBtn = h("button", { type: "button", class: "icon-btn post-more", "aria-label": "更多操作", "aria-haspopup": "menu", "aria-expanded": "false" }, icon("more"));
-    moreBtn.addEventListener("click", () => {
-      const full = fullPageUrl(post);
-      openMenu(moreBtn, [
-        { label: "在完整页面打开", icon: "external", href: full },
-        post.can_manage && post.system !== "bazi" ? { label: "发布事情进展", icon: "feather", href: full, meta: "完整页面" } : null,
-        "sep",
-        { label: "举报这条卦帖", icon: "flag", href: full, meta: "完整页面" },
-      ]);
-    });
+    // 「更多」菜单原先只有三项，都指向已下线的服务端完整帖子页（/?post= 又映射回本页，原地打转）。
+    // 举报与「发布事情进展」要等公开契约给出表单可选值后，在本页内完成；在那之前不展示点了没用的入口。
     const primary = isHelp
       ? h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => focusComposer() }, icon("feather"), "写下判断")
       : h("a", { class: "btn btn-primary btn-sm", href: post.system === "bazi" ? "#/ask/bazi" : "#/ask/liuyao" }, icon("plus"), post.system === "bazi" ? "我也要排盘" : "我也要起卦");
@@ -424,7 +409,7 @@ export function render(ctx) {
         board,
         answer,
         updates,
-        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, moreBtn, h("span", { class: "post-actions-spacer" }), primary)),
+        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, h("span", { class: "post-actions-spacer" }), primary)),
       discussion);
     renderComments();
 
