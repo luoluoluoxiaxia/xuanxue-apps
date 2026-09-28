@@ -193,7 +193,7 @@ export function render(ctx) {
   let targetDone = !targetId;
 
   /* ---------- 加载：预取缓存先秒开，再用新数据核对 ---------- */
-  async function load({ countView = true, fresh = false } = {}) {
+  async function load({ countView = true, fresh = false, quiet = false } = {}) {
     const my = ++loadSeq;
     if (fresh) invalidateCached(path);
     // 五秒内的预取（包括还在路上的）直接复用，否则重新取。
@@ -208,7 +208,8 @@ export function render(ctx) {
       if (!ctx.isCurrent() || my !== loadSeq) return;
       loadFailed = error.status !== 404;
       if (post && error.status !== 404) {
-        toast("网络不稳定，显示的可能不是最新内容；恢复后会自动刷新", { type: "error" });
+        if (!quiet) toast("网络不稳定，显示的可能不是最新内容；恢复后会自动刷新", { type: "error" });
+        armHelpAiPoll();
         return;
       }
       showError(error);
@@ -247,11 +248,7 @@ export function render(ctx) {
     if (lastView) applyView(lastView);
     if (first || signature(post) !== before) repaint();
     else patchCounts();
-    // 求助帖的 AI 解读还在生成：每隔几秒核对一次，出结果后整页重画。
-    clearTimeout(helpAiTimer);
-    if (post.post_kind === "help" && post.ai_answer?.status === "generating") {
-      helpAiTimer = setTimeout(() => { if (ctx.isCurrent()) load({ countView: false, fresh: true }); }, 5000);
-    }
+    armHelpAiPoll();
     if (first && restoring && readPos.has(slug)) {
       const y = readPos.get(slug);
       requestAnimationFrame(() => { if (ctx.isCurrent()) window.scrollTo(0, y); });
@@ -354,6 +351,13 @@ export function render(ctx) {
   /* ---------- 求助帖：卦友花自己的积分请 AI 解读（一帖一轮，每日免费积分不能用） ---------- */
   ctx.cleanup(() => clearTimeout(helpAiTimer));
 
+  // AI 解读还在生成：每隔几秒静默核对一次，出结果后整页重画；某次核对失败（例如断网）也照样继续。
+  function armHelpAiPoll() {
+    clearTimeout(helpAiTimer);
+    if (!post || post.post_kind !== "help" || post.ai_answer?.status !== "generating") return;
+    helpAiTimer = setTimeout(() => { if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true }); }, 5000);
+  }
+
   function helpAiSection() {
     const ai = post.ai_answer || null;
     const who = ai?.requested_by || "卦友";
@@ -396,7 +400,7 @@ export function render(ctx) {
     }
     const confirmed = await confirmDialog({
       title: "用你的积分请 AI 解读？",
-      message: "只扣账户余额，通常 1–2 分；每日免费积分不能用。解读生成后直接公开在这条帖子上，并注明是你请的。",
+      message: "按这次解读的实际用量从账户余额扣分，每日免费积分不能用。解读生成后直接公开在这条帖子上，并注明是你请的。",
       confirmText: "请 AI 解读",
       returnFocus: button,
     });
