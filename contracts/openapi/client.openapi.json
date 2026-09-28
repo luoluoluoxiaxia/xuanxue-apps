@@ -140,11 +140,6 @@
             ],
             "title": "Name"
           },
-          "personal_case_id": {
-            "default": "",
-            "title": "Personal Case Id",
-            "type": "string"
-          },
           "pillars": {
             "anyOf": [
               {
@@ -2110,50 +2105,6 @@
         "title": "ClientCreditActivitySummary",
         "type": "object"
       },
-      "ClientCreditLedgerEntry": {
-        "additionalProperties": false,
-        "properties": {
-          "amount": {
-            "title": "Amount",
-            "type": "integer"
-          },
-          "balance_after": {
-            "title": "Balance After",
-            "type": "integer"
-          },
-          "created_at": {
-            "title": "Created At",
-            "type": "string"
-          },
-          "entry_type": {
-            "title": "Entry Type",
-            "type": "string"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "reference_id": {
-            "title": "Reference Id",
-            "type": "string"
-          },
-          "reference_type": {
-            "title": "Reference Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "amount",
-          "balance_after",
-          "entry_type",
-          "reference_type",
-          "reference_id",
-          "created_at"
-        ],
-        "title": "ClientCreditLedgerEntry",
-        "type": "object"
-      },
       "ClientCreditPack": {
         "additionalProperties": false,
         "properties": {
@@ -2600,11 +2551,6 @@
             "title": "Partial",
             "type": "boolean"
           },
-          "personal_case_id": {
-            "default": "",
-            "title": "Personal Case Id",
-            "type": "string"
-          },
           "profile_id": {
             "anyOf": [
               {
@@ -2773,17 +2719,6 @@
               }
             ],
             "title": "Moving Shi Relations"
-          },
-          "personal_case_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Personal Case Id"
           },
           "profile_id": {
             "anyOf": [
@@ -4074,27 +4009,6 @@
         "title": "ClientVerificationCode",
         "type": "object"
       },
-      "ClientWallet": {
-        "additionalProperties": false,
-        "properties": {
-          "ledger": {
-            "items": {
-              "$ref": "#/components/schemas/ClientCreditLedgerEntry"
-            },
-            "title": "Ledger",
-            "type": "array"
-          },
-          "wallet": {
-            "$ref": "#/components/schemas/ClientCreditWallet"
-          }
-        },
-        "required": [
-          "wallet",
-          "ledger"
-        ],
-        "title": "ClientWallet",
-        "type": "object"
-      },
       "CommentCreate": {
         "properties": {
           "body": {
@@ -4242,236 +4156,6 @@
           }
         },
         "title": "FollowInput",
-        "type": "object"
-      },
-      "ForecastInput": {
-        "description": "岁运全书历史订单输入；新建能力已经下线。",
-        "properties": {
-          "as_of": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "As Of"
-          },
-          "calendar": {
-            "default": "solar",
-            "title": "Calendar",
-            "type": "string"
-          },
-          "day": {
-            "default": 0,
-            "title": "Day",
-            "type": "integer"
-          },
-          "day_boundary": {
-            "default": "zi",
-            "title": "Day Boundary",
-            "type": "string"
-          },
-          "day_pillar": {
-            "default": "",
-            "title": "Day Pillar",
-            "type": "string"
-          },
-          "email": {
-            "default": "",
-            "title": "Email",
-            "type": "string"
-          },
-          "gender": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Gender"
-          },
-          "hour": {
-            "default": 0,
-            "title": "Hour",
-            "type": "integer"
-          },
-          "hour_pillar": {
-            "default": "",
-            "title": "Hour Pillar",
-            "type": "string"
-          },
-          "input_mode": {
-            "default": "birth_time",
-            "title": "Input Mode",
-            "type": "string"
-          },
-          "is_leap_month": {
-            "default": false,
-            "title": "Is Leap Month",
-            "type": "boolean"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Location"
-          },
-          "longitude": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Longitude"
-          },
-          "manual_birth_year": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Manual Birth Year"
-          },
-          "method": {
-            "default": "coins",
-            "title": "Method",
-            "type": "string"
-          },
-          "minute": {
-            "default": 0,
-            "title": "Minute",
-            "type": "integer"
-          },
-          "month": {
-            "default": 0,
-            "title": "Month",
-            "type": "integer"
-          },
-          "month_pillar": {
-            "default": "",
-            "title": "Month Pillar",
-            "type": "string"
-          },
-          "name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Name"
-          },
-          "personal_case_id": {
-            "default": "",
-            "title": "Personal Case Id",
-            "type": "string"
-          },
-          "pillars": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pillars"
-          },
-          "public_consent": {
-            "default": false,
-            "title": "Public Consent",
-            "type": "boolean"
-          },
-          "public_consent_version": {
-            "default": "",
-            "title": "Public Consent Version",
-            "type": "string"
-          },
-          "question": {
-            "default": "",
-            "title": "Question",
-            "type": "string"
-          },
-          "session_id": {
-            "default": "",
-            "title": "Session Id",
-            "type": "string"
-          },
-          "system": {
-            "default": "bazi",
-            "title": "System",
-            "type": "string"
-          },
-          "timezone": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Timezone"
-          },
-          "tz_offset": {
-            "default": 8.0,
-            "title": "Tz Offset",
-            "type": "number"
-          },
-          "use_true_solar": {
-            "default": true,
-            "title": "Use True Solar",
-            "type": "boolean"
-          },
-          "visibility": {
-            "default": "public",
-            "title": "Visibility",
-            "type": "string"
-          },
-          "yaos": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "integer"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Yaos"
-          },
-          "year": {
-            "default": 0,
-            "title": "Year",
-            "type": "integer"
-          },
-          "year_pillar": {
-            "default": "",
-            "title": "Year Pillar",
-            "type": "string"
-          }
-        },
-        "title": "ForecastInput",
         "type": "object"
       },
       "ForecastUnlockInput": {
@@ -4710,11 +4394,6 @@
             ],
             "title": "Name"
           },
-          "personal_case_id": {
-            "default": "",
-            "title": "Personal Case Id",
-            "type": "string"
-          },
           "pillars": {
             "anyOf": [
               {
@@ -4855,88 +4534,6 @@
           "answer"
         ],
         "title": "InterpretationCreate",
-        "type": "object"
-      },
-      "LifeCaseCreate": {
-        "properties": {
-          "category": {
-            "default": "",
-            "title": "Category",
-            "type": "string"
-          },
-          "context": {
-            "default": "",
-            "title": "Context",
-            "type": "string"
-          },
-          "decision_deadline": {
-            "default": "",
-            "title": "Decision Deadline",
-            "type": "string"
-          },
-          "followup_at": {
-            "default": "",
-            "title": "Followup At",
-            "type": "string"
-          },
-          "mode": {
-            "title": "Mode",
-            "type": "string"
-          },
-          "question": {
-            "title": "Question",
-            "type": "string"
-          },
-          "title": {
-            "default": "",
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "mode",
-          "question"
-        ],
-        "title": "LifeCaseCreate",
-        "type": "object"
-      },
-      "LifeCasePatch": {
-        "properties": {
-          "followup_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Followup At"
-          },
-          "outcome": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Outcome"
-          },
-          "status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Status"
-          }
-        },
-        "title": "LifeCasePatch",
         "type": "object"
       },
       "LoginInput": {
@@ -5143,11 +4740,6 @@
               }
             ],
             "title": "Name"
-          },
-          "personal_case_id": {
-            "default": "",
-            "title": "Personal Case Id",
-            "type": "string"
           },
           "pillars": {
             "anyOf": [
@@ -5976,24 +5568,6 @@
         "summary": "Api Payment Orders"
       }
     },
-    "/api/billing/wallet": {
-      "get": {
-        "operationId": "api_credit_wallet_api_billing_wallet_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientWallet"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Api Credit Wallet"
-      }
-    },
     "/api/chart": {
       "post": {
         "operationId": "api_chart_api_chart_post",
@@ -6157,348 +5731,6 @@
           }
         },
         "summary": "Api Create Help Post"
-      }
-    },
-    "/api/community/liuyao/posts": {
-      "get": {
-        "operationId": "api_list_posts_api_community_liuyao_posts_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 30,
-              "title": "Limit",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "question_type",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "Question Type",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "view",
-            "required": false,
-            "schema": {
-              "default": "latest",
-              "title": "View",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "cursor",
-            "required": false,
-            "schema": {
-              "default": "",
-              "title": "Cursor",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "include_oracle_summary",
-            "required": false,
-            "schema": {
-              "default": false,
-              "title": "Include Oracle Summary",
-              "type": "boolean"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientCommunityFeed"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api List Posts"
-      }
-    },
-    "/api/community/liuyao/posts/{slug}": {
-      "get": {
-        "operationId": "api_get_post_api_community_liuyao_posts__slug__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientCommunityPost"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Get Post"
-      }
-    },
-    "/api/community/liuyao/posts/{slug}/comments": {
-      "get": {
-        "operationId": "api_list_comments_api_community_liuyao_posts__slug__comments_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientCommunityComments"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api List Comments"
-      },
-      "post": {
-        "operationId": "api_add_comment_api_community_liuyao_posts__slug__comments_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CommentCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientCommentCreated"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Add Comment"
-      }
-    },
-    "/api/community/liuyao/posts/{slug}/like": {
-      "post": {
-        "operationId": "api_like_post_api_community_liuyao_posts__slug__like_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientEngagement"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Like Post"
-      }
-    },
-    "/api/community/liuyao/posts/{slug}/updates": {
-      "post": {
-        "operationId": "api_add_update_api_community_liuyao_posts__slug__updates_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PublicUpdateCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientUpdateCreated"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Add Update"
-      }
-    },
-    "/api/community/liuyao/posts/{slug}/view": {
-      "post": {
-        "operationId": "api_record_post_view_api_community_liuyao_posts__slug__view_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "slug",
-            "required": true,
-            "schema": {
-              "title": "Slug",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientEngagement"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Record Post View"
       }
     },
     "/api/community/notifications": {
@@ -6961,6 +6193,55 @@
         "summary": "Api Resolve Help Post"
       }
     },
+    "/api/community/posts/{slug}/updates": {
+      "post": {
+        "operationId": "api_add_update_api_community_posts__slug__updates_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublicUpdateCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientUpdateCreated"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Add Update"
+      }
+    },
     "/api/community/posts/{slug}/view": {
       "post": {
         "operationId": "api_record_post_view_api_community_posts__slug__view_post",
@@ -7114,47 +6395,6 @@
           }
         },
         "summary": "Api Feedback"
-      }
-    },
-    "/api/forecast": {
-      "post": {
-        "description": "岁运全书不再接受新建订单；既有订单仍可凭原链接查阅。",
-        "operationId": "api_forecast_api_forecast_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/ForecastInput"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Api Forecast Api Forecast Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Forecast"
       }
     },
     "/api/forecast/{order_id}": {
@@ -7365,45 +6605,6 @@
         "summary": "Api Interpret Task"
       }
     },
-    "/api/interpret/tasks/{task_id}/cancel": {
-      "post": {
-        "operationId": "api_cancel_interpret_task_api_interpret_tasks__task_id__cancel_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "task_id",
-            "required": true,
-            "schema": {
-              "title": "Task Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ClientInterpretTask"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Cancel Interpret Task"
-      }
-    },
     "/api/interpret/tasks/{task_id}/events": {
       "get": {
         "operationId": "api_interpret_task_events_api_interpret_tasks__task_id__events_get",
@@ -7500,136 +6701,6 @@
           }
         },
         "summary": "Api Personal Home"
-      }
-    },
-    "/api/personal-home/cases": {
-      "post": {
-        "operationId": "api_personal_home_create_case_api_personal_home_cases_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LifeCaseCreate"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "201": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Api Personal Home Create Case Api Personal Home Cases Post",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Personal Home Create Case"
-      }
-    },
-    "/api/personal-home/cases/{case_id}": {
-      "get": {
-        "operationId": "api_personal_home_case_api_personal_home_cases__case_id__get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "case_id",
-            "required": true,
-            "schema": {
-              "title": "Case Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Api Personal Home Case Api Personal Home Cases  Case Id  Get",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Personal Home Case"
-      },
-      "patch": {
-        "operationId": "api_personal_home_update_case_api_personal_home_cases__case_id__patch",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "case_id",
-            "required": true,
-            "schema": {
-              "title": "Case Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/LifeCasePatch"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Api Personal Home Update Case Api Personal Home Cases  Case Id  Patch",
-                  "type": "object"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Api Personal Home Update Case"
       }
     },
     "/api/personal-home/city": {

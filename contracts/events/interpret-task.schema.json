@@ -30,7 +30,6 @@
     "created_at": {"type": ["string", "null"]},
     "updated_at": {"type": ["string", "null"]},
     "completed_at": {"type": ["string", "null"]},
-    "personal_case_id": {"type": "string"},
     "public_post": {"type": "object"},
     "credits": {
       "type": "object",
