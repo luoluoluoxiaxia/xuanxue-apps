@@ -82,6 +82,8 @@ export async function requireAuth(reason, { mode = "", force = false } = {}) {
 // 首页就是「问」：大多数人来这里是为了问一件具体的事；广场是看看别人问了什么。
 const isAskPath = path => path === "/" || path.startsWith("/ask");
 const isPlazaPath = path => path.startsWith("/square") || path.startsWith("/post");
+// 没有站内上一页（例如从分享链接直接打开）时「返回」去哪：帖子回广场，消息回「我」，其余回首页。
+const backFallback = path => (isPlazaPath(path) ? "/square" : path.startsWith("/inbox") ? "/me" : "/");
 const NAV = [
   { key: "ask", label: "问", href: "#/", glyph: "message", match: isAskPath },
   { key: "plaza", label: "广场", href: "#/square", glyph: "plaza", match: isPlazaPath },
@@ -99,7 +101,7 @@ function buildShell() {
   const themeButton = h("button", { type: "button", class: "icon-btn topbar-theme", "aria-label": "深色模式", onClick: toggleTheme });
   const topbar = h("header", { class: "topbar" },
     h("div", { class: "topbar-inner" },
-      h("button", { type: "button", class: "icon-btn topbar-back", "aria-label": "返回", onClick: () => back("/") }, icon("back")),
+      h("button", { type: "button", class: "icon-btn topbar-back", "aria-label": "返回", onClick: () => back(backFallback(currentRoute()?.path || "/")) }, icon("back")),
       h("a", { class: "brand", href: "#/", "aria-label": "玄枢首页" }, brandMark(), h("span", { class: "brand-name" }, "玄枢")),
       h("nav", { class: "nav-tabs", "aria-label": "主导航" },
         NAV.map(item => h("a", { class: "nav-tab", href: item.href, "data-nav": item.key }, item.label))),

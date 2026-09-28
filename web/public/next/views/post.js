@@ -162,7 +162,8 @@ export function render(ctx) {
   const mobileBar = h("div", { class: "post-mobilebar" });
   root.append(mainCol, sideCol, mobileBar);
 
-  const backLink = () => h("button", { type: "button", class: "back-link", onClick: () => ctx.back("/") }, icon("back"), "返回");
+  // 从分享链接直接打开时没有站内上一页：「返回」回到广场，而不是提问首页。
+  const backLink = () => h("button", { type: "button", class: "back-link", onClick: () => ctx.back("/square") }, icon("back"), "返回");
   const skeleton = () => h("div", { class: "post-loading", "aria-busy": "true", "aria-label": "正在加载帖子" },
     h("span", { class: "skel skel-line", style: { width: "160px" } }),
     h("span", { class: "skel skel-title", style: { height: "30px", width: "86%" } }),
