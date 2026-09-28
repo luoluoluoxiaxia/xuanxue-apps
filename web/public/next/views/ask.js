@@ -1,16 +1,16 @@
 // 提问：先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n3";
-import { icon } from "../lib/icons.js?v=n3";
-import { get, post, put } from "../lib/api.js?v=n3";
-import { session, local, refreshSession } from "../lib/store.js?v=n3";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n3";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n3";
-import { handoff } from "../lib/handoff.js?v=n3";
-import { humanizeError } from "../lib/interpret.js?v=n3";
-import { stateView } from "../ui/bits.js?v=n3";
-import { toast } from "../ui/toast.js?v=n3";
-import { confirmDialog } from "../ui/overlay.js?v=n3";
-import { locationPicker } from "../ui/location.js?v=n3";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n4";
+import { icon } from "../lib/icons.js?v=n4";
+import { get, post, put } from "../lib/api.js?v=n4";
+import { session, local, refreshSession } from "../lib/store.js?v=n4";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n4";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n4";
+import { handoff } from "../lib/handoff.js?v=n4";
+import { humanizeError } from "../lib/interpret.js?v=n4";
+import { stateView } from "../ui/bits.js?v=n4";
+import { toast } from "../ui/toast.js?v=n4";
+import { confirmDialog } from "../ui/overlay.js?v=n4";
+import { locationPicker } from "../ui/location.js?v=n4";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 const readDraft = () => local.get(ASK_DRAFT, "");
