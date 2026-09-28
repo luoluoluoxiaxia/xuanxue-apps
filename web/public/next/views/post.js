@@ -187,6 +187,7 @@ export function render(ctx) {
   let relatedRequest = null;
   let helpAiTimer = null;
   let helpAiBusy = false;
+  let helpAiTaskId = "";
   const expanded = new Set();
   const ui = {};
   const targetId = ctx.query.get("target") || "";
@@ -354,7 +355,10 @@ export function render(ctx) {
   // AI 解读还在生成：每隔几秒静默核对一次，出结果后整页重画；某次核对失败（例如断网）也照样继续。
   function armHelpAiPoll() {
     clearTimeout(helpAiTimer);
-    if (!post || post.post_kind !== "help" || post.ai_answer?.status !== "generating") return;
+    if (!post || post.post_kind !== "help" || post.ai_answer?.status !== "generating") {
+      helpAiTaskId = "";
+      return;
+    }
     helpAiTimer = setTimeout(() => { if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true }); }, 5000);
   }
 
@@ -368,9 +372,14 @@ export function render(ctx) {
         renderMarkdown(ai.answer || ""));
     }
     if (ai && ai.status === "generating") {
+      // 发起人在本页请的：可以停止（生成中停止不扣分；已经公开的服务端会拒绝）。
+      const stop = helpAiTaskId
+        ? h("button", { type: "button", class: "link-btn help-ai-stop", onClick: event => stopHelpAi(event.currentTarget) }, "停止")
+        : null;
       return h("section", { class: "help-ai-note", role: "status" },
         h("span", { class: "spinner", "aria-hidden": "true" }),
-        h("p", null, `${who === "你" ? "你" : `${who} `}请了 AI，正在解读，完成后会显示在这里。`));
+        h("p", null, `${who === "你" ? "你" : `${who} `}请了 AI，正在解读，完成后会显示在这里。`),
+        stop);
     }
     if (!post.can_request_ai) return null;
     const state = session.get();
@@ -405,7 +414,8 @@ export function render(ctx) {
     helpAiBusy = true;
     button.setAttribute("aria-busy", "true");
     try {
-      await apiPost(`/api/community/posts/${encodeURIComponent(post.slug)}/ai-answer`);
+      const started = await apiPost(`/api/community/posts/${encodeURIComponent(post.slug)}/ai-answer`, undefined, { interaction: true });
+      helpAiTaskId = String(started?.task_id || "");
       toast("已请 AI 解读，完成后会显示在帖子上", { type: "ok" });
       refreshSession().catch(() => {});
       // 先在本地标成「生成中」并开始轮询：紧接着的这次刷新即使失败，也会继续核对到出结果。
@@ -419,6 +429,24 @@ export function render(ctx) {
         : { type: "error" });
     } finally {
       helpAiBusy = false;
+      button.removeAttribute("aria-busy");
+      if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true });
+    }
+  }
+
+  async function stopHelpAi(button) {
+    const taskId = helpAiTaskId;
+    if (!taskId || button.getAttribute("aria-busy") === "true") return;
+    button.setAttribute("aria-busy", "true");
+    try {
+      const result = await apiPost("/api/interpret/cancel", { task_id: taskId });
+      helpAiTaskId = "";
+      const stopped = result?.status === "cancelled";
+      toast(stopped ? "已停止，这次没有扣积分" : "解读已经完成并公开，没法再停止", { type: stopped ? "ok" : "info" });
+      refreshSession().catch(() => {});
+    } catch (error) {
+      toast(error?.message || "没能停止，请稍后再试", { type: "error" });
+    } finally {
       button.removeAttribute("aria-busy");
       if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true });
     }
