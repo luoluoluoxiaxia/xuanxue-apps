@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n4";
-import { icon } from "../lib/icons.js?v=n4";
-import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n4";
-import { session, local, refreshSession } from "../lib/store.js?v=n4";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n4";
-import { stateView } from "../ui/bits.js?v=n4";
-import { elementClass } from "../ui/gua.js?v=n4";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n4";
-import { toast } from "../ui/toast.js?v=n4";
-import { sharePost } from "../lib/share.js?v=n4";
-import { openShareSheet } from "../ui/share-sheet.js?v=n4";
-import { confirmDialog } from "../ui/overlay.js?v=n4";
-import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n4";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n5";
+import { icon } from "../lib/icons.js?v=n5";
+import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n5";
+import { session, local, refreshSession } from "../lib/store.js?v=n5";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n5";
+import { stateView } from "../ui/bits.js?v=n5";
+import { elementClass } from "../ui/gua.js?v=n5";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n5";
+import { toast } from "../ui/toast.js?v=n5";
+import { sharePost } from "../lib/share.js?v=n5";
+import { openShareSheet } from "../ui/share-sheet.js?v=n5";
+import { confirmDialog } from "../ui/overlay.js?v=n5";
+import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n5";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
@@ -258,7 +258,7 @@ export function render(ctx) {
         glyph: "compass",
         title: "这条帖子不存在或已下线",
         text: "可能已被作者删除或暂时下线，去广场看看别的讨论吧。",
-        actions: [h("a", { class: "btn btn-soft", href: "#/" }, icon("plaza"), "回到广场")],
+        actions: [h("a", { class: "btn btn-soft", href: "#/square" }, icon("plaza"), "回到广场")],
       })
       : stateView({
         tone: "error",

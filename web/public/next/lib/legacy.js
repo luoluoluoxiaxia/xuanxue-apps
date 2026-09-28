@@ -34,7 +34,7 @@ export function routeFromLegacy(search) {
     route = "#/me/archives";
     params.delete("view");
   } else if (location.hash === "#gua-square") {
-    route = "#/";
+    route = "#/square";
   }
   if (!route) return "";
   const rest = params.toString();

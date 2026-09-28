@@ -1,22 +1,22 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n4";
-import { icon, brandMark } from "./lib/icons.js?v=n4";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n4";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n4";
-import { get } from "./lib/api.js?v=n4";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n4";
-import { toast } from "./ui/toast.js?v=n4";
-import { openAuth } from "./views/auth.js?v=n4";
-import * as FeedView from "./views/feed.js?v=n4";
-import * as PostView from "./views/post.js?v=n4";
-import * as AskView from "./views/ask.js?v=n4";
-import * as ReadingView from "./views/reading.js?v=n4";
-import * as TodayView from "./views/today.js?v=n4";
-import * as InboxView from "./views/inbox.js?v=n4";
-import * as MeView from "./views/me.js?v=n4";
-import { openFeedback } from "./views/feedback.js?v=n4";
-import { routeFromLegacy } from "./lib/legacy.js?v=n4";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n5";
+import { icon, brandMark } from "./lib/icons.js?v=n5";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n5";
+import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n5";
+import { get } from "./lib/api.js?v=n5";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n5";
+import { toast } from "./ui/toast.js?v=n5";
+import { openAuth } from "./views/auth.js?v=n5";
+import * as FeedView from "./views/feed.js?v=n5";
+import * as PostView from "./views/post.js?v=n5";
+import * as AskView from "./views/ask.js?v=n5";
+import * as ReadingView from "./views/reading.js?v=n5";
+import * as TodayView from "./views/today.js?v=n5";
+import * as InboxView from "./views/inbox.js?v=n5";
+import * as MeView from "./views/me.js?v=n5";
+import { openFeedback } from "./views/feedback.js?v=n5";
+import { routeFromLegacy } from "./lib/legacy.js?v=n5";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -79,8 +79,12 @@ export async function requireAuth(reason, { mode = "", force = false } = {}) {
 }
 
 /* ---------- 外壳 ---------- */
+// 首页就是「问」：大多数人来这里是为了问一件具体的事；广场是看看别人问了什么。
+const isAskPath = path => path === "/" || path.startsWith("/ask");
+const isPlazaPath = path => path.startsWith("/square") || path.startsWith("/post");
 const NAV = [
-  { key: "plaza", label: "广场", href: "#/", glyph: "plaza", match: path => path === "/" || path.startsWith("/post") },
+  { key: "ask", label: "问", href: "#/", glyph: "message", match: isAskPath },
+  { key: "plaza", label: "广场", href: "#/square", glyph: "plaza", match: isPlazaPath },
   { key: "today", label: "今日", href: "#/today", glyph: "sun", match: path => path.startsWith("/today") },
   { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "book", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
 ];
@@ -89,7 +93,8 @@ const shell = {};
 
 function buildShell() {
   const app = document.getElementById("app");
-  const bell = h("a", { class: "icon-btn", href: "#/inbox", "aria-label": "消息" }, icon("bell"), h("span", { class: "badge", hidden: true, "data-inbox-badge": "" }));
+  // 铃铛只在桌面显示；手机上消息收在底栏「我」里，未读数挂在「我」上。
+  const bell = h("a", { class: "icon-btn topbar-bell", href: "#/inbox", "aria-label": "消息" }, icon("bell"), h("span", { class: "badge", hidden: true, "data-inbox-badge": "" }));
   const accountSlot = h("div", { class: "topbar-account" });
   const themeButton = h("button", { type: "button", class: "icon-btn topbar-theme", "aria-label": "深色模式", onClick: toggleTheme });
   const topbar = h("header", { class: "topbar" },
@@ -99,18 +104,16 @@ function buildShell() {
       h("nav", { class: "nav-tabs", "aria-label": "主导航" },
         NAV.map(item => h("a", { class: "nav-tab", href: item.href, "data-nav": item.key }, item.label))),
       h("div", { class: "topbar-actions" },
-        h("a", { class: "btn btn-primary btn-ask", href: "#/ask" }, icon("plus"), "提问"),
         themeButton,
         bell,
         accountSlot)));
   const main = h("main", { id: "main", class: "main", tabindex: "-1" });
   const tabBadge = h("span", { class: "badge", hidden: true, "data-inbox-badge": "" });
   const tabbar = h("nav", { class: "tabbar", "aria-label": "底部导航" },
-    h("a", { class: "tab", href: "#/", "data-tab": "plaza" }, icon("plaza"), h("span", null, "广场")),
+    h("a", { class: "tab", href: "#/", "data-tab": "ask" }, icon("message"), h("span", null, "问")),
+    h("a", { class: "tab", href: "#/square", "data-tab": "plaza" }, icon("plaza"), h("span", null, "广场")),
     h("a", { class: "tab", href: "#/today", "data-tab": "today" }, icon("sun"), h("span", null, "今日")),
-    h("a", { class: "tab tab-ask", href: "#/ask", "aria-label": "提问" }, icon("plus")),
-    h("a", { class: "tab", href: "#/inbox", "data-tab": "inbox" }, icon("bell"), h("span", null, "消息"), tabBadge),
-    h("a", { class: "tab", href: "#/me", "data-tab": "me" }, icon("user"), h("span", null, "我")));
+    h("a", { class: "tab", href: "#/me", "data-tab": "me" }, icon("user"), h("span", null, "我"), tabBadge));
   const skip = h("a", { class: "skip-link", href: "#main", onClick: event => { event.preventDefault(); main.focus(); } }, "跳到主要内容");
   const netBanner = h("div", { class: "net-banner", role: "status", hidden: true }, icon("alert"), h("span", null, "网络已断开，恢复后会自动重试"));
   app.replaceChildren(skip, topbar, netBanner, main, tabbar);
@@ -254,17 +257,17 @@ function syncNav(path) {
     if (item && item.match(path)) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
-  const tabKey = path === "/" || path.startsWith("/post") ? "plaza"
-    : path.startsWith("/today") ? "today"
-      : path.startsWith("/inbox") ? "inbox"
-        : path.startsWith("/me") || path.startsWith("/reading") ? "me" : "";
+  const tabKey = isAskPath(path) ? "ask"
+    : isPlazaPath(path) ? "plaza"
+      : path.startsWith("/today") ? "today"
+        : path.startsWith("/me") || path.startsWith("/reading") || path.startsWith("/inbox") ? "me" : "";
   shell.tabbar.querySelectorAll("[data-tab]").forEach(link => {
     if (link.dataset.tab === tabKey) link.setAttribute("aria-current", "page");
     else link.removeAttribute("aria-current");
   });
-  shell.app.dataset.route = path.split("/")[1] || "plaza";
-  // 底栏一级页面之外都算子页面：手机顶栏显示返回键。
-  shell.app.dataset.depth = ["/", "/today", "/inbox", "/me"].includes(path) ? "root" : "sub";
+  shell.app.dataset.route = path.split("/")[1] || "home";
+  // 底栏一级页面之外都算子页面：手机顶栏显示返回键（消息从「我」进入，也算子页面）。
+  shell.app.dataset.depth = ["/", "/square", "/today", "/me"].includes(path) ? "root" : "sub";
 }
 
 /* ---------- 消息数 ---------- */
@@ -287,6 +290,12 @@ function syncInboxBadge({ unread }) {
     badge.hidden = !unread;
     badge.textContent = unread > 99 ? "99+" : String(unread || "");
   });
+  // 手机上消息收在「我」里：读屏读到「我」时一并说出未读数。
+  const meTab = shell.tabbar?.querySelector('[data-tab="me"]');
+  if (meTab) {
+    if (unread) meTab.setAttribute("aria-label", `我，${unread > 99 ? "99+" : unread} 条未读消息`);
+    else meTab.removeAttribute("aria-label");
+  }
   applyTitle();
 }
 
@@ -347,6 +356,11 @@ const ctxBase = {
 
 function renderRoute(match, previous, { restoreScroll } = {}) {
   if (!match) return;
+  // 旧的提问入口 #/ask 已并入首页。
+  if (match.path === "/ask") {
+    navigate("/", { replace: true });
+    return;
+  }
   closeMenus();
   closeAllSheets();
   const token = ++renderToken;
@@ -354,7 +368,7 @@ function renderRoute(match, previous, { restoreScroll } = {}) {
   try { activeCleanups.splice(0).forEach(fn => fn()); } catch (_) {}
   active = null;
   refreshHandlers.length = 0;
-  const view = match.route?.view || FeedView;
+  const view = match.route?.view || AskView;
   const ctx = {
     ...ctxBase,
     params: match.params,
@@ -390,7 +404,8 @@ function renderRoute(match, previous, { restoreScroll } = {}) {
 }
 
 const ROUTES = [
-  { path: "/", view: FeedView },
+  { path: "/", view: AskView },
+  { path: "/square", view: FeedView },
   { path: "/post/:slug", view: PostView },
   { path: "/ask", view: AskView },
   { path: "/ask/:system", view: AskView },

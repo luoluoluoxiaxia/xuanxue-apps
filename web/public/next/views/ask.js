@@ -1,16 +1,18 @@
-// 提问：先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n4";
-import { icon } from "../lib/icons.js?v=n4";
-import { get, post, put } from "../lib/api.js?v=n4";
-import { session, local, refreshSession } from "../lib/store.js?v=n4";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n4";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n4";
-import { handoff } from "../lib/handoff.js?v=n4";
-import { humanizeError } from "../lib/interpret.js?v=n4";
-import { stateView } from "../ui/bits.js?v=n4";
-import { toast } from "../ui/toast.js?v=n4";
-import { confirmDialog } from "../ui/overlay.js?v=n4";
-import { locationPicker } from "../ui/location.js?v=n4";
+// 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n5";
+import { icon } from "../lib/icons.js?v=n5";
+import { get, post, put } from "../lib/api.js?v=n5";
+import { session, local, refreshSession } from "../lib/store.js?v=n5";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n5";
+import { readingDraftKey } from "../lib/sessions.js?v=n5";
+import { relativeTime, count } from "../lib/format.js?v=n5";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n5";
+import { handoff } from "../lib/handoff.js?v=n5";
+import { humanizeError } from "../lib/interpret.js?v=n5";
+import { stateView } from "../ui/bits.js?v=n5";
+import { toast } from "../ui/toast.js?v=n5";
+import { confirmDialog } from "../ui/overlay.js?v=n5";
+import { locationPicker } from "../ui/location.js?v=n5";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 const readDraft = () => local.get(ASK_DRAFT, "");
@@ -56,7 +58,7 @@ export function render(ctx) {
   const system = ctx.params.system;
   if (system === "liuyao") return liuyaoFlow(ctx);
   if (system === "bazi") return baziFlow(ctx);
-  return hub(ctx);
+  return home(ctx);
 }
 
 function focusHeader(ctx, title, sub) {
@@ -66,53 +68,81 @@ function focusHeader(ctx, title, sub) {
 }
 
 /* ==========================================================================
-   提问入口
+   首页：写下问题 → 选方式；下面是「接着上次」和「大家最近问的」
    ========================================================================== */
-function hub(ctx) {
-  const textarea = h("textarea", { class: "ask-input", rows: 3, maxlength: 2000, placeholder: "写下一件放在心上的事，越具体越好判断", "aria-label": "你想问什么" });
+// 例子不再是一排按钮：输入框空着时每隔几秒换一个，写了字就不再打扰。
+function rotateExamples(textarea, ctx) {
+  let index = 0;
+  const paint = () => { textarea.placeholder = `比如：${ASK_EXAMPLES[index % ASK_EXAMPLES.length]}`; };
+  paint();
+  const timer = setInterval(() => {
+    if (textarea.value || document.visibilityState !== "visible") return;
+    index += 1;
+    paint();
+  }, 3600);
+  ctx.cleanup(() => clearInterval(timer));
+}
+
+function methodCard({ system, title, text, meta, onSelect }) {
+  return h("button", { type: "button", class: `method-card is-${system}`, onClick: onSelect },
+    h("span", { class: "method-copy" }, h("b", null, title), h("span", null, text), h("small", null, meta)),
+    icon("chevronRight", "method-go"));
+}
+
+// 大家最近问的：只取带 AI 解答的公开卦帖，一行一问；分类、盘法筛选都留在广场。
+function recentQuestions(ctx) {
+  const list = h("div", { class: "home-questions" });
+  const section = h("section", { class: "home-community", hidden: true, "aria-labelledby": "home-community-title" },
+    h("div", { class: "home-section-head" },
+      h("h2", { class: "ask-section-title", id: "home-community-title" }, "大家最近问的"),
+      h("a", { class: "link-btn", href: "#/square" }, "去广场", icon("arrowRight", "icon-sm"))),
+    list);
+  get("/api/community/posts?limit=4&view=latest&post_kind=ai&include_oracle_summary=true", { cache: "no-store" })
+    .then(data => {
+      if (!ctx.isCurrent()) return;
+      const items = (Array.isArray(data?.items) ? data.items : []).filter(item => item.slug && (item.question || item.title)).slice(0, 4);
+      if (!items.length) return;
+      list.replaceChildren(...items.map(item => {
+        const gua = item.oracle_summary || {};
+        const names = [gua.ben_name, gua.has_changed && gua.bian_name ? gua.bian_name : ""].filter(Boolean).join(" → ");
+        const meta = [
+          names || (item.system === "bazi" ? "八字" : "六爻"),
+          Number(item.comment_count) ? `${count(item.comment_count)} 条讨论` : "",
+          relativeTime(item.published_at || item.created_at),
+        ].filter(Boolean).join(" · ");
+        return h("a", { class: "home-question", href: `#/post/${encodeURIComponent(item.slug)}` },
+          h("b", { class: "home-question-title" }, item.question || item.title),
+          h("span", { class: "home-question-meta" }, meta));
+      }));
+      section.hidden = false;
+    })
+    .catch(() => {});
+  return section;
+}
+
+function home(ctx) {
+  const textarea = h("textarea", { class: "ask-input", rows: 3, maxlength: 2000, "aria-label": "你想问什么" });
   textarea.value = readDraft();
   textarea.addEventListener("input", () => writeDraft(textarea.value));
   autoGrow(textarea, 240);
+  rotateExamples(textarea, ctx);
   const go = target => () => {
     writeDraft(textarea.value);
     ctx.navigate(target);
   };
   const recent = h("section", { class: "ask-recent", hidden: true });
   const methodTitle = h("h2", { class: "ask-section-title" }, "选一种方式来看");
-  const node = h("div", { class: "ask-page" },
-    focusHeader(ctx, "你想问什么？"),
+  const node = h("div", { class: "ask-page ask-home" },
+    h("header", { class: "ask-head" }, h("h1", null, "有什么放不下的事？")),
     h("section", { class: "ask-card" },
       textarea,
-      h("div", { class: "ask-examples", role: "group", "aria-label": "例子" },
-        ASK_EXAMPLES.map(example => h("button", { type: "button", class: "pill-filter", onClick: () => {
-          textarea.value = example;
-          writeDraft(example);
-          textarea.dispatchEvent(new Event("input"));
-          textarea.focus();
-          textarea.setSelectionRange(example.length, example.length);
-        } }, example))),
       h("p", { class: "ask-privacy" }, icon("lock", "icon-sm"), "不要写姓名、电话、住址或证件号。")),
     methodTitle,
     h("div", { class: "method-grid" },
-      h("button", { type: "button", class: "method-card is-liuyao", onClick: go("/ask/liuyao") },
-        h("span", { class: "method-copy" },
-          h("b", null, "六爻问事"),
-          h("span", null, "一件具体的事：成不成、何时、怎么做。"),
-          h("small", null, "三钱六掷 · AI 解读")),
-        icon("chevronRight", "method-go")),
-      h("button", { type: "button", class: "method-card is-bazi", onClick: go("/ask/bazi") },
-        h("span", { class: "method-copy" },
-          h("b", null, "八字看长期"),
-          h("span", null, "用出生时间排盘：性格底色、事业财运、大运流年。"),
-          h("small", null, "排盘免费 · 同一张盘可以一直追问")),
-        icon("chevronRight", "method-go")),
-      h("button", { type: "button", class: "method-card is-help", onClick: go("/ask/liuyao?help=1") },
-        h("span", { class: "method-copy" },
-          h("b", null, "向卦友求助"),
-          h("span", null, "起卦后把脱敏的卦象发到广场，请卦友帮你断。"),
-          h("small", null, "不调用 AI · 不扣积分")),
-        icon("chevronRight", "method-go"))),
-    recent);
+      methodCard({ system: "liuyao", title: "六爻问事", text: "一件具体的事：成不成、何时、怎么做。", meta: "三钱六掷 · AI 解读", onSelect: go("/ask/liuyao") }),
+      methodCard({ system: "bazi", title: "八字看长期", text: "用出生时间排盘：性格底色、事业财运、大运流年。", meta: "排盘免费 · 同一张盘可以一直追问", onSelect: go("/ask/bazi") })),
+    recent,
+    recentQuestions(ctx));
 
   // 回车是「下一步」：写完问题直接去选方式（Shift+回车换行；输入法选词时的回车不算）。
   submitOnEnter(textarea, () => {
@@ -130,14 +160,15 @@ function hub(ctx) {
       if (!list.length) { recent.hidden = true; return; }
       recent.hidden = false;
       recent.replaceChildren(
-        h("h2", { class: "ask-section-title" }, "接着上次的盘问"),
+        h("h2", { class: "ask-section-title" }, "接着上次"),
         h("div", { class: "recent-grid" }, list.map(item => {
           const bazi = (item.system || item.summary?.system) !== "liuyao";
           const summary = item.summary || {};
           const line = bazi
             ? Object.values(summary.pillars || {}).join(" ")
             : [summary.ben_gua?.name, summary.bian_gua?.name].filter(Boolean).join(" → ") || summary.question || "六爻卦盘";
-          return h("a", { class: "recent-card", href: `#/reading/${encodeURIComponent(item.id)}${bazi ? "?fresh=1" : ""}`, onClick: () => { if (bazi && textarea.value.trim()) local.set(`xz-next-draft:reading:${item.id}`, textarea.value.trim()); } },
+          // 八字盘开一段新对话：把首页写好的问题带进它的「新对话」草稿里。
+          return h("a", { class: "recent-card", href: `#/reading/${encodeURIComponent(item.id)}${bazi ? "?fresh=1" : ""}`, onClick: () => { if (bazi && textarea.value.trim()) { local.set(readingDraftKey(item.id), textarea.value.trim()); writeDraft(""); } } },
             h("span", { class: ["chip", bazi ? "chip-bazi" : "chip-liuyao"] }, bazi ? "八字" : "六爻"),
             h("b", null, item.name || (bazi ? "未命名命盘" : "未命名卦盘")),
             h("span", { class: "recent-line serif" }, line));
@@ -146,8 +177,9 @@ function hub(ctx) {
   };
   loadRecent();
   ctx.subscribe(session, loadRecent);
-  requestAnimationFrame(() => textarea.focus({ preventScroll: true }));
-  return { node, title: "提问", layout: "focus" };
+  // 桌面直接把光标放进输入框；手机上不自动聚焦，免得一进首页就弹出键盘挡住内容。
+  if (window.matchMedia?.("(pointer: fine)").matches) requestAnimationFrame(() => textarea.focus({ preventScroll: true }));
+  return { node, title: "", layout: "page" };
 }
 
 /* ==========================================================================
@@ -770,7 +802,7 @@ function existingProfiles(ctx, profiles, { help = false } = {}) {
     h("div", { class: "recent-grid" }, list.map(item => h("a", {
       class: "recent-card",
       href: `#/reading/${encodeURIComponent(item.id)}?fresh=1${help ? "&help=1" : ""}`,
-      onClick: () => { if (question.trim()) { local.set(`xz-next-draft:reading:${item.id}`, question.trim()); writeDraft(""); } },
+      onClick: () => { if (question.trim()) { local.set(readingDraftKey(item.id), question.trim()); writeDraft(""); } },
     },
     h("span", { class: "recent-top" },
       h("span", { class: "chip chip-bazi" }, "八字"),
@@ -1327,7 +1359,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
         return;
       }
       const draft = readDraft().trim();
-      if (draft) { local.set(`xz-next-draft:reading:${profileId}`, draft); writeDraft(""); }
+      if (draft) { local.set(readingDraftKey(profileId), draft); writeDraft(""); }
       // help：解读页载入后直接打开「向社区求助」。
       handoff(profileId, { system: "bazi", payload: chart, input: bodyPayload, sessionId: bodyPayload.session_id, name: chart.profile_name || bodyPayload.name || "", openHelp: help });
       ctx.navigate(`/reading/${encodeURIComponent(profileId)}`, { replace: true });

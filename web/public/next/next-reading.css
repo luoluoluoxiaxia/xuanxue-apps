@@ -52,6 +52,16 @@
 .recent-top { display: flex; gap: 6px; }
 .recent-line { color: var(--ink-2); font-size: 15px; font-weight: 700; letter-spacing: .08em; }
 .ask-recent { display: grid; gap: 12px; }
+/* 首页：大家最近问的——一行一问，行与行之间一条细线，不再套卡片。 */
+.home-community { display: grid; gap: 4px; }
+.home-section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.home-section-head .link-btn { display: inline-flex; align-items: center; gap: 4px; }
+.home-questions { display: grid; }
+.home-question { display: grid; gap: 4px; padding: 14px 2px; border-top: 1px solid var(--line); }
+.home-question:first-child { border-top: 0; }
+.home-question-title { font-family: var(--font-serif); font-size: 16px; font-weight: 700; line-height: 1.5; color: var(--ink); }
+.home-question:hover .home-question-title { color: var(--brand-ink); }
+.home-question-meta { color: var(--ink-3); font-size: 13px; }
 
 .flow-step { display: grid; gap: 14px; padding: 20px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); }
 .flow-step-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

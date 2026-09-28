@@ -360,8 +360,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 }
 .nav-tab .icon { width: 18px; height: 18px; }
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
-.btn-ask { min-height: 40px; padding: 0 18px 0 14px; }
-.btn-ask .icon { width: 18px; height: 18px; stroke-width: 2.2; }
 /* 已登录的昵称按钮；外层 .topbar-account 是账户位容器，未登录时放登录按钮。 */
 .topbar-user { max-width: 200px; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
 .topbar-user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -389,7 +387,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   display: none;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 6px env(safe-area-inset-bottom, 0px);
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(16px);
   backdrop-filter: saturate(1.6) blur(16px);
@@ -404,9 +402,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .tab[aria-current="page"] { color: var(--ink); }
 .tab[aria-current="page"] .icon { stroke-width: 2.1; }
 .tab .badge { top: 4px; right: calc(50% - 22px); border-color: var(--bg-elev); }
-.tab-ask { align-self: center; justify-self: center; width: 52px; height: 40px; border-radius: 14px; color: var(--on-brand); background: var(--brand); box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--brand) 80%, transparent); }
-.tab-ask .icon { width: 24px; height: 24px; stroke-width: 2.3; }
-.tab-ask:active { transform: scale(.95); }
 
 /* ---------- 浮层：抽屉 / 底部面板 / 对话框 ---------- */
 .overlay {
@@ -506,7 +501,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   :root { --topbar-h: 54px; }
   body { font-size: 15px; }
   .topbar-inner { padding: 0 8px 0 16px; gap: 10px; }
-  .nav-tabs, .btn-ask, .topbar-login-label, .topbar-user { display: none; }
+  .nav-tabs, .topbar-bell, .topbar-login-label, .topbar-user { display: none; }
   .app[data-depth="sub"] .topbar-back { display: inline-grid; }
   .app[data-depth="sub"] .brand-mark { display: none; }
   .brand-name { font-size: 18px; }
@@ -564,42 +559,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .feed-main { min-width: 0; display: grid; gap: 16px; }
 .feed-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 2px 2px 4px; }
 .feed-title { font-size: 28px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
-
-.composer-card {
-  display: grid; gap: 12px;
-  padding: 14px;
-  background: var(--bg-elev);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-1);
-}
-.composer-prompt {
-  display: flex; align-items: center; gap: 12px;
-  min-height: 52px; padding: 8px 10px 8px 16px;
-  background: var(--bg-sunken);
-  border-radius: 14px;
-  transition: background .16s var(--ease), box-shadow .16s var(--ease);
-}
-.composer-prompt:hover { background: var(--bg-press); }
-.composer-placeholder { flex: 1; min-width: 0; color: var(--ink-3); font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.composer-go { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--on-brand); background: var(--brand); flex: none; }
-.composer-go .icon { width: 18px; height: 18px; }
-.composer-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.composer-action {
-  display: flex; align-items: center; gap: 10px;
-  min-height: 56px; padding: 8px 12px;
-  border: 1px solid var(--line); border-radius: 14px;
-  transition: border-color .16s var(--ease), background .16s var(--ease), transform .12s var(--ease);
-}
-.composer-action:hover { background: var(--bg-hover); border-color: var(--line-strong); }
-.composer-action:active { transform: scale(.98); }
-.composer-action > .icon { width: 22px; height: 22px; flex: none; }
-.composer-action span { display: grid; gap: 1px; min-width: 0; }
-.composer-action b { font-size: 14px; font-weight: 700; }
-.composer-action small { color: var(--ink-3); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.composer-action.is-liuyao > .icon { color: var(--brand-ink); }
-.composer-action.is-bazi > .icon { color: var(--indigo); }
-.composer-action.is-help > .icon { color: var(--accent-ink); }
 
 .feed-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 6px; border-bottom: 1px solid var(--line); }
 .feed-tabs { display: flex; gap: 22px; }
@@ -744,13 +703,6 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 @media (max-width: 719px) {
   .feed-title { font-size: 23px; }
   .feed-heading { padding-top: 4px; }
-  .composer-card { padding: 12px; }
-  .composer-placeholder { font-size: 14px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.5; }
-  .composer-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-  .composer-action { flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 84px; padding: 10px 4px; text-align: center; }
-  .composer-action span { justify-items: center; }
-  .composer-action small { display: none; }
-  .composer-action b { font-size: 13px; }
   .feed-controls { flex-wrap: wrap; row-gap: 0; }
   .feed-tabs { gap: 18px; }
   .feed-system { display: none; }
