@@ -1,23 +1,22 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n7";
-import { icon, brandMark } from "./lib/icons.js?v=n7";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n7";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n7";
-import { get } from "./lib/api.js?v=n7";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n7";
-import { toast } from "./ui/toast.js?v=n7";
-import { openAuth } from "./views/auth.js?v=n7";
-import * as FeedView from "./views/feed.js?v=n7";
-import * as PostView from "./views/post.js?v=n7";
-import * as AskView from "./views/ask.js?v=n7";
-import * as ReadingView from "./views/reading.js?v=n7";
-import * as TodayView from "./views/today.js?v=n7";
-import * as KnowledgeView from "./views/knowledge.js?v=n7";
-import * as InboxView from "./views/inbox.js?v=n7";
-import * as MeView from "./views/me.js?v=n7";
-import { openFeedback } from "./views/feedback.js?v=n7";
-import { routeFromLegacy } from "./lib/legacy.js?v=n7";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n8";
+import { icon, brandMark } from "./lib/icons.js?v=n8";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n8";
+import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n8";
+import { get } from "./lib/api.js?v=n8";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n8";
+import { toast } from "./ui/toast.js?v=n8";
+import { openAuth } from "./views/auth.js?v=n8";
+import * as FeedView from "./views/feed.js?v=n8";
+import * as PostView from "./views/post.js?v=n8";
+import * as AskView from "./views/ask.js?v=n8";
+import * as ReadingView from "./views/reading.js?v=n8";
+import * as TodayView from "./views/today.js?v=n8";
+import * as InboxView from "./views/inbox.js?v=n8";
+import * as MeView from "./views/me.js?v=n8";
+import { openFeedback } from "./views/feedback.js?v=n8";
+import { routeFromLegacy } from "./lib/legacy.js?v=n8";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -84,12 +83,11 @@ export async function requireAuth(reason, { mode = "", force = false } = {}) {
 const isAskPath = path => path === "/" || path.startsWith("/ask");
 const isPlazaPath = path => path.startsWith("/square") || path.startsWith("/post");
 // 没有站内上一页（例如从分享链接直接打开）时「返回」去哪：帖子回广场，消息回「我」，其余回首页。
-const backFallback = path => (isPlazaPath(path) ? "/square" : path.startsWith("/inbox") ? "/me" : path.startsWith("/knowledge") ? "/knowledge" : "/");
+const backFallback = path => (isPlazaPath(path) ? "/square" : path.startsWith("/inbox") ? "/me" : "/");
 const NAV = [
   { key: "ask", label: "问", href: "#/", glyph: "message", match: isAskPath },
   { key: "plaza", label: "广场", href: "#/square", glyph: "plaza", match: isPlazaPath },
   { key: "today", label: "今日", href: "#/today", glyph: "sun", match: path => path.startsWith("/today") },
-  { key: "knowledge", label: "知识", href: "#/knowledge", glyph: "book", match: path => path.startsWith("/knowledge") },
   { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "book", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
 ];
 
@@ -117,7 +115,6 @@ function buildShell() {
     h("a", { class: "tab", href: "#/", "data-tab": "ask" }, icon("message"), h("span", null, "问")),
     h("a", { class: "tab", href: "#/square", "data-tab": "plaza" }, icon("plaza"), h("span", null, "广场")),
     h("a", { class: "tab", href: "#/today", "data-tab": "today" }, icon("sun"), h("span", null, "今日")),
-    h("a", { class: "tab", href: "#/knowledge", "data-tab": "knowledge" }, icon("book"), h("span", null, "知识")),
     h("a", { class: "tab", href: "#/me", "data-tab": "me" }, icon("user"), h("span", null, "我"), tabBadge));
   const skip = h("a", { class: "skip-link", href: "#main", onClick: event => { event.preventDefault(); main.focus(); } }, "跳到主要内容");
   const netBanner = h("div", { class: "net-banner", role: "status", hidden: true }, icon("alert"), h("span", null, "网络已断开，恢复后会自动重试"));
@@ -265,7 +262,6 @@ function syncNav(path) {
   const tabKey = isAskPath(path) ? "ask"
     : isPlazaPath(path) ? "plaza"
       : path.startsWith("/today") ? "today"
-        : path.startsWith("/knowledge") ? "knowledge"
         : path.startsWith("/me") || path.startsWith("/reading") || path.startsWith("/inbox") ? "me" : "";
   shell.tabbar.querySelectorAll("[data-tab]").forEach(link => {
     if (link.dataset.tab === tabKey) link.setAttribute("aria-current", "page");
@@ -273,7 +269,7 @@ function syncNav(path) {
   });
   shell.app.dataset.route = path.split("/")[1] || "home";
   // 底栏一级页面之外都算子页面：手机顶栏显示返回键（消息从「我」进入，也算子页面）。
-  shell.app.dataset.depth = ["/", "/square", "/today", "/knowledge", "/me"].includes(path) ? "root" : "sub";
+  shell.app.dataset.depth = ["/", "/square", "/today", "/me"].includes(path) ? "root" : "sub";
 }
 
 /* ---------- 消息数 ---------- */
@@ -362,6 +358,11 @@ const ctxBase = {
 
 function renderRoute(match, previous, { restoreScroll } = {}) {
   if (!match) return;
+  // 典籍资料仍在内部整理，已有知识馆链接统一回到公开首页。
+  if (match.path === "/knowledge" || match.path.startsWith("/knowledge/")) {
+    navigate("/", { replace: true });
+    return;
+  }
   // 旧的提问入口 #/ask 已并入首页。
   if (match.path === "/ask") {
     navigate("/", { replace: true });
@@ -417,8 +418,6 @@ const ROUTES = [
   { path: "/ask/:system", view: AskView },
   { path: "/reading/:id", view: ReadingView },
   { path: "/today", view: TodayView },
-  { path: "/knowledge", view: KnowledgeView },
-  { path: "/knowledge/:id", view: KnowledgeView },
   { path: "/inbox", view: InboxView },
   { path: "/me", view: MeView },
   { path: "/me/:tab", view: MeView },

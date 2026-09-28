@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n7`, base).href);
+const load = path => import(new URL(`${path}?v=n8`, base).href);
 
 test('knowledge search keeps URL filters through pagination and resets the page when a category changes', async () => {
   const { readKnowledgeQuery, knowledgeListPath, knowledgeApiPath } = await load('lib/knowledge.js');

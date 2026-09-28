@@ -389,7 +389,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   display: none;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 6px env(safe-area-inset-bottom, 0px);
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(16px);
   backdrop-filter: saturate(1.6) blur(16px);
