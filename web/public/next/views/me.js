@@ -1128,7 +1128,8 @@ function activityRow(item) {
       h("span", { class: "cr-row-meta" },
         description ? h("span", null, label) : null,
         h("time", { datetime: item?.created_at || "" }, ledgerTime(item?.created_at)),
-        free > 0 ? h("span", null, free >= Math.abs(amount) ? "免费额度" : `免费额度 ${free} 分`) : null)),
+        // 始终写出免费额度用了几分：变动金额可能只算账户扣款（整笔由免费额度抵扣时为 0）。
+        free > 0 ? h("span", null, `免费额度 ${free} 分`) : null)),
     h("span", { class: "cr-row-side" },
       h("b", { class: ["cr-change", `is-${direction}`, "tnum"] }, signed(amount), h("span", { class: "sr-only" }, " 分")),
       h("span", { class: "cr-after tnum" }, `余额 ${number(item?.balance_after)}`)));
