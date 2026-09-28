@@ -87,7 +87,7 @@ const html = read("index.html");
 const entry = /<script type="module" src="next\/app\.js\?v=([a-z0-9-]+)"><\/script>/.exec(html);
 if (!entry) fail("index.html must load next/app.js as a versioned module");
 const version = entry[1];
-for (const sheet of ["next/next.css", "next/next-reading.css", "next/next-personal.css", "next/next-chart.css", "next/next-knowledge.css"]) {
+for (const sheet of ["next/next.css", "next/next-reading.css", "next/next-personal.css", "next/next-chart.css"]) {
   if (!html.includes(`href="${sheet}?v=${version}"`)) fail(`index.html must load ${sheet} with version ${version}`);
 }
 if (!/<script src="chat-render\.js\?v=[^"]+"><\/script>/.test(html)) fail("index.html must load the shared answer renderer");
