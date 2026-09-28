@@ -199,6 +199,9 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .icon-btn:hover { color: var(--ink); background: var(--bg-hover); }
 .icon-btn:active { transform: scale(.94); }
 .icon-btn[aria-pressed="true"] { color: var(--brand); }
+/* 深浅色开关：月亮 / 太阳本身就表示状态，按下时不再染成品牌红。 */
+.topbar-theme[aria-pressed="true"] { color: var(--ink-2); }
+.topbar-theme[aria-pressed="true"]:hover { color: var(--ink); }
 .badge {
   position: absolute; top: 5px; right: 4px;
   min-width: 17px; height: 17px; padding: 0 5px;

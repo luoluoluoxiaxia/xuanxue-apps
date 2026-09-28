@@ -20,11 +20,11 @@
 <meta name="theme-color" content="#FFFFFF">
 <link rel="icon" href="assets/xuanshu-favicon.svg" type="image/svg+xml">
 <script>
-// 外观（跟随系统 / 浅色 / 深色）在首帧前确定，避免闪烁。
+// 外观在首帧前确定，避免闪烁：默认浅色（红白），用户可以选深色或跟随系统。
 (() => {
-  let pref = "auto";
-  try { pref = localStorage.getItem("xz-next-theme") || "auto"; } catch (_) {}
-  const dark = pref === "dark" || (pref !== "light" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
+  let pref = "light";
+  try { pref = localStorage.getItem("xz-next-theme") || "light"; } catch (_) {}
+  const dark = pref === "dark" || (pref === "auto" && window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches);
   document.documentElement.dataset.scheme = dark ? "dark" : "light";
 })();
 </script>

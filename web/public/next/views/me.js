@@ -1843,7 +1843,7 @@ function settingRow({ label, text = "", control = null, className = "" }) {
 }
 
 function appearanceSection(ctx) {
-  const options = [["auto", "跟随系统", "monitor"], ["light", "浅色", "sun"], ["dark", "深色", "moon"]];
+  const options = [["light", "浅色", "sun"], ["dark", "深色", "moon"], ["auto", "跟随系统", "monitor"]];
   const buttons = options.map(([key, label, glyph]) => h("button", {
     type: "button",
     "aria-pressed": String(ctx.themePreference() === key),
@@ -1857,7 +1857,7 @@ function appearanceSection(ctx) {
     ctx.setTheme(button.dataset.pref);
     sync();
   }));
-  // 外观也可能在账户菜单里被切换：跟着根节点上的偏好标记同步。
+  // 外观也可能在顶栏开关里被切换：跟着根节点上的偏好标记同步。
   if (typeof MutationObserver === "function") {
     const observer = new MutationObserver(sync);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-scheme-pref"] });
