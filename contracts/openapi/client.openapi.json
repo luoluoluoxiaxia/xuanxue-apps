@@ -1588,6 +1588,16 @@
             ],
             "title": "Accepted Comment Id"
           },
+          "ai_answer": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientHelpAiAnswer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "ai_disclosure": {
             "title": "Ai Disclosure",
             "type": "string"
@@ -1610,6 +1620,17 @@
             "default": false,
             "title": "Can Manage",
             "type": "boolean"
+          },
+          "can_request_ai": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Can Request Ai"
           },
           "chart": {
             "anyOf": [
@@ -2325,6 +2346,47 @@
           "follow_count"
         ],
         "title": "ClientFollowState",
+        "type": "object"
+      },
+      "ClientHelpAiAnswer": {
+        "additionalProperties": false,
+        "description": "求助帖上由卦友花自己积分请来的 AI 解读（一帖一轮）。",
+        "properties": {
+          "answer": {
+            "default": "",
+            "title": "Answer",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "requested_at": {
+            "title": "Requested At",
+            "type": "string"
+          },
+          "requested_by": {
+            "title": "Requested By",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "requested_by",
+          "requested_at"
+        ],
+        "title": "ClientHelpAiAnswer",
         "type": "object"
       },
       "ClientHelpPostCreated": {
@@ -5968,6 +6030,46 @@
           }
         },
         "summary": "Api Get Community Post"
+      }
+    },
+    "/api/community/posts/{slug}/ai-answer": {
+      "post": {
+        "description": "卦友花自己的账户余额，为一条六爻求助帖请 AI 解读；审核通过后公开在帖子上。\n\n每日免费积分不能用于替别人请 AI；一帖只生成一轮，结果不写进任何人的私人档案。",
+        "operationId": "api_help_post_ai_answer_api_community_posts__slug__ai_answer_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientInterpretTask"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Help Post Ai Answer"
       }
     },
     "/api/community/posts/{slug}/comments": {
