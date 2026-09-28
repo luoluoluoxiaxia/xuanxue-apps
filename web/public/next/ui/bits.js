@@ -1,7 +1,7 @@
 // 通用小组件：头像、状态页（空 / 错误 / 未登录）、骨架屏。
-import { h } from "../lib/dom.js?v=n1";
-import { icon } from "../lib/icons.js?v=n1";
-import { initial, toneFor } from "../lib/format.js?v=n1";
+import { h } from "../lib/dom.js?v=n2";
+import { icon } from "../lib/icons.js?v=n2";
+import { initial, toneFor } from "../lib/format.js?v=n2";
 
 export function avatar(name, size = "") {
   return h("span", {
