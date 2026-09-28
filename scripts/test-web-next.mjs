@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n2`, base).href);
+const load = path => import(new URL(`${path}?v=n3`, base).href);
 
 test('waiting copy maps free-form stages to fixed banks and never echoes the raw stage', async () => {
   const { waitingBankKey, waitingLine } = await load('lib/copy.js');
