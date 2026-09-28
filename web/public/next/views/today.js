@@ -1,7 +1,7 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h, svg } from "../lib/dom.js?v=n2";
+import { h } from "../lib/dom.js?v=n2";
 import { icon } from "../lib/icons.js?v=n2";
 import { get, post, put } from "../lib/api.js?v=n2";
 import { session, refreshSession } from "../lib/store.js?v=n2";
@@ -36,15 +36,6 @@ function setIdle(button, ...content) {
   button.removeAttribute("aria-busy");
   button.classList.remove("is-busy");
   button.replaceChildren(...content);
-}
-
-const GLYPHS = {
-  palette: '<path d="M12 3.5a8.5 8.5 0 0 0 0 17c1.1 0 1.9-.8 1.9-1.8 0-.5-.2-.9-.5-1.2-.3-.4-.5-.8-.5-1.3 0-1 .8-1.8 1.8-1.8h2.1a4.2 4.2 0 0 0 4.2-4.2c0-3.7-4-6.7-9-6.7z"/><circle cx="7.6" cy="11.2" r="1.1"/><circle cx="10.3" cy="7.5" r="1.1"/><circle cx="14.8" cy="7.7" r="1.1"/>',
-  beads: '<circle cx="12" cy="4.7" r="2"/><circle cx="17.2" cy="6.8" r="2"/><circle cx="19.3" cy="12" r="2"/><circle cx="17.2" cy="17.2" r="2"/><circle cx="12" cy="19.3" r="2"/><circle cx="6.8" cy="17.2" r="2"/><circle cx="4.7" cy="12" r="2"/><circle cx="6.8" cy="6.8" r="2"/>',
-};
-
-function glyph(name, className = "") {
-  return svg(`<svg class="icon ${className}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${GLYPHS[name] || ""}</svg>`);
 }
 
 let uidSeed = 0;
@@ -116,15 +107,14 @@ function todayText(today) {
 
 /* ---------- 组件 ---------- */
 function actionRail() {
-  const item = (tone, href, glyphName, small, label, text) => h("a", { class: ["td-rail-item", `is-${tone}`], href },
-    h("span", { class: "td-rail-icon", "aria-hidden": "true" }, icon(glyphName)),
+  const item = (tone, href, small, label, text) => h("a", { class: ["td-rail-item", `is-${tone}`], href },
     h("span", { class: "td-rail-copy" }, h("small", null, small), h("b", null, label), h("span", null, text)),
     h("span", { class: "td-rail-go", "aria-hidden": "true" }, icon("arrowRight")));
   return h("section", { class: "td-rail-wrap", "aria-labelledby": "td-rail-title" },
     h("h2", { class: "td-section-title", id: "td-rail-title" }, "想细问一件事？"),
     h("nav", { class: "td-rail", "aria-label": "开始问事" },
-      item("liuyao", "#/ask/liuyao", "gua", "问眼前", "六爻起卦", "一件具体的事，看走向与时机"),
-      item("bazi", "#/ask/bazi", "pillars", "看长期", "八字排盘", "性格、事业与大运流年")));
+      item("liuyao", "#/ask/liuyao", "问眼前", "六爻起卦", "一件具体的事，看走向与时机"),
+      item("bazi", "#/ask/bazi", "看长期", "八字排盘", "性格、事业与大运流年")));
 }
 
 function heroNode(payload, { onCity }) {
@@ -137,7 +127,6 @@ function heroNode(payload, { onCity }) {
   const city = String(payload?.current_city || "").trim();
   const profile = payload?.default_profile || null;
   return h("section", { class: "td-hero" },
-    h("div", { class: "td-hero-mark", "aria-hidden": "true" }, icon("sun")),
     h("div", { class: "td-hero-copy" },
       h("p", { class: "kicker" }, "观象台"),
       h("h1", { class: "td-greet" }, nickname ? `${greeting()}，${nickname}` : greeting()),
@@ -153,38 +142,30 @@ function heroNode(payload, { onCity }) {
         icon("book", "icon-sm"), h("span", null, `依据「${profile.name || "未命名命盘"}」`)) : null));
 }
 
-// seal：本月宜忌的印章排在词条最前面，当作这一组的小标题（读屏读隐藏的 h3）。
-function chipList(items, tone, seal = "") {
+function chipList(items, tone) {
   const list = (items || []).map(item => String(item || "").trim()).filter(Boolean);
-  if (!list.length && !seal) return h("p", { class: "td-none" }, "暂无");
-  return h("ul", { class: ["td-chips", `is-${tone}`] },
-    seal ? h("li", { class: "td-chip-seal", "aria-hidden": "true" }, seal) : null,
-    list.length ? list.map(text => h("li", null, text)) : h("li", { class: "td-chip-none" }, "暂无"));
+  if (!list.length) return h("p", { class: "td-none" }, "暂无");
+  return h("ul", { class: ["td-chips", `is-${tone}`] }, list.map(text => h("li", null, text)));
 }
 
-function dayCard(tone, seal, title, items) {
+function dayCard(tone, title, items) {
   return h("article", { class: ["td-card", `is-${tone}`] },
-    h("header", { class: "td-card-head" },
-      h("span", { class: "td-seal", "aria-hidden": "true" }, seal),
-      h("h2", null, title)),
+    h("header", { class: "td-card-head" }, h("h2", null, title)),
     chipList(items, tone));
 }
 
 // 「正在准备」由卡片上方的状态行说一次，卡片里只留骨架。
-function pendingCard(tone, seal, title) {
+function pendingCard(tone, title) {
   return h("article", { class: ["td-card", `is-${tone}`, "is-pending"], "aria-hidden": "true" },
-    h("header", { class: "td-card-head" },
-      h("span", { class: "td-seal" }, seal),
-      h("h2", null, title)),
+    h("header", { class: "td-card-head" }, h("h2", null, title)),
     h("div", { class: "td-skel-chips" },
       [68, 52, 84, 60].map(width => h("span", { class: "skel", style: { width: `${width}%` } }))));
 }
 
-function issueCard({ tone = "error", title, text, button, busyText, onRetry, glyphNode }) {
+function issueCard({ tone = "error", title, text, button, busyText, onRetry }) {
   const retry = h("button", { type: "button", class: "btn btn-soft btn-sm" }, icon("refresh"), button);
   retry.addEventListener("click", () => onRetry(retry, busyText, button));
   return h("div", { class: ["td-issue", `is-${tone}`], role: tone === "error" ? "alert" : null },
-    h("span", { class: "td-issue-mark", "aria-hidden": "true" }, glyphNode || icon(tone === "error" ? "alert" : "clock")),
     h("div", { class: "td-issue-copy" }, h("b", null, title), text ? h("p", null, text) : null),
     retry);
 }
@@ -194,13 +175,13 @@ function dayBlock(payload, actions) {
   const state = dayState(daily);
   if (state === "ready") {
     return h("section", { class: "td-duo", "aria-label": "今日宜忌" },
-      dayCard("good", "宜", "今日宜", daily.content.suitable),
-      dayCard("bad", "忌", "今日忌", daily.content.avoid));
+      dayCard("good", "今日宜", daily.content.suitable),
+      dayCard("bad", "今日忌", daily.content.avoid));
   }
   if (state === "pending") {
     return h("section", { class: "td-duo-wrap", "aria-label": "今日宜忌", "aria-busy": "true" },
       h("p", { class: "td-pending-note", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }), daily.message || "正在准备今日宜忌"),
-      h("div", { class: "td-duo" }, pendingCard("good", "宜", "今日宜"), pendingCard("bad", "忌", "今日忌")));
+      h("div", { class: "td-duo" }, pendingCard("good", "今日宜"), pendingCard("bad", "今日忌")));
   }
   const failed = state === "failed";
   return h("section", { class: "td-duo-wrap", "aria-label": "今日宜忌" },
@@ -244,7 +225,7 @@ function outfitSection(outfit, view) {
   }
   paintReason();
   return h("section", { class: "td-extra td-outfit", "aria-labelledby": `${panelId}-title` },
-    h("h3", { class: "td-sub-title", id: `${panelId}-title` }, h("span", { class: "td-sub-icon is-color", "aria-hidden": "true" }, glyph("palette")), "本月穿搭"),
+    h("h3", { class: "td-sub-title", id: `${panelId}-title` }, "本月穿搭"),
     h("p", { class: "td-intent" }, outfit.intent_label || "本月配色"),
     outfit.intent_reason ? h("p", { class: "td-intent-reason" }, outfit.intent_reason) : null,
     colors.length
@@ -258,13 +239,11 @@ function braceletSection(outfit) {
   const reasons = outfit.bracelet_reasons && typeof outfit.bracelet_reasons === "object" ? outfit.bracelet_reasons : {};
   const titleId = uid("td-bracelet");
   return h("section", { class: "td-extra td-bracelet", "aria-labelledby": titleId },
-    h("h3", { class: "td-sub-title", id: titleId }, h("span", { class: "td-sub-icon is-bead", "aria-hidden": "true" }, glyph("beads")), "手镯材质"),
+    h("h3", { class: "td-sub-title", id: titleId }, "手镯材质"),
     materials.length
       ? h("ul", { class: "td-materials" }, materials.map(material => h("li", null,
-        h("span", { class: "td-bead", "aria-hidden": "true" }),
-        h("div", null,
-          h("b", null, material),
-          h("p", null, String(reasons[material] || "").trim() || REASON_FALLBACK)))))
+        h("b", null, material),
+        h("p", null, String(reasons[material] || "").trim() || REASON_FALLBACK))))
       : h("p", { class: "td-none" }, "本月暂无材质建议"));
 }
 
@@ -283,8 +262,8 @@ function monthBlock(payload, actions, view) {
     return h("section", { class: "td-month", "aria-label": "本月提示" },
       head,
       h("div", { class: "td-month-lists" },
-        h("div", { class: "td-list is-good" }, h("h3", { class: "sr-only" }, "本月宜"), chipList(content.suitable, "good", "宜")),
-        h("div", { class: "td-list is-bad" }, h("h3", { class: "sr-only" }, "本月忌"), chipList(content.avoid, "bad", "忌"))),
+        h("div", { class: "td-list is-good" }, h("h3", null, "宜"), chipList(content.suitable, "good")),
+        h("div", { class: "td-list is-bad" }, h("h3", null, "忌"), chipList(content.avoid, "bad"))),
       h("div", { class: "td-month-extras" },
         outfitSection(content.outfit, view),
         braceletSection(content.outfit)));
@@ -313,14 +292,12 @@ function monthBlock(payload, actions, view) {
 
 function gateNode(kind, payload, actions) {
   const generation = payload?.generation || {};
-  const shell = ({ tone = "", mark, title, text, body = null }) => h("section", { class: ["td-gate", tone && `is-${tone}`] },
-    h("div", { class: "td-gate-mark", "aria-hidden": "true" }, mark),
-    h("h2", { class: "td-gate-title" }, title),
+  const shell = ({ tone = "", title, text, body = null }) => h("section", { class: ["td-gate", tone && `is-${tone}`] },
+    h("h2", { class: "td-gate-title" }, tone === "preparing" ? h("span", { class: "spinner", "aria-hidden": "true" }) : null, title),
     text ? h("p", { class: "td-gate-text" }, text) : null,
     body);
   if (kind === "no_profile") {
     return shell({
-      mark: icon("pillars"),
       title: "先建立一张本人命盘",
       text: "设为默认命盘后显示今日、本月、颜色与手镯提示。",
       body: h("div", { class: "td-gate-actions" },
@@ -332,7 +309,6 @@ function gateNode(kind, payload, actions) {
     const currentId = Number(payload?.default_profile?.id || 0);
     const profiles = Array.isArray(payload?.profiles) ? payload.profiles : [];
     return shell({
-      mark: icon("book"),
       title: "选择一张默认命盘",
       text: "仅影响观象台，其他档案保留。设置后开始准备内容。",
       body: profiles.length
@@ -344,7 +320,6 @@ function gateNode(kind, payload, actions) {
             disabled: active,
             "aria-current": active ? "true" : null,
           },
-          h("span", { class: "td-choice-mark", "aria-hidden": "true" }, icon("pillars")),
           h("span", { class: "td-choice-copy" }, h("b", null, profile.name || "未命名命盘"), h("em", null, pillarsText(profile))),
           h("span", { class: "td-choice-action" }, active ? "默认命盘" : "设为默认"));
           button.addEventListener("click", () => actions.setDefault(profile.id, button));
@@ -359,7 +334,6 @@ function gateNode(kind, payload, actions) {
     button.addEventListener("click", () => actions.refresh(button, paused ? "更新今日与本月" : "重新生成"));
     return shell({
       tone: paused ? "" : "error",
-      mark: icon(paused ? "clock" : "alert"),
       title: paused ? "今日与本月尚未更新" : "本次生成失败",
       text: generation.message || "",
       body: h("div", { class: "td-gate-actions" },
@@ -371,7 +345,6 @@ function gateNode(kind, payload, actions) {
   refresh.addEventListener("click", () => actions.reload());
   return shell({
     tone: "preparing",
-    mark: h("span", { class: "td-gate-spin" }, icon("sun")),
     title: "正在准备今日与本月",
     text: generation.message || "",
     body: h("div", { class: "td-gate-actions" }, h("p", { class: "td-gate-note" }, "完成后自动保存。"), refresh),
@@ -382,12 +355,11 @@ function skeletonView() {
   return h("div", { class: "td-skeleton" },
     h("p", { class: "sr-only", role: "status" }, "加载观象台…"),
     h("section", { class: "td-hero is-skeleton", "aria-hidden": "true" },
-      h("span", { class: "skel", style: { width: "52px", height: "52px", borderRadius: "16px" } }),
       h("div", { class: "td-hero-copy" },
         h("span", { class: "skel skel-line", style: { width: "64px" } }),
         h("span", { class: "skel skel-title", style: { width: "220px", height: "30px", marginTop: "12px" } }),
         h("span", { class: "skel skel-line", style: { width: "160px", marginTop: "12px" } }))),
-    h("div", { class: "td-duo", "aria-hidden": "true" }, pendingCard("good", "宜", "今日宜", ""), pendingCard("bad", "忌", "今日忌", "")),
+    h("div", { class: "td-duo", "aria-hidden": "true" }, pendingCard("good", "今日宜"), pendingCard("bad", "今日忌")),
     h("section", { class: "td-month is-skeleton", "aria-hidden": "true" },
       h("span", { class: "skel skel-line", style: { width: "90px" } }),
       h("span", { class: "skel skel-title", style: { width: "160px", marginTop: "12px" } }),
@@ -397,22 +369,20 @@ function skeletonView() {
 function anonView(ctx) {
   const reason = "登录后，每天为你准备今日宜忌与本月提示。";
   const features = [
-    ["good", h("span", { class: "td-feature-seal" }, "宜"), "今日宜忌", "今天适合做什么、少碰什么"],
-    ["month", h("span", { class: "td-feature-seal" }, "月"), "本月提示", "按节气划分的本月宜与忌"],
-    ["color", glyph("palette"), "穿搭配色", "本月适合的颜色，以及为什么是它"],
-    ["bead", glyph("beads"), "手镯材质", "适合本月佩戴的材质与缘由"],
+    ["今日宜忌", "今天适合做什么、少碰什么"],
+    ["本月提示", "按节气划分的本月宜与忌"],
+    ["穿搭配色", "本月适合的颜色，以及为什么是它"],
+    ["手镯材质", "适合本月佩戴的材质与缘由"],
   ];
   return h("div", { class: "td-anon" },
     h("section", { class: "td-anon-hero" },
-      h("div", { class: "td-hero-mark", "aria-hidden": "true" }, icon("sun")),
       h("p", { class: "kicker" }, "观象台"),
       h("h1", { class: "td-anon-title" }, "每天一份属于你的宜忌"),
       h("p", { class: "td-anon-text" }, "登录后排一张本人八字（排盘免费），之后每天自动更新。"),
       h("div", { class: "td-anon-actions" },
         h("button", { type: "button", class: "btn btn-primary btn-lg", onClick: () => ctx.openAuth({ reason }) }, icon("user"), "登录 / 注册"),
         h("a", { class: "btn btn-ghost btn-lg", href: "#/" }, "先逛逛广场"))),
-    h("ul", { class: "td-features", "aria-label": "观象台会为你准备" }, features.map(([tone, mark, title, text]) => h("li", { class: ["td-feature", `is-${tone}`] },
-      h("span", { class: "td-feature-mark", "aria-hidden": "true" }, mark),
+    h("ul", { class: "td-features", "aria-label": "观象台会为你准备" }, features.map(([title, text]) => h("li", { class: "td-feature" },
       h("b", null, title),
       h("span", null, text)))),
     actionRail());

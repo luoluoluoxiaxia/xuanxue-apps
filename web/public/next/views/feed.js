@@ -316,14 +316,12 @@ function sideRail(ctx, { shown, onStats } = {}) {
     const avoid = Array.isArray(daily?.content?.avoid) ? daily.content.avoid : [];
     if (daily?.status !== "done" || (!suitable.length && !avoid.length)) {
       todayBox.replaceChildren(
-        h("div", { class: "side-today-mark", "aria-hidden": "true" }, icon("sun")),
         h("h2", null, "今日宜忌"),
         h("p", null, "按你的命盘生成，每天更新。"),
         h("a", { class: "btn btn-soft btn-sm", href: "#/today" }, "查看今日", icon("arrowRight")));
       return;
     }
     fill(todayBox,
-      h("div", { class: "side-today-mark", "aria-hidden": "true" }, icon("sun")),
       h("h2", null, `今日 · ${[daily.date_label, daily.weekday_label].filter(Boolean).join(" ")}`),
       suitable.length ? h("p", { class: "side-today-line" }, h("b", { class: "yi" }, "宜"), suitable.slice(0, 3).join("、")) : null,
       avoid.length ? h("p", { class: "side-today-line" }, h("b", { class: "ji" }, "忌"), avoid.slice(0, 2).join("、")) : null,
@@ -333,7 +331,6 @@ function sideRail(ctx, { shown, onStats } = {}) {
     const state = session.get();
     if (!state.authenticated) {
       todayBox.replaceChildren(
-        h("div", { class: "side-today-mark", "aria-hidden": "true" }, icon("sun")),
         h("h2", null, "每天一份属于你的宜忌"),
         h("p", null, "登录并保存命盘后，按你的八字生成今日宜忌与本月提醒。"),
         h("button", { type: "button", class: "btn btn-soft btn-sm", "data-open-auth": "" }, "登录 / 注册"));
@@ -524,7 +521,7 @@ export function render(ctx) {
       return;
     }
     pulse.hidden = false;
-    pulse.replaceChildren(h("span", { class: "pulse-dot", "aria-hidden": "true" }), `今日 ${count(today)} 卦 · ${count(answered)} 次解读`);
+    pulse.replaceChildren(`今日 ${count(today)} 卦 · ${count(answered)} 次解读`);
   };
   if (!side.stats) {
     pulse.hidden = false;

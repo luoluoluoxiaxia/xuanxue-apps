@@ -95,21 +95,18 @@ function hub(ctx) {
     methodTitle,
     h("div", { class: "method-grid" },
       h("button", { type: "button", class: "method-card is-liuyao", onClick: go("/ask/liuyao") },
-        h("span", { class: "method-icon" }, icon("gua")),
         h("span", { class: "method-copy" },
           h("b", null, "六爻问事"),
           h("span", null, "一件具体的事：成不成、何时、怎么做。"),
           h("small", null, "三钱六掷 · AI 解读")),
         icon("chevronRight", "method-go")),
       h("button", { type: "button", class: "method-card is-bazi", onClick: go("/ask/bazi") },
-        h("span", { class: "method-icon" }, icon("pillars")),
         h("span", { class: "method-copy" },
           h("b", null, "八字看长期"),
           h("span", null, "用出生时间排盘：性格底色、事业财运、大运流年。"),
           h("small", null, "排盘免费 · 同一张盘可以一直追问")),
         icon("chevronRight", "method-go")),
       h("button", { type: "button", class: "method-card is-help", onClick: go("/ask/liuyao?help=1") },
-        h("span", { class: "method-icon" }, icon("hand")),
         h("span", { class: "method-copy" },
           h("b", null, "向卦友求助"),
           h("span", null, "起卦后把脱敏的卦象发到广场，请卦友帮你断。"),
@@ -192,9 +189,9 @@ function liuyaoFlow(ctx) {
   const manualPad = h("div", { class: "manual-pad", hidden: true });
 
   const visibilityOptions = [
-    ["help", "向社区求助", "选择即同意公开脱敏卦象和问题，由社区回答。", "hand"],
-    ["private", "私密 AI 解读", "仅自己可见，不进入社区。", "lock"],
-    ["public", "公开 AI 解读", "选择即同意公开问题、卦象和首轮 AI 解答到广场。", "globe"],
+    ["help", "向社区求助", "选择即同意公开脱敏卦象和问题，由社区回答。"],
+    ["private", "私密 AI 解读", "仅自己可见，不进入社区。"],
+    ["public", "公开 AI 解读", "选择即同意公开问题、卦象和首轮 AI 解答到广场。"],
   ];
   const visibilityGroup = h("div", { class: "vis-grid", role: "radiogroup", "aria-label": "回答方式" });
   radioKeys(visibilityGroup);
@@ -208,7 +205,7 @@ function liuyaoFlow(ctx) {
   const renderVisibility = () => {
     // 账户状态刷新时也会重画：焦点原本在选项上就留在选中项上。
     const hadFocus = visibilityGroup.contains(document.activeElement);
-    visibilityGroup.replaceChildren(...visibilityOptions.map(([value, label, copy, glyph]) => h("button", {
+    visibilityGroup.replaceChildren(...visibilityOptions.map(([value, label, copy]) => h("button", {
       type: "button",
       role: "radio",
       class: ["vis-card", `is-${value}`],
@@ -222,7 +219,6 @@ function liuyaoFlow(ctx) {
         syncSubmit();
       },
     },
-    h("span", { class: "vis-icon" }, icon(glyph)),
     h("span", { class: "vis-copy" }, h("b", null, label), h("span", null, copy),
       value === "private" ? h("small", null, quotaLabel()) : value === "public" ? h("small", null, "消耗积分 · 分享可增加每日额度") : h("small", null, "不调用 AI · 不扣积分")),
     h("span", { class: "vis-radio", "aria-hidden": "true" }))));
@@ -231,21 +227,21 @@ function liuyaoFlow(ctx) {
   const submit = h("button", { type: "button", class: "btn btn-primary btn-lg btn-block submit-btn" });
   const submitError = h("p", { class: "field-error", hidden: true, role: "alert" });
   const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
-    h("span", { class: "ritual-mark", "aria-hidden": "true" }),
+    h("span", { class: "spinner", "aria-hidden": "true" }),
     h("span", { class: "ritual-text", "aria-hidden": "true" }),
     h("span", { class: "sr-only" }, "正在排盘，请稍候"));
 
   const node = h("div", { class: "ask-page is-cast" },
     focusHeader(ctx, wantsHelp ? "起一卦，请卦友帮你断" : "六爻问事"),
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "1"), h("h2", null, "所问之事"), h("span", { class: "flow-hint" }, "一次只问一件事，写清时间范围")),
+      h("div", { class: "flow-step-head" }, h("h2", null, "所问之事"), h("span", { class: "flow-hint" }, "一次只问一件事，写清时间范围")),
       question, questionError,
       h("p", { class: "ask-privacy" }, icon("lock", "icon-sm"), "不要填写姓名、电话、住址或证件号。")),
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "2"), h("h2", null, "三钱六掷"), modeSeg),
+      h("div", { class: "flow-step-head" }, h("h2", null, "三钱六掷"), modeSeg),
       h("div", { class: "cast-layout" }, h("div", { class: "cast-left" }, stage, manualPad), h("div", { class: "cast-right" }, builder, banner))),
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "3"), h("h2", null, "怎么回答")),
+      h("div", { class: "flow-step-head" }, h("h2", null, "怎么回答")),
       visibilityGroup),
     h("div", { class: "flow-submit" }, submitError, submit),
     ritual);
@@ -406,7 +402,7 @@ function liuyaoFlow(ctx) {
     builder.replaceChildren(...rows);
     const moving = state.lines.filter(line => line.value === 6 || line.value === 9).length;
     banner.hidden = state.lines.length < 6;
-    banner.replaceChildren(h("span", { class: "gua-ready-seal" }, "卦成"), h("span", null, h("b", null, moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"), h("small", null, "下一步：选择怎么回答")));
+    banner.replaceChildren(h("span", null, h("b", null, `卦成 · ${moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"}`), h("small", null, "下一步：选择怎么回答")));
   }
 
   function startEdit(index) {
@@ -770,7 +766,7 @@ function existingProfiles(ctx, profiles, { help = false } = {}) {
   const question = readDraft();
   const list = profiles.slice().sort((a, b) => Number(b.is_default) - Number(a.is_default) || Number(b.id) - Number(a.id)).slice(0, 6);
   return h("section", { class: "flow-step" },
-    h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, icon("book", "icon-sm")), h("h2", null, "用已有命盘"), h("span", { class: "flow-hint" }, help ? "选一张盘，直接向卦友求助" : "同一张盘可以开新的对话")),
+    h("div", { class: "flow-step-head" }, h("h2", null, "用已有命盘"), h("span", { class: "flow-hint" }, help ? "选一张盘，直接向卦友求助" : "同一张盘可以开新的对话")),
     h("div", { class: "recent-grid" }, list.map(item => h("a", {
       class: "recent-card",
       href: `#/reading/${encodeURIComponent(item.id)}?fresh=1${help ? "&help=1" : ""}`,
@@ -850,7 +846,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   const submitLabel = editing ? "更新并重新排盘" : "生成命盘";
   const submit = h("button", { type: "submit", class: "btn btn-primary btn-lg btn-block submit-btn" }, icon("sparkle"), submitLabel);
   const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
-    h("span", { class: "ritual-mark", "aria-hidden": "true" }),
+    h("span", { class: "spinner", "aria-hidden": "true" }),
     h("span", { class: "ritual-text", "aria-hidden": "true" }),
     h("span", { class: "sr-only" }, "正在排盘，请稍候"));
 
@@ -1092,11 +1088,11 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
 
   const form = h("form", { class: "birth-form", novalidate: true },
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "1"), h("h2", null, "你是谁")),
+      h("div", { class: "flow-step-head" }, h("h2", null, "你是谁")),
       h("label", { class: "field" }, h("span", { class: "field-label" }, "称呼（可选）"), name),
       h("div", { class: "field" }, h("span", { class: "field-label" }, "性别"), genderSeg, h("span", { class: "field-hint" }, "性别决定大运顺逆；不透露则无法排大运。"))),
     h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("span", { class: "flow-num" }, "2"), h("h2", null, "出生时间"), modeSeg),
+      h("div", { class: "flow-step-head" }, h("h2", null, "出生时间"), modeSeg),
       timeSection,
       manualSection),
     h("div", { class: "flow-submit" }, error, submit),

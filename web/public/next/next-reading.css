@@ -39,11 +39,6 @@
 }
 .method-card:hover { border-color: var(--line-strong); box-shadow: var(--shadow-2); }
 .method-card:active { transform: scale(.99); }
-.method-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 16px; flex: none; }
-.method-icon .icon { width: 26px; height: 26px; }
-.method-card.is-liuyao .method-icon { color: var(--brand-ink); background: var(--brand-soft); }
-.method-card.is-bazi .method-icon { color: var(--indigo); background: var(--indigo-soft); }
-.method-card.is-help .method-icon { color: var(--accent-ink); background: var(--accent-soft); }
 .method-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
 .method-copy b { font-size: 17px; font-weight: 800; }
 .method-copy span { color: var(--ink-2); font-size: 14px; }
@@ -62,7 +57,6 @@
 .flow-step-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .flow-step-head h2 { font-size: 17px; font-weight: 800; }
 .flow-step-head .seg { margin-left: auto; }
-.flow-num { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 9px; color: var(--on-brand); background: var(--brand); font-size: 13px; font-weight: 800; }
 .flow-hint { color: var(--ink-3); font-size: 13px; }
 .flow-step .ask-input { min-height: 64px; font-size: 18px; padding: 10px 14px; background: var(--bg-sunken); border-radius: 14px; }
 .flow-step .ask-input:focus { box-shadow: var(--focus); }
@@ -98,8 +92,9 @@
 @keyframes coin-land { 0% { transform: translateY(-4px) rotateY(0deg) scale(1.04); } 100% { transform: rotateY(0deg); } }
 @keyframes coin-land-back { 0% { transform: translateY(-4px) rotateY(180deg) scale(1.04); } 100% { transform: rotateY(180deg); } }
 .coin-tags { display: flex; align-items: center; gap: 6px; min-height: 26px; flex-wrap: wrap; justify-content: center; }
-.coin-tag { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 8px; color: var(--ink-2); background: var(--bg-elev); font: 700 13px/1 var(--font-serif); }
-.coin-tag.is-back { color: var(--gold-ink); background: var(--gold-soft); }
+/* 三枚钱的字 / 背：写成字，背面用颜色区分，不再套小方块。 */
+.coin-tag { color: var(--ink-2); font: 700 15px/1.4 var(--font-serif); }
+.coin-tag.is-back { color: var(--gold-ink); }
 .coin-result { margin-left: 6px; color: var(--ink); font-weight: 700; font-size: 14px; }
 .cast-btn { min-width: 220px; }
 .cast-btn > span { display: inline-flex; align-items: center; gap: 8px; }
@@ -132,7 +127,6 @@
 /* 卦成提示滚进视野时，给吸底的开始按钮留出位置。 */
 .gua-ready { display: flex; align-items: center; gap: 12px; margin-top: 10px; padding: 12px 14px; color: var(--ink); background: var(--brand-soft); border-radius: 14px; animation: gb-in .4s var(--ease-out) both; scroll-margin-top: calc(var(--topbar-h) + 16px); scroll-margin-bottom: 116px; }
 /* 两个字竖排：用窄内容宽度逐字换行，不依赖竖排字体（网络字体加载失败时竖排会错位）。 */
-.gua-ready-seal { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding-inline: 15px; border-radius: 12px; color: var(--on-brand); background: var(--brand); font: 900 13px/1.15 var(--font-serif); text-align: center; }
 .gua-ready b { display: block; font-size: 15px; }
 .gua-ready small { color: var(--ink-2); font-size: 12.5px; }
 .manual-pad { display: grid; gap: 12px; padding: 18px; background: var(--bg-sunken); border-radius: var(--r-lg); }
@@ -148,8 +142,6 @@
 }
 .vis-card:hover { border-color: var(--line-strong); }
 .vis-card[aria-checked="true"] { border-color: var(--brand); background: var(--brand-tint); }
-.vis-icon { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 13px; color: var(--ink-2); background: var(--bg-sunken); flex: none; }
-.vis-card[aria-checked="true"] .vis-icon { color: var(--on-brand); background: var(--brand); }
 .vis-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .vis-copy b { font-size: 15.5px; }
 .vis-copy span { color: var(--ink-2); font-size: 13.5px; }
@@ -158,13 +150,11 @@
 .vis-card[aria-checked="true"] .vis-radio { border-color: var(--brand); }
 .vis-card[aria-checked="true"] .vis-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 999px; background: var(--brand); }
 .vis-card.is-help[aria-checked="true"] { border-color: var(--accent); background: var(--accent-soft); }
-.vis-card.is-help[aria-checked="true"] .vis-icon { background: var(--accent); color: #fff; }
 .vis-card.is-help[aria-checked="true"] .vis-radio { border-color: var(--accent); }
 .vis-card.is-help[aria-checked="true"] .vis-radio::after { background: var(--accent); }
 
 .ritual { position: fixed; inset: 0; z-index: 70; display: grid; place-content: center; justify-items: center; gap: 18px; background: color-mix(in srgb, var(--bg) 82%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); animation: fade-in .2s var(--ease) both; }
-.ritual-mark { width: 64px; height: 64px; border-radius: 20px; background: conic-gradient(from 0deg, var(--brand), var(--brand-soft), var(--brand)); animation: ritual-spin 1.8s linear infinite; box-shadow: 0 18px 40px -16px color-mix(in srgb, var(--brand) 70%, transparent); }
-@keyframes ritual-spin { to { transform: rotate(360deg); } }
+.ritual .spinner { width: 28px; height: 28px; border-width: 3px; color: var(--brand); }
 .ritual-text { color: var(--ink); font: 700 17px/1.4 var(--font-serif); letter-spacing: .14em; }
 
 /* 八字表单 */
@@ -253,7 +243,6 @@
 .msg-user .bubble { max-width: min(82%, 600px); padding: 11px 16px; color: var(--ink); background: var(--brand-soft); border-radius: 20px 20px 6px 20px; font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .msg-ai { display: grid; gap: 12px; }
 .ai-head { display: flex; align-items: center; gap: 10px; }
-.ai-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; color: var(--on-brand); background: var(--brand); font: 900 14px/1 var(--font-serif); }
 .ai-label { font-size: 13px; font-weight: 700; color: var(--ink-2); }
 .ai-elapsed { margin-left: auto; color: var(--ink-3); font-size: 12px; }
 .msg-ai .prose { font-size: 16px; }
@@ -332,7 +321,6 @@
 .rd-resume-slot:empty { display: none; }
 .rd-resume { display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 10px; background: var(--bg-sunken); border: 1px solid transparent; border-radius: 14px; transition: border-color .16s var(--ease); }
 .rd-resume:hover { border-color: var(--line-strong); }
-.rd-resume-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; color: var(--brand-ink); background: var(--bg-elev); flex: none; }
 .rd-resume-copy { flex: 1; min-width: 0; display: grid; gap: 1px; }
 .rd-resume-copy small { color: var(--ink-3); font-size: 12px; }
 .rd-resume-copy b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -442,7 +430,6 @@
   .gb-row { min-height: 26px; }
   .recent-grid { grid-template-columns: minmax(0, 1fr); }
   .method-card { padding: 14px; gap: 12px; }
-  .method-icon { width: 44px; height: 44px; border-radius: 14px; }
   .method-copy b { font-size: 16px; }
   .method-copy span { font-size: 13px; }
   .date-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }

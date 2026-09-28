@@ -184,10 +184,11 @@
 .pp-mark { width: 1em; color: var(--accent-ink); font-style: normal; font-weight: 800; text-align: center; }
 .pp-table:not(.has-bian) .pp-mark { display: none; }
 .pp-tags { display: inline-flex; gap: 4px; }
-.pp-tag { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; font-weight: 800; }
-.pp-tag.is-shi { color: var(--on-brand); background: var(--brand); }
-.pp-tag.is-ying { color: var(--ink-2); background: var(--pp-well); box-shadow: inset 0 0 0 1px var(--line-strong); }
-.pp-tag.is-kong { color: var(--ink-3); box-shadow: inset 0 0 0 1px var(--line-strong); }
+/* 世 / 应 / 空：直接写成有颜色的字，不再套小方块。 */
+.pp-tag { font-size: 13px; font-weight: 800; line-height: 1.3; }
+.pp-tag.is-shi { color: var(--brand-ink); }
+.pp-tag.is-ying { color: var(--ink); }
+.pp-tag.is-kong { color: var(--ink-3); font-weight: 600; }
 .pp-table.has-bian .pp-bian { padding-left: 14px; border-left: 1px dashed color-mix(in srgb, var(--ink-4) 50%, transparent); }
 .pp-to { font-size: 13.5px; font-weight: 700; }
 .pp-to-inline { display: none; margin-top: 3px; color: var(--ink-3); font-size: 11.5px; }
@@ -221,7 +222,7 @@
   .pp-table.has-bian .pp-bian { padding-left: 8px; }
   .pp-bian .pp-to { display: none; }
   .pp-to-inline { display: block; }
-  .pp-tag { width: 20px; height: 20px; font-size: 11px; }
+  .pp-tag { font-size: 12px; }
   .pp-line { gap: 4px; }
   .pp-pos-btn { margin-left: -4px; padding: 0 4px; }
   .pp-pos-btn .icon { display: none; }
@@ -231,7 +232,6 @@
   .pp-table tbody th, .pp-table td { padding: 8px 3px; }
   .pp-table tr > :first-child { padding-left: 2px; }
   .pp-tags { flex-direction: column; gap: 2px; }
-  .pp-tag { width: 18px; height: 18px; }
   .pp-table { font-size: 12.5px; }
   .pp-to-inline { font-size: 11px; }
   .pp-table.has-bian .pp-bar { width: 32px; }

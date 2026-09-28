@@ -382,7 +382,6 @@ export function render(ctx) {
     const board = post.system === "bazi" ? baziBoard(post.chart) : liuyaoBoard(post.oracle);
     const answer = !isHelp && post.answer ? h("section", { class: "answer-card", "aria-label": "AI 解读" },
       h("header", { class: "answer-head" },
-        h("span", { class: "answer-mark", "aria-hidden": "true" }, icon("sparkle")),
         h("div", null, h("h2", null, "解答"), h("p", null, post.ai_disclosure || "AI 生成解读，仅供传统文化研究与娱乐参考"))),
       renderMarkdown(post.answer)) : null;
     const updates = Array.isArray(post.updates) && post.updates.length ? h("section", { class: "updates", "aria-label": "卦主后续" },
