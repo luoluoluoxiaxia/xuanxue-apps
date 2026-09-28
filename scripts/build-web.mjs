@@ -245,9 +245,10 @@ for (const path of nextModules) {
   }
 }
 
-// 点赞、浏览、关注、采纳与反馈都要带同域互动证明。
+// 点赞、浏览、关注、采纳、请 AI 解读与反馈都要带同域互动证明。
 for (const [file, call] of [
   ["views/feed.js", /\/like`/],
+  ["views/post.js", /\/ai-answer`/],
   ["views/post.js", /\$\{path\}\/view`/],
   ["views/post.js", /\$\{path\}\/follow`/],
   ["views/post.js", /\$\{path\}\/resolve`/],
