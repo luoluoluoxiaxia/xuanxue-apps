@@ -24,13 +24,13 @@ next/app.js           外壳、导航、会话与路由装配
 
 ## 与后端页面共用的资源
 
-下面这些文件不属于首页，但后端渲染的页面仍直接引用，前端改版时不能删除：
+下面这些文件不属于首页，但后端页面仍直接引用，前端改版时不能删除：
 
-- 帖子完整页（`post.url`，形如 `/community/<slug>`）：`community.js`、`community.css`、`account.js`、`account.css`、`chat-render.js`、`share-card.js`、`style.css`。
-- 岁运全书报告页：`forecast-view.html`、`forecast.css`、`style.css`。
+- 解读正文渲染：`chat-render.js`（新版解读页与管理后台会话共用）。
+- 岁运全书旧报告页（`/forecast/view/<id>`，计划 2026-12-31 后下线）：`forecast-view.html`、`forecast.css`、`style.css`。
 - 管理后台地图：`admin-ip-geo-map.js`、`maps/`、`vendor/`。
 
-新版里举报帖子和发布事情进展会打开帖子完整页完成，因为公开契约没有给出这两个表单的可选值。
+后端渲染的帖子完整页已经下线（`/gua/<slug>` 返回 404），旧版 `account`、`community` 脚本与样式随之删除。帖子菜单里的「举报」「发布事情进展」目前仍指向完整页，需要先在公开契约里补上两个表单的可选值，再在新版帖子页内完成。
 
 ## 检查与打包
 
