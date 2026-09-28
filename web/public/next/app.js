@@ -5,7 +5,6 @@ import { icon, brandMark } from "./lib/icons.js?v=n2";
 import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n2";
 import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n2";
 import { get } from "./lib/api.js?v=n2";
-import { avatar } from "./ui/bits.js?v=n2";
 import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n2";
 import { toast } from "./ui/toast.js?v=n2";
 import { openAuth } from "./views/auth.js?v=n2";
@@ -150,7 +149,7 @@ function renderAccountSlot() {
   const slot = shell.accountSlot;
   if (!slot) return;
   if (!state.ready) {
-    slot.replaceChildren(h("span", { class: "skel skel-circle", style: { width: "34px", height: "34px" } }));
+    slot.replaceChildren(h("span", { class: "skel", style: { width: "72px", height: "34px", borderRadius: "999px" } }));
     return;
   }
   if (!state.authenticated) {
@@ -158,7 +157,9 @@ function renderAccountSlot() {
     return;
   }
   const name = displayName(state.user);
-  const button = h("button", { type: "button", class: "avatar-btn topbar-avatar", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": `${name}的账户菜单` }, avatar(name));
+  // 直接写昵称：不把名字缩成一个字再套圆圈。
+  const button = h("button", { type: "button", class: "btn btn-ghost topbar-account", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": `${name}的账户菜单`, title: name },
+    h("span", { class: "topbar-account-name" }, name), icon("chevronDown", "icon-sm"));
   button.addEventListener("click", () => openAccountMenu(button));
   slot.replaceChildren(button);
 }
@@ -180,7 +181,7 @@ export function openAccountMenu(anchor) {
     "sep",
     { label: "退出登录", icon: "logout", onSelect: doLogout },
   ], {
-    head: h("div", { class: "menu-head" }, avatar(name, "lg"), h("div", null, h("b", null, name), h("span", null, state.user?.email || ""))),
+    head: h("div", { class: "menu-head" }, h("div", null, h("b", null, name), h("span", null, state.user?.email || ""))),
   });
 }
 

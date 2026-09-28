@@ -6,7 +6,7 @@ import { icon } from "../lib/icons.js?v=n2";
 import { get, post, query } from "../lib/api.js?v=n2";
 import { session, inbox, refreshSession } from "../lib/store.js?v=n2";
 import { relativeTime, fullTime, count } from "../lib/format.js?v=n2";
-import { avatar, stateView } from "../ui/bits.js?v=n2";
+import { stateView } from "../ui/bits.js?v=n2";
 import { confirmDialog } from "../ui/overlay.js?v=n2";
 import { toast } from "../ui/toast.js?v=n2";
 
@@ -20,12 +20,12 @@ const FILTERS = [
   { key: "like", label: "赞", kinds: ["post_like"], empty: "赞" },
   { key: "accepted", label: "采纳", kinds: ["answer_accepted"], empty: "采纳" },
 ];
-const KIND_STYLE = {
-  post_like: { glyph: "heart", tone: "like" },
-  comment_reply: { glyph: "reply", tone: "reply" },
-  answer_accepted: { glyph: "award", tone: "accept" },
-  post_comment: { glyph: "comment", tone: "comment" },
-  followed_post_comment: { glyph: "bookmark", tone: "comment" },
+const KIND_TONE = {
+  post_like: "like",
+  comment_reply: "reply",
+  answer_accepted: "accept",
+  post_comment: "comment",
+  followed_post_comment: "comment",
 };
 
 // 离开再回来时保留筛选项。
@@ -102,7 +102,6 @@ function decodeURIComponentSafe(value) {
 function skeletonRows(n = 5) {
   return h("div", { class: "ib-skeleton", "aria-hidden": "true" },
     Array.from({ length: n }, (_, index) => h("div", { class: "ib-skel-row" },
-      h("span", { class: "skel skel-circle", style: { width: "40px", height: "40px" } }),
       h("span", { class: "ib-skel-lines" },
         h("span", { class: "skel skel-line", style: { width: `${[62, 48, 70, 54, 66][index % 5]}%` } }),
         h("span", { class: "skel skel-line", style: { width: `${[86, 72, 80, 90, 64][index % 5]}%`, marginTop: "10px" } }),
@@ -112,12 +111,11 @@ function skeletonRows(n = 5) {
 function anonView(ctx) {
   const reason = "登录后查看谁赞了、评论了或回复了你的卦帖。";
   return h("section", { class: "ib-anon" },
-    h("div", { class: "ib-anon-mark", "aria-hidden": "true" }, icon("bell")),
     h("h1", { class: "ib-anon-title" }, "登录后查看消息"),
     h("ul", { class: "ib-anon-list" },
-      h("li", null, h("span", { class: "ib-kind is-like", "aria-hidden": "true" }, icon("heart")), h("span", null, h("b", null, "赞"), "有人认同你的卦帖")),
-      h("li", null, h("span", { class: "ib-kind is-reply", "aria-hidden": "true" }, icon("reply")), h("span", null, h("b", null, "评论与回复"), "卦友的判断和追问")),
-      h("li", null, h("span", { class: "ib-kind is-accept", "aria-hidden": "true" }, icon("award")), h("span", null, h("b", null, "采纳"), "你的回答帮到了人"))),
+      h("li", null, h("b", null, "赞"), h("span", null, "有人认同你的卦帖")),
+      h("li", null, h("b", null, "评论与回复"), h("span", null, "卦友的判断和追问")),
+      h("li", null, h("b", null, "采纳"), h("span", null, "你的回答帮到了人"))),
     h("div", { class: "ib-anon-actions" },
       h("button", { type: "button", class: "btn btn-primary btn-lg", onClick: () => ctx.openAuth({ reason }) }, icon("user"), "登录 / 注册"),
       h("a", { class: "btn btn-ghost btn-lg", href: "#/" }, "先去广场看看")));
@@ -222,24 +220,20 @@ export function render(ctx) {
 
   /* ---------- 列表 ---------- */
   function itemNode(entry) {
-    const style = KIND_STYLE[entry.kind] || { glyph: "bell", tone: "comment" };
+    const tone = KIND_TONE[entry.kind] || "comment";
     const grouped = entry.kind === "post_like" && entry.total > 1;
     const route = routeFor(entry);
-    const actor = entry.actors[0] || "卦友";
     const title = grouped
       ? h("span", { class: "ib-item-title" }, h("b", null, `${entry.total} 位卦友`), "赞了你的卦帖")
       : h("span", { class: "ib-item-title" }, h("b", null, String(entry.actor_name || "").trim() || "有位卦友"), entry.kind_label || "与你互动了");
     const excerpt = String(entry.body_excerpt || "").trim();
     return h(route ? "a" : "div", {
-      class: ["ib-item", entry.unread && "is-unread", `is-${style.tone}`],
+      class: ["ib-item", entry.unread && "is-unread", `is-${tone}`],
       href: route ? `#${route}` : null,
       role: route ? null : "button",
       tabindex: route ? null : "0",
       "data-key": entry.key,
     },
-    h("span", { class: "ib-who" },
-      grouped ? h("span", { class: "ib-like-tile", "aria-hidden": "true" }, icon("heart")) : avatar(actor),
-      grouped ? null : h("span", { class: ["ib-kind", `is-${style.tone}`], "aria-hidden": "true" }, icon(style.glyph))),
     h("span", { class: "ib-main" },
       h("span", { class: "ib-line" },
         title,
@@ -247,7 +241,6 @@ export function render(ctx) {
         entry.unread ? h("span", { class: "ib-dot" }, h("span", { class: "sr-only" }, "未读")) : null),
       grouped
         ? h("span", { class: "ib-actors" },
-          h("span", { class: "ib-stack", "aria-hidden": "true" }, entry.actors.slice(0, 5).map(name => avatar(name, "sm"))),
           h("span", null, `${entry.actors.slice(0, 3).join("、")}${entry.actors.length > 3 ? " 等" : ""}`))
         : null,
       excerpt ? h("span", { class: "ib-excerpt" }, h("span", null, excerpt)) : null,
