@@ -247,7 +247,7 @@ export function render(ctx) {
     if (lastView) applyView(lastView);
     if (first || signature(post) !== before) repaint();
     else patchCounts();
-    // 求助帖的 AI 解读还在生成或审核：每隔几秒核对一次，出结果后整页重画。
+    // 求助帖的 AI 解读还在生成：每隔几秒核对一次，出结果后整页重画。
     clearTimeout(helpAiTimer);
     if (post.post_kind === "help" && post.ai_answer?.status === "generating") {
       helpAiTimer = setTimeout(() => { if (ctx.isCurrent()) load({ countView: false, fresh: true }); }, 5000);
@@ -368,10 +368,6 @@ export function render(ctx) {
         h("span", { class: "spinner", "aria-hidden": "true" }),
         h("p", null, `${who} 请了 AI，正在解读，完成后会显示在这里。`));
     }
-    if (ai && ai.status === "blocked") {
-      return h("section", { class: "help-ai-note" },
-        h("p", null, "有卦友为这条求助请过 AI 解读，但没有通过公开审核，不会显示。"));
-    }
     if (!post.can_request_ai) return null;
     const state = session.get();
     const balance = Number(state.wallet?.balance ?? 0) || 0;
@@ -381,7 +377,7 @@ export function render(ctx) {
         h("h2", { id: "help-ai-title" }, "还没人回答？先请 AI 看看"),
         h("p", null, ai && ai.status === "failed"
           ? "上次请的 AI 解读没有完成，没有扣积分，可以再请一次。"
-          : "花你自己的积分请 AI 解读这一卦；通过审核后公开在这条帖子上，并注明是你请的。"),
+          : "花你自己的积分请 AI 解读这一卦；解读会直接公开在这条帖子上，并注明是你请的。"),
         h("p", { class: "help-ai-meta" }, state.authenticated
           ? `只扣账户余额，每日免费积分不能用 · 当前余额 ${balance} 分`
           : "只扣账户余额，每日免费积分不能用")),
@@ -400,7 +396,7 @@ export function render(ctx) {
     }
     const confirmed = await confirmDialog({
       title: "用你的积分请 AI 解读？",
-      message: "只扣账户余额，通常 1–2 分；每日免费积分不能用。解读通过审核后公开在这条帖子上，并注明是你请的。",
+      message: "只扣账户余额，通常 1–2 分；每日免费积分不能用。解读生成后直接公开在这条帖子上，并注明是你请的。",
       confirmText: "请 AI 解读",
       returnFocus: button,
     });
