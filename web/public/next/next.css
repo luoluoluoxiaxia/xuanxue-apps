@@ -801,6 +801,17 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .answer-head { display: flex; align-items: center; gap: 12px; }
 .answer-head h2 { font-size: 18px; font-weight: 800; }
 .answer-head p { color: var(--ink-3); font-size: 12.5px; }
+/* 求助帖：请 AI 解读——一段说明加一个按钮，上下各一条细线，不套卡片。 */
+.help-ai-cta { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.help-ai-copy { display: grid; gap: 4px; min-width: 0; }
+.help-ai-copy h2 { font-size: 16px; font-weight: 800; }
+.help-ai-copy p { color: var(--ink-2); font-size: 14px; }
+.help-ai-copy .help-ai-meta { color: var(--ink-3); font-size: 12.5px; }
+.help-ai-cta .btn { flex: none; }
+.help-ai-note { display: flex; align-items: center; gap: 10px; padding: 12px 0; color: var(--ink-3); font-size: 14px; }
+@media (max-width: 719px) {
+  .help-ai-cta { flex-direction: column; align-items: stretch; }
+}
 .prose { color: var(--ink-2); font-size: 15.5px; line-height: 1.85; }
 .prose > * + * { margin-top: .75em; }
 .prose h2, .prose h3, .prose h4 { color: var(--ink); font-size: 16.5px; font-weight: 800; margin-top: 1.4em; line-height: 1.5; }

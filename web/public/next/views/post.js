@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n5";
-import { icon } from "../lib/icons.js?v=n5";
-import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n5";
-import { session, local, refreshSession } from "../lib/store.js?v=n5";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n5";
-import { stateView } from "../ui/bits.js?v=n5";
-import { elementClass } from "../ui/gua.js?v=n5";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n5";
-import { toast } from "../ui/toast.js?v=n5";
-import { sharePost } from "../lib/share.js?v=n5";
-import { openShareSheet } from "../ui/share-sheet.js?v=n5";
-import { confirmDialog } from "../ui/overlay.js?v=n5";
-import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n5";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n6";
+import { icon } from "../lib/icons.js?v=n6";
+import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n6";
+import { session, local, refreshSession } from "../lib/store.js?v=n6";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n6";
+import { stateView } from "../ui/bits.js?v=n6";
+import { elementClass } from "../ui/gua.js?v=n6";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n6";
+import { toast } from "../ui/toast.js?v=n6";
+import { sharePost } from "../lib/share.js?v=n6";
+import { openShareSheet } from "../ui/share-sheet.js?v=n6";
+import { confirmDialog } from "../ui/overlay.js?v=n6";
+import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n6";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
@@ -34,6 +34,7 @@ function signature(post) {
   return JSON.stringify([
     post.comments_enabled, post.can_manage, post.accepted_comment_id, post.help_status, post.viewer_following, post.follow_count,
     post.question, String(post.answer || "").length, (post.updates || []).length,
+    post.can_request_ai, post.ai_answer ? [post.ai_answer.status, String(post.ai_answer.answer || "").length] : null,
     (post.comments || []).map(comment => [comment.id, !!comment.accepted, (comment.replies || []).map(reply => reply.id)]),
   ]);
 }
@@ -184,6 +185,8 @@ export function render(ctx) {
   let restoring = false;
   let related = null;
   let relatedRequest = null;
+  let helpAiTimer = null;
+  let helpAiBusy = false;
   const expanded = new Set();
   const ui = {};
   const targetId = ctx.query.get("target") || "";
@@ -244,6 +247,11 @@ export function render(ctx) {
     if (lastView) applyView(lastView);
     if (first || signature(post) !== before) repaint();
     else patchCounts();
+    // 求助帖的 AI 解读还在生成或审核：每隔几秒核对一次，出结果后整页重画。
+    clearTimeout(helpAiTimer);
+    if (post.post_kind === "help" && post.ai_answer?.status === "generating") {
+      helpAiTimer = setTimeout(() => { if (ctx.isCurrent()) load({ countView: false, fresh: true }); }, 5000);
+    }
     if (first && restoring && readPos.has(slug)) {
       const y = readPos.get(slug);
       requestAnimationFrame(() => { if (ctx.isCurrent()) window.scrollTo(0, y); });
@@ -343,6 +351,78 @@ export function render(ctx) {
     revealTarget();
   }
 
+  /* ---------- 求助帖：卦友花自己的积分请 AI 解读（一帖一轮，每日免费积分不能用） ---------- */
+  ctx.cleanup(() => clearTimeout(helpAiTimer));
+
+  function helpAiSection() {
+    const ai = post.ai_answer || null;
+    const who = ai?.requested_by || "卦友";
+    if (ai && ai.status === "published") {
+      return h("section", { class: "answer-card help-ai", "aria-label": "AI 解读" },
+        h("header", { class: "answer-head" },
+          h("div", null, h("h2", null, "AI 解读"), h("p", null, `${who} 用自己的积分请的 · AI 生成解读，仅供传统文化研究与娱乐参考`))),
+        renderMarkdown(ai.answer || ""));
+    }
+    if (ai && ai.status === "generating") {
+      return h("section", { class: "help-ai-note", role: "status" },
+        h("span", { class: "spinner", "aria-hidden": "true" }),
+        h("p", null, `${who} 请了 AI，正在解读，完成后会显示在这里。`));
+    }
+    if (ai && ai.status === "blocked") {
+      return h("section", { class: "help-ai-note" },
+        h("p", null, "有卦友为这条求助请过 AI 解读，但没有通过公开审核，不会显示。"));
+    }
+    if (!post.can_request_ai) return null;
+    const state = session.get();
+    const balance = Number(state.wallet?.balance ?? 0) || 0;
+    const button = h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => requestHelpAi(button) }, icon("sparkle"), "用我的积分请 AI 解读");
+    return h("section", { class: "help-ai-cta", "aria-labelledby": "help-ai-title" },
+      h("div", { class: "help-ai-copy" },
+        h("h2", { id: "help-ai-title" }, "还没人回答？先请 AI 看看"),
+        h("p", null, ai && ai.status === "failed"
+          ? "上次请的 AI 解读没有完成，没有扣积分，可以再请一次。"
+          : "花你自己的积分请 AI 解读这一卦；通过审核后公开在这条帖子上，并注明是你请的。"),
+        h("p", { class: "help-ai-meta" }, state.authenticated
+          ? `只扣账户余额，每日免费积分不能用 · 当前余额 ${balance} 分`
+          : "只扣账户余额，每日免费积分不能用")),
+      button);
+  }
+
+  async function requestHelpAi(button) {
+    if (helpAiBusy) return;
+    if (!session.get().authenticated) {
+      const ok = await ctx.requireAuth("登录后才能用自己的积分请 AI 解读。");
+      if (!ok || !ctx.isCurrent()) return;
+    }
+    if ((Number(session.get().wallet?.balance ?? 0) || 0) <= 0) {
+      toast("账户余额不足：帮别人请 AI 解读只能用余额，每日免费积分不能用", { type: "error", action: { label: "查看积分", onClick: () => ctx.navigate("/me/credits") } });
+      return;
+    }
+    const confirmed = await confirmDialog({
+      title: "用你的积分请 AI 解读？",
+      message: "只扣账户余额，通常 1–2 分；每日免费积分不能用。解读通过审核后公开在这条帖子上，并注明是你请的。",
+      confirmText: "请 AI 解读",
+      returnFocus: button,
+    });
+    if (!confirmed || !ctx.isCurrent()) return;
+    helpAiBusy = true;
+    button.setAttribute("aria-busy", "true");
+    try {
+      await apiPost(`/api/community/posts/${encodeURIComponent(post.slug)}/ai-answer`);
+      toast("已请 AI 解读，完成后会显示在帖子上", { type: "ok" });
+      refreshSession().catch(() => {});
+    } catch (error) {
+      const message = error?.body?.detail?.message || error.message || "没能请到 AI，请稍后再试";
+      toast(message, error.status === 429
+        ? { type: "error", action: { label: "查看积分", onClick: () => ctx.navigate("/me/credits") } }
+        : { type: "error" });
+    } finally {
+      helpAiBusy = false;
+      button.removeAttribute("aria-busy");
+      if (ctx.isCurrent()) load({ countView: false, fresh: true });
+    }
+  }
+
   function paint() {
     const isHelp = post.post_kind === "help";
     const systemLabel = post.system_label || (post.system === "bazi" ? "八字" : "六爻");
@@ -370,6 +450,8 @@ export function render(ctx) {
       h("header", { class: "answer-head" },
         h("div", null, h("h2", null, "解答"), h("p", null, post.ai_disclosure || "AI 生成解读，仅供传统文化研究与娱乐参考"))),
       renderMarkdown(post.answer)) : null;
+    const helpAi = isHelp && post.system !== "bazi" ? helpAiSection() : null;
+    ui.helpAi = helpAi;
     const updates = Array.isArray(post.updates) && post.updates.length ? h("section", { class: "updates", "aria-label": "卦主后续" },
       h("h2", { class: "block-title" }, "卦主后续"),
       h("ol", { class: "timeline" }, post.updates.map(update => h("li", null,
@@ -409,6 +491,7 @@ export function render(ctx) {
           h("h1", { class: "post-title" }, post.question || post.title || "卦帖")),
         board,
         answer,
+        helpAi,
         updates,
         h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, h("span", { class: "post-actions-spacer" }), primary)),
       discussion);
@@ -924,6 +1007,19 @@ export function render(ctx) {
     lastAuth = state.authenticated;
     if (busy) reloadWhenIdle = true;
     else load({ countView: false, fresh: true });
+  });
+
+  // 登录、退出或余额变化时，只重画「请 AI 解读」这一段：帖子本身没变，不会整页重绘。
+  let lastWalletKey = "";
+  ctx.subscribe(session, state => {
+    const key = JSON.stringify([state.authenticated, state.wallet?.balance ?? null]);
+    if (key === lastWalletKey) return;
+    lastWalletKey = key;
+    if (!post || post.post_kind !== "help" || !ui.helpAi?.isConnected) return;
+    const next = helpAiSection();
+    if (next) ui.helpAi.replaceWith(next);
+    else ui.helpAi.remove();
+    ui.helpAi = next;
   });
 
   // 记住阅读位置（只在本页仍是当前页时记，避免浏览器前进后退时把别的页面的位置记进来）。
