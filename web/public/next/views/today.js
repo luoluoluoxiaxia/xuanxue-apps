@@ -1,14 +1,14 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n4";
-import { icon } from "../lib/icons.js?v=n4";
-import { get, post, put } from "../lib/api.js?v=n4";
-import { session, refreshSession } from "../lib/store.js?v=n4";
-import { greeting } from "../lib/format.js?v=n4";
-import { stateView } from "../ui/bits.js?v=n4";
-import { openSheet } from "../ui/overlay.js?v=n4";
-import { toast } from "../ui/toast.js?v=n4";
+import { h } from "../lib/dom.js?v=n5";
+import { icon } from "../lib/icons.js?v=n5";
+import { get, post, put } from "../lib/api.js?v=n5";
+import { session, refreshSession } from "../lib/store.js?v=n5";
+import { greeting } from "../lib/format.js?v=n5";
+import { stateView } from "../ui/bits.js?v=n5";
+import { openSheet } from "../ui/overlay.js?v=n5";
+import { toast } from "../ui/toast.js?v=n5";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
@@ -381,7 +381,7 @@ function anonView(ctx) {
       h("p", { class: "td-anon-text" }, "登录后排一张本人八字（排盘免费），之后每天自动更新。"),
       h("div", { class: "td-anon-actions" },
         h("button", { type: "button", class: "btn btn-primary btn-lg", onClick: () => ctx.openAuth({ reason }) }, icon("user"), "登录 / 注册"),
-        h("a", { class: "btn btn-ghost btn-lg", href: "#/" }, "先逛逛广场"))),
+        h("a", { class: "btn btn-ghost btn-lg", href: "#/square" }, "先逛逛广场"))),
     h("ul", { class: "td-features", "aria-label": "观象台会为你准备" }, features.map(([title, text]) => h("li", { class: "td-feature" },
       h("b", null, title),
       h("span", null, text)))),

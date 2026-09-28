@@ -1,20 +1,20 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n4";
-import { icon } from "../lib/icons.js?v=n4";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n4";
-import { session, applyAccount, refreshSession } from "../lib/store.js?v=n4";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n4";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n4";
-import { pillarsToken } from "../ui/gua.js?v=n4";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n4";
-import { toast } from "../ui/toast.js?v=n4";
-import { copyText } from "../lib/share.js?v=n4";
-import { openFeedback } from "./feedback.js?v=n4";
+import { h, reducedMotion } from "../lib/dom.js?v=n5";
+import { icon } from "../lib/icons.js?v=n5";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n5";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n5";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n5";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n5";
+import { pillarsToken } from "../ui/gua.js?v=n5";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n5";
+import { toast } from "../ui/toast.js?v=n5";
+import { copyText } from "../lib/share.js?v=n5";
+import { openFeedback } from "./feedback.js?v=n5";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },
-  { key: "archives", label: "档案", href: "#/me/archives", glyph: "book", title: "我的盘" },
+  { key: "archives", label: "我的盘", href: "#/me/archives", glyph: "book", title: "我的盘" },
   { key: "credits", label: "积分", href: "#/me/credits", glyph: "coins", title: "积分" },
   { key: "settings", label: "设置", href: "#/me/settings", glyph: "sliders", title: "设置" },
 ];
@@ -302,13 +302,29 @@ function walletCard() {
   return { node, update };
 }
 
-// 档案、积分、设置都在上方标签里，消息在底栏和铃铛里；这里只放标签里没有的意见反馈。
-function feedbackCard() {
-  const button = h("button", { class: "me-link", type: "button" },
+// 我的盘、积分、设置都在上方标签里；消息（手机底栏已不单列）和意见反馈放在这里。
+function inboxLink(ctx) {
+  const meta = h("span", { class: "me-link-meta" });
+  const link = h("a", { class: "me-link", href: "#/inbox" },
+    h("span", { class: "me-link-copy" }, h("b", null, "消息"), h("span", null, "点赞、评论与采纳")),
+    meta,
+    h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
+  const paint = ({ unread }) => {
+    const n = Number(unread) || 0;
+    meta.replaceChildren(n ? h("span", { class: "badge me-link-badge", "aria-hidden": "true" }, n > 99 ? "99+" : String(n)) : "");
+    link.setAttribute("aria-label", n ? `消息，${n} 条未读` : "消息");
+  };
+  paint(inbox.get());
+  ctx.subscribe(inbox, paint);
+  return link;
+}
+
+function linksCard(ctx, authenticated) {
+  const feedback = h("button", { class: "me-link", type: "button" },
     h("span", { class: "me-link-copy" }, h("b", null, "意见反馈"), h("span", null, "断得准不准，直说无妨")),
     h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
-  button.addEventListener("click", () => openFeedback());
-  return h("div", { class: "me-links" }, button);
+  feedback.addEventListener("click", () => openFeedback());
+  return h("div", { class: "me-links" }, authenticated ? inboxLink(ctx) : null, feedback);
 }
 
 function overviewSkeleton() {
@@ -351,14 +367,14 @@ function overviewView(ctx, body) {
                 text: "命盘、卦档、积分与消息都在这里，只对你本人可见。",
                 reason: "登录后查看你的命盘、积分与消息。",
               })),
-            h("div", { class: "me-col" }, feedbackCard(), overviewFoot(ctx, false))));
+            h("div", { class: "me-col" }, linksCard(ctx, false), overviewFoot(ctx, false))));
         return;
       }
       profile = profileCard(ctx);
       wallet = walletCard();
       body.replaceChildren(h("div", { class: "me-overview" },
         h("div", { class: "me-col" }, profile.node, wallet.node),
-        h("div", { class: "me-col" }, feedbackCard(), overviewFoot(ctx, true))));
+        h("div", { class: "me-col" }, linksCard(ctx, true), overviewFoot(ctx, true))));
     }
     if (state.authenticated) {
       profile?.update(state);

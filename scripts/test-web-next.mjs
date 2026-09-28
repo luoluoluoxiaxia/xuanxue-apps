@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n4`, base).href);
+const load = path => import(new URL(`${path}?v=n5`, base).href);
 
 test('waiting copy maps free-form stages to fixed banks and never echoes the raw stage', async () => {
   const { waitingBankKey, waitingLine } = await load('lib/copy.js');
@@ -122,6 +122,15 @@ test('old home-page links map onto the new routes', async () => {
   assert.equal(routeFromLegacy('?post=ly-abc&ref=invite&inviter=u1'), '?ref=invite&inviter=u1#/post/ly-abc');
   assert.equal(routeFromLegacy(''), '');
   assert.equal(routeFromLegacy('?ref=invite'), '');
+  // 旧的广场锚点落到新的广场地址（首页已改为提问页）。
+  const hash = location.hash;
+  try {
+    location.hash = '#gua-square';
+    assert.equal(routeFromLegacy(''), '#/square');
+    assert.equal(routeFromLegacy('?ref=post_card'), '?ref=post_card#/square');
+  } finally {
+    location.hash = hash;
+  }
 });
 
 test('coming back online re-polls a live answer at once instead of waiting out the retry backoff', async () => {

@@ -413,6 +413,8 @@
 .me-link-copy b { font-size: 15px; font-weight: 700; }
 .me-link-copy span { color: var(--ink-3); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .me-link-go { color: var(--ink-4); }
+.me-link-meta { display: inline-flex; }
+.me-link-badge { position: static; border-color: var(--bg-elev); }
 .me-foot { display: grid; gap: 10px; padding: 2px 6px; }
 .me-logout { justify-self: start; margin-left: -12px; color: var(--ink-3); }
 

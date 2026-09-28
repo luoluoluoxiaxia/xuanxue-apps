@@ -1,12 +1,12 @@
 // 广场：社区问题流。桌面三栏（话题 / 问题流 / 今日与等你来答），手机单栏 + 话题横滑。
-import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n4";
-import { icon } from "../lib/icons.js?v=n4";
-import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n4";
-import { session, local } from "../lib/store.js?v=n4";
-import { relativeTime, count } from "../lib/format.js?v=n4";
-import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n4";
-import { guaToken, pillarsToken } from "../ui/gua.js?v=n4";
-import { toast } from "../ui/toast.js?v=n4";
+import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n5";
+import { icon } from "../lib/icons.js?v=n5";
+import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n5";
+import { session, local } from "../lib/store.js?v=n5";
+import { relativeTime, count } from "../lib/format.js?v=n5";
+import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n5";
+import { guaToken, pillarsToken } from "../ui/gua.js?v=n5";
+import { toast } from "../ui/toast.js?v=n5";
 
 export const TOPICS = [
   ["", "全部话题", "compass"],
@@ -248,17 +248,6 @@ export async function likePost(item, button) {
   }
 }
 
-function composerCard() {
-  return h("section", { class: "composer-card", "aria-label": "发起提问" },
-    h("a", { class: "composer-prompt", href: "#/ask" },
-      h("span", { class: "composer-placeholder" }, "有什么放不下的事？写下来问问"),
-      h("span", { class: "composer-go", "aria-hidden": "true" }, icon("arrowRight"))),
-    h("div", { class: "composer-actions" },
-      h("a", { class: "composer-action is-liuyao", href: "#/ask/liuyao" }, icon("gua"), h("span", null, h("b", null, "六爻问事"), h("small", null, "一件具体的事"))),
-      h("a", { class: "composer-action is-bazi", href: "#/ask/bazi" }, icon("pillars"), h("span", null, h("b", null, "八字看长期"), h("small", null, "性格、事业与运势"))),
-      h("a", { class: "composer-action is-help", href: "#/ask/liuyao?help=1" }, icon("hand"), h("span", null, h("b", null, "向卦友求助"), h("small", null, "请大家帮忙断")))));
-}
-
 function topicRail(filter, apply) {
   return h("nav", { class: "rail rail-left", "aria-label": "话题" },
     h("p", { class: "rail-label" }, "话题"),
@@ -296,7 +285,7 @@ function sideRail(ctx, { shown, onStats } = {}) {
   const todayBox = h("section", { class: "side-card side-today" });
   const seekingList = h("div", { class: "side-seeking-list" });
   const seekingBox = h("section", { class: "side-card side-seeking" },
-    h("div", { class: "side-head" }, h("h2", null, "等你来答"), h("a", { class: "link-btn", href: "#/?view=seeking", "data-view-link": "seeking" }, "更多")),
+    h("div", { class: "side-head" }, h("h2", null, "等你来答"), h("a", { class: "link-btn", href: "#/square?view=seeking", "data-view-link": "seeking" }, "更多")),
     seekingList);
   const pulseGrid = h("div", { class: "pulse-grid" });
   const pulseBox = h("section", { class: "side-card side-pulse" }, h("div", { class: "side-head" }, h("h2", null, "社区脉搏")), pulseGrid);
@@ -432,7 +421,7 @@ export function render(ctx) {
   const stale = Date.now() - feedState.at > CACHE_MS;
   const handoff = pendingHandoff && Date.now() - pendingHandoff.at < 2000 ? pendingHandoff : null;
   pendingHandoff = null;
-  const myHash = location.hash || "#/";
+  const myHash = location.hash || "#/square";
 
   const list = h("div", { class: "feed-list", "aria-busy": "false" });
   const sentinel = h("div", { class: "feed-sentinel" });
@@ -465,7 +454,7 @@ export function render(ctx) {
     if (next.system) params.system = next.system;
     if (next.type) params.type = next.type;
     const search = new URLSearchParams(params).toString();
-    ctx.navigate(`/${search ? `?${search}` : ""}`, { replace: true });
+    ctx.navigate(`/square${search ? `?${search}` : ""}`, { replace: true });
   };
 
   const tabs = h("div", { class: "feed-tabs", role: "tablist", "aria-label": "排序" },
@@ -534,7 +523,6 @@ export function render(ctx) {
 
   const center = h("div", { class: "feed-main" },
     heading,
-    composerCard(),
     controls,
     chips,
     h("div", { class: "feed-stream" }, newbar, list),
@@ -574,7 +562,7 @@ export function render(ctx) {
     if (feedState.done) {
       sentinel.append(h("div", { class: "feed-end" },
         h("span", null, "已经看完了"),
-        h("a", { class: "btn btn-soft btn-sm", href: "#/ask" }, icon("plus"), "问问你的事")));
+        h("a", { class: "btn btn-soft btn-sm", href: "#/" }, icon("plus"), "问问你的事")));
     } else {
       sentinel.append(h("button", { type: "button", class: "btn btn-ghost feed-more", onClick: () => load() }, "加载更多"));
     }
@@ -590,7 +578,7 @@ export function render(ctx) {
       text: topic && filter.type ? `「${topic}」下还没有内容，来问第一个问题吧。`
         : seeking ? "大家的求助暂时都有人接手了，去看看最新的讨论吧。" : "来问第一个问题，让大家帮你看看。",
       actions: [
-        h("a", { class: "btn btn-primary", href: "#/ask" }, icon("plus"), "发起提问"),
+        h("a", { class: "btn btn-primary", href: "#/" }, icon("plus"), "发起提问"),
         narrowed ? h("button", { type: "button", class: "btn btn-soft", "data-filter": "empty:all", onClick: event => apply({ type: "", system: "" }, event.currentTarget) }, "看看全部话题")
           : seeking ? h("button", { type: "button", class: "btn btn-soft", "data-filter": "empty:latest", onClick: event => apply({ view: "latest" }, event.currentTarget) }, "看看最新讨论") : null,
       ].filter(Boolean),
@@ -671,7 +659,7 @@ export function render(ctx) {
   }
 
   function saveAnchor() {
-    if (!ctx.isCurrent() || (location.hash || "#/") !== myHash || !feedState.items.length) return;
+    if (!ctx.isCurrent() || (location.hash || "#/square") !== myHash || !feedState.items.length) return;
     feedState.y = window.scrollY;
     feedState.anchor = feedState.y > 12 ? captureAnchor() : null;
   }
@@ -866,8 +854,11 @@ export function render(ctx) {
   if (feedState.items.length) {
     renderItems(feedState.items);
     renderEnd();
+  } else if (feedState.done && !stale) {
+    // 已确认这个筛选下没有内容：直接画空态（load() 会因 done 提前返回，列表就一直空白）。
+    renderEmpty();
   } else {
-    load();
+    load({ reset: true });
   }
   const stopWatching = whenVisible(sentinel, () => {
     if (!feedState.done && feedState.items.length && !failed) load();
@@ -938,7 +929,7 @@ export function render(ctx) {
   return {
     node,
     // 首页（广场）用站点完整标题，便于搜索引擎收录。
-    title: filter.view === "seeking" ? "等你来答" : "",
+    title: filter.view === "seeking" ? "等你来答" : "广场",
     layout: "feed",
     onRestore(y) {
       restored = y;
