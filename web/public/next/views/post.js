@@ -370,7 +370,7 @@ export function render(ctx) {
     if (ai && ai.status === "generating") {
       return h("section", { class: "help-ai-note", role: "status" },
         h("span", { class: "spinner", "aria-hidden": "true" }),
-        h("p", null, `${who} 请了 AI，正在解读，完成后会显示在这里。`));
+        h("p", null, `${who === "你" ? "你" : `${who} `}请了 AI，正在解读，完成后会显示在这里。`));
     }
     if (!post.can_request_ai) return null;
     const state = session.get();
@@ -394,10 +394,7 @@ export function render(ctx) {
       const ok = await ctx.requireAuth("登录后才能用自己的积分请 AI 解读。");
       if (!ok || !ctx.isCurrent()) return;
     }
-    if ((Number(session.get().wallet?.balance ?? 0) || 0) <= 0) {
-      toast("账户余额不足：帮别人请 AI 解读只能用余额，每日免费积分不能用", { type: "error", action: { label: "查看积分", onClick: () => ctx.navigate("/me/credits") } });
-      return;
-    }
+    // 余额够不够以服务端为准：本地的余额可能是旧的，不在这里拦。
     const confirmed = await confirmDialog({
       title: "用你的积分请 AI 解读？",
       message: "按这次解读的实际用量从账户余额扣分，每日免费积分不能用。解读生成后直接公开在这条帖子上，并注明是你请的。",
@@ -411,6 +408,10 @@ export function render(ctx) {
       await apiPost(`/api/community/posts/${encodeURIComponent(post.slug)}/ai-answer`);
       toast("已请 AI 解读，完成后会显示在帖子上", { type: "ok" });
       refreshSession().catch(() => {});
+      // 先在本地标成「生成中」并开始轮询：紧接着的这次刷新即使失败，也会继续核对到出结果。
+      post.ai_answer = { status: "generating", answer: "", requested_by: "你", requested_at: new Date().toISOString(), published_at: null };
+      post.can_request_ai = false;
+      if (ctx.isCurrent()) repaint();
     } catch (error) {
       const message = error?.body?.detail?.message || error.message || "没能请到 AI，请稍后再试";
       toast(message, error.status === 429
@@ -419,7 +420,7 @@ export function render(ctx) {
     } finally {
       helpAiBusy = false;
       button.removeAttribute("aria-busy");
-      if (ctx.isCurrent()) load({ countView: false, fresh: true });
+      if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true });
     }
   }
 
