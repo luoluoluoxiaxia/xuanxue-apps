@@ -6039,7 +6039,7 @@
     },
     "/api/community/posts/{slug}/ai-answer": {
       "post": {
-        "description": "卦友花自己的账户余额，为一条六爻求助帖请 AI 解读；审核通过后公开在帖子上。\n\n每日免费积分不能用于替别人请 AI；一帖只生成一轮，结果不写进任何人的私人档案。",
+        "description": "卦友花自己的账户余额，为一条仍在求助中的六爻求助帖请 AI 解读；生成后直接公开在帖子上（不过发布审核）。\n\n每日免费积分不能用于替别人请 AI；一帖只生成一轮，结果不写进任何人的私人档案。",
         "operationId": "api_help_post_ai_answer_api_community_posts__slug__ai_answer_post",
         "parameters": [
           {
