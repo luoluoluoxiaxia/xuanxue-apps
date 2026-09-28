@@ -23,9 +23,10 @@ const THEME_KEY = "xz-next-theme";
 /* ---------- 主题 ---------- */
 const systemDark = window.matchMedia?.("(prefers-color-scheme: dark)");
 
+// 默认浅色（红白）；深色或跟随系统由用户自己选。
 export function themePreference() {
-  const value = local.get(THEME_KEY, "auto");
-  return value === "light" || value === "dark" ? value : "auto";
+  const value = local.get(THEME_KEY, "light");
+  return value === "dark" || value === "auto" ? value : "light";
 }
 
 function applyTheme() {
@@ -35,6 +36,21 @@ function applyTheme() {
   document.documentElement.dataset.schemePref = pref;
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", dark ? "#1A1A1C" : "#FFFFFF");
+  syncThemeButton();
+}
+
+// 顶栏的深浅色开关：浅色时画月亮（点了变深色），深色时画太阳。
+function syncThemeButton() {
+  const button = shell.themeButton;
+  if (!button) return;
+  const dark = document.documentElement.dataset.scheme === "dark";
+  button.setAttribute("aria-pressed", String(dark));
+  button.title = dark ? "切换到浅色" : "切换到深色";
+  button.replaceChildren(icon(dark ? "sun" : "moon"));
+}
+
+function toggleTheme() {
+  setTheme(document.documentElement.dataset.scheme === "dark" ? "light" : "dark");
 }
 
 export function setTheme(pref) {
@@ -75,6 +91,7 @@ function buildShell() {
   const app = document.getElementById("app");
   const bell = h("a", { class: "icon-btn", href: "#/inbox", "aria-label": "消息" }, icon("bell"), h("span", { class: "badge", hidden: true, "data-inbox-badge": "" }));
   const accountSlot = h("div", { class: "topbar-account" });
+  const themeButton = h("button", { type: "button", class: "icon-btn topbar-theme", "aria-label": "深色模式", onClick: toggleTheme });
   const topbar = h("header", { class: "topbar" },
     h("div", { class: "topbar-inner" },
       h("button", { type: "button", class: "icon-btn topbar-back", "aria-label": "返回", onClick: () => back("/") }, icon("back")),
@@ -83,6 +100,7 @@ function buildShell() {
         NAV.map(item => h("a", { class: "nav-tab", href: item.href, "data-nav": item.key }, item.label))),
       h("div", { class: "topbar-actions" },
         h("a", { class: "btn btn-primary btn-ask", href: "#/ask" }, icon("plus"), "提问"),
+        themeButton,
         bell,
         accountSlot)));
   const main = h("main", { id: "main", class: "main", tabindex: "-1" });
@@ -97,7 +115,8 @@ function buildShell() {
   const netBanner = h("div", { class: "net-banner", role: "status", hidden: true }, icon("alert"), h("span", null, "网络已断开，恢复后会自动重试"));
   app.replaceChildren(skip, topbar, netBanner, main, tabbar);
   app.dataset.state = "ready";
-  Object.assign(shell, { app, topbar, main, tabbar, accountSlot, netBanner });
+  Object.assign(shell, { app, topbar, main, tabbar, accountSlot, netBanner, themeButton });
+  syncThemeButton();
   // 再点一次当前所在的导航：先回到顶部；已在顶部时刷新当前页。
   topbar.addEventListener("click", onNavTap);
   tabbar.addEventListener("click", onNavTap);
@@ -168,15 +187,11 @@ export function openAccountMenu(anchor) {
   const state = session.get();
   const name = displayName(state.user);
   const balance = state.wallet ? `${state.wallet.balance ?? 0} 分` : "";
-  const pref = themePreference();
-  const nextTheme = pref === "auto" ? "light" : pref === "light" ? "dark" : "auto";
-  const themeLabel = { auto: "跟随系统", light: "浅色", dark: "深色" };
   openMenu(anchor, [
     { label: "我的主页", icon: "user", href: "#/me" },
     { label: "我的盘", icon: "book", href: "#/me/archives" },
     { label: "积分", icon: "coins", href: "#/me/credits", meta: balance },
     "sep",
-    { label: "外观", icon: pref === "dark" ? "moon" : pref === "light" ? "sun" : "monitor", meta: themeLabel[pref], onSelect: () => { setTheme(nextTheme); toast(`外观：${themeLabel[nextTheme]}`); } },
     { label: "意见反馈", icon: "message", onSelect: () => openFeedback() },
     "sep",
     { label: "退出登录", icon: "logout", onSelect: doLogout },
