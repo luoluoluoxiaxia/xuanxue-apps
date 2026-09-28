@@ -359,9 +359,10 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .btn-ask { min-height: 40px; padding: 0 18px 0 14px; }
 .btn-ask .icon { width: 18px; height: 18px; stroke-width: 2.2; }
-.topbar-account { max-width: 200px; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
-.topbar-account-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.topbar-account .icon { flex: none; color: var(--ink-3); }
+/* 已登录的昵称按钮；外层 .topbar-account 是账户位容器，未登录时放登录按钮。 */
+.topbar-user { max-width: 200px; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
+.topbar-user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topbar-user .icon { flex: none; color: var(--ink-3); }
 .topbar-login { font-weight: 650; }
 
 .page-title-m { display: none; }
@@ -502,7 +503,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   :root { --topbar-h: 54px; }
   body { font-size: 15px; }
   .topbar-inner { padding: 0 8px 0 16px; gap: 10px; }
-  .nav-tabs, .btn-ask, .topbar-login-label, .topbar-account { display: none; }
+  .nav-tabs, .btn-ask, .topbar-login-label, .topbar-user { display: none; }
   .app[data-depth="sub"] .topbar-back { display: inline-grid; }
   .app[data-depth="sub"] .brand-mark { display: none; }
   .brand-name { font-size: 18px; }

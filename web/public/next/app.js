@@ -158,8 +158,8 @@ function renderAccountSlot() {
   }
   const name = displayName(state.user);
   // 直接写昵称：不把名字缩成一个字再套圆圈。
-  const button = h("button", { type: "button", class: "btn btn-ghost topbar-account", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": `${name}的账户菜单`, title: name },
-    h("span", { class: "topbar-account-name" }, name), icon("chevronDown", "icon-sm"));
+  const button = h("button", { type: "button", class: "btn btn-ghost topbar-user", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": `${name}的账户菜单`, title: name },
+    h("span", { class: "topbar-user-name" }, name), icon("chevronDown", "icon-sm"));
   button.addEventListener("click", () => openAccountMenu(button));
   slot.replaceChildren(button);
 }
