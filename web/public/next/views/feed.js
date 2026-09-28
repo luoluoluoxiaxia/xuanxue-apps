@@ -2,9 +2,9 @@
 import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n2";
 import { icon } from "../lib/icons.js?v=n2";
 import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n2";
-import { session, displayName, local } from "../lib/store.js?v=n2";
+import { session, local } from "../lib/store.js?v=n2";
 import { relativeTime, count } from "../lib/format.js?v=n2";
-import { avatar, errorView, stateView, skeletonCard } from "../ui/bits.js?v=n2";
+import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n2";
 import { guaToken, pillarsToken } from "../ui/gua.js?v=n2";
 import { toast } from "../ui/toast.js?v=n2";
 
@@ -164,7 +164,6 @@ export function postCard(item, { onLike } = {}) {
   });
   return h("article", { class: ["post-card", isHelp && "is-help", resolved && "is-resolved"], "data-slug": item.slug },
     h("header", { class: "post-card-head" },
-      avatar(item.author_name || "卦友", "sm"),
       h("span", { class: "post-card-author" }, item.author_name || "卦友"),
       h("span", { class: "dot", "aria-hidden": "true" }, "·"),
       h("time", { datetime: item.published_at || item.created_at, title: item.published_at || "" }, relativeTime(item.published_at || item.created_at)),
@@ -249,12 +248,9 @@ export async function likePost(item, button) {
   }
 }
 
-function composerCard(ctx) {
-  const state = session.get();
-  const name = state.authenticated ? displayName(state.user) : "";
+function composerCard() {
   return h("section", { class: "composer-card", "aria-label": "发起提问" },
     h("a", { class: "composer-prompt", href: "#/ask" },
-      state.authenticated ? avatar(name) : h("span", { class: "composer-mark", "aria-hidden": "true" }, icon("feather")),
       h("span", { class: "composer-placeholder" }, "有什么放不下的事？写下来问问"),
       h("span", { class: "composer-go", "aria-hidden": "true" }, icon("arrowRight"))),
     h("div", { class: "composer-actions" },
@@ -541,7 +537,7 @@ export function render(ctx) {
 
   const center = h("div", { class: "feed-main" },
     heading,
-    composerCard(ctx),
+    composerCard(),
     controls,
     chips,
     h("div", { class: "feed-stream" }, newbar, list),
@@ -907,7 +903,6 @@ export function render(ctx) {
   ctx.subscribe(session, state => {
     if (state.authenticated === lastAuth) return;
     lastAuth = state.authenticated;
-    center.querySelector(".composer-card")?.replaceWith(composerCard(ctx));
     cache.forEach(entry => { if (entry !== feedState) entry.at = 0; });
     if (loading || !feedState.items.length) load({ reset: true });
     else check({ light: false });

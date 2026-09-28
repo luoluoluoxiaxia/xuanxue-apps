@@ -3,9 +3,9 @@
 import { h, svg, reducedMotion } from "../lib/dom.js?v=n2";
 import { icon } from "../lib/icons.js?v=n2";
 import { get, post, put, patch, del, query } from "../lib/api.js?v=n2";
-import { session, applyAccount, refreshSession, displayName } from "../lib/store.js?v=n2";
+import { session, applyAccount, refreshSession } from "../lib/store.js?v=n2";
 import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n2";
-import { avatar, stateView, spinnerLine } from "../ui/bits.js?v=n2";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n2";
 import { pillarsToken } from "../ui/gua.js?v=n2";
 import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n2";
 import { toast } from "../ui/toast.js?v=n2";
@@ -252,7 +252,6 @@ function nicknameEditor(ctx, { variant = "row" } = {}) {
    主页（概览）
    ========================================================================== */
 function profileCard(ctx) {
-  const avatarSlot = h("span", { class: "me-avatar-slot" });
   const nick = nicknameEditor(ctx, { variant: "hero" });
   const email = h("span", { class: "me-email" });
   const since = h("span", { class: "me-since" });
@@ -260,7 +259,6 @@ function profileCard(ctx) {
   const note = h("p", { class: "me-active-note", hidden: true });
   const node = h("section", { class: "me-profile", "aria-label": "个人资料" },
     h("div", { class: "me-profile-top" },
-      avatarSlot,
       h("div", { class: "me-profile-id" }, nick.node, h("p", { class: "me-profile-meta" }, email, since))),
     stats,
     note);
@@ -269,7 +267,6 @@ function profileCard(ctx) {
     h("span", null, label));
   function update(state) {
     const user = state.user || {};
-    avatarSlot.replaceChildren(avatar(displayName(user), "xl"));
     nick.update();
     email.textContent = maskEmail(user.email);
     since.textContent = user.created_at ? `${shortDate(user.created_at)}加入` : "";
@@ -337,7 +334,6 @@ function overviewSkeleton() {
     h("div", { class: "me-col" },
       h("section", { class: "me-profile is-skeleton" },
         h("div", { class: "me-profile-top" },
-          h("span", { class: "skel skel-circle", style: { width: "84px", height: "84px" } }),
           h("div", { class: "me-profile-id" },
             h("span", { class: "skel skel-title", style: { width: "140px", height: "26px" } }),
             h("span", { class: "skel skel-line", style: { width: "200px", marginTop: "12px" } }))),

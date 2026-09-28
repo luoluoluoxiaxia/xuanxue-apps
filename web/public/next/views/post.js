@@ -2,9 +2,9 @@
 import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n2";
 import { icon } from "../lib/icons.js?v=n2";
 import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n2";
-import { session, displayName, local, refreshSession } from "../lib/store.js?v=n2";
+import { session, local, refreshSession } from "../lib/store.js?v=n2";
 import { relativeTime, fullTime, count } from "../lib/format.js?v=n2";
-import { avatar, stateView } from "../ui/bits.js?v=n2";
+import { stateView } from "../ui/bits.js?v=n2";
 import { elementClass } from "../ui/gua.js?v=n2";
 import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n2";
 import { toast } from "../ui/toast.js?v=n2";
@@ -91,7 +91,6 @@ function commentNode(comment, context) {
     "data-comment-id": comment.id || "",
     "aria-busy": pending ? "true" : null,
   },
-  avatar(author, "sm"),
   h("div", { class: "comment-main" },
     h("header", { class: "comment-head" },
       h("b", null, author),
@@ -412,7 +411,6 @@ export function render(ctx) {
       h("article", { class: "post-article" },
         h("header", { class: "post-head" },
           h("div", { class: "post-author" },
-            avatar(post.author_name || "卦友", "lg"),
             h("div", null,
               h("b", null, post.author_name || "卦友"),
               h("span", null,
@@ -531,13 +529,12 @@ export function render(ctx) {
     const hint = h("span", { class: "composer-hint", "aria-hidden": "true" }, IS_MAC ? "⌘ + Enter 发布" : "Ctrl + Enter 发布");
     const identity = h("span", { class: "composer-identity" });
     const field = h("div", { class: "composer-field" }, replyChip, textarea);
-    const row = h("div", { class: "composer-row" }, h("span"), field);
+    const row = h("div", { class: "composer-row" }, field);
     const syncIdentity = () => {
       const current = session.get();
       identity.textContent = current.authenticated
         ? (current.user?.nickname ? `显示为 ${current.user.nickname}` : "显示匿名编号")
         : "发布时登录 · 显示昵称或匿名编号";
-      row.firstElementChild.replaceWith(current.authenticated ? avatar(displayName(current.user), "sm") : h("span", { class: "composer-mark", "aria-hidden": "true" }, icon("feather")));
     };
     syncIdentity();
     ctx.subscribe(session, syncIdentity);

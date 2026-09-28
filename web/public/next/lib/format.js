@@ -1,17 +1,4 @@
 // 文本与时间格式化（北京时间展示）。
-const AVATAR_TONES = ["#E51F3C", "#C2185B", "#C4410C", "#B23A55", "#8A5543", "#5F5F66", "#77478A", "#3F5A8A", "#A0402A", "#962A57"];
-
-export function initial(name) {
-  const text = String(name || "").trim();
-  return text ? Array.from(text)[0].toUpperCase() : "友";
-}
-
-export function toneFor(name) {
-  let hash = 0;
-  for (const char of String(name || "")) hash = (hash * 31 + char.codePointAt(0)) >>> 0;
-  return AVATAR_TONES[hash % AVATAR_TONES.length];
-}
-
 function toDate(value) {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
