@@ -343,13 +343,14 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .brand { display: inline-flex; align-items: center; gap: 10px; flex: none; }
 .brand-mark { width: 32px; height: 32px; }
 .brand-name { font: 900 20px/1 var(--font-serif); letter-spacing: .14em; }
-.nav-tabs { display: flex; align-items: center; gap: 4px; }
+.nav-tabs { display: flex; flex: none; align-items: center; gap: 4px; }
 .nav-tab {
   position: relative;
   display: inline-flex; align-items: center; gap: 7px;
   height: 40px; padding: 0 14px;
   color: var(--ink-3); border-radius: 999px;
   font-weight: 650; font-size: 15px;
+  white-space: nowrap;
   transition: color .16s var(--ease), background .16s var(--ease);
 }
 .nav-tab:hover { color: var(--ink); background: var(--bg-hover); }
@@ -359,9 +360,10 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   height: 3px; border-radius: 3px 3px 0 0; background: var(--brand);
 }
 .nav-tab .icon { width: 18px; height: 18px; }
-.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.topbar-actions { margin-left: auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
 /* 已登录的昵称按钮；外层 .topbar-account 是账户位容器，未登录时放登录按钮。 */
-.topbar-user { max-width: 200px; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
+.topbar-account { min-width: 0; max-width: 200px; }
+.topbar-user { max-width: 100%; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
 .topbar-user-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topbar-user .icon { flex: none; color: var(--ink-3); }
 .topbar-login { font-weight: 650; }
@@ -387,7 +389,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   display: none;
   height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   padding: 0 6px env(safe-area-inset-bottom, 0px);
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   background: color-mix(in srgb, var(--bg-elev) 90%, transparent);
   -webkit-backdrop-filter: saturate(1.6) blur(16px);
   backdrop-filter: saturate(1.6) blur(16px);

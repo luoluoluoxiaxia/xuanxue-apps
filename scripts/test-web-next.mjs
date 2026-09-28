@@ -8,7 +8,88 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n6`, base).href);
+const load = path => import(new URL(`${path}?v=n7`, base).href);
+
+test('knowledge search keeps URL filters through pagination and resets the page when a category changes', async () => {
+  const { readKnowledgeQuery, knowledgeListPath, knowledgeApiPath } = await load('lib/knowledge.js');
+  const filter = readKnowledgeQuery(new URLSearchParams('kind=term&system=bazi&q=%20月令%20&book_id=book-ziping&offset=24'));
+  assert.deepEqual(filter, { kind: 'term', system: 'bazi', q: '月令', book_id: 'book-ziping', offset: 24 });
+  const next = new URL(knowledgeListPath(filter, { offset: 48 }), 'https://example.test');
+  assert.equal(next.searchParams.get('q'), '月令');
+  assert.equal(next.searchParams.get('book_id'), 'book-ziping');
+  assert.equal(next.searchParams.get('offset'), '48');
+  const category = new URL(knowledgeListPath(filter, { kind: 'case', offset: 0 }), 'https://example.test');
+  assert.equal(category.searchParams.get('kind'), 'case');
+  assert.equal(category.searchParams.has('offset'), false);
+  assert.equal(category.searchParams.get('system'), 'bazi');
+  const api = new URL(knowledgeApiPath({ ...filter, unrelated: 'ignored' }), 'https://example.test');
+  assert.equal(api.pathname, '/api/knowledge');
+  assert.equal(api.searchParams.get('limit'), '24');
+  assert.equal(api.searchParams.has('unrelated'), false);
+  const invalid = readKnowledgeQuery(new URLSearchParams(`kind=unknown&system=unknown&offset=-3&q=${'字'.repeat(170)}`));
+  assert.equal(invalid.kind, '');
+  assert.equal(invalid.system, '');
+  assert.equal(invalid.offset, 0);
+  assert.equal(invalid.q.length, 160);
+});
+
+test('knowledge provenance renders only supplied pages and preserves the editorial location note', async () => {
+  const { sourceLocation } = await load('lib/knowledge.js');
+  assert.equal(sourceLocation({ chapter: '论用神', page_start: null, page_end: null, location_note: '据章节定位' }), '论用神 · 据章节定位');
+  assert.equal(sourceLocation({ chapter: '论用神', page_start: 12, page_end: 14, location_note: '底本页码' }), '论用神 · 来源页码 12–14 · 底本页码');
+  assert.equal(sourceLocation({ page_start: 12, page_end: 12 }), '来源页码 12');
+  assert.equal(sourceLocation({ page_start: null, page_end: 18 }), '');
+});
+
+test('knowledge requests abort superseded loads and never publish late responses after a route change', async () => {
+  const { createKnowledgeLoader } = await load('lib/knowledge.js');
+  const states = [];
+  const requests = [];
+  const loader = createKnowledgeLoader(state => states.push(state), (path, { signal }) => new Promise((resolve, reject) => requests.push({ path, signal, resolve, reject })));
+  const first = loader.load('/api/knowledge?kind=book');
+  const second = loader.load('/api/knowledge?kind=term');
+  assert.equal(requests[0].signal.aborted, true);
+  requests[1].resolve({ items: [{ id: 'new-term' }] });
+  await second;
+  // 模拟底层忽略 abort、旧请求晚到的情况。
+  requests[0].resolve({ items: [{ id: 'old-book' }] });
+  await first;
+  assert.deepEqual(states.filter(state => state.phase === 'ready').map(state => state.data.items[0].id), ['new-term']);
+  const third = loader.load('/api/knowledge/term-example');
+  loader.destroy();
+  assert.equal(requests[2].signal.aborted, true);
+  requests[2].resolve({ entry: { id: 'closed-page' } });
+  await third;
+  assert.equal(states.filter(state => state.phase === 'ready').length, 1);
+  await loader.load('/api/knowledge');
+  assert.equal(requests.length, 3);
+});
+
+test('knowledge requests preserve a 404 for the missing-entry view and can recover after failure', async () => {
+  const { createKnowledgeLoader } = await load('lib/knowledge.js');
+  const realFetch = globalThis.fetch;
+  const states = [];
+  let failure = true;
+  globalThis.fetch = async (path, init) => {
+    assert.equal(path, '/api/knowledge/term-example');
+    assert.equal(init.credentials, 'same-origin');
+    assert.ok(init.signal instanceof AbortSignal);
+    return new Response(JSON.stringify(failure ? { detail: '条目不存在' } : { entry: { id: 'term-example' }, related: [] }), { status: failure ? 404 : 200 });
+  };
+  const loader = createKnowledgeLoader(state => states.push(state));
+  try {
+    await loader.load('/api/knowledge/term-example');
+    assert.equal(states.at(-1).phase, 'error');
+    assert.equal(states.at(-1).error.status, 404);
+    failure = false;
+    await loader.load('/api/knowledge/term-example');
+    assert.equal(states.at(-1).phase, 'ready');
+    assert.equal(states.at(-1).data.entry.id, 'term-example');
+  } finally {
+    loader.destroy();
+    globalThis.fetch = realFetch;
+  }
+});
 
 test('waiting copy maps free-form stages to fixed banks and never echoes the raw stage', async () => {
   const { waitingBankKey, waitingLine } = await load('lib/copy.js');

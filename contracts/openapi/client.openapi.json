@@ -2725,6 +2725,303 @@
         "title": "ClientInviteCode",
         "type": "object"
       },
+      "ClientKnowledgeCounts": {
+        "additionalProperties": false,
+        "properties": {
+          "book": {
+            "title": "Book",
+            "type": "integer"
+          },
+          "case": {
+            "title": "Case",
+            "type": "integer"
+          },
+          "term": {
+            "title": "Term",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "book",
+          "case",
+          "term"
+        ],
+        "title": "ClientKnowledgeCounts",
+        "type": "object"
+      },
+      "ClientKnowledgeDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "entry": {
+            "$ref": "#/components/schemas/ClientKnowledgeEntry"
+          },
+          "related": {
+            "items": {
+              "$ref": "#/components/schemas/ClientKnowledgeSummary"
+            },
+            "title": "Related",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entry",
+          "related"
+        ],
+        "title": "ClientKnowledgeDetail",
+        "type": "object"
+      },
+      "ClientKnowledgeEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "aliases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Aliases",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "book",
+              "case",
+              "term"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "related_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Ids",
+            "type": "array"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ClientKnowledgeSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ClientKnowledgeSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "system": {
+            "enum": [
+              "bazi",
+              "liuyao",
+              "general"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "system",
+          "title",
+          "summary",
+          "tags",
+          "sources",
+          "aliases",
+          "sections",
+          "related_ids"
+        ],
+        "title": "ClientKnowledgeEntry",
+        "type": "object"
+      },
+      "ClientKnowledgeList": {
+        "additionalProperties": false,
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/ClientKnowledgeCounts"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientKnowledgeSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "counts"
+        ],
+        "title": "ClientKnowledgeList",
+        "type": "object"
+      },
+      "ClientKnowledgeSection": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "heading": {
+            "title": "Heading",
+            "type": "string"
+          }
+        },
+        "required": [
+          "heading",
+          "body"
+        ],
+        "title": "ClientKnowledgeSection",
+        "type": "object"
+      },
+      "ClientKnowledgeSource": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "book_title": {
+            "title": "Book Title",
+            "type": "string"
+          },
+          "chapter": {
+            "title": "Chapter",
+            "type": "string"
+          },
+          "location_note": {
+            "title": "Location Note",
+            "type": "string"
+          },
+          "page_end": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page End"
+          },
+          "page_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page Start"
+          }
+        },
+        "required": [
+          "book_id",
+          "book_title",
+          "chapter",
+          "page_start",
+          "page_end",
+          "location_note"
+        ],
+        "title": "ClientKnowledgeSource",
+        "type": "object"
+      },
+      "ClientKnowledgeSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "book",
+              "case",
+              "term"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ClientKnowledgeSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "system": {
+            "enum": [
+              "bazi",
+              "liuyao",
+              "general"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "system",
+          "title",
+          "summary",
+          "tags",
+          "sources"
+        ],
+        "title": "ClientKnowledgeSummary",
+        "type": "object"
+      },
       "ClientLiuyaoChart": {
         "additionalProperties": false,
         "properties": {
@@ -6747,6 +7044,171 @@
           }
         },
         "summary": "Api Interpret Task Events"
+      }
+    },
+    "/api/knowledge": {
+      "get": {
+        "description": "Search published books, cases and terms, with counts before kind filtering.",
+        "operationId": "list_knowledge_api_knowledge_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "book",
+                    "case",
+                    "term"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "bazi",
+                    "liuyao",
+                    "general"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "System"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 160,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "book_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Book Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientKnowledgeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Knowledge"
+      }
+    },
+    "/api/knowledge/{entry_id}": {
+      "get": {
+        "description": "Return editorial reading content and citations, never original documents.",
+        "operationId": "knowledge_detail_api_knowledge__entry_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientKnowledgeDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Knowledge Detail"
       }
     },
     "/api/location/preview": {
