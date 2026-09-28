@@ -2377,6 +2377,11 @@
             "type": "string"
           },
           "status": {
+            "enum": [
+              "generating",
+              "published",
+              "failed"
+            ],
             "title": "Status",
             "type": "string"
           }
