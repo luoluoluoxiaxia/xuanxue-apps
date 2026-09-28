@@ -1,11 +1,11 @@
 // 古典解读浮层：点命盘的一柱、大运、流年、流月，或卦盘的一爻，查看这一格的排盘事实与静态古籍释义。
 // 桌面为居中对话框，手机为底部面板（均由 openSheet 提供）。干支颜色、十神、藏干等全部取接口字段；
 // 释义是 lib/copy.js 里的静态模板，不调用解读接口，也不在客户端推算旺衰喜忌。
-import { h, reducedMotion } from "../lib/dom.js?v=n1";
-import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n1";
-import { openSheet, closeAllSheets } from "./overlay.js?v=n1";
-import { openGlossary } from "./glossary.js?v=n1";
-import { elementClass } from "./gua.js?v=n1";
+import { h, reducedMotion } from "../lib/dom.js?v=n2";
+import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n2";
+import { openSheet, closeAllSheets } from "./overlay.js?v=n2";
+import { openGlossary } from "./glossary.js?v=n2";
+import { elementClass } from "./gua.js?v=n2";
 
 const str = value => (value === null || value === undefined ? "" : String(value)).trim();
 const orDash = value => str(value) || "—";

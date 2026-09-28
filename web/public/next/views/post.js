@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n1";
-import { icon } from "../lib/icons.js?v=n1";
-import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n1";
-import { session, displayName, local, refreshSession } from "../lib/store.js?v=n1";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n1";
-import { avatar, stateView } from "../ui/bits.js?v=n1";
-import { elementClass } from "../ui/gua.js?v=n1";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n1";
-import { toast } from "../ui/toast.js?v=n1";
-import { sharePost } from "../lib/share.js?v=n1";
-import { openShareSheet } from "../ui/share-sheet.js?v=n1";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n1";
-import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n1";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n2";
+import { icon } from "../lib/icons.js?v=n2";
+import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n2";
+import { session, displayName, local, refreshSession } from "../lib/store.js?v=n2";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n2";
+import { avatar, stateView } from "../ui/bits.js?v=n2";
+import { elementClass } from "../ui/gua.js?v=n2";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n2";
+import { toast } from "../ui/toast.js?v=n2";
+import { sharePost } from "../lib/share.js?v=n2";
+import { openShareSheet } from "../ui/share-sheet.js?v=n2";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n2";
+import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n2";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
