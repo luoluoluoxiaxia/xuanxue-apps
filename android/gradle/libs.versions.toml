@@ -2,7 +2,7 @@
 # 升级时重新查 group-index.xml 与 maven-metadata.xml，不要手改成没验证过的版本。
 [versions]
 agp = "9.3.1"
-kotlin = "2.4.10"
+kotlin = "2.4.20"
 ksp = "2.3.11"
 coreKtx = "1.19.0"
 activityCompose = "1.13.0"
