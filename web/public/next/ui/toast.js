@@ -1,6 +1,6 @@
 // 轻提示：底部居中，手机端避开底栏；错误提示可以带一个操作按钮。
-import { h } from "../lib/dom.js?v=n8";
-import { icon } from "../lib/icons.js?v=n8";
+import { h } from "../lib/dom.js?v=n9";
+import { icon } from "../lib/icons.js?v=n9";
 
 let host = null;
 
