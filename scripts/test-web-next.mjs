@@ -8,7 +8,26 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n8`, base).href);
+const load = path => import(new URL(`${path}?v=n9`, base).href);
+
+test('book navigation rejects invalid saved pages and encodes book identities', async () => {
+  const { readingPath, readingNumber } = await load('lib/books.js');
+  assert.equal(readingNumber('156', 397), 156);
+  for (const invalid of ['0', '-1', '398', '1.5', 'garbage', 'Infinity']) assert.equal(readingNumber(invalid, 397), 1);
+  assert.equal(readingPath('book/one', 3), '/books/book%2Fone?page=3');
+});
+
+test('book filters keep working drafts and unavailable records visible with their own states', async () => {
+  const { filterBooks, BOOK_STATUS } = await load('lib/books.js');
+  const books = [
+    { title: '断易天机', source_label: '上海古本', system: 'liuyao', status: 'working_draft' },
+    { title: '滴天髓辑要', source_label: '文明本', system: 'bazi', status: 'unavailable' },
+  ];
+  assert.deepEqual(filterBooks(books, ' 上海 ', 'liuyao'), [books[0]]);
+  assert.deepEqual(filterBooks(books, '', ''), books);
+  assert.equal(BOOK_STATUS.working_draft, '有疑缺的工作稿');
+  assert.equal(BOOK_STATUS.unavailable, '成品待恢复');
+});
 
 test('knowledge search keeps URL filters through pagination and resets the page when a category changes', async () => {
   const { readKnowledgeQuery, knowledgeListPath, knowledgeApiPath } = await load('lib/knowledge.js');

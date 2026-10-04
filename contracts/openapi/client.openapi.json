@@ -1040,6 +1040,212 @@
         "title": "ClientBaziPillarDetail",
         "type": "object"
       },
+      "ClientBook": {
+        "additionalProperties": false,
+        "properties": {
+          "has_modern": {
+            "title": "Has Modern",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "section_count": {
+            "title": "Section Count",
+            "type": "integer"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "reading_edition",
+              "first_pass",
+              "working_draft",
+              "unavailable"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "system": {
+            "enum": [
+              "bazi",
+              "liuyao",
+              "general"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "system",
+          "source_label",
+          "status",
+          "section_count",
+          "has_modern",
+          "notice"
+        ],
+        "title": "ClientBook",
+        "type": "object"
+      },
+      "ClientBookBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "modern": {
+            "title": "Modern",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text",
+          "modern",
+          "notes"
+        ],
+        "title": "ClientBookBlock",
+        "type": "object"
+      },
+      "ClientBookContentsItem": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "title",
+          "location",
+          "partial"
+        ],
+        "title": "ClientBookContentsItem",
+        "type": "object"
+      },
+      "ClientBookDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "book": {
+            "$ref": "#/components/schemas/ClientBook"
+          },
+          "contents": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookContentsItem"
+            },
+            "title": "Contents",
+            "type": "array"
+          }
+        },
+        "required": [
+          "book",
+          "contents"
+        ],
+        "title": "ClientBookDetail",
+        "type": "object"
+      },
+      "ClientBookList": {
+        "additionalProperties": false,
+        "properties": {
+          "books": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBook"
+            },
+            "title": "Books",
+            "type": "array"
+          }
+        },
+        "required": [
+          "books"
+        ],
+        "title": "ClientBookList",
+        "type": "object"
+      },
+      "ClientBookSection": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "partial": {
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "number",
+          "title",
+          "location",
+          "partial",
+          "book_id",
+          "notice",
+          "blocks"
+        ],
+        "title": "ClientBookSection",
+        "type": "object"
+      },
       "ClientCapabilities": {
         "additionalProperties": false,
         "properties": {
@@ -5930,6 +6136,116 @@
           }
         },
         "summary": "Api Payment Orders"
+      }
+    },
+    "/api/books": {
+      "get": {
+        "operationId": "list_books_api_books_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Books"
+      }
+    },
+    "/api/books/{book_id}": {
+      "get": {
+        "operationId": "book_detail_api_books__book_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Detail"
+      }
+    },
+    "/api/books/{book_id}/sections/{number}": {
+      "get": {
+        "operationId": "book_section_api_books__book_id__sections__number__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Number",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookSection"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Section"
       }
     },
     "/api/chart": {
