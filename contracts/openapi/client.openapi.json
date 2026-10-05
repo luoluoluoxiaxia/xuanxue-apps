@@ -1043,6 +1043,16 @@
       "ClientBook": {
         "additionalProperties": false,
         "properties": {
+          "doubtful_page_count": {
+            "default": 0,
+            "title": "Doubtful Page Count",
+            "type": "integer"
+          },
+          "figure_page_count": {
+            "default": 0,
+            "title": "Figure Page Count",
+            "type": "integer"
+          },
           "has_modern": {
             "title": "Has Modern",
             "type": "boolean"
@@ -1054,6 +1064,11 @@
           "notice": {
             "title": "Notice",
             "type": "string"
+          },
+          "partial_page_count": {
+            "default": 0,
+            "title": "Partial Page Count",
+            "type": "integer"
           },
           "section_count": {
             "title": "Section Count",
@@ -1114,9 +1129,24 @@
             "title": "Notes",
             "type": "array"
           },
+          "presentation": {
+            "default": "prose",
+            "enum": [
+              "prose",
+              "table",
+              "diagram"
+            ],
+            "title": "Presentation",
+            "type": "string"
+          },
           "role": {
             "title": "Role",
             "type": "string"
+          },
+          "source_text": {
+            "default": true,
+            "title": "Source Text",
+            "type": "boolean"
           },
           "text": {
             "title": "Text",
@@ -1182,6 +1212,40 @@
         "title": "ClientBookDetail",
         "type": "object"
       },
+      "ClientBookFigure": {
+        "additionalProperties": false,
+        "properties": {
+          "caption": {
+            "title": "Caption",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "caption",
+          "width",
+          "height"
+        ],
+        "title": "ClientBookFigure",
+        "type": "object"
+      },
       "ClientBookList": {
         "additionalProperties": false,
         "properties": {
@@ -1212,6 +1276,13 @@
           "book_id": {
             "title": "Book Id",
             "type": "string"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookFigure"
+            },
+            "title": "Figures",
+            "type": "array"
           },
           "location": {
             "title": "Location",
@@ -6246,6 +6317,68 @@
           }
         },
         "summary": "Book Section"
+      }
+    },
+    "/api/books/{book_id}/sections/{number}/figures/{figure_id}": {
+      "get": {
+        "operationId": "book_figure_api_books__book_id__sections__number__figures__figure_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "minimum": 1,
+              "title": "Number",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "figure_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9]{16}$",
+              "title": "Figure Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/webp": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Figure"
       }
     },
     "/api/chart": {

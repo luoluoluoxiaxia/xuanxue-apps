@@ -1,12 +1,12 @@
 // 登录 / 注册 / 重设密码面板。账户由服务端决定，这里只提交表单并应用返回的账户状态。
 // 交互：字段就地校验（中文提示，聚焦第一个有误的字段）；回车依次前进到下一个待填项；
 // 验证码可整段粘贴；提交中按钮保持焦点；面板在请求途中被关掉时，等请求结束再回报结果。
-import { h, svg } from "../lib/dom.js?v=n9";
-import { icon, brandMark } from "../lib/icons.js?v=n9";
-import { post } from "../lib/api.js?v=n9";
-import { applyAccount } from "../lib/store.js?v=n9";
-import { openSheet } from "../ui/overlay.js?v=n9";
-import { toast } from "../ui/toast.js?v=n9";
+import { h, svg } from "../lib/dom.js?v=n10";
+import { icon, brandMark } from "../lib/icons.js?v=n10";
+import { post } from "../lib/api.js?v=n10";
+import { applyAccount } from "../lib/store.js?v=n10";
+import { openSheet } from "../ui/overlay.js?v=n10";
+import { toast } from "../ui/toast.js?v=n10";
 
 const MODES = {
   login_password: { title: "登录玄枢", submit: "密码登录", busy: "正在登录…", done: "已登录", note: "密码无法登录时，可以验证邮箱后重设密码。" },

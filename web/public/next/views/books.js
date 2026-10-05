@@ -1,10 +1,10 @@
-import { h, fill } from "../lib/dom.js?v=n9";
-import { icon } from "../lib/icons.js?v=n9";
-import { get } from "../lib/api.js?v=n9";
-import { local } from "../lib/store.js?v=n9";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n9";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks } from "../lib/books.js?v=n9";
-import { errorView, stateView } from "../ui/bits.js?v=n9";
+import { h, fill } from "../lib/dom.js?v=n10";
+import { icon } from "../lib/icons.js?v=n10";
+import { get } from "../lib/api.js?v=n10";
+import { local } from "../lib/store.js?v=n10";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n10";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks } from "../lib/books.js?v=n10";
+import { errorView, stateView } from "../ui/bits.js?v=n10";
 
 const progressKey = id => `xz-book-progress:${id}`;
 
@@ -26,7 +26,7 @@ function library(ctx) {
     Object.entries(BOOK_SYSTEM).map(([value, label]) => h("option", { value }, label)));
   const node = h("div", { class: "books-library" },
     h("header", { class: "books-hero" }, h("p", { class: "kicker" }, "典籍研读"), h("h1", null, "典籍书库"),
-      h("p", null, "打开原文，循着书页读下去。已整理的白话与校记随文保留。")),
+      h("p", null, "现有原文初录稿开放查阅，疑字与缺文随页标明，尚待逐书校勘。已整理的白话与校记随文保留。")),
     h("div", { class: "books-filters" }, search, system), count, results);
   function paintBooks() {
     const rows = filterBooks(books, search.value, system.value);
@@ -71,22 +71,50 @@ function reader(ctx) {
   const node = h("div", { class: "book-reading" },
     h("a", { class: "back-link", href: "#/books" }, icon("back"), "典籍书库"), heading, controls, content, pagination);
 
+  function renderFigure(figure) {
+    const warning = h("p", { class: "books-notice", hidden: true }, "书影未能加载，可展开下方转写查看，或刷新重试。");
+    const image = h("img", { src: figure.url, alt: `${book.title} · ${activeSection.location} · 图式书影`,
+      width: figure.width, height: figure.height, loading: "lazy", decoding: "async",
+      onError: event => { event.target.hidden = true; warning.hidden = false; } });
+    return h("figure", { class: "book-figure" },
+      h("a", { href: figure.url, target: "_blank", rel: "noopener", "aria-label": "放大图式书影" }, image),
+      warning, h("figcaption", null, figure.caption),
+      h("a", { class: "book-figure-link", href: figure.url, target: "_blank", rel: "noopener" }, "放大原图"));
+  }
+
+  function renderBlock(block, hasFigure) {
+    const diagram = block.presentation === "diagram" || block.role === "diagram_caption" || block.source_text === false;
+    const table = block.presentation === "table" || block.role === "table";
+    const transcribed = diagram || table;
+    const original = h("div", { class: "book-original", lang: "zh-Hant" },
+      ["note", "commentary"].includes(block.role) ? h("span", { class: "book-layer" }, block.role === "note" ? "原注" : "评注") : null,
+      transcribed ? h("span", { class: "book-layer" }, block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写") : null,
+      h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null }, block.text));
+    const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
+      block.notes.map(note => h("p", null, note))) : null;
+    const layer = transcribed && (hasFigure || diagram)
+      ? h("details", { class: "book-diagram-transcription" }, h("summary", null, diagram ? "展开图式标注与转写" : "展开表格转写"),
+        block.source_text === false ? h("p", { class: "books-notice" }, "此处是图形结构的文字转写，位置与连接请以书影为准。") : null,
+        original, notes)
+      : h("div", null, original, notes);
+    return h("section", { class: `book-block book-role-${block.role}` }, layer,
+      block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"), h("p", null, block.modern)) : null);
+  }
+
   function paintSection() {
     if (!activeSection) return;
     const section = activeSection;
+    const figures = section.figures || [];
     content.dataset.mode = book.has_modern ? mode : "original";
     fill(content,
-      h("header", { class: "book-section-header" }, h("p", { class: "books-source" }, section.location), h("h2", null, section.title)),
+      h("header", { class: "book-section-header" }, h("p", { class: "books-source" }, section.location),
+        section.title !== section.location ? h("h2", null, section.title) : null),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? h("p", null, section.notice) : null) : null,
-      section.blocks.length ? section.blocks.map(block => h("section", { class: `book-block book-role-${block.role}` },
-        h("div", { class: "book-original", lang: "zh-Hant" },
-          ["note", "commentary"].includes(block.role) ? h("span", { class: "book-layer" }, block.role === "note" ? "原注" : "评注") : null,
-          h(block.role === "heading" ? "h3" : "p", null, block.text)),
-        block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"), h("p", null, block.modern)) : null,
-        block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
-          block.notes.map(note => h("p", null, note))) : null)) : h("p", null, "本页没有录文，保留此页的来源位置。"));
+      figures.map(renderFigure),
+      section.blocks.length ? section.blocks.map(block => renderBlock(block, figures.length > 0))
+        : h("p", null, "本页没有录文，保留此页的来源位置。"));
     fill(pagination,
       section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${readingPath(id, section.number - 1)}` }, "上一页") : h("span"),
       h("span", null, `${section.number} / ${book.section_count}`),
@@ -122,7 +150,7 @@ function reader(ctx) {
       mode = event.target.value; local.set("xz-book-mode", mode); paintSection();
     } }, [["original", "原文"], ["parallel", "原文与白话"], ["modern", "白话"]].map(([value, label]) =>
       h("option", { value, selected: mode === value }, label))) : null;
-    fill(controls, h("label", null, "目录", select), modes ? h("label", null, "显示", modes) : null);
+    fill(controls, h("label", null, book.has_modern ? "目录" : "书页", select), modes ? h("label", null, "显示", modes) : null);
     openSection(number);
   });
   const refresh = () => life.loader.load(`/api/books/${encodeURIComponent(id)}`);
