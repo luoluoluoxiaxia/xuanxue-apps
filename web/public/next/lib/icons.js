@@ -1,5 +1,5 @@
 // 线性图标（24×24，描边 1.8）。只用于装饰或配合可见文字 / aria-label。
-import { svg } from "./dom.js?v=n9";
+import { svg } from "./dom.js?v=n10";
 
 const PATHS = {
   plaza: '<path d="M3 10.6 12 4l9 6.6"/><path d="M5 9.4V20h14V9.4"/><path d="M9.5 20v-5.5h5V20"/>',
