@@ -107,6 +107,26 @@ async function captureFailure(page, task) {
   } catch (_) { /* Preserve failures even when the page cannot take a screenshot. */ }
 }
 
+async function waitForSurface(page, selector) {
+  await page.evaluate(async selector => {
+    const animations = new Set();
+    for (let element = document.querySelector(selector); element; element = element.parentElement) {
+      element.getAnimations().forEach(animation => animations.add(animation));
+    }
+    await Promise.allSettled([...animations].map(animation => animation.finished));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }, selector);
+  await page.waitForFunction(selector => {
+    const target = document.querySelector(selector);
+    if (!target?.getClientRects().length) return false;
+    for (let element = target; element; element = element.parentElement) {
+      const style = getComputedStyle(element);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return false;
+    }
+    return true;
+  }, selector, { timeout });
+}
+
 async function auditDirectory(page, task) {
   const claim = `${task.width}:${task.book.id}`;
   if (directoryClaims.has(claim)) return;
@@ -115,14 +135,7 @@ async function auditDirectory(page, task) {
   if (!expected) { problem(task, 'directory-source', 'No public book detail was available for comparison.'); return; }
   await page.locator('.book-directory').click();
   await page.locator('.sheet-book-contents').waitFor({ state: 'visible', timeout });
-  await page.evaluate(async () => {
-    const panel = document.querySelector('.sheet-book-contents');
-    await Promise.allSettled([...panel.getAnimations(), ...panel.parentElement.getAnimations()].map(animation => animation.finished));
-  });
-  await page.waitForFunction(() => {
-    const panel = document.querySelector('.sheet-book-contents');
-    return panel && Number(getComputedStyle(panel).opacity) > 0 && Number(getComputedStyle(panel.parentElement).opacity) > 0;
-  }, null, { timeout });
+  await waitForSurface(page, '.sheet-book-contents');
   const actual = await page.locator('.book-contents-item').evaluateAll(elements => elements.map(element => ({
     number: Number(element.querySelector('.book-contents-number')?.textContent),
     title: element.querySelector('b')?.textContent,
@@ -290,15 +303,7 @@ async function auditCase(page, task) {
         document.querySelector('.book-directory small')?.textContent === counter &&
         content.querySelector('.book-section-header .books-source')?.textContent === location;
     }, { title: task.book.title, counter: `${task.number} / ${task.book.section_count}`, location: section.location }, { timeout });
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    await page.evaluate(async () => {
-      const view = document.querySelector('.book-reading');
-      await Promise.allSettled(view.getAnimations().map(animation => animation.finished));
-    });
-    await page.waitForFunction(() => {
-      const view = document.querySelector('.book-reading');
-      return view && Number(getComputedStyle(view).opacity) > 0;
-    }, null, { timeout });
+    await waitForSurface(page, '.book-reading');
     row.blocks += section.blocks.length;
     row.notes += section.blocks.reduce((sum, block) => sum + block.notes.length, 0);
     row.page_notes += (section.page_notes || []).length;
@@ -327,6 +332,12 @@ async function auditCase(page, task) {
       const figure = section.figures[index];
       await page.locator('.book-figure-link').nth(index).click();
       await page.locator('.book-image-stage img:not([hidden])').waitFor({ state: 'visible', timeout });
+      await waitForSurface(page, '.book-image-stage');
+      await page.waitForFunction(() => {
+        const panel = document.querySelector('.sheet-book-image');
+        const image = panel?.querySelector('.book-image-stage img');
+        return image?.style.width && image.style.height && Number(getComputedStyle(panel).opacity) > 0 && Number(getComputedStyle(panel.parentElement).opacity) > 0;
+      }, null, { timeout });
       const viewer = await page.locator('.book-image-stage img').evaluate(async image => {
         await image.decode();
         const box = image.getBoundingClientRect(), stage = image.parentElement.getBoundingClientRect();
