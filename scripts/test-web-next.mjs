@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n12`, base).href);
+const load = path => import(new URL(`${path}?v=n13`, base).href);
 
 test('book navigation rejects invalid saved pages and encodes book identities', async () => {
   const { readingPath, readingNumber } = await load('lib/books.js');
