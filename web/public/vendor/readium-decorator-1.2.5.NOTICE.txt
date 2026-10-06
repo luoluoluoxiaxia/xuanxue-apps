@@ -1,0 +1,23 @@
+Readium decorator browser asset
+Copyright (c) 2022, Readium Foundation
+
+Official project: https://github.com/readium/ts-toolkit
+Public API: https://github.com/readium/ts-toolkit/tree/develop/decorator
+
+The npm dependencies and their integrity hashes are fixed in scripts/vendor/readium/package-lock.json.
+This asset bundles only the public HTML decoration/Locator APIs. It does not replace book content or collect account data.
+
+Generated with esbuild 0.28.2: ES modules, browser platform, ES2022 target, minified, tree-shaken, production environment.
+Source changes consist of this combined browser distribution and its banner; the upstream sources are not edited.
+
+Bundled Readium packages:
+@readium/decorator 1.2.5 (BSD-3-Clause)
+@readium/helpers 1.2.0 (BSD-3-Clause)
+@readium/navigator-html-injectables 2.8.5 (BSD-3-Clause)
+@readium/shared 2.7.0 (BSD-3-Clause)
+
+Included third-party code: Hypothesis anchoring (BSD-2-Clause, with annotator MIT terms), approx-string-match (MIT), and Google's text-fragments-polyfill (Apache-2.0).
+Their complete license texts accompany this file. The Readium BSD-3-Clause license is in LICENSE.txt.
+
+esbuild is an MIT-licensed build tool and is not a runtime dependency in the distributed Web asset.
+To rebuild: node scripts/vendor/readium/build.mjs

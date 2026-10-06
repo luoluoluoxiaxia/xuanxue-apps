@@ -231,6 +231,148 @@
         "title": "BirthInput",
         "type": "object"
       },
+      "BookAnnotationCreate": {
+        "additionalProperties": false,
+        "description": "Offsets use Unicode code points within the exact published layer text.",
+        "properties": {
+          "block_id": {
+            "default": "",
+            "maxLength": 80,
+            "title": "Block Id",
+            "type": "string"
+          },
+          "color": {
+            "default": "yellow",
+            "enum": [
+              "yellow",
+              "green",
+              "blue",
+              "pink"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "edition_sha256": {
+            "pattern": "^[a-f0-9]{64}$",
+            "title": "Edition Sha256",
+            "type": "string"
+          },
+          "end": {
+            "default": 0,
+            "description": "Unicode 码点终点，不含该位置的字符；不能使用 UTF-16 code unit 或 DOM 索引。",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "kind": {
+            "default": "highlight",
+            "enum": [
+              "highlight",
+              "bookmark"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "layer": {
+            "default": "original",
+            "enum": [
+              "original",
+              "modern"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Note",
+            "type": "string"
+          },
+          "prefix": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Prefix",
+            "type": "string"
+          },
+          "quote": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Quote",
+            "type": "string"
+          },
+          "section_number": {
+            "minimum": 1.0,
+            "title": "Section Number",
+            "type": "integer"
+          },
+          "start": {
+            "default": 0,
+            "description": "所选层原始字符串中的 Unicode 码点起点（包含来源换行），从 0 计数。",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "suffix": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Suffix",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section_number",
+          "edition_sha256"
+        ],
+        "title": "BookAnnotationCreate",
+        "type": "object"
+      },
+      "BookAnnotationUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yellow",
+                  "green",
+                  "blue",
+                  "pink"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "revision": {
+            "description": "最后读取的笔记版本。已被其他设备更新时返回 409，避免覆盖。",
+            "minimum": 1.0,
+            "title": "Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "revision"
+        ],
+        "title": "BookAnnotationUpdate",
+        "type": "object"
+      },
       "ChatMessageFeedbackCreate": {
         "properties": {
           "chart_id": {
@@ -1115,9 +1257,180 @@
         "title": "ClientBook",
         "type": "object"
       },
+      "ClientBookAnnotation": {
+        "additionalProperties": false,
+        "properties": {
+          "anchor_status": {
+            "description": "只有 matched 可在正文定位/画线；其他状态保留原摘录与笔记，不尝试挪到类似文字。",
+            "enum": [
+              "matched",
+              "edition_changed",
+              "section_missing",
+              "block_missing",
+              "quote_mismatch"
+            ],
+            "title": "Anchor Status",
+            "type": "string"
+          },
+          "block_id": {
+            "title": "Block Id",
+            "type": "string"
+          },
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "color": {
+            "enum": [
+              "yellow",
+              "green",
+              "blue",
+              "pink"
+            ],
+            "title": "Color",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "current_edition_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Edition Sha256"
+          },
+          "edition_sha256": {
+            "title": "Edition Sha256",
+            "type": "string"
+          },
+          "end": {
+            "title": "End",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "highlight",
+              "bookmark"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "layer": {
+            "enum": [
+              "original",
+              "modern"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "quote": {
+            "title": "Quote",
+            "type": "string"
+          },
+          "revision": {
+            "title": "Revision",
+            "type": "integer"
+          },
+          "section_number": {
+            "title": "Section Number",
+            "type": "integer"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "suffix": {
+            "title": "Suffix",
+            "type": "string"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "book_id",
+          "section_number",
+          "kind",
+          "edition_sha256",
+          "block_id",
+          "layer",
+          "start",
+          "end",
+          "quote",
+          "prefix",
+          "suffix",
+          "color",
+          "note",
+          "revision",
+          "created_at",
+          "updated_at",
+          "current_edition_sha256",
+          "anchor_status"
+        ],
+        "title": "ClientBookAnnotation",
+        "type": "object"
+      },
+      "ClientBookAnnotationList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookAnnotation"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "ClientBookAnnotationList",
+        "type": "object"
+      },
       "ClientBookBlock": {
         "additionalProperties": false,
         "properties": {
+          "id": {
+            "default": "",
+            "description": "服务器分配的原文内容标识；与版式及正文节点序号无关。",
+            "title": "Id",
+            "type": "string"
+          },
           "modern": {
             "title": "Modern",
             "type": "string"
@@ -1275,6 +1588,12 @@
           },
           "book_id": {
             "title": "Book Id",
+            "type": "string"
+          },
+          "edition_sha256": {
+            "default": "",
+            "description": "完整公开阅读副本的版本标识，不是扫描底本或私有编辑源的哈希。",
+            "title": "Edition Sha256",
             "type": "string"
           },
           "figures": {
@@ -6273,6 +6592,247 @@
           }
         },
         "summary": "Book Detail"
+      }
+    },
+    "/api/books/{book_id}/annotations": {
+      "get": {
+        "description": "Only the authenticated account's marks; stale anchors are never relocated.",
+        "operationId": "list_book_annotations_api_books__book_id__annotations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "section_number",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Section Number"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookAnnotationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Book Annotations"
+      },
+      "post": {
+        "operationId": "create_book_annotation_api_books__book_id__annotations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookAnnotationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookAnnotation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Book Annotation"
+      }
+    },
+    "/api/books/{book_id}/annotations/{annotation_id}": {
+      "delete": {
+        "operationId": "delete_book_annotation_api_books__book_id__annotations__annotation_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "annotation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Annotation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientOk"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Book Annotation"
+      },
+      "patch": {
+        "operationId": "update_book_annotation_api_books__book_id__annotations__annotation_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "annotation_id",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-f0-9]{32}$",
+              "title": "Annotation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookAnnotationUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookAnnotation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Book Annotation"
       }
     },
     "/api/books/{book_id}/sections/{number}": {

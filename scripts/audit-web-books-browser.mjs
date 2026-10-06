@@ -133,10 +133,13 @@ async function auditDirectory(page, task) {
   directoryClaims.add(claim);
   const expected = details.get(task.book.id)?.contents;
   if (!expected) { problem(task, 'directory-source', 'No public book detail was available for comparison.'); return; }
-  await page.locator('.book-directory').click();
-  await page.locator('.sheet-book-contents').waitFor({ state: 'visible', timeout });
-  await waitForSurface(page, '.sheet-book-contents');
-  const actual = await page.locator('.book-contents-item').evaluateAll(elements => elements.map(element => ({
+  const wide = task.width >= 1100;
+  const selector = wide ? '.book-sidebar' : '.sheet-book-contents';
+  if (!wide || !await page.locator(selector).isVisible()) await page.locator('.book-directory').click();
+  await page.locator(selector).waitFor({ state: 'visible', timeout });
+  await waitForSurface(page, selector);
+  await page.locator(selector).getByLabel('搜索目录', { exact: true }).fill('');
+  const actual = await page.locator(selector).locator('.book-contents-item').evaluateAll(elements => elements.map(element => ({
     number: Number(element.querySelector('.book-contents-number')?.textContent),
     title: element.querySelector('b')?.textContent,
     location: element.querySelector('span:nth-child(2) > small')?.textContent || element.querySelector('b')?.textContent,
@@ -157,9 +160,11 @@ async function auditDirectory(page, task) {
       problem(task, 'directory-entry', 'Directory entry or current-page position differs from the public API.', { index, expected: item, actual: row });
     }
   });
-  report.directories.push({ width: task.width, book_id: task.book.id, entries: actual.length });
-  await page.locator('.sheet-book-contents .sheet-head button').click();
-  await page.locator('.sheet-book-contents').waitFor({ state: 'detached', timeout });
+  report.directories.push({ width: task.width, book_id: task.book.id, entries: actual.length, surface: wide ? 'sidebar' : 'sheet' });
+  if (!wide) {
+    await page.locator('.sheet-book-contents .sheet-head button').click();
+    await page.locator('.sheet-book-contents').waitFor({ state: 'detached', timeout });
+  }
 }
 
 // This runs in the real reader DOM after the current public response is ready.
@@ -194,6 +199,12 @@ function inspectReader({ book, section, mode }) {
     return true;
   };
   const root = document.querySelector('.book-reading-content');
+  if (root.dataset.mode !== (book.has_modern ? mode : 'original')) fail('reader-mode', 'Reader does not display the requested mode.');
+  const modeButtons = [...document.querySelectorAll('[data-book-mode]')];
+  if (modeButtons.length !== (book.has_modern ? 3 : 0)) fail('mode-controls', 'Reading modes are missing from the toolbar or shown for a book without translation.');
+  modeButtons.forEach(button => {
+    if (!visible(button) || button.getAttribute('aria-pressed') !== String(button.dataset.bookMode === mode)) fail('mode-control-state', 'A direct reading-mode button is hidden or its active state differs.', { button_mode: button.dataset.bookMode });
+  });
   const blocks = [...root.querySelectorAll(':scope > .book-block')];
   if (blocks.length !== section.blocks.length) fail('block-count', `Expected ${section.blocks.length}, rendered ${blocks.length}.`);
   const header = root.querySelector('.book-section-header');
@@ -235,6 +246,11 @@ function inspectReader({ book, section, mode }) {
     const originalExpected = mode !== 'modern' || !expected.modern;
     if (visible(original) !== originalExpected) fail('original-visibility', `Original visibility differs in ${mode} mode.`, { index, visibility_reason: hiddenReason });
     if (Boolean(modern && visible(modern)) !== Boolean(expected.modern && mode !== 'original')) fail('modern-visibility', `Modern visibility differs in ${mode} mode.`, { index });
+    if (mode === 'parallel' && book.has_modern && innerWidth >= 900) {
+      const left = element.firstElementChild?.getBoundingClientRect();
+      const right = element.querySelector('.book-modern, .book-modern-empty')?.getBoundingClientRect();
+      if (getComputedStyle(element).display !== 'grid' || !left || !right || right.left <= left.right || Math.abs(right.top - left.top) > 2 || Math.abs(right.width - left.width) > 2) fail('parallel-columns', 'Original and translation do not occupy matching adjacent columns.', { index });
+    }
     notes.forEach((note, noteIndex) => {
       if (!visible(note)) fail('note-visibility', 'An expanded note is hidden.', { index, note_index: noteIndex });
       if (getComputedStyle(note).whiteSpace !== 'pre-wrap') fail('note-whitespace', 'Editorial notes do not preserve their line breaks.', { index, note_index: noteIndex });
@@ -315,6 +331,10 @@ async function auditCase(page, task) {
         content.querySelector('.book-section-header .books-source')?.textContent === location;
     }, { title: task.book.title, counter: `${task.number} / ${task.book.section_count}`, location: section.location }, { timeout });
     await waitForSurface(page, '.book-reading');
+    if (task.book.has_modern) {
+      await page.locator(`[data-book-mode="${task.mode}"]`).click();
+      await page.waitForFunction(mode => document.querySelector('.book-reading-content')?.dataset.mode === mode, task.mode, { timeout });
+    }
     row.blocks += section.blocks.length;
     row.notes += section.blocks.reduce((sum, block) => sum + block.notes.length, 0);
     row.page_notes += (section.page_notes || []).length;

@@ -1,0 +1,13 @@
+{
+  "name": "xuanxue-readium-vendor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@readium/decorator": "1.2.5",
+    "@readium/helpers": "1.2.0",
+    "@readium/navigator-html-injectables": "2.8.5",
+    "@readium/shared": "2.7.0",
+    "esbuild": "0.28.2"
+  }
+}

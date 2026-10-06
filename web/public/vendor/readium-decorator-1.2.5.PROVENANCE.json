@@ -1,0 +1,54 @@
+{
+  "format": "pinned-browser-vendor-v1",
+  "project": "https://github.com/readium/ts-toolkit",
+  "asset": "readium-decorator-1.2.5.js",
+  "compiler": {
+    "name": "esbuild",
+    "version": "0.28.2",
+    "target": "es2022",
+    "format": "esm",
+    "platform": "browser",
+    "minified": true,
+    "production": true
+  },
+  "packages": [
+    {
+      "name": "@readium/decorator",
+      "version": "1.2.5",
+      "integrity": "sha512-x2hCr964+K6hyHI+xFDzUxvF0Gighy58javBQmIHJ4O7+GsaRuIJPalaZFRWVzWtcej0uWUkPsvo4ic0yzCb7Q==",
+      "tarball": "https://registry.npmjs.org/@readium/decorator/-/decorator-1.2.5.tgz",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "@readium/helpers",
+      "version": "1.2.0",
+      "integrity": "sha512-0aWmmuapAyuwDnJrUOiQ8lpKcnUJjI1HtG6KoLqlN5/oi4mIwP0hg9QfS5fF7SiA697+oQHZkSAazs/busBWew==",
+      "tarball": "https://registry.npmjs.org/@readium/helpers/-/helpers-1.2.0.tgz",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "@readium/navigator-html-injectables",
+      "version": "2.8.5",
+      "integrity": "sha512-SU+JAGpwKZ/PqC1hf56v/vnOZ7ntPBYjB7GYM89HIJ9awKz5F4P5txZAWG47UyYgzIR6fc2ZO0dTRDlwm1ib/g==",
+      "tarball": "https://registry.npmjs.org/@readium/navigator-html-injectables/-/navigator-html-injectables-2.8.5.tgz",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "name": "@readium/shared",
+      "version": "2.7.0",
+      "integrity": "sha512-F/0SbfuAVh/9X+YJ0JnSa/P+wwSQjElaoxfeIlV3CgL4FrLsDwvIJEIN1BLYG1QbI0oUXY6HUBptCd+Gintkzg==",
+      "tarball": "https://registry.npmjs.org/@readium/shared/-/shared-2.7.0.tgz",
+      "license": "BSD-3-Clause"
+    }
+  ],
+  "package_lock_sha256": "aabb6e2aaa072f7c976f2e58da34560a441f10254f785635601945feff09e08e",
+  "entry_sha256": "f0da2c1f8c6c608c3ef1c4743a8bb8da63cd07dfb6a40312bab680d10cfeb53f",
+  "bytes": 64285,
+  "gzip_bytes": 20414,
+  "sha256": "a45b858c9cc13e59cb81db7dc9d579a51665392abe30c5661e25a022fd431ed0",
+  "license_files": [
+    "readium-decorator-1.2.5.LICENSE.txt",
+    "readium-decorator-1.2.5.THIRD-PARTY-LICENSES.txt",
+    "readium-decorator-1.2.5.NOTICE.txt"
+  ]
+}

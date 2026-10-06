@@ -1,16 +1,18 @@
-import { h, fill } from "../lib/dom.js?v=n14";
-import { icon } from "../lib/icons.js?v=n14";
-import { get } from "../lib/api.js?v=n14";
-import { local } from "../lib/store.js?v=n14";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n14";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n14";
-import { errorView, stateView } from "../ui/bits.js?v=n14";
-import { openBookImage } from "../ui/book-image.js?v=n14";
-import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n14";
+import { h, fill } from "../lib/dom.js?v=n15";
+import { icon } from "../lib/icons.js?v=n15";
+import { get } from "../lib/api.js?v=n15";
+import { local, session } from "../lib/store.js?v=n15";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n15";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n15";
+import { errorView, stateView } from "../ui/bits.js?v=n15";
+import { openBookImage } from "../ui/book-image.js?v=n15";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n15";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n15";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
 const detailCache = new Map();
+const annotationNavigation = new Map();
 
 function lifecycle(ctx, paint, request) {
   const loader = createKnowledgeLoader(state => { if (ctx.isCurrent()) paint(state); }, request);
@@ -84,14 +86,20 @@ function reader(ctx) {
   let book = null;
   let contents = [];
   let activeSection = null;
-  let mode = local.get("xz-book-mode", "original");
-  if (!["original", "modern", "parallel"].includes(mode)) mode = "original";
+  let mode = local.get("xz-book-mode", "parallel");
+  if (!["original", "modern", "parallel"].includes(mode)) mode = "parallel";
   let preferences = readingPreferences(local.json("xz-book-preferences"));
   let routeRestore = null;
   let saving = false;
   let saveTimer;
   let request = 0;
   let controller = new AbortController();
+  let sidebar = null;
+  let directoryOpen = local.get("xz-book-directory-open", "1") !== "0";
+  const wideDirectory = window.matchMedia("(min-width: 1100px)");
+  const pending = annotationNavigation.get(id);
+  annotationNavigation.delete(id);
+  let pendingAnnotation = pending && pending.userId === session.get().user?.id ? pending.annotation : null;
   const content = h("div", { class: "book-reading-content", "aria-label": "书籍正文" });
   const controls = h("nav", { class: "book-reading-controls", "aria-label": "阅读工具", hidden: true,
     onMouseDown: event => {
@@ -102,8 +110,30 @@ function reader(ctx) {
     } });
   const pagination = h("nav", { class: "book-reading-pagination", "aria-label": "正文翻页" });
   const heading = h("header", { class: "book-reading-header" });
+  const sidebarSlot = h("div", { class: "book-sidebar-slot" });
+  const readerBody = h("div", { class: "book-reader-body" }, controls, content, pagination);
   const node = h("div", { class: "book-reading" },
-    h("a", { class: "back-link", href: "#/books" }, icon("back"), "典籍书库"), heading, controls, content, pagination);
+    h("a", { class: "back-link", href: "#/books" }, icon("back"), "典籍书库"), heading,
+    h("div", { class: "book-reader-layout" }, sidebarSlot, readerBody));
+  const annotations = setupBookAnnotations({ content, book: () => book, getSection: () => activeSection,
+    getMode: () => book?.has_modern ? mode : "original", ctx,
+    onNavigate: annotation => {
+      if (annotation.anchor_status !== "matched") {
+        ctx.toast("底本或来源位置已变化，已打开来源页；原标记的位置仍待核对。");
+      }
+      if (annotation.kind === "highlight" && annotation.anchor_status === "matched") {
+        if (annotation.layer === "modern" && mode === "original") setMode("modern");
+        else if (annotation.layer === "original" && mode === "modern") setMode("original");
+      }
+      if (annotation.section_number === activeSection?.number) {
+        if (!annotations.locate(annotation)) content.scrollIntoView({ block: "start" });
+      } else {
+        annotationNavigation.set(id, { userId: session.get().user?.id, annotation });
+        savePosition();
+        ctx.navigate(readingPath(id, annotation.section_number));
+      }
+    } });
+  controls.after(annotations.statusNode);
 
   function applyPreferences() {
     content.style.setProperty("--reading-size", `${preferences.size}px`);
@@ -112,6 +142,11 @@ function reader(ctx) {
     content.dataset.paper = preferences.paper;
     content.dataset.layout = preferences.layout;
     content.dataset.mode = book?.has_modern ? mode : "original";
+    node.dataset.mode = content.dataset.mode;
+    node.dataset.hasModern = String(!!book?.has_modern);
+    for (const button of controls.querySelectorAll("[data-book-mode]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.bookMode === mode));
+    }
   }
   applyPreferences();
   function readingTop() {
@@ -140,6 +175,42 @@ function reader(ctx) {
     const rect = anchor.getBoundingClientRect();
     window.scrollTo(0, window.scrollY + rect.top + rect.height * position.offset - readingTop());
   }
+  function setMode(nextMode) {
+    if (!["original", "parallel", "modern"].includes(nextMode) || !book?.has_modern) return;
+    const position = capturePosition();
+    mode = nextMode;
+    local.set("xz-book-mode", mode);
+    applyPreferences();
+    requestAnimationFrame(() => annotations.onLayout());
+    if (position) restorePosition(position);
+  }
+  function syncDirectory() {
+    node.dataset.directory = directoryOpen ? "open" : "collapsed";
+    const button = controls.querySelector(".book-directory");
+    if (button && book) {
+      if (wideDirectory.matches) {
+        button.setAttribute("aria-expanded", String(directoryOpen));
+        button.setAttribute("aria-controls", "book-directory-sidebar");
+        button.removeAttribute("aria-haspopup");
+      } else {
+        button.removeAttribute("aria-expanded"); button.removeAttribute("aria-controls");
+        button.setAttribute("aria-haspopup", "dialog");
+      }
+      button.setAttribute("aria-label", `${wideDirectory.matches ? directoryOpen ? "收起" : "展开" : "打开"}${book.title}目录，当前第 ${activeSection?.number || 1} 页`);
+      button.querySelector("span").textContent = wideDirectory.matches
+        ? directoryOpen ? "收起目录" : `${book.title} · 展开目录` : `${book.title} · ${book.has_modern ? "目录" : "书页"}`;
+    }
+    requestAnimationFrame(() => { sidebar?.refresh(); annotations.onLayout(); });
+  }
+  function setDirectory(expanded) {
+    const position = capturePosition();
+    directoryOpen = expanded; local.set("xz-book-directory-open", expanded ? "1" : "0");
+    syncDirectory();
+    if (position) restorePosition(position);
+    if (!expanded) controls.querySelector(".book-directory")?.focus({ preventScroll: true });
+  }
+  wideDirectory.addEventListener("change", syncDirectory);
+  ctx.cleanup(() => { wideDirectory.removeEventListener("change", syncDirectory); sidebar?.destroy(); });
   const trackScroll = () => { clearTimeout(saveTimer); saveTimer = setTimeout(savePosition, 300); };
   window.addEventListener("scroll", trackScroll, { passive: true });
   window.addEventListener("pagehide", savePosition);
@@ -162,6 +233,8 @@ function reader(ctx) {
     const table = block.presentation === "table" || block.role === "table";
     const transcribed = diagram || table;
     const original = h("div", { class: "book-original", lang: "zh-Hant" },
+      book.has_modern && !["note", "commentary"].includes(block.role) && !transcribed
+        ? h("span", { class: "book-layer book-original-label" }, "原文") : null,
       ["note", "commentary"].includes(block.role) ? h("span", { class: "book-layer" }, block.role === "note" ? "原注" : "评注") : null,
       transcribed ? h("span", { class: "book-layer" }, block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写") : null,
       h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null,
@@ -175,7 +248,7 @@ function reader(ctx) {
         block.source_text === false ? h("p", { class: "books-notice" }, "此处是图形结构的文字转写，位置与连接请以书影为准。") : null,
         original, notes)
       : h("div", null, original, notes);
-    return h("section", { class: `book-block book-role-${block.role}` }, layer,
+    return h("section", { class: `book-block book-role-${block.role}`, dataset: { blockId: block.id } }, layer,
       block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"), h("p", null, block.modern)) : null);
   }
 
@@ -186,7 +259,9 @@ function reader(ctx) {
     content.dataset.mode = book.has_modern ? mode : "original";
     fill(content,
       h("header", { class: "book-section-header" }, h("p", { class: "books-source" }, section.location),
-        section.title !== section.location ? h("h2", null, section.title) : null),
+        section.title !== section.location ? h("h2", null, section.title) : null,
+        book.has_modern ? h("div", { class: "book-comparison-heading", "aria-hidden": "true" },
+          h("span", null, "原文"), h("span", null, "白话")) : null),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? section.partial
@@ -201,6 +276,11 @@ function reader(ctx) {
     // Page notes were added after saved reading positions; keep existing content indices stable.
     [...content.children].filter(child => !child.classList.contains("book-page-notes"))
       .forEach((child, index) => child.dataset.readingAnchor = index);
+    for (const block of content.querySelectorAll(".book-block")) {
+      if (book.has_modern && !block.querySelector(".book-modern")) {
+        block.append(h("span", { class: "book-modern-empty" }, "本段暂无白话，保留原文供阅读。"));
+      }
+    }
     fill(pagination,
       section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${readingPath(id, section.number - 1)}` }, "上一页") : h("span"),
       h("span", null, `${section.number} / ${book.section_count}`),
@@ -213,22 +293,32 @@ function reader(ctx) {
   }
   function paintControls(number) {
     fill(controls,
+      h("div", { class: "book-toolbar-main" },
       h("button", { type: "button", class: "btn btn-ghost book-page-prev", disabled: number <= 1, "aria-label": "上一页", onClick: () => go(number - 1) }, "←"),
       h("button", { type: "button", class: "btn btn-ghost book-directory",
         "aria-label": `打开${book.title}目录，当前第 ${number} ${book.has_modern ? "篇" : "页"}，共 ${book.section_count} ${book.has_modern ? "篇" : "页"}`,
-        onClick: event => openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget }) },
+        onClick: event => wideDirectory.matches ? setDirectory(!directoryOpen)
+          : openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget }) },
         icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, `${number} / ${book.section_count}`)),
-      h("button", { type: "button", class: "btn btn-ghost book-settings-open", onClick: event => openBookSettings({ preferences, mode, hasModern: book.has_modern, returnFocus: event.currentTarget,
+      h("button", { type: "button", class: "btn btn-ghost book-settings-open", "aria-label": "字号与排版设置", onClick: event => openBookSettings({ preferences, mode, hasModern: false, returnFocus: event.currentTarget,
         onChange: (prefs, nextMode) => {
           const position = capturePosition(); preferences = readingPreferences(prefs); mode = nextMode;
           local.setJson("xz-book-preferences", preferences); local.set("xz-book-mode", mode); applyPreferences();
+          requestAnimationFrame(() => annotations.onLayout());
           if (position) restorePosition(position);
         } }) }, "Aa", h("span", null, "设置")),
-      h("button", { type: "button", class: "btn btn-ghost book-page-next", disabled: number >= book.section_count, "aria-label": "下一页", onClick: () => go(number + 1) }, "→"));
+      h("button", { type: "button", class: "btn btn-ghost book-notes-open", "aria-label": "打开笔记与书签", onClick: event => annotations.openNotes(event.currentTarget) }, "笔记"),
+      h("button", { type: "button", class: "btn btn-ghost book-page-next", disabled: number >= book.section_count, "aria-label": "下一页", onClick: () => go(number + 1) }, "→")),
+      book.has_modern ? h("div", { class: "book-mode-switch", role: "group", "aria-label": "阅读模式" },
+        [["original", "原文"], ["parallel", "对照"], ["modern", "白话"]].map(([value, label]) =>
+          h("button", { type: "button", class: "book-mode-option", dataset: { bookMode: value },
+            "aria-pressed": String(mode === value), onClick: () => setMode(value) }, label))) : null);
+    syncDirectory();
   }
   async function openSection(number) {
     const token = ++request;
     saving = false;
+    annotations.onSection(null);
     content.setAttribute("aria-busy", "true");
     controller.abort(); controller = new AbortController();
     fill(content, h("p", { role: "status" }, "正在打开正文…"));
@@ -237,10 +327,18 @@ function reader(ctx) {
       const section = await get(`/api/books/${encodeURIComponent(id)}/sections/${number}`, { signal: controller.signal });
       if (!ctx.isCurrent() || token !== request) return;
       activeSection = section; paintSection(); paintControls(number); content.setAttribute("aria-busy", "false");
+      sidebar?.destroy();
+      sidebar = createBookSidebar({ book, contents, current: number, onSelect: go,
+        onNotes: returnFocus => annotations.openNotes(returnFocus), onCollapse: () => setDirectory(false) });
+      fill(sidebarSlot, sidebar.node);
+      annotations.onSection(section);
       const position = readingPosition(local.json(positionKey(id)), book.section_count);
       requestAnimationFrame(() => {
         if (!ctx.isCurrent() || token !== request) return;
-        if (typeof routeRestore === "number") window.scrollTo(0, routeRestore);
+        if (pendingAnnotation) {
+          const target = pendingAnnotation; pendingAnnotation = null;
+          if (!annotations.locate(target)) window.scrollTo(0, window.scrollY + content.getBoundingClientRect().top - readingTop());
+        } else if (typeof routeRestore === "number") window.scrollTo(0, routeRestore);
         else if (position?.number === number) restorePosition(position);
         else if (number > 1) window.scrollTo(0, window.scrollY + content.getBoundingClientRect().top - readingTop());
         routeRestore = null; saving = true; savePosition();
@@ -254,7 +352,7 @@ function reader(ctx) {
   ctx.cleanup(() => controller.abort());
   const keyboard = event => {
     if (!activeSection || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
-        document.body.classList.contains("is-locked") || event.target.closest?.("input, textarea, select, [contenteditable=true], pre")) return;
+        document.body.classList.contains("is-locked") || event.target.closest?.("input, textarea, select, button, a, [contenteditable=true], pre")) return;
     if (window.getSelection()?.toString()) return;
     if (event.key === "ArrowLeft") { event.preventDefault(); go(activeSection.number - 1); }
     if (event.key === "ArrowRight") { event.preventDefault(); go(activeSection.number + 1); }
