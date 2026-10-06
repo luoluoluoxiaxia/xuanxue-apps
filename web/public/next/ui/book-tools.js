@@ -1,20 +1,42 @@
-import { h, fill } from "../lib/dom.js?v=n13";
-import { filterContents } from "../lib/books.js?v=n13";
-import { openSheet } from "./overlay.js?v=n13";
+import { h, fill } from "../lib/dom.js?v=n14";
+import { filterContents } from "../lib/books.js?v=n14";
+import { openSheet } from "./overlay.js?v=n14";
 
 export function openBookContents({ book, contents, current, onSelect, returnFocus }) {
   const readingY = window.scrollY;
   const search = h("input", { type: "search", placeholder: "搜索标题、来源页，或输入阅读页码", "aria-label": "搜索目录" });
   const count = h("p", { class: "books-count", role: "status" });
   const rows = h("div", { class: "book-contents-list" });
+  let closed = false;
+  let scrollFrame;
+  let rowsObserver;
   const jump = h("input", { type: "number", min: 1, max: book.section_count, value: current, "aria-label": "跳转阅读页码", required: true });
   const go = h("form", { class: "book-page-jump", onSubmit: event => {
     event.preventDefault(); if (!go.reportValidity()) return;
     sheet.close(); onSelect(Number(jump.value));
   } }, h("label", null, `阅读页码（1–${book.section_count}）`, jump), h("button", { type: "submit", class: "btn btn-soft" }, "跳转"));
+  const searchArea = h("div", { class: "book-contents-search" }, search, go, count,
+    h("a", { class: "book-contents-library", href: "#/books" }, "返回书库"));
   const sheet = openSheet({ title: `${book.title} · ${book.has_modern ? "目录" : "书页"}`, className: "sheet-book-contents", returnFocus,
-    body: [h("div", { class: "book-contents-search" }, search, go, count), rows],
-    onClose: reason => { if (reason !== "route") window.scrollTo(0, readingY); } });
+    body: [searchArea, rows],
+    onClose: reason => {
+      closed = true; cancelAnimationFrame(scrollFrame);
+      rowsObserver?.disconnect();
+      if (reason !== "route") window.scrollTo(0, readingY);
+    } });
+  function positionContents() {
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = requestAnimationFrame(() => {
+      if (closed) return;
+      const row = rows.querySelector('[aria-current="page"]');
+      if (search.value.trim() || !row) { rows.scrollTop = 0; return; }
+      // 只滚动目录容器，避免 scrollIntoView 把其下的阅读正文一起移走。
+      const rect = rows.getBoundingClientRect();
+      const scale = rows.offsetHeight ? rect.height / rows.offsetHeight : 1;
+      const top = (row.getBoundingClientRect().top - rect.top) / (scale || 1) + rows.scrollTop;
+      rows.scrollTop = Math.max(0, top - Math.max(0, (rows.clientHeight - row.offsetHeight) / 2));
+    });
+  }
   function paint() {
     const matches = filterContents(contents, search.value);
     count.textContent = `${matches.length} / ${contents.length} 项 · 当前第 ${current} ${book.has_modern ? "篇" : "页"}`;
@@ -24,9 +46,15 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
       h("span", { class: "book-contents-number" }, item.number),
       h("span", null, h("b", null, item.title), item.title !== item.location ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null)) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
+    positionContents();
+  }
+  // 手机搜索框唤起键盘后，目录可视高度会改变；空搜索仍保持当前页可见。
+  if (typeof ResizeObserver === "function") {
+    rowsObserver = new ResizeObserver(() => { if (!search.value.trim()) positionContents(); });
+    rowsObserver.observe(rows);
   }
   search.addEventListener("input", paint); paint();
-  requestAnimationFrame(() => search.focus({ preventScroll: true }));
+  requestAnimationFrame(() => { if (!closed) search.focus({ preventScroll: true }); });
   return sheet;
 }
 
@@ -43,6 +71,8 @@ export function openBookSettings({ preferences, mode, hasModern, onChange, retur
   return openSheet({ title: "阅读设置", className: "sheet-book-settings", returnFocus,
     body: h("div", { class: "book-settings" },
       hasModern ? field("阅读模式", "mode", [["original", "原文"], ["parallel", "原文与白话"], ["modern", "白话"]]) : null,
+      field("排版", "layout", [["continuous", "连续排版"], ["source", "保留原稿换行"]]),
+      h("p", { class: "books-notice" }, "连续排版的正文按屏幕宽度换行，诗诀与表格保留原结构。"),
       field("字号", "size", [[18, "较小 · 18"], [20, "标准 · 20"], [22, "较大 · 22"], [24, "大字 · 24"]]),
       field("行距", "line", [[1.8, "紧凑"], [2, "舒适"], [2.2, "宽松"]]),
       field("字体", "font", [["serif", "宋体"], ["sans", "黑体"]]),

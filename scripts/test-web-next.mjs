@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n13`, base).href);
+const load = path => import(new URL(`${path}?v=n14`, base).href);
 
 test('book navigation rejects invalid saved pages and encodes book identities', async () => {
   const { readingPath, readingNumber } = await load('lib/books.js');
@@ -31,17 +31,48 @@ test('book filters keep working drafts and unavailable records visible with thei
 
 test('reading settings and bookmarks recover safely from corrupt or stale local storage', async () => {
   const { readingPreferences, readingPosition } = await load('lib/books.js');
-  const defaults = { size: 20, line: 2, font: 'serif', paper: 'white' };
-  for (const value of [null, 'broken', { size: 900, line: -1, font: 'injected', paper: 'other' }]) {
+  const defaults = { size: 20, line: 2, font: 'serif', paper: 'white', layout: 'continuous' };
+  for (const value of [null, 'broken', [], { size: 900, line: -1, font: 'injected', paper: 'other', layout: 'other' }]) {
     assert.deepEqual(readingPreferences(value), defaults);
   }
-  const prefs = { size: 24, line: 2.2, font: 'sans', paper: 'warm' };
+  const prefs = { size: 24, line: 2.2, font: 'sans', paper: 'warm', layout: 'source' };
   assert.deepEqual(readingPreferences(prefs), prefs);
+  assert.deepEqual(readingPreferences({ size: 24, line: 2.2, font: 'sans', paper: 'warm' }), { ...prefs, layout: 'continuous' });
+  for (const layout of [null, 1, [], 'SOURCE', 'normal']) assert.equal(readingPreferences({ layout }).layout, 'continuous');
   const bookmark = { number: 7, anchor: 3, offset: .35, updatedAt: 1000 };
   assert.deepEqual(readingPosition(bookmark, 20), bookmark);
   for (const value of [null, '7', { ...bookmark, number: 21 }, { ...bookmark, number: '7' },
     { ...bookmark, anchor: -1 }, { ...bookmark, anchor: 1.5 }, { ...bookmark, offset: Infinity },
     { ...bookmark, offset: 1.1 }, { ...bookmark, updatedAt: 0 }]) assert.equal(readingPosition(value, 20), null);
+});
+
+test('continuous prose marks CJK, word and paragraph breaks without changing any source character', async () => {
+  const { sourceBreaks } = await load('lib/books.js');
+  const text = '天干\n地支\n\n甲乙\n\n\nabc\n123\n漢字\nabc \nword\n';
+  const block = { text, role: 'text', presentation: 'prose', source_text: true };
+  const before = structuredClone(block);
+  const parts = sourceBreaks(block);
+  assert.equal(parts.map(part => part.text).join(''), text);
+  assert.deepEqual(parts.filter(part => part.kind).map(part => [part.text, part.kind]), [
+    ['\n', 'soft'], ['\n\n', 'paragraph'], ['\n\n\n', 'paragraph'],
+    ['\n', 'space'], ['\n', 'soft'], ['\n', 'soft'], ['\n', 'soft'], ['\n', 'soft'],
+  ]);
+  assert.deepEqual(block, before);
+  for (const role of ['prose', 'note', 'commentary']) {
+    assert.equal(sourceBreaks({ ...block, role }).map(part => part.text).join(''), text);
+    assert.equal(sourceBreaks({ ...block, role }).find(part => part.kind)?.kind, 'soft');
+  }
+  assert.deepEqual(sourceBreaks({ text: '', role: 'text' }), [{ text: '', kind: null }]);
+});
+
+test('continuous prose never marks verse, heading, diagram or table structure for folding', async () => {
+  const { sourceBreaks } = await load('lib/books.js');
+  const text = '甲\t乙\n丙\t丁\n\n戊';
+  const block = { text, role: 'text', presentation: 'prose', source_text: true };
+  for (const fields of [{ role: 'verse' }, { role: 'heading' }, { role: 'table' },
+    { role: 'diagram_caption' }, { presentation: 'table' }, { presentation: 'diagram' }, { source_text: false }]) {
+    assert.deepEqual(sourceBreaks({ ...block, ...fields }), [{ text, kind: null }]);
+  }
 });
 
 test('contents search matches the supplied title, provenance and exact reading page', async () => {

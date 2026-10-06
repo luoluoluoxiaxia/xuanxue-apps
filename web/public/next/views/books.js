@@ -1,12 +1,12 @@
-import { h, fill } from "../lib/dom.js?v=n13";
-import { icon } from "../lib/icons.js?v=n13";
-import { get } from "../lib/api.js?v=n13";
-import { local } from "../lib/store.js?v=n13";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n13";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition } from "../lib/books.js?v=n13";
-import { errorView, stateView } from "../ui/bits.js?v=n13";
-import { openBookImage } from "../ui/book-image.js?v=n13";
-import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n13";
+import { h, fill } from "../lib/dom.js?v=n14";
+import { icon } from "../lib/icons.js?v=n14";
+import { get } from "../lib/api.js?v=n14";
+import { local } from "../lib/store.js?v=n14";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n14";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n14";
+import { errorView, stateView } from "../ui/bits.js?v=n14";
+import { openBookImage } from "../ui/book-image.js?v=n14";
+import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n14";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -110,6 +110,7 @@ function reader(ctx) {
     content.style.setProperty("--reading-line", preferences.line);
     content.style.setProperty("--reading-font", `var(--font-${preferences.font})`);
     content.dataset.paper = preferences.paper;
+    content.dataset.layout = preferences.layout;
     content.dataset.mode = book?.has_modern ? mode : "original";
   }
   applyPreferences();
@@ -164,7 +165,9 @@ function reader(ctx) {
       ["note", "commentary"].includes(block.role) ? h("span", { class: "book-layer" }, block.role === "note" ? "原注" : "评注") : null,
       transcribed ? h("span", { class: "book-layer" }, block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写") : null,
       h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null,
-        ...(transcribed ? { tabindex: "0", "aria-label": `${diagram ? "图式" : "表格"}转写，可横向滚动` } : {}) }, block.text));
+        ...(transcribed ? { tabindex: "0", "aria-label": `${diagram ? "图式" : "表格"}转写，可横向滚动` } : {}) },
+        sourceBreaks(block).map(part => part.kind
+          ? h("span", { class: "book-source-break", dataset: { kind: part.kind } }, part.text) : part.text)));
     const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
       block.notes.map(note => h("p", null, note))) : null;
     const layer = transcribed && (hasFigure || diagram)
@@ -186,7 +189,9 @@ function reader(ctx) {
         section.title !== section.location ? h("h2", null, section.title) : null),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
-        section.notice ? h("p", null, section.notice) : null) : null,
+        section.notice ? section.partial
+          ? h("details", { class: "book-source-notice" }, h("summary", null, "原稿整理说明"), h("p", null, section.notice))
+          : h("p", null, section.notice) : null) : null,
       section.page_notes?.length ? h("details", { class: "book-notes book-page-notes" },
         h("summary", null, `本页说明 · ${section.page_notes.length}`),
         section.page_notes.map(note => h("p", null, note))) : null,
@@ -209,8 +214,10 @@ function reader(ctx) {
   function paintControls(number) {
     fill(controls,
       h("button", { type: "button", class: "btn btn-ghost book-page-prev", disabled: number <= 1, "aria-label": "上一页", onClick: () => go(number - 1) }, "←"),
-      h("button", { type: "button", class: "btn btn-ghost book-directory", onClick: event => openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget }) },
-        icon("book"), h("span", null, book.has_modern ? "目录" : "书页"), h("small", null, `${number} / ${book.section_count}`)),
+      h("button", { type: "button", class: "btn btn-ghost book-directory",
+        "aria-label": `打开${book.title}目录，当前第 ${number} ${book.has_modern ? "篇" : "页"}，共 ${book.section_count} ${book.has_modern ? "篇" : "页"}`,
+        onClick: event => openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget }) },
+        icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, `${number} / ${book.section_count}`)),
       h("button", { type: "button", class: "btn btn-ghost book-settings-open", onClick: event => openBookSettings({ preferences, mode, hasModern: book.has_modern, returnFocus: event.currentTarget,
         onChange: (prefs, nextMode) => {
           const position = capturePosition(); preferences = readingPreferences(prefs); mode = nextMode;
@@ -272,7 +279,7 @@ function reader(ctx) {
   }, (path, options) => detailCache.has(id) ? Promise.resolve(detailCache.get(id)) : get(path, options));
   const refresh = () => { detailCache.delete(id); return life.loader.load(`/api/books/${encodeURIComponent(id)}`); };
   life.setRefresh(refresh); life.loader.load(`/api/books/${encodeURIComponent(id)}`);
-  return { node, title: "典籍阅读", onRestore(value) { routeRestore = value; } };
+  return { node, title: "典籍阅读", layout: "book-reader", onRestore(value) { routeRestore = value; } };
 }
 
 export function render(ctx) { return ctx.params.id ? reader(ctx) : library(ctx); }
