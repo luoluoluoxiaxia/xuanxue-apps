@@ -1,13 +1,13 @@
 // 意见反馈面板：类型可选、内容必填（1–4000 字）、联系方式可选。
 // 只提交用户写下的文字、当前页面路由，以及（从解读页打开时）档案 / 盘 / 对话 / 任务的编号；不附带出生信息或对话内容。
 // 没提交的内容存为本机草稿（退出登录时随其他草稿一起清除），误关面板或刷新页面都不会丢。
-import { h, autoGrow, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n10";
-import { icon } from "../lib/icons.js?v=n10";
-import { post } from "../lib/api.js?v=n10";
-import { local } from "../lib/store.js?v=n10";
-import { copyText } from "../lib/share.js?v=n10";
-import { openSheet } from "../ui/overlay.js?v=n10";
-import { toast } from "../ui/toast.js?v=n10";
+import { h, autoGrow, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n11";
+import { icon } from "../lib/icons.js?v=n11";
+import { post } from "../lib/api.js?v=n11";
+import { local } from "../lib/store.js?v=n11";
+import { copyText } from "../lib/share.js?v=n11";
+import { openSheet } from "../ui/overlay.js?v=n11";
+import { toast } from "../ui/toast.js?v=n11";
 
 const TYPES = ["体验建议", "断语不准", "想要功能"];
 const MESSAGE_MAX = 4000;
