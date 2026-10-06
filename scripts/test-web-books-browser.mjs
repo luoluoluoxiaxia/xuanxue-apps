@@ -28,7 +28,7 @@ for(const width of [1360,390]) {
  const position=await p.evaluate(()=>JSON.parse(localStorage.getItem('xz-book-position:ziping-zhenquan')));assert.equal(position.number,2);
  const before=await p.evaluate(()=>scrollY);await p.reload();await loaded();await p.waitForTimeout(150);assert(Math.abs(await p.evaluate(()=>scrollY)-before)<10,'reload paragraph position');
  assert(await p.locator('.book-modern').first().isVisible());
- await p.locator('.book-directory').click();await p.getByLabel('搜索目录').fill('论用神');assert(await p.locator('.book-contents-item').count()>0);
+ await p.locator('.book-directory').click();assert(Math.abs(await p.evaluate(()=>scrollY)-before)<2,'opening contents preserves paragraph position');await p.getByLabel('搜索目录').fill('论用神');assert(await p.locator('.book-contents-item').count()>0);
  await p.getByLabel('搜索目录').fill('2');assert.equal(await p.locator('.book-contents-item').count(),1);
  await p.getByLabel('跳转阅读页码').fill('9999');await p.getByRole('button',{name:'跳转',exact:true}).click();assert(await p.locator('.sheet-book-contents').isVisible());
  await p.getByLabel('跳转阅读页码').fill('3');await p.getByRole('button',{name:'跳转',exact:true}).click();await p.waitForURL('**page=3');await loaded();

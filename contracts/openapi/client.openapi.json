@@ -1296,6 +1296,13 @@
             "title": "Number",
             "type": "integer"
           },
+          "page_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Page Notes",
+            "type": "array"
+          },
           "partial": {
             "title": "Partial",
             "type": "boolean"

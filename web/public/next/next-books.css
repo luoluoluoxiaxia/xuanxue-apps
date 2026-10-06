@@ -39,7 +39,7 @@
 .book-page-notice { border-left: 3px solid var(--brand); background: var(--brand-tint); padding: 14px 18px; margin-bottom: 24px; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.8; }
 .book-notes { margin-top: 10px; color: var(--ink-3); }
 .book-notes summary { cursor: pointer; font-size: 13px; }
-.book-notes p { font-family: var(--font-sans); font-size: 14px; line-height: 1.8; }
+.book-notes p { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-sans); font-size: 14px; line-height: 1.8; }
 .book-transcription { max-width: 100%; margin: 10px 0; padding: 14px; overflow-x: auto; white-space: pre; font-family: monospace; font-size: 16px; line-height: 1.7; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); tab-size: 4; }
 .book-diagram-transcription { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; }
 .book-diagram-transcription > summary { cursor: pointer; color: var(--ink-3); font-size: 14px; }

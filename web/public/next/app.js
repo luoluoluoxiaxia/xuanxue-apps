@@ -1,23 +1,23 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n11";
-import { icon, brandMark } from "./lib/icons.js?v=n11";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n11";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n11";
-import { get } from "./lib/api.js?v=n11";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n11";
-import { toast } from "./ui/toast.js?v=n11";
-import { openAuth } from "./views/auth.js?v=n11";
-import * as FeedView from "./views/feed.js?v=n11";
-import * as PostView from "./views/post.js?v=n11";
-import * as AskView from "./views/ask.js?v=n11";
-import * as ReadingView from "./views/reading.js?v=n11";
-import * as TodayView from "./views/today.js?v=n11";
-import * as InboxView from "./views/inbox.js?v=n11";
-import * as MeView from "./views/me.js?v=n11";
-import * as BooksView from "./views/books.js?v=n11";
-import { openFeedback } from "./views/feedback.js?v=n11";
-import { routeFromLegacy } from "./lib/legacy.js?v=n11";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n12";
+import { icon, brandMark } from "./lib/icons.js?v=n12";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n12";
+import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n12";
+import { get } from "./lib/api.js?v=n12";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n12";
+import { toast } from "./ui/toast.js?v=n12";
+import { openAuth } from "./views/auth.js?v=n12";
+import * as FeedView from "./views/feed.js?v=n12";
+import * as PostView from "./views/post.js?v=n12";
+import * as AskView from "./views/ask.js?v=n12";
+import * as ReadingView from "./views/reading.js?v=n12";
+import * as TodayView from "./views/today.js?v=n12";
+import * as InboxView from "./views/inbox.js?v=n12";
+import * as MeView from "./views/me.js?v=n12";
+import * as BooksView from "./views/books.js?v=n12";
+import { openFeedback } from "./views/feedback.js?v=n12";
+import { routeFromLegacy } from "./lib/legacy.js?v=n12";
 
 const THEME_KEY = "xz-next-theme";
 

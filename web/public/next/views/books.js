@@ -1,12 +1,12 @@
-import { h, fill } from "../lib/dom.js?v=n11";
-import { icon } from "../lib/icons.js?v=n11";
-import { get } from "../lib/api.js?v=n11";
-import { local } from "../lib/store.js?v=n11";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n11";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition } from "../lib/books.js?v=n11";
-import { errorView, stateView } from "../ui/bits.js?v=n11";
-import { openBookImage } from "../ui/book-image.js?v=n11";
-import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n11";
+import { h, fill } from "../lib/dom.js?v=n12";
+import { icon } from "../lib/icons.js?v=n12";
+import { get } from "../lib/api.js?v=n12";
+import { local } from "../lib/store.js?v=n12";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n12";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition } from "../lib/books.js?v=n12";
+import { errorView, stateView } from "../ui/bits.js?v=n12";
+import { openBookImage } from "../ui/book-image.js?v=n12";
+import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n12";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -93,7 +93,13 @@ function reader(ctx) {
   let request = 0;
   let controller = new AbortController();
   const content = h("div", { class: "book-reading-content", "aria-label": "书籍正文" });
-  const controls = h("nav", { class: "book-reading-controls", "aria-label": "阅读工具", hidden: true });
+  const controls = h("nav", { class: "book-reading-controls", "aria-label": "阅读工具", hidden: true,
+    onMouseDown: event => {
+      const button = event.target.closest?.("button:not([disabled])");
+      if (event.button !== 0 || !button) return;
+      // Chrome 的默认聚焦会把 sticky 按钮滚回布局位置，先保持正文位置再打开工具。
+      event.preventDefault(); button.focus({ preventScroll: true });
+    } });
   const pagination = h("nav", { class: "book-reading-pagination", "aria-label": "正文翻页" });
   const heading = h("header", { class: "book-reading-header" });
   const node = h("div", { class: "book-reading" },
@@ -157,7 +163,8 @@ function reader(ctx) {
     const original = h("div", { class: "book-original", lang: "zh-Hant" },
       ["note", "commentary"].includes(block.role) ? h("span", { class: "book-layer" }, block.role === "note" ? "原注" : "评注") : null,
       transcribed ? h("span", { class: "book-layer" }, block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写") : null,
-      h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null }, block.text));
+      h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null,
+        ...(transcribed ? { tabindex: "0", "aria-label": `${diagram ? "图式" : "表格"}转写，可横向滚动` } : {}) }, block.text));
     const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
       block.notes.map(note => h("p", null, note))) : null;
     const layer = transcribed && (hasFigure || diagram)
@@ -180,9 +187,12 @@ function reader(ctx) {
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? h("p", null, section.notice) : null) : null,
+      section.page_notes?.length ? h("details", { class: "book-notes book-page-notes" },
+        h("summary", null, `本页说明 · ${section.page_notes.length}`),
+        section.page_notes.map(note => h("p", null, note))) : null,
       figures.map(renderFigure),
       section.blocks.length ? section.blocks.map(block => renderBlock(block, figures.length > 0))
-        : h("p", null, "本页没有录文，保留此页的来源位置。"));
+        : h("p", null, figures.length ? "本页为书影内容，未录连续正文。" : "保留此页的来源位置，页面情况见上方说明。"));
     [...content.children].forEach((child, index) => child.dataset.readingAnchor = index);
     fill(pagination,
       section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${readingPath(id, section.number - 1)}` }, "上一页") : h("span"),
