@@ -1,13 +1,13 @@
 // 八字命盘面板：四柱、命局速览、五行分布、大运流年与走势；进阶里另有所选大运的机械事实、当前流月引动与十二流月。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n12";
-import { icon } from "../lib/icons.js?v=n12";
-import { local } from "../lib/store.js?v=n12";
-import { TREND_NOTE } from "../lib/copy.js?v=n12";
-import { elementClass } from "./gua.js?v=n12";
-import { openGlossary } from "./glossary.js?v=n12";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n12";
+import { h, svg, esc } from "../lib/dom.js?v=n13";
+import { icon } from "../lib/icons.js?v=n13";
+import { local } from "../lib/store.js?v=n13";
+import { TREND_NOTE } from "../lib/copy.js?v=n13";
+import { elementClass } from "./gua.js?v=n13";
+import { openGlossary } from "./glossary.js?v=n13";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n13";
 
 const MODE_KEY = "xz-next-bazi-mode";
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];

@@ -1,9 +1,9 @@
 // 分享面板：先给出复制链接，同时生成一张带二维码的分享长图（帖子页、解读页共用）。
-import { h } from "../lib/dom.js?v=n12";
-import { icon } from "../lib/icons.js?v=n12";
-import { sharePost, renderShareImage, trackShare } from "../lib/share.js?v=n12";
-import { openSheet } from "./overlay.js?v=n12";
-import { toast } from "./toast.js?v=n12";
+import { h } from "../lib/dom.js?v=n13";
+import { icon } from "../lib/icons.js?v=n13";
+import { sharePost, renderShareImage, trackShare } from "../lib/share.js?v=n13";
+import { openSheet } from "./overlay.js?v=n13";
+import { toast } from "./toast.js?v=n13";
 
 const inWeChat = () => typeof navigator !== "undefined" && /MicroMessenger/i.test(navigator.userAgent || "");
 

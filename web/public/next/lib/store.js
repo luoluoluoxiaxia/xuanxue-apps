@@ -1,5 +1,5 @@
 // 极简状态容器与账户会话：账户、额度与消息数都以服务端返回为准，客户端只缓存展示。
-import { get, post, setCsrfToken } from "./api.js?v=n12";
+import { get, post, setCsrfToken } from "./api.js?v=n13";
 
 export function createStore(initial) {
   let state = initial;

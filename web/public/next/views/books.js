@@ -1,12 +1,12 @@
-import { h, fill } from "../lib/dom.js?v=n12";
-import { icon } from "../lib/icons.js?v=n12";
-import { get } from "../lib/api.js?v=n12";
-import { local } from "../lib/store.js?v=n12";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n12";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition } from "../lib/books.js?v=n12";
-import { errorView, stateView } from "../ui/bits.js?v=n12";
-import { openBookImage } from "../ui/book-image.js?v=n12";
-import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n12";
+import { h, fill } from "../lib/dom.js?v=n13";
+import { icon } from "../lib/icons.js?v=n13";
+import { get } from "../lib/api.js?v=n13";
+import { local } from "../lib/store.js?v=n13";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n13";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition } from "../lib/books.js?v=n13";
+import { errorView, stateView } from "../ui/bits.js?v=n13";
+import { openBookImage } from "../ui/book-image.js?v=n13";
+import { openBookContents, openBookSettings } from "../ui/book-tools.js?v=n13";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -193,7 +193,9 @@ function reader(ctx) {
       figures.map(renderFigure),
       section.blocks.length ? section.blocks.map(block => renderBlock(block, figures.length > 0))
         : h("p", null, figures.length ? "本页为书影内容，未录连续正文。" : "保留此页的来源位置，页面情况见上方说明。"));
-    [...content.children].forEach((child, index) => child.dataset.readingAnchor = index);
+    // Page notes were added after saved reading positions; keep existing content indices stable.
+    [...content.children].filter(child => !child.classList.contains("book-page-notes"))
+      .forEach((child, index) => child.dataset.readingAnchor = index);
     fill(pagination,
       section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${readingPath(id, section.number - 1)}` }, "上一页") : h("span"),
       h("span", null, `${section.number} / ${book.section_count}`),
