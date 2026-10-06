@@ -8,7 +8,19 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n14`, base).href);
+const load = path => import(new URL(`${path}?v=n15`, base).href);
+
+test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
+  const { get } = await load('lib/api.js');
+  const previous = globalThis.fetch;
+  const aborted = new DOMException('Response body aborted', 'AbortError');
+  try {
+    globalThis.fetch = async () => ({ ok: false, status: 401, text: async () => { throw aborted; } });
+    await assert.rejects(get('/api/books/test/annotations'), error => error === aborted);
+    globalThis.fetch = async () => ({ ok: true, status: 200, text: async () => { throw new TypeError('Disconnected while reading'); } });
+    await assert.rejects(get('/api/books/test/annotations'), error => error.status === 0 && error.isNetwork);
+  } finally { globalThis.fetch = previous; }
+});
 
 test('book navigation rejects invalid saved pages and encodes book identities', async () => {
   const { readingPath, readingNumber } = await load('lib/books.js');

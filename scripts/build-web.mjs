@@ -50,6 +50,11 @@ const required = [
   "vendor/licenses/LICENSE-administrative-divisions-of-china",
   "vendor/qrcode-generator-2.0.4.mjs",
   "vendor/qrcode-generator-2.0.4.LICENSE.txt",
+  "vendor/readium-decorator-1.2.5.js",
+  "vendor/readium-decorator-1.2.5.LICENSE.txt",
+  "vendor/readium-decorator-1.2.5.THIRD-PARTY-LICENSES.txt",
+  "vendor/readium-decorator-1.2.5.NOTICE.txt",
+  "vendor/readium-decorator-1.2.5.PROVENANCE.json",
   "maps/china-geojson-1.0.4.json",
   "maps/china-map-geojson-1.0.4.LICENSE.txt",
 ];

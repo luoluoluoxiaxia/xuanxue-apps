@@ -68,7 +68,15 @@ export async function api(path, options = {}) {
     throw new ApiError(0, "网络连接不稳定，请检查网络后重试");
   }
   let data = null;
-  const text = await response.text().catch(() => "");
+  let text;
+  try {
+    text = await response.text();
+  } catch (error) {
+    // Reading a streamed response can be cancelled after its headers arrive.
+    // Preserve cancellation so a stale 401 cannot invalidate a newer session.
+    if (error?.name === "AbortError") throw error;
+    throw new ApiError(0, "网络连接不稳定，请检查网络后重试");
+  }
   if (text) {
     try { data = JSON.parse(text); } catch (_) { data = null; }
   }

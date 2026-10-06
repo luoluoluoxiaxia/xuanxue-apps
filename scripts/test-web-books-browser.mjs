@@ -15,10 +15,14 @@ for(const width of [1360,390]) {
    await p.locator('.book-reading-content[aria-busy=false]').waitFor();
    await p.locator('.book-block').first().waitFor(); await p.waitForTimeout(80);
  };
+ const directory=async()=>{const wide=width>=1100;const surface=p.locator(wide?'.book-sidebar':'.sheet-book-contents');if(!wide||!await surface.isVisible())await p.locator('.book-directory').click();await surface.waitFor();return surface;};
+ const closeDirectory=async()=>{if(width<1100){await p.keyboard.press('Escape');await p.locator('.sheet-book-contents').waitFor({state:'detached'});}};
  await p.goto(base+'/#/books');await p.locator('.books-card').last().waitFor();assert.equal(await p.locator('.books-card').count(),17);
  await p.getByLabel('搜索书名').fill('子平');assert.equal(await p.locator('.books-card').count(),1);
  await p.locator('.books-card a').click();await loaded();
- await p.locator('.book-settings-open').click();await p.getByLabel('阅读模式').selectOption('parallel');assert(await p.locator('.book-modern').first().isVisible());
+ await p.locator('[data-book-mode="parallel"]').click();assert(await p.locator('.book-modern').first().isVisible());
+ assert.equal(await p.locator('[data-book-mode="parallel"]').getAttribute('aria-pressed'),'true');
+ await p.locator('.book-settings-open').click();assert.equal(await p.locator('.sheet-book-settings [aria-label="阅读模式"]').count(),0,'reading mode is available directly in the toolbar');
  await p.getByLabel('字号',{exact:true}).selectOption('24');await p.getByLabel('纸张',{exact:true}).selectOption('warm');await p.getByLabel('字体',{exact:true}).selectOption('sans');
  await p.getByRole('button',{name:'关闭',exact:true}).click();await p.locator('.overlay').waitFor({state:'detached'});
  assert.equal(await p.locator('.book-block p').first().evaluate(el=>getComputedStyle(el).fontSize),'24px');
@@ -28,10 +32,10 @@ for(const width of [1360,390]) {
  const position=await p.evaluate(()=>JSON.parse(localStorage.getItem('xz-book-position:ziping-zhenquan')));assert.equal(position.number,2);
  const before=await p.evaluate(()=>scrollY);await p.reload();await loaded();await p.waitForTimeout(150);assert(Math.abs(await p.evaluate(()=>scrollY)-before)<10,'reload paragraph position');
  assert(await p.locator('.book-modern').first().isVisible());
- await p.locator('.book-directory').click();assert(Math.abs(await p.evaluate(()=>scrollY)-before)<2,'opening contents preserves paragraph position');await p.getByLabel('搜索目录').fill('论用神');assert(await p.locator('.book-contents-item').count()>0);
- await p.getByLabel('搜索目录').fill('2');assert.equal(await p.locator('.book-contents-item').count(),1);
- await p.getByLabel('跳转阅读页码').fill('9999');await p.getByRole('button',{name:'跳转',exact:true}).click();assert(await p.locator('.sheet-book-contents').isVisible());
- await p.getByLabel('跳转阅读页码').fill('3');await p.getByRole('button',{name:'跳转',exact:true}).click();await p.waitForURL('**page=3');await loaded();
+ let contents=await directory();assert(Math.abs(await p.evaluate(()=>scrollY)-before)<2,'opening contents preserves paragraph position');await contents.getByLabel('搜索目录').fill('论用神');assert(await contents.locator('.book-contents-item').count()>0);
+ await contents.getByLabel('搜索目录').fill('2');assert.equal(await contents.locator('.book-contents-item').count(),1);
+ await contents.getByLabel('跳转阅读页码').fill('9999');await contents.getByRole('button',{name:'跳转',exact:true}).click();assert(await contents.isVisible());
+ await contents.getByLabel('跳转阅读页码').fill('3');await contents.getByRole('button',{name:'跳转',exact:true}).click();await p.waitForURL('**page=3');await loaded();
  await p.goBack();await p.waitForURL('**page=2');await loaded();await p.waitForTimeout(150);{ const restored = await p.evaluate(()=>scrollY); assert(Math.abs(restored-before)<10, `back position: expected ${before}, got ${restored} at width ${width}`); }
  await p.goto(base+'/#/books/sanming-tonghui?page=7');await loaded();await p.locator('.book-figure img').evaluate(img=>img.decode());
  await p.locator('.book-figure-link').click();await p.locator('.book-image-stage img:not([hidden])').waitFor();await p.waitForTimeout(300);
@@ -46,7 +50,7 @@ for(const width of [1360,390]) {
  await p.goBack();await p.locator('.overlay').waitFor({state:'detached'});assert.equal(p.url(),url);assert(Math.abs(await p.evaluate(()=>scrollY)-readingY)<2);assert(await p.locator('.book-figure-link').evaluate(el=>document.activeElement===el));
  await p.locator('.book-figure-open').click();await p.locator('.book-image-stage img:not([hidden])').waitFor();await p.waitForTimeout(300);await p.screenshot({path:join(output, 'image-'+width+'.png')});await p.keyboard.press('Escape');await p.locator('.overlay').waitFor({state:'detached'});
  assert.equal(popups,0);
- await p.locator('.book-directory').click();await p.getByLabel('搜索目录').fill('7');assert.equal(await p.locator('.book-contents-item').count(),1);await p.getByLabel('搜索目录').fill('不存在的目录');assert.equal(await p.locator('.book-contents-item').count(),0);await p.keyboard.press('Escape');await p.locator('.overlay').waitFor({state:'detached'});
+ contents=await directory();await contents.getByLabel('搜索目录').fill('7');assert.equal(await contents.locator('.book-contents-item').count(),1);await contents.getByLabel('搜索目录').fill('不存在的目录');assert.equal(await contents.locator('.book-contents-item').count(),0);await closeDirectory();
  await p.goto(base+'/#/books/duanyi-tianji?page=156');await loaded();assert(await p.locator('.book-page-notice').isVisible());assert(!(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth)));
  await p.goto(base+'/#/books');await p.locator('.books-card').last().waitFor();assert(await p.locator('.books-resume').isVisible());await p.getByLabel('搜索书名').fill('');assert.equal(await p.locator('.books-card').count(),17);
  assert.equal(await p.locator('.books-card').filter({has:p.getByRole('heading',{name:'滴天髓辑要',exact:true})}).getByRole('link').count(),0);

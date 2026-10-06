@@ -1,5 +1,5 @@
 // 知识馆的公开查询参数与请求生命周期；书目、条目和出处均来自服务端。
-import { get, query } from "./api.js?v=n14";
+import { get, query } from "./api.js?v=n15";
 
 export const KNOWLEDGE_KINDS = [["", "全部"], ["book", "书籍"], ["case", "案例"], ["term", "名词"]];
 export const KNOWLEDGE_SYSTEMS = [["", "全部体系"], ["bazi", "八字"], ["liuyao", "六爻"], ["general", "通用"]];

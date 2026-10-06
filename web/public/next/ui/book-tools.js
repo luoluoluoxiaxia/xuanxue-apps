@@ -1,6 +1,73 @@
-import { h, fill } from "../lib/dom.js?v=n14";
-import { filterContents } from "../lib/books.js?v=n14";
-import { openSheet } from "./overlay.js?v=n14";
+import { h, fill } from "../lib/dom.js?v=n15";
+import { filterContents } from "../lib/books.js?v=n15";
+import { local } from "../lib/store.js?v=n15";
+import { openSheet } from "./overlay.js?v=n15";
+
+export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
+  let closed = false, scrollFrame;
+  const search = h("input", { type: "search", maxLength: 160, placeholder: "搜索目录或页码", "aria-label": "搜索目录" });
+  search.value = local.get(`xz-book-directory-query:${book.id}`, "").slice(0, 160);
+  const count = h("p", { class: "books-count", role: "status" });
+  const rows = h("nav", { class: "book-contents-list", "aria-label": "章节列表" });
+  const jump = h("input", { type: "number", min: 1, max: book.section_count, value: current, "aria-label": "跳转阅读页码", required: true });
+  const go = h("form", { class: "book-page-jump", onSubmit: event => {
+    event.preventDefault(); if (go.reportValidity()) onSelect(Number(jump.value));
+  } }, h("label", null, "阅读页码", jump), h("button", { type: "submit", class: "btn btn-soft" }, "跳转"));
+  const node = h("aside", { id: "book-directory-sidebar", class: "book-sidebar", "aria-label": `${book.title}目录`,
+    onMouseDown: event => {
+      const button = event.target.closest?.("button");
+      if (event.button === 0 && button) { event.preventDefault(); button.focus({ preventScroll: true }); }
+    } },
+    h("div", { class: "book-sidebar-head" }, h("b", null, book.title),
+      h("button", { type: "button", class: "book-sidebar-collapse", "aria-label": "收起目录", onClick: onCollapse }, "‹")),
+    h("div", { class: "book-sidebar-links" }, h("a", { href: "#/books" }, "返回书库"),
+      h("button", { type: "button", onClick: event => onNotes(event.currentTarget) }, "我的笔记")),
+    h("div", { class: "book-contents-search" }, search, go, count), rows);
+  function showRow(row, center = false) {
+    if (!row || !rows.clientHeight) return;
+    const rect = rows.getBoundingClientRect(), item = row.getBoundingClientRect();
+    const top = item.top - rect.top + rows.scrollTop;
+    if (center) rows.scrollTop = Math.max(0, top - Math.max(0, (rows.clientHeight - item.height) / 2));
+    else if (item.top < rect.top) rows.scrollTop = top;
+    else if (item.bottom > rect.bottom) rows.scrollTop += item.bottom - rect.bottom;
+  }
+  function refresh() {
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = requestAnimationFrame(() => {
+      if (closed) return;
+      if (search.value.trim()) rows.scrollTop = 0;
+      else showRow(rows.querySelector('[aria-current="page"]'), true);
+    });
+  }
+  function paint() {
+    local.set(`xz-book-directory-query:${book.id}`, search.value);
+    const matches = filterContents(contents, search.value);
+    count.textContent = `${matches.length} / ${contents.length} 项 · 当前 ${current}`;
+    const tabNumber = matches.some(item => item.number === current) ? current : matches[0]?.number;
+    fill(rows, matches.length ? matches.map(item => h("button", { type: "button", class: "book-contents-item",
+      tabindex: item.number === tabNumber ? 0 : -1, "aria-current": item.number === current ? "page" : null,
+      onClick: () => onSelect(item.number), onFocus: event => {
+        for (const button of rows.querySelectorAll("button")) button.tabIndex = button === event.currentTarget ? 0 : -1;
+      } }, h("span", { class: "book-contents-number" }, item.number),
+      h("span", null, h("b", null, item.title), item.title !== item.location ? h("small", null, item.location) : null),
+      item.partial ? h("small", { class: "books-status" }, "有疑缺") : null))
+      : h("p", { class: "books-notice" }, "没有匹配项，可按阅读页码跳转。"));
+    refresh();
+  }
+  rows.addEventListener("keydown", event => {
+    if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+    const buttons = [...rows.querySelectorAll("button")], index = buttons.indexOf(document.activeElement);
+    if (index < 0) return;
+    event.preventDefault();
+    const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+      : Math.max(0, Math.min(buttons.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)));
+    buttons[next].focus({ preventScroll: true }); showRow(buttons[next]);
+  });
+  const observer = typeof ResizeObserver === "function" ? new ResizeObserver(refresh) : null;
+  observer?.observe(rows);
+  search.addEventListener("input", paint); paint();
+  return { node, refresh, destroy() { closed = true; cancelAnimationFrame(scrollFrame); observer?.disconnect(); } };
+}
 
 export function openBookContents({ book, contents, current, onSelect, returnFocus }) {
   const readingY = window.scrollY;
