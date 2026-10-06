@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n13";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n14";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -32,13 +32,37 @@ export function filterContents(contents, query) {
 }
 
 export function readingPreferences(value = {}) {
-  value = value && typeof value === "object" ? value : {};
+  value = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   return {
     size: [18, 20, 22, 24].includes(value.size) ? value.size : 20,
     line: [1.8, 2, 2.2].includes(value.line) ? value.line : 2,
     font: value.font === "sans" ? "sans" : "serif",
     paper: value.paper === "warm" ? "warm" : "white",
+    layout: value.layout === "source" ? "source" : "continuous",
   };
+}
+
+// 只标记普通正文的来源换行；每一段 text 拼回后仍与接口原文逐字符相同。
+// 诗诀、标题和图表转写始终保留自身结构，不在这里推断或重组段落。
+export function sourceBreaks(block) {
+  const text = block.text;
+  if (!["text", "prose", "note", "commentary"].includes(block.role) ||
+      (block.presentation && block.presentation !== "prose") || block.source_text === false) {
+    return [{ text, kind: null }];
+  }
+  const parts = [];
+  let offset = 0;
+  for (const match of text.matchAll(/\n+/g)) {
+    if (match.index > offset) parts.push({ text: text.slice(offset, match.index), kind: null });
+    const before = text[match.index - 1] || "";
+    const after = text[match.index + match[0].length] || "";
+    const kind = match[0].length > 1 ? "paragraph"
+      : /[A-Za-z0-9]/.test(before) && /[A-Za-z0-9]/.test(after) ? "space" : "soft";
+    parts.push({ text: match[0], kind });
+    offset = match.index + match[0].length;
+  }
+  if (offset < text.length || !parts.length) parts.push({ text: text.slice(offset), kind: null });
+  return parts;
 }
 
 // 以段落及段内比例保存位置，换字号或屏幕宽度后仍可找到同一段。

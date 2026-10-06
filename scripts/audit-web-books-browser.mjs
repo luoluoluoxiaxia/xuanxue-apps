@@ -244,7 +244,18 @@ function inspectReader({ book, section, mode }) {
     if (diagram || table) {
       if (original?.tagName !== 'PRE' || getComputedStyle(original).whiteSpace !== 'pre') fail('transcription-format', 'A table or diagram does not preserve its preformatted whitespace.', { index });
       if (original && original.tabIndex < 0 && original.scrollWidth > original.clientWidth + 1) fail('transcription-keyboard', 'A wide transcription cannot receive keyboard focus.', { index });
-    } else if (original && getComputedStyle(original).whiteSpace !== 'pre-wrap') fail('prose-whitespace', 'Prose does not preserve source line breaks.', { index });
+    } else if (original) {
+      const continuous = root.dataset.layout === 'continuous' && original.tagName === 'P'
+        && ['prose', 'text', 'note', 'commentary'].includes(expected.role);
+      const whitespace = continuous ? 'normal' : 'pre-wrap';
+      if (getComputedStyle(original).whiteSpace !== whitespace) fail('prose-whitespace', 'Text does not follow the selected reading layout.', { index, layout: root.dataset.layout, expected: whitespace });
+      original.querySelectorAll('.book-source-break').forEach((lineBreak, breakIndex) => {
+        const display = getComputedStyle(lineBreak).display;
+        const kind = lineBreak.dataset.kind;
+        const wanted = continuous && kind === 'soft' ? 'none' : continuous && kind === 'paragraph' ? 'block' : 'inline';
+        if (display !== wanted) fail('source-break-layout', 'A source line break is displayed incorrectly for the selected layout.', { index, break_index: breakIndex, kind, expected: wanted, actual: display });
+      });
+    }
     if (expected.text.includes('\t') && original?.tagName !== 'PRE') fail('tab-columns', 'A source block containing column tabs is rendered as prose.', { index });
     if (!element.classList.contains(`book-role-${expected.role}`)) fail('block-role', 'Original block role differs.', { index });
     if (['note', 'commentary'].includes(expected.role) && text(element, '.book-original > .book-layer') !== (expected.role === 'note' ? '原注' : '评注')) fail('original-note-label', 'Original note or commentary is labelled incorrectly.', { index });
