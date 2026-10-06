@@ -1,11 +1,11 @@
 // 六爻卦盘面板。起卦接口的 yaos 自下而上（yaos[0] 为初爻），展示时自上而下。
 // 点一行（或行里的「几爻」按钮）看这一爻的排盘事实与古典释读（ui/popover.js）。
-import { h } from "../lib/dom.js?v=n11";
-import { icon } from "../lib/icons.js?v=n11";
-import { guaGlyph, elementClass } from "./gua.js?v=n11";
-import { LY_POS } from "../lib/copy.js?v=n11";
-import { openGlossary } from "./glossary.js?v=n11";
-import { yaoPop } from "./popover.js?v=n11";
+import { h } from "../lib/dom.js?v=n12";
+import { icon } from "../lib/icons.js?v=n12";
+import { guaGlyph, elementClass } from "./gua.js?v=n12";
+import { LY_POS } from "../lib/copy.js?v=n12";
+import { openGlossary } from "./glossary.js?v=n12";
+import { yaoPop } from "./popover.js?v=n12";
 
 // 转成社区卦象同样的「上爻在前」线条结构，复用卦形绘制。
 export function linesFromYaos(yaos) {

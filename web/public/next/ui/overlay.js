@@ -1,7 +1,7 @@
 // 浮层：桌面为居中对话框，手机为底部面板；统一处理焦点、Esc、背景滚动锁与层叠。
-import { h } from "../lib/dom.js?v=n11";
-import { icon } from "../lib/icons.js?v=n11";
-import { holdNavigation, navigationHold } from "../lib/router.js?v=n11";
+import { h } from "../lib/dom.js?v=n12";
+import { icon } from "../lib/icons.js?v=n12";
+import { holdNavigation, navigationHold } from "../lib/router.js?v=n12";
 
 const stack = [];
 let historyToken = 0;

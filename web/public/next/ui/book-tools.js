@@ -1,6 +1,6 @@
-import { h, fill } from "../lib/dom.js?v=n11";
-import { filterContents } from "../lib/books.js?v=n11";
-import { openSheet } from "./overlay.js?v=n11";
+import { h, fill } from "../lib/dom.js?v=n12";
+import { filterContents } from "../lib/books.js?v=n12";
+import { openSheet } from "./overlay.js?v=n12";
 
 export function openBookContents({ book, contents, current, onSelect, returnFocus }) {
   const readingY = window.scrollY;
