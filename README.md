@@ -36,6 +36,17 @@ Web 发布物会生成到 `dist/web/xuanxue-web.tar.gz`。公开仓库 CI 只构
 
 合并到 `main` 后，`Client CI` 成功会通过仓库事件通知触发正式发布流程，随后执行独立集成校验并固定客户端提交。PR 检查或其他分支的检查不会触发生产发布；检查成功、发布进行中和线上已更新是三个不同状态。
 
+典籍阅读的浏览器验收脚本为 `scripts/test-web-books-browser.mjs`。在可访问公共阅读 API 的开发服务器上，使用独立 Playwright 安装运行：
+
+```bash
+PLAYWRIGHT_MODULE=/absolute/path/to/playwright/index.mjs \
+CHROMIUM_PATH=/absolute/path/to/chromium \
+BOOKS_QA_URL=http://127.0.0.1:8911 \
+node scripts/test-web-books-browser.mjs
+```
+
+脚本检查桌面和手机的搜索、阅读设置、段落位置恢复、返回键、目录跳转、页内看图、焦点及失败重试，并将所有可读书籍的首末页原文与公开 API 逐块比对。截图与报告默认保存在忽略的 `tmp/books-browser-qa/`。该脚本需要可运行的阅读服务及浏览器，不包含私有底本，也不声明全文校勘完成。
+
 ## 许可证
 
 第一方源码公开可见但保留全部权利，详见 `LICENSE`。第三方组件使用各自许可证，详见 `THIRD_PARTY_NOTICES.md` 及组件旁的许可证文件。

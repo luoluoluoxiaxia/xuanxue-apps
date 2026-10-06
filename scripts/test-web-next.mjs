@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n10`, base).href);
+const load = path => import(new URL(`${path}?v=n11`, base).href);
 
 test('book navigation rejects invalid saved pages and encodes book identities', async () => {
   const { readingPath, readingNumber } = await load('lib/books.js');
@@ -27,6 +27,49 @@ test('book filters keep working drafts and unavailable records visible with thei
   assert.deepEqual(filterBooks(books, '', ''), books);
   assert.equal(BOOK_STATUS.working_draft, '有疑缺的工作稿');
   assert.equal(BOOK_STATUS.unavailable, '成品待恢复');
+});
+
+test('reading settings and bookmarks recover safely from corrupt or stale local storage', async () => {
+  const { readingPreferences, readingPosition } = await load('lib/books.js');
+  const defaults = { size: 20, line: 2, font: 'serif', paper: 'white' };
+  for (const value of [null, 'broken', { size: 900, line: -1, font: 'injected', paper: 'other' }]) {
+    assert.deepEqual(readingPreferences(value), defaults);
+  }
+  const prefs = { size: 24, line: 2.2, font: 'sans', paper: 'warm' };
+  assert.deepEqual(readingPreferences(prefs), prefs);
+  const bookmark = { number: 7, anchor: 3, offset: .35, updatedAt: 1000 };
+  assert.deepEqual(readingPosition(bookmark, 20), bookmark);
+  for (const value of [null, '7', { ...bookmark, number: 21 }, { ...bookmark, number: '7' },
+    { ...bookmark, anchor: -1 }, { ...bookmark, anchor: 1.5 }, { ...bookmark, offset: Infinity },
+    { ...bookmark, offset: 1.1 }, { ...bookmark, updatedAt: 0 }]) assert.equal(readingPosition(value, 20), null);
+});
+
+test('contents search matches the supplied title, provenance and exact reading page', async () => {
+  const { filterContents } = await load('lib/books.js');
+  const contents = [{ number: 7, title: '河图', location: '影像文件 1 · 来源页 9' },
+    { number: 70, title: '论用神', location: '卷三 · 来源页 72', partial: true }];
+  assert.deepEqual(filterContents(contents, ' 7 '), [contents[0]]);
+  assert.deepEqual(filterContents(contents, '河图'), [contents[0]]);
+  assert.deepEqual(filterContents(contents, '来源页 9'), [contents[0]]);
+  assert.deepEqual(filterContents(contents, 'not-found'), []);
+  assert.deepEqual(filterContents(contents, ''), contents);
+  assert.equal(filterContents([{ number: 11, title: '論用神', location: '來源頁 23' }], '论用神').length, 1);
+  assert.equal(filterContents([{ number: 11, title: '论用神', location: '来源页 23' }], '論用神').length, 1);
+  const { filterBooks } = await load('lib/books.js');
+  assert.equal(filterBooks([{ title: '子平真诠', source_label: '文明本', system: 'bazi' }], '子平真詮', '').length, 1);
+});
+
+test('image zoom preserves the pointed location and clamps scale and pan to the visible image', async () => {
+  const { imageTransform } = await load('lib/books.js');
+  const size = { width: 800, height: 600, stageWidth: 1000, stageHeight: 700 };
+  const fit = { scale: 1, x: 0, y: 0 };
+  const zoomed = imageTransform(fit, 3, { x: 200, y: 100 }, size);
+  assert.deepEqual(zoomed, { scale: 3, x: -400, y: -200 });
+  assert.equal((200 - fit.x) / fit.scale, (200 - zoomed.x) / zoomed.scale);
+  assert.equal((100 - fit.y) / fit.scale, (100 - zoomed.y) / zoomed.scale);
+  assert.deepEqual(imageTransform(zoomed, .1, { x: 0, y: 0 }, size), fit);
+  const clamped = imageTransform({ scale: 3, x: 10000, y: -10000 }, 100, { x: 0, y: 0 }, size);
+  assert.deepEqual(clamped, { scale: 8, x: 2700, y: -2050 });
 });
 
 test('knowledge search keeps URL filters through pagination and resets the page when a category changes', async () => {

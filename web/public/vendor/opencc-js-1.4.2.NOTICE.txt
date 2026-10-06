@@ -1,0 +1,7 @@
+Search-only character folding uses the unmodified TSCharacters dictionary
+from opencc-js 1.4.2 (https://github.com/nk2028/opencc-js), published under MIT.
+The dictionary is derived from opencc-data (https://github.com/nk2028/opencc-data),
+published under Apache-2.0. License texts accompany this file.
+
+Only the character dictionary is included; no phrase conversion is performed.
+Folding is used for book/contents search comparisons, never to rewrite book text.
