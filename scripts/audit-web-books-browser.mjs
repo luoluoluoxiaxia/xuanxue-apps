@@ -115,6 +115,14 @@ async function auditDirectory(page, task) {
   if (!expected) { problem(task, 'directory-source', 'No public book detail was available for comparison.'); return; }
   await page.locator('.book-directory').click();
   await page.locator('.sheet-book-contents').waitFor({ state: 'visible', timeout });
+  await page.evaluate(async () => {
+    const panel = document.querySelector('.sheet-book-contents');
+    await Promise.allSettled([...panel.getAnimations(), ...panel.parentElement.getAnimations()].map(animation => animation.finished));
+  });
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.sheet-book-contents');
+    return panel && Number(getComputedStyle(panel).opacity) > 0 && Number(getComputedStyle(panel.parentElement).opacity) > 0;
+  }, null, { timeout });
   const actual = await page.locator('.book-contents-item').evaluateAll(elements => elements.map(element => ({
     number: Number(element.querySelector('.book-contents-number')?.textContent),
     title: element.querySelector('b')?.textContent,
