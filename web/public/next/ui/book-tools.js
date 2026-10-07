@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n18";
-import { filterContents } from "../lib/books.js?v=n18";
-import { local } from "../lib/store.js?v=n18";
-import { openSheet } from "./overlay.js?v=n18";
+import { h, fill } from "../lib/dom.js?v=n19";
+import { filterContents } from "../lib/books.js?v=n19";
+import { local } from "../lib/store.js?v=n19";
+import { openSheet } from "./overlay.js?v=n19";
 
 export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
   let closed = false, scrollFrame;

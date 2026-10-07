@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n18`, base).href);
+const load = path => import(new URL(`${path}?v=n19`, base).href);
 
 test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
   const { get } = await load('lib/api.js');
