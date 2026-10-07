@@ -1,18 +1,18 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n17";
-import { icon } from "../lib/icons.js?v=n17";
-import { get, post, put } from "../lib/api.js?v=n17";
-import { session, local, refreshSession } from "../lib/store.js?v=n17";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n17";
-import { readingDraftKey } from "../lib/sessions.js?v=n17";
-import { relativeTime, count } from "../lib/format.js?v=n17";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n17";
-import { handoff } from "../lib/handoff.js?v=n17";
-import { humanizeError } from "../lib/interpret.js?v=n17";
-import { stateView } from "../ui/bits.js?v=n17";
-import { toast } from "../ui/toast.js?v=n17";
-import { confirmDialog } from "../ui/overlay.js?v=n17";
-import { locationPicker } from "../ui/location.js?v=n17";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n18";
+import { icon } from "../lib/icons.js?v=n18";
+import { get, post, put } from "../lib/api.js?v=n18";
+import { session, local, refreshSession } from "../lib/store.js?v=n18";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n18";
+import { readingDraftKey } from "../lib/sessions.js?v=n18";
+import { relativeTime, count } from "../lib/format.js?v=n18";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n18";
+import { handoff } from "../lib/handoff.js?v=n18";
+import { humanizeError } from "../lib/interpret.js?v=n18";
+import { stateView } from "../ui/bits.js?v=n18";
+import { toast } from "../ui/toast.js?v=n18";
+import { confirmDialog } from "../ui/overlay.js?v=n18";
+import { locationPicker } from "../ui/location.js?v=n18";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 const readDraft = () => local.get(ASK_DRAFT, "");

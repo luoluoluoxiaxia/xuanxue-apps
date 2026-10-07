@@ -1,14 +1,14 @@
-import { h, fill } from "../lib/dom.js?v=n17";
-import { icon } from "../lib/icons.js?v=n17";
-import { get } from "../lib/api.js?v=n17";
-import { local, session } from "../lib/store.js?v=n17";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n17";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n17";
-import { errorView, stateView } from "../ui/bits.js?v=n17";
-import { openBookImage } from "../ui/book-image.js?v=n17";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n17";
-import { openSheet } from "../ui/overlay.js?v=n17";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n17";
+import { h, fill } from "../lib/dom.js?v=n18";
+import { icon } from "../lib/icons.js?v=n18";
+import { get } from "../lib/api.js?v=n18";
+import { local, session } from "../lib/store.js?v=n18";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n18";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n18";
+import { errorView, stateView } from "../ui/bits.js?v=n18";
+import { openBookImage } from "../ui/book-image.js?v=n18";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n18";
+import { openSheet } from "../ui/overlay.js?v=n18";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n18";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;

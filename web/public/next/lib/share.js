@@ -1,6 +1,6 @@
 // 分享：登录后换取带归因的分享链接；优先系统分享，其次复制标题与链接。
-import { post } from "./api.js?v=n17";
-import { session } from "./store.js?v=n17";
+import { post } from "./api.js?v=n18";
+import { session } from "./store.js?v=n18";
 
 export function canonicalPostUrl(slug, ref = "post_share") {
   const origin = location.origin && location.origin !== "null" ? location.origin : "";
