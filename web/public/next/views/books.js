@@ -110,7 +110,8 @@ function reader(ctx) {
       event.preventDefault(); button.focus({ preventScroll: true });
     } });
   const pagination = h("nav", { class: "book-reading-pagination", "aria-label": "正文翻页" });
-  const heading = h("header", { class: "book-reading-header" });
+  const backLink = h("a", { class: "book-reading-back", href: "#/books", "aria-label": "返回典籍书库" }, icon("back"), h("span", null, "书库"));
+  const heading = h("header", { class: "book-reading-header" }, backLink);
   const sidebarSlot = h("div", { class: "book-sidebar-slot" });
   const readerBody = h("div", { class: "book-reader-body" }, controls, content, pagination);
   const node = h("div", { class: "book-reading" },
@@ -369,7 +370,7 @@ function reader(ctx) {
     ctx.setTitle(`${book.title} · 典籍书库`);
     const state = { first_pass: "待校勘", working_draft: "有疑缺", unavailable: "待恢复" }[book.status];
     fill(heading,
-      h("a", { class: "book-reading-back", href: "#/books", "aria-label": "返回典籍书库" }, icon("back"), h("span", null, "书库")),
+      backLink,
       h("div", { class: "book-reading-identity" }, h("h1", null, book.title),
         state ? h("span", { class: "book-reading-state" }, state) : null),
       h("button", { type: "button", class: "btn book-edition-open", "aria-haspopup": "dialog", onClick: event =>
