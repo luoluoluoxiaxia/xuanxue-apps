@@ -1,23 +1,24 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n17";
-import { icon, brandMark } from "./lib/icons.js?v=n17";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n17";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n17";
-import { get } from "./lib/api.js?v=n17";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n17";
-import { toast } from "./ui/toast.js?v=n17";
-import { openAuth } from "./views/auth.js?v=n17";
-import * as FeedView from "./views/feed.js?v=n17";
-import * as PostView from "./views/post.js?v=n17";
-import * as AskView from "./views/ask.js?v=n17";
-import * as ReadingView from "./views/reading.js?v=n17";
-import * as TodayView from "./views/today.js?v=n17";
-import * as InboxView from "./views/inbox.js?v=n17";
-import * as MeView from "./views/me.js?v=n17";
-import * as BooksView from "./views/books.js?v=n17";
-import { openFeedback } from "./views/feedback.js?v=n17";
-import { routeFromLegacy } from "./lib/legacy.js?v=n17";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n18";
+import { icon, brandMark } from "./lib/icons.js?v=n18";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n18";
+import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n18";
+import { get } from "./lib/api.js?v=n18";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n18";
+import { toast } from "./ui/toast.js?v=n18";
+import { openAuth } from "./views/auth.js?v=n18";
+import * as FeedView from "./views/feed.js?v=n18";
+import * as PostView from "./views/post.js?v=n18";
+import * as AskView from "./views/ask.js?v=n18";
+import * as ReadingView from "./views/reading.js?v=n18";
+import * as TodayView from "./views/today.js?v=n18";
+import * as InboxView from "./views/inbox.js?v=n18";
+import * as MeView from "./views/me.js?v=n18";
+import * as BooksView from "./views/books.js?v=n18";
+import * as RoadmapView from "./views/roadmap.js?v=n18";
+import { openFeedback } from "./views/feedback.js?v=n18";
+import { routeFromLegacy } from "./lib/legacy.js?v=n18";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -91,6 +92,7 @@ const NAV = [
   { key: "today", label: "今日", href: "#/today", glyph: "sun", match: path => path.startsWith("/today") },
   { key: "books", label: "书库", href: "#/books", glyph: "book", match: path => path.startsWith("/books") },
   { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "book", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
+  { key: "roadmap", label: "路线图", href: "#/roadmap", glyph: "compass", match: path => path === "/roadmap" },
 ];
 
 const shell = {};
@@ -108,6 +110,7 @@ function buildShell() {
       h("nav", { class: "nav-tabs", "aria-label": "主导航" },
         NAV.map(item => h("a", { class: "nav-tab", href: item.href, "data-nav": item.key }, item.label))),
       h("div", { class: "topbar-actions" },
+        h("a", { class: "topbar-roadmap", href: "#/roadmap", "aria-label": "路线图" }, icon("compass"), h("span", null, "路线图")),
         themeButton,
         bell,
         accountSlot)));
@@ -199,6 +202,7 @@ export function openAccountMenu(anchor) {
     { label: "我的主页", icon: "user", href: "#/me" },
     { label: "我的盘", icon: "book", href: "#/me/archives" },
     { label: "积分", icon: "coins", href: "#/me/credits", meta: balance },
+    { label: "路线图", icon: "compass", href: "#/roadmap" },
     "sep",
     { label: "意见反馈", icon: "message", onSelect: () => openFeedback() },
     "sep",
@@ -257,6 +261,9 @@ function showInvitePrompt() {
 }
 
 function syncNav(path) {
+  const roadmapLink = shell.topbar.querySelector(".topbar-roadmap");
+  if (path === "/roadmap") roadmapLink.setAttribute("aria-current", "page");
+  else roadmapLink.removeAttribute("aria-current");
   shell.topbar.querySelectorAll("[data-nav]").forEach(link => {
     const item = NAV.find(entry => entry.key === link.dataset.nav);
     if (item && item.match(path)) link.setAttribute("aria-current", "page");
@@ -424,6 +431,7 @@ const ROUTES = [
   { path: "/today", view: TodayView },
   { path: "/books", view: BooksView },
   { path: "/books/:id", view: BooksView },
+  { path: "/roadmap", view: RoadmapView },
   { path: "/inbox", view: InboxView },
   { path: "/me", view: MeView },
   { path: "/me/:tab", view: MeView },

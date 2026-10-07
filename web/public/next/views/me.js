@@ -1,16 +1,16 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n17";
-import { icon } from "../lib/icons.js?v=n17";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n17";
-import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n17";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n17";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n17";
-import { pillarsToken } from "../ui/gua.js?v=n17";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n17";
-import { toast } from "../ui/toast.js?v=n17";
-import { copyText } from "../lib/share.js?v=n17";
-import { openFeedback } from "./feedback.js?v=n17";
+import { h, reducedMotion } from "../lib/dom.js?v=n18";
+import { icon } from "../lib/icons.js?v=n18";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n18";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n18";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n18";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n18";
+import { pillarsToken } from "../ui/gua.js?v=n18";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n18";
+import { toast } from "../ui/toast.js?v=n18";
+import { copyText } from "../lib/share.js?v=n18";
+import { openFeedback } from "./feedback.js?v=n18";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },
@@ -324,7 +324,10 @@ function linksCard(ctx, authenticated) {
     h("span", { class: "me-link-copy" }, h("b", null, "意见反馈"), h("span", null, "断得准不准，直说无妨")),
     h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
   feedback.addEventListener("click", () => openFeedback());
-  return h("div", { class: "me-links" }, authenticated ? inboxLink(ctx) : null, feedback);
+  const roadmap = h("a", { class: "me-link", href: "#/roadmap" },
+    h("span", { class: "me-link-copy" }, h("b", null, "路线图"), h("span", null, "古书、案例与工具，接下来怎样串起来")),
+    h("span", { class: "me-link-go", "aria-hidden": "true" }, icon("chevronRight")));
+  return h("div", { class: "me-links" }, authenticated ? inboxLink(ctx) : null, roadmap, feedback);
 }
 
 function overviewSkeleton() {
