@@ -1,5 +1,5 @@
 // 卦象与四柱的展示组件。接口里的 lines 以上爻在前（lines[0] 为上爻），自上而下绘制。
-import { h, svg, esc } from "../lib/dom.js?v=n15";
+import { h, svg, esc } from "../lib/dom.js?v=n16";
 
 function lineRects(line, index, { changed, width, height, gap, barH, highlightMoving }) {
   const y = index * (barH + gap);

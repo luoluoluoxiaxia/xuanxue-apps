@@ -1,7 +1,7 @@
 // Readium renders marks; the account API and canonical source anchors remain
 // independent. The vendor file is a pinned, self-contained browser ES module.
 import { DirectCommsChannel, Decorator, DecorationController, DecorationStyleType,
-  Locator, LocatorLocations, LocatorText } from "../../vendor/readium-decorator-1.2.5.js?v=n15";
+  Locator, LocatorLocations, LocatorText } from "../../vendor/readium-decorator-1.2.5.js?v=n16";
 
 const TINTS = Object.freeze({ yellow: "#FFD54F", green: "#81C784", blue: "#90CAF9", pink: "#F48FB1" });
 let instanceSequence = 0;
