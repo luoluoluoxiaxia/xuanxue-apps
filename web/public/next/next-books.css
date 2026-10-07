@@ -61,6 +61,19 @@
 .book-reading-content[data-layout="continuous"] :is(.book-role-prose, .book-role-text, .book-role-note, .book-role-commentary) .book-original > p .book-source-break[data-kind="space"] { display: inline; }
 .book-block h3 { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-serif); }
 .book-layer { color: var(--ink-3); font-size: 12px; }
+.book-term { color: inherit; text-decoration: underline dotted color-mix(in srgb, var(--ink-3) 60%, transparent); text-underline-offset: .22em; text-decoration-thickness: 1px; cursor: help; border-radius: 2px; -webkit-user-select: text; user-select: text; touch-action: auto; }
+.book-term:hover, .book-term[aria-expanded="true"] { color: var(--brand-ink); background: var(--brand-tint); }
+.book-term:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.book-glossary-help { margin: 12px 0 0; color: var(--ink-3); font-size: 12px; line-height: 1.7; }
+.book-glossary-popover { position: fixed; z-index: 60; width: min(360px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); padding: 16px 18px; overflow-y: auto; overscroll-behavior: contain; border: 1px solid var(--line-strong); border-radius: var(--r-lg); background: var(--bg-elev); box-shadow: var(--shadow-2); color: var(--ink); font-family: var(--font-sans); font-size: 14px; line-height: 1.8; overflow-wrap: anywhere; }
+.book-glossary-popover[hidden] { display: none; }
+.book-glossary-heading { display: flex; align-items: flex-start; gap: 12px; }
+.book-glossary-heading h3 { flex: 1; margin: 0; font-size: 17px; line-height: 1.6; }
+.book-glossary-close { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; margin: -10px -12px -6px 0; border-radius: var(--r); color: var(--ink-3); font-size: 24px; }
+.book-glossary-close:hover { background: var(--bg-hover); color: var(--ink); }
+.book-glossary-definition { margin: 8px 0 0; white-space: pre-wrap; }
+.book-glossary-details summary { min-height: 44px; padding-top: 10px; color: var(--brand-ink); cursor: pointer; }
+.book-glossary-details p { margin: 8px 0 0; color: var(--ink-2); white-space: pre-wrap; }
 .book-role-note, .book-role-commentary { padding-left: 18px; border-left: 2px solid var(--line-strong); }
 .book-modern { padding-top: 14px; }
 .book-modern p { font-family: var(--font-sans); font-size: 17px; color: var(--ink-2); }

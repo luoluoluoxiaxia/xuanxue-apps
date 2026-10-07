@@ -1,6 +1,6 @@
 // 通用小组件：状态页（空 / 错误 / 未登录）、骨架屏。
-import { h } from "../lib/dom.js?v=n19";
-import { icon } from "../lib/icons.js?v=n19";
+import { h } from "../lib/dom.js?v=n20";
+import { icon } from "../lib/icons.js?v=n20";
 
 export function stateView({ tone = "empty", glyph = "compass", title, text = "", actions = [] } = {}) {
   return h("div", { class: ["state", tone === "error" && "state-error"], role: tone === "error" ? "alert" : null },
