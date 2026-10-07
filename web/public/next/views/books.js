@@ -1,13 +1,14 @@
-import { h, fill } from "../lib/dom.js?v=n15";
-import { icon } from "../lib/icons.js?v=n15";
-import { get } from "../lib/api.js?v=n15";
-import { local, session } from "../lib/store.js?v=n15";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n15";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n15";
-import { errorView, stateView } from "../ui/bits.js?v=n15";
-import { openBookImage } from "../ui/book-image.js?v=n15";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n15";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n15";
+import { h, fill } from "../lib/dom.js?v=n16";
+import { icon } from "../lib/icons.js?v=n16";
+import { get } from "../lib/api.js?v=n16";
+import { local, session } from "../lib/store.js?v=n16";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n16";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n16";
+import { errorView, stateView } from "../ui/bits.js?v=n16";
+import { openBookImage } from "../ui/book-image.js?v=n16";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n16";
+import { openSheet } from "../ui/overlay.js?v=n16";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n16";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -113,7 +114,7 @@ function reader(ctx) {
   const sidebarSlot = h("div", { class: "book-sidebar-slot" });
   const readerBody = h("div", { class: "book-reader-body" }, controls, content, pagination);
   const node = h("div", { class: "book-reading" },
-    h("a", { class: "back-link", href: "#/books" }, icon("back"), "典籍书库"), heading,
+    heading,
     h("div", { class: "book-reader-layout" }, sidebarSlot, readerBody));
   const annotations = setupBookAnnotations({ content, book: () => book, getSection: () => activeSection,
     getMode: () => book?.has_modern ? mode : "original", ctx,
@@ -366,9 +367,16 @@ function reader(ctx) {
     contents = data.contents;
     detailCache.set(id, data);
     ctx.setTitle(`${book.title} · 典籍书库`);
-    fill(heading, h("p", { class: "kicker" }, `${BOOK_SYSTEM[book.system]} · ${BOOK_STATUS[book.status]}`),
-      h("h1", null, book.title), h("details", { class: "book-edition" }, h("summary", null, "版本与整理说明"),
-        h("p", { class: "books-source" }, book.source_label), h("p", { class: "books-notice" }, book.notice)));
+    const state = { first_pass: "待校勘", working_draft: "有疑缺", unavailable: "待恢复" }[book.status];
+    fill(heading,
+      h("a", { class: "book-reading-back", href: "#/books", "aria-label": "返回典籍书库" }, icon("back"), h("span", null, "书库")),
+      h("div", { class: "book-reading-identity" }, h("h1", null, book.title),
+        state ? h("span", { class: "book-reading-state" }, state) : null),
+      h("button", { type: "button", class: "btn book-edition-open", "aria-haspopup": "dialog", onClick: event =>
+        openSheet({ title: `${book.title} · 版本与整理说明`, className: "sheet-book-edition", returnFocus: event.currentTarget,
+          body: h("div", { class: "book-edition" },
+            h("p", { class: "books-notice" }, `${BOOK_SYSTEM[book.system]} · ${BOOK_STATUS[book.status]}`),
+            h("p", { class: "books-source" }, book.source_label), h("p", { class: "books-notice" }, book.notice)) }) }, "版本说明"));
     if (!book.section_count) { content.setAttribute("aria-busy", "false"); fill(content, h("p", null, "电子成品待恢复，请先阅读其他书籍。")); return; }
     controls.hidden = false;
     const number = readingNumber(ctx.query.get("page") || local.get(progressKey(id), "1"), book.section_count);
