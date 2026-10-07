@@ -114,7 +114,7 @@ export function setupBookGlossary({ content, ctx }) {
   });
   listen(content, "pointerout", event => {
     const term = termFrom(event.target);
-    if (term === active && !term.contains(event.relatedTarget) && !popup.contains(event.relatedTarget)) scheduleClose();
+    if (term && term === active && !term.contains(event.relatedTarget) && !popup.contains(event.relatedTarget)) scheduleClose();
   });
   listen(popup, "pointerenter", () => { popupHovered = true; cancelClose(); });
   listen(popup, "pointerleave", () => { popupHovered = false; scheduleClose(); });

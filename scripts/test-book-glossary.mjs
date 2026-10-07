@@ -198,6 +198,25 @@ test("glossary supports keyboard, touch, selection priority, readable hover and 
   assert.equal([...window.listeners.values()].flat().length, 0);
 });
 
+test("leaving ordinary reader text while no term is active does not throw", () => {
+  const { document } = mockEnvironment();
+  const cleanups = [], content = document.createElement("div"); document.body.append(content);
+  const glossary = setupBookGlossary({ content, ctx: { isCurrent: () => true, cleanup: callback => cleanups.push(callback) } });
+  glossary.onSection({ glossary: [entry] });
+  const paragraph = document.createElement("p"); content.append(paragraph);
+  paragraph.append("普通正文", ...glossary.renderText([{ text: "用神", kind: null }], [occurrence(0, 2)], "original"));
+  const popup = document.body.querySelector(".book-glossary-popover");
+  const leaveText = () => content.emit("pointerout", { target: paragraph.childNodes[0], relatedTarget: null });
+  assert.doesNotThrow(leaveText);
+  content.emit("click", { target: paragraph.querySelector(".book-term") });
+  assert.equal(popup.hidden, false);
+  popup.querySelector("button").emit("click");
+  assert.equal(popup.hidden, true);
+  assert.doesNotThrow(leaveText);
+  assert.doesNotThrow(() => content.emit("pointerout", { target: paragraph, relatedTarget: document.body }));
+  cleanups.forEach(cleanup => cleanup());
+});
+
 test("glossary definitions and expanded explanations stay literal and long mobile content stays bounded", () => {
   const { document } = mockEnvironment();
   const cleanups = [], content = document.createElement("div"); document.body.append(content);
