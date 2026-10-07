@@ -1461,6 +1461,14 @@
             "title": "Source Text",
             "type": "boolean"
           },
+          "terms": {
+            "description": "仅当前段已核对的随文释义位置。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookTermSpan"
+            },
+            "title": "Terms",
+            "type": "array"
+          },
           "text": {
             "title": "Text",
             "type": "string"
@@ -1559,6 +1567,40 @@
         "title": "ClientBookFigure",
         "type": "object"
       },
+      "ClientBookGlossarySense": {
+        "additionalProperties": false,
+        "properties": {
+          "definition": {
+            "title": "Definition",
+            "type": "string"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "term": {
+            "title": "Term",
+            "type": "string"
+          },
+          "usage_note": {
+            "title": "Usage Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "term",
+          "definition",
+          "explanation",
+          "usage_note"
+        ],
+        "title": "ClientBookGlossarySense",
+        "type": "object"
+      },
       "ClientBookList": {
         "additionalProperties": false,
         "properties": {
@@ -1603,6 +1645,14 @@
             "title": "Figures",
             "type": "array"
           },
+          "glossary": {
+            "description": "仅本页实际引用的公开术语义项，不含私有证据或未核候选。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookGlossarySense"
+            },
+            "title": "Glossary",
+            "type": "array"
+          },
           "location": {
             "title": "Location",
             "type": "string"
@@ -1641,6 +1691,43 @@
           "blocks"
         ],
         "title": "ClientBookSection",
+        "type": "object"
+      },
+      "ClientBookTermSpan": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "Unicode 码点终点，不含该位置；换行计入，不能使用 UTF-16 位移。",
+            "exclusiveMinimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "layer": {
+            "enum": [
+              "original",
+              "modern"
+            ],
+            "title": "Layer",
+            "type": "string"
+          },
+          "sense_id": {
+            "title": "Sense Id",
+            "type": "string"
+          },
+          "start": {
+            "description": "完整原文或白话字符串中的 Unicode 码点起点，从 0 计数。",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "layer",
+          "start",
+          "end",
+          "sense_id"
+        ],
+        "title": "ClientBookTermSpan",
         "type": "object"
       },
       "ClientCapabilities": {

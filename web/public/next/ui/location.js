@@ -1,7 +1,7 @@
 // 出生地选择（省 / 市 / 区县），用于真太阳时校正。行政区划数据按需加载。
 // 修改已有命盘时，把保存的地点文字匹配回三级选择并显示真太阳时预览；匹配不上就原样沿用保存的文字。
-import { h } from "../lib/dom.js?v=n16";
-import { get, query } from "../lib/api.js?v=n16";
+import { h } from "../lib/dom.js?v=n17";
+import { get, query } from "../lib/api.js?v=n17";
 
 const MUNICIPALITIES = new Set(["北京市", "天津市", "上海市", "重庆市"]);
 const SKIP_CITY = new Set(["市辖区", "县"]);

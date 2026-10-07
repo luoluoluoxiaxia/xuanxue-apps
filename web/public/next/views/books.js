@@ -1,14 +1,15 @@
-import { h, fill } from "../lib/dom.js?v=n16";
-import { icon } from "../lib/icons.js?v=n16";
-import { get } from "../lib/api.js?v=n16";
-import { local, session } from "../lib/store.js?v=n16";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n16";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n16";
-import { errorView, stateView } from "../ui/bits.js?v=n16";
-import { openBookImage } from "../ui/book-image.js?v=n16";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n16";
-import { openSheet } from "../ui/overlay.js?v=n16";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n16";
+import { h, fill } from "../lib/dom.js?v=n17";
+import { icon } from "../lib/icons.js?v=n17";
+import { get } from "../lib/api.js?v=n17";
+import { local, session } from "../lib/store.js?v=n17";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n17";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n17";
+import { errorView, stateView } from "../ui/bits.js?v=n17";
+import { openBookImage } from "../ui/book-image.js?v=n17";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n17";
+import { openSheet } from "../ui/overlay.js?v=n17";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n17";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n17";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -117,6 +118,7 @@ function reader(ctx) {
   const node = h("div", { class: "book-reading" },
     heading,
     h("div", { class: "book-reader-layout" }, sidebarSlot, readerBody));
+  const glossary = setupBookGlossary({ content, ctx });
   const annotations = setupBookAnnotations({ content, book: () => book, getSection: () => activeSection,
     getMode: () => book?.has_modern ? mode : "original", ctx,
     onNavigate: annotation => {
@@ -138,6 +140,7 @@ function reader(ctx) {
   controls.after(annotations.statusNode);
 
   function applyPreferences() {
+    glossary.close();
     content.style.setProperty("--reading-size", `${preferences.size}px`);
     content.style.setProperty("--reading-line", preferences.line);
     content.style.setProperty("--reading-font", `var(--font-${preferences.font})`);
@@ -202,7 +205,7 @@ function reader(ctx) {
       button.querySelector("span").textContent = wideDirectory.matches
         ? directoryOpen ? "收起目录" : `${book.title} · 展开目录` : `${book.title} · ${book.has_modern ? "目录" : "书页"}`;
     }
-    requestAnimationFrame(() => { sidebar?.refresh(); annotations.onLayout(); });
+    requestAnimationFrame(() => { sidebar?.refresh(); annotations.onLayout(); glossary.onLayout(); });
   }
   function setDirectory(expanded) {
     const position = capturePosition();
@@ -241,8 +244,7 @@ function reader(ctx) {
       transcribed ? h("span", { class: "book-layer" }, block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写") : null,
       h(transcribed ? "pre" : block.role === "heading" ? "h3" : "p", { class: transcribed ? "book-transcription" : null,
         ...(transcribed ? { tabindex: "0", "aria-label": `${diagram ? "图式" : "表格"}转写，可横向滚动` } : {}) },
-        sourceBreaks(block).map(part => part.kind
-          ? h("span", { class: "book-source-break", dataset: { kind: part.kind } }, part.text) : part.text)));
+        glossary.renderText(sourceBreaks(block), block.terms, "original")));
     const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
       block.notes.map(note => h("p", null, note))) : null;
     const layer = transcribed && (hasFigure || diagram)
@@ -251,19 +253,22 @@ function reader(ctx) {
         original, notes)
       : h("div", null, original, notes);
     return h("section", { class: `book-block book-role-${block.role}`, dataset: { blockId: block.id } }, layer,
-      block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"), h("p", null, block.modern)) : null);
+      block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"),
+        h("p", null, glossary.renderText([{ text: block.modern, kind: null }], block.terms, "modern"))) : null);
   }
 
   function paintSection() {
     if (!activeSection) return;
     const section = activeSection;
+    glossary.onSection(section);
     const figures = section.figures || [];
     content.dataset.mode = book.has_modern ? mode : "original";
     fill(content,
       h("header", { class: "book-section-header" }, h("p", { class: "books-source" }, section.location),
         section.title !== section.location ? h("h2", null, section.title) : null,
         book.has_modern ? h("div", { class: "book-comparison-heading", "aria-hidden": "true" },
-          h("span", null, "原文"), h("span", null, "白话")) : null),
+          h("span", null, "原文"), h("span", null, "白话")) : null,
+        section.glossary?.length ? h("p", { class: "book-glossary-help" }, "点状下划线的词可悬停或点按查看释义。") : null),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? section.partial
@@ -320,6 +325,7 @@ function reader(ctx) {
   async function openSection(number) {
     const token = ++request;
     saving = false;
+    glossary.onSection(null);
     annotations.onSection(null);
     content.setAttribute("aria-busy", "true");
     controller.abort(); controller = new AbortController();
@@ -354,7 +360,7 @@ function reader(ctx) {
   ctx.cleanup(() => controller.abort());
   const keyboard = event => {
     if (!activeSection || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
-        document.body.classList.contains("is-locked") || event.target.closest?.("input, textarea, select, button, a, [contenteditable=true], pre")) return;
+        document.body.classList.contains("is-locked") || event.target.closest?.("input, textarea, select, button, a, [role=button], [contenteditable=true], pre")) return;
     if (window.getSelection()?.toString()) return;
     if (event.key === "ArrowLeft") { event.preventDefault(); go(activeSection.number - 1); }
     if (event.key === "ArrowRight") { event.preventDefault(); go(activeSection.number + 1); }
@@ -362,7 +368,7 @@ function reader(ctx) {
   document.addEventListener("keydown", keyboard);
   ctx.cleanup(() => document.removeEventListener("keydown", keyboard));
   const life = lifecycle(ctx, ({ phase, data, error }) => {
-    if (phase === "loading") { savePosition(); saving = false; content.setAttribute("aria-busy", "true"); fill(content, h("p", { role: "status" }, "正在打开书籍…")); return; }
+    if (phase === "loading") { savePosition(); saving = false; glossary.onSection(null); content.setAttribute("aria-busy", "true"); fill(content, h("p", { role: "status" }, "正在打开书籍…")); return; }
     if (phase === "error") { content.setAttribute("aria-busy", "false"); fill(content, errorView(error, refresh, { title: "这本书暂时没有打开" })); return; }
     book = data.book;
     contents = data.contents;
