@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n16";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n17";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));

@@ -1,12 +1,12 @@
 // 典籍知识馆：阅读整理后的书籍导读、案例与名词，保留可核对的书籍出处。
-import { h, fill } from "../lib/dom.js?v=n16";
-import { icon } from "../lib/icons.js?v=n16";
+import { h, fill } from "../lib/dom.js?v=n17";
+import { icon } from "../lib/icons.js?v=n17";
 import {
   KNOWLEDGE_KINDS, KNOWLEDGE_SYSTEMS, readKnowledgeQuery, knowledgeListPath,
   knowledgeEntryPath, knowledgeKindLabel, knowledgeSystemLabel, knowledgeApiPath,
   sourceLocation, createKnowledgeLoader,
-} from "../lib/knowledge.js?v=n16";
-import { stateView, errorView, spinnerLine } from "../ui/bits.js?v=n16";
+} from "../lib/knowledge.js?v=n17";
+import { stateView, errorView, spinnerLine } from "../ui/bits.js?v=n17";
 
 function entryLink(entry, className = "") {
   return h("a", { href: `#${knowledgeEntryPath(entry.id)}`, class: className }, entry.title);
