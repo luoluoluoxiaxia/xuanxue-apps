@@ -1,15 +1,15 @@
-import { h, fill } from "../lib/dom.js?v=n17";
-import { icon } from "../lib/icons.js?v=n17";
-import { get } from "../lib/api.js?v=n17";
-import { local, session } from "../lib/store.js?v=n17";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n17";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n17";
-import { errorView, stateView } from "../ui/bits.js?v=n17";
-import { openBookImage } from "../ui/book-image.js?v=n17";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n17";
-import { openSheet } from "../ui/overlay.js?v=n17";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n17";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n17";
+import { h, fill } from "../lib/dom.js?v=n20";
+import { icon } from "../lib/icons.js?v=n20";
+import { get } from "../lib/api.js?v=n20";
+import { local, session } from "../lib/store.js?v=n20";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n20";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n20";
+import { errorView, stateView } from "../ui/bits.js?v=n20";
+import { openBookImage } from "../ui/book-image.js?v=n20";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n20";
+import { openSheet } from "../ui/overlay.js?v=n20";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n20";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n20";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -26,27 +26,35 @@ function lifecycle(ctx, paint, request) {
 }
 
 function library(ctx) {
-  let books = [];
+  let books = null;
   const results = h("div", { class: "books-grid" });
   const count = h("p", { class: "books-count", role: "status", "aria-live": "polite" });
   const search = h("input", { type: "search", placeholder: "搜索书名", "aria-label": "搜索书名" });
-  const system = h("select", { "aria-label": "筛选典籍体系" }, h("option", { value: "" }, "全部体系"),
-    Object.entries(BOOK_SYSTEM).map(([value, label]) => h("option", { value }, label)));
-  const sort = h("select", { "aria-label": "书籍排序" }, h("option", { value: "recent" }, "最近阅读优先"), h("option", { value: "catalog" }, "书库顺序"));
   const recent = h("div", { class: "books-recent" });
   const filters = local.json("xz-book-filters", {});
   search.value = typeof filters?.query === "string" ? filters.query : "";
-  system.value = Object.hasOwn(BOOK_SYSTEM, filters?.system) ? filters.system : "";
-  sort.value = filters?.sort === "catalog" ? "catalog" : "recent";
+  let system = Object.hasOwn(BOOK_SYSTEM, filters?.system) ? filters.system : "";
+  let sort = filters?.sort === "catalog" ? "catalog" : "recent";
+  function choices(name, label, accessibleLabel, options, selected, change) {
+    return h("div", { class: "books-filter-group" }, h("span", { class: "books-filter-label" }, label),
+      h("div", { class: "books-filter-options", role: "group", "aria-label": accessibleLabel },
+        options.map(([value, text]) => h("label", { class: "books-filter-choice" },
+          h("input", { type: "radio", name, value, checked: value === selected,
+            onChange: event => { if (event.currentTarget.checked) { change(value); paintBooks(); } } }),
+          h("span", null, text)))));
+  }
+  const systems = choices("book-system", "体系", "筛选典籍体系", [["", "全部"], ...Object.entries(BOOK_SYSTEM)], system, value => { system = value; });
+  const sorts = choices("book-sort", "排序", "书籍排序", [["recent", "最近阅读优先"], ["catalog", "书库顺序"]], sort, value => { sort = value; });
   const node = h("div", { class: "books-library" },
-    h("header", { class: "books-hero" }, h("p", { class: "kicker" }, "典籍研读"), h("h1", null, "典籍书库"),
-      h("p", null, "现有原文初录稿开放查阅，疑字与缺文随页标明，尚待逐书校勘。已整理的白话与校记随文保留。")),
-    recent, h("div", { class: "books-filters" }, search, system, sort), count, results);
+    h("header", { class: "books-hero" }, h("h1", null, "典籍书库"),
+      h("p", null, "原文初录稿开放查阅，疑缺随页标注；已整理的白话与校记随文保留，尚待逐书校勘。")),
+    recent, h("div", { class: "books-filters" }, search, systems, sorts), count, results);
   function paintBooks() {
-    const rows = filterBooks(books, search.value, system.value);
-    local.setJson("xz-book-filters", { query: search.value, system: system.value, sort: sort.value });
+    local.setJson("xz-book-filters", { query: search.value, system, sort });
+    if (!books) return;
+    const rows = filterBooks(books, search.value, system);
     const position = book => readingPosition(local.json(positionKey(book.id)), book.section_count);
-    if (sort.value === "recent") rows.sort((a, b) => (position(b)?.updatedAt || 0) - (position(a)?.updatedAt || 0));
+    if (sort === "recent") rows.sort((a, b) => (position(b)?.updatedAt || 0) - (position(a)?.updatedAt || 0));
     const latest = books.filter(book => position(book)).sort((a, b) => position(b).updatedAt - position(a).updatedAt)[0];
     fill(recent, latest ? h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
       icon("book"), h("span", null, h("small", null, "接着上次读"), h("b", null, latest.title)),
@@ -69,10 +77,9 @@ function library(ctx) {
     }) : stateView({ glyph: "search", title: "没有匹配的书籍", text: "试试其他书名，或切换体系。" }));
   }
   search.addEventListener("input", paintBooks);
-  system.addEventListener("change", paintBooks);
-  sort.addEventListener("change", paintBooks);
   const life = lifecycle(ctx, ({ phase, data, error }) => {
     results.setAttribute("aria-busy", String(phase === "loading"));
+    if (phase !== "ready") { books = null; count.textContent = ""; }
     if (phase === "loading") { fill(results, h("p", { role: "status" }, "正在打开书库…")); return; }
     if (phase === "error") { fill(results, errorView(error, refresh, { title: "书库暂时没有打开" })); return; }
     books = data.books;

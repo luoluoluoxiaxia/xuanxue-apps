@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n17";
-import { icon } from "../lib/icons.js?v=n17";
-import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n17";
-import { session, local, refreshSession } from "../lib/store.js?v=n17";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n17";
-import { stateView } from "../ui/bits.js?v=n17";
-import { elementClass } from "../ui/gua.js?v=n17";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n17";
-import { toast } from "../ui/toast.js?v=n17";
-import { sharePost } from "../lib/share.js?v=n17";
-import { openShareSheet } from "../ui/share-sheet.js?v=n17";
-import { confirmDialog } from "../ui/overlay.js?v=n17";
-import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n17";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n20";
+import { icon } from "../lib/icons.js?v=n20";
+import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n20";
+import { session, local, refreshSession } from "../lib/store.js?v=n20";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n20";
+import { stateView } from "../ui/bits.js?v=n20";
+import { elementClass } from "../ui/gua.js?v=n20";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n20";
+import { toast } from "../ui/toast.js?v=n20";
+import { sharePost } from "../lib/share.js?v=n20";
+import { openShareSheet } from "../ui/share-sheet.js?v=n20";
+import { confirmDialog } from "../ui/overlay.js?v=n20";
+import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n20";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;

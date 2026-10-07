@@ -361,6 +361,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 }
 .nav-tab .icon { width: 18px; height: 18px; }
 .topbar-actions { margin-left: auto; min-width: 0; display: flex; align-items: center; gap: 6px; }
+.topbar-roadmap { display: none; }
 /* 已登录的昵称按钮；外层 .topbar-account 是账户位容器，未登录时放登录按钮。 */
 .topbar-account { min-width: 0; max-width: 200px; }
 .topbar-user { max-width: 100%; gap: 4px; padding: 0 10px 0 14px; font-weight: 650; }
@@ -504,6 +505,10 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   body { font-size: 15px; }
   .topbar-inner { padding: 0 8px 0 16px; gap: 10px; }
   .nav-tabs, .topbar-bell, .topbar-login-label, .topbar-user { display: none; }
+  .topbar-roadmap { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 0 8px; border-radius: var(--r-sm); color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+  .topbar-roadmap .icon { width: 16px; height: 16px; }
+  .topbar-roadmap:hover { color: var(--ink); background: var(--bg-hover); }
+  .topbar-roadmap[aria-current="page"] { color: var(--brand-ink); background: var(--brand-soft); }
   .app[data-depth="sub"] .topbar-back { display: inline-grid; }
   .app[data-depth="sub"] .brand-mark { display: none; }
   .brand-name { font-size: 18px; }

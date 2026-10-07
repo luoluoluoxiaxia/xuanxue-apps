@@ -29,6 +29,8 @@ ALLOWED_BINARIES = {
         "4c5dce9c3bfe897ff3b8121d72ae31aab4f2bb0174f90365ddb6df65abd50145",
     "web/public/assets/qianlong_coin_front_transparent_512.png":
         "d8667bf5121198379eed8f09d664a59738381d8f813d3e9fed193541d49be6d2",
+    "web/public/next/assets/roadmap-landscape.webp":
+        "c08c8df42bd945a984a21d64f44b36ca87f0224e01118da08220c9eacde17cac",
 }
 
 SECRET_PATTERNS = {
