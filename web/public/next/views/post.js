@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n20";
-import { icon } from "../lib/icons.js?v=n20";
-import { get, post as apiPost, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n20";
-import { session, local, refreshSession } from "../lib/store.js?v=n20";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n20";
-import { stateView } from "../ui/bits.js?v=n20";
-import { elementClass } from "../ui/gua.js?v=n20";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n20";
-import { toast } from "../ui/toast.js?v=n20";
-import { sharePost } from "../lib/share.js?v=n20";
-import { openShareSheet } from "../ui/share-sheet.js?v=n20";
-import { confirmDialog } from "../ui/overlay.js?v=n20";
-import { likePost, syncLikes, syncPost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n20";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n21";
+import { icon } from "../lib/icons.js?v=n21";
+import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n21";
+import { session, local, refreshSession } from "../lib/store.js?v=n21";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n21";
+import { stateView } from "../ui/bits.js?v=n21";
+import { elementClass } from "../ui/gua.js?v=n21";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n21";
+import { toast } from "../ui/toast.js?v=n21";
+import { sharePost } from "../lib/share.js?v=n21";
+import { openShareSheet } from "../ui/share-sheet.js?v=n21";
+import { confirmDialog } from "../ui/overlay.js?v=n21";
+import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n21";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
@@ -188,6 +188,7 @@ export function render(ctx) {
   let helpAiTimer = null;
   let helpAiBusy = false;
   let helpAiTaskId = "";
+  let deleting = false;
   const expanded = new Set();
   const ui = {};
   const targetId = ctx.query.get("target") || "";
@@ -452,6 +453,40 @@ export function render(ctx) {
     }
   }
 
+  async function removeOwnPost(button) {
+    if (deleting) return;
+    deleting = true;
+    busy += 1;
+    try {
+      const confirmed = await confirmDialog({
+        title: "确定删除这条帖子？",
+        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。你的个人档案和解读记录会保留。",
+        confirmText: "删除帖子",
+        danger: true,
+        returnFocus: button,
+      });
+      if (!confirmed || !ctx.isCurrent()) return;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      await del(path, { interaction: true });
+      removePost(slug);
+      local.remove(draftKey(slug));
+      readPos.delete(slug);
+      clearTimeout(helpAiTimer);
+      loadSeq += 1;
+      if (!ctx.isCurrent()) return;
+      toast("帖子已删除", { type: "ok" });
+      ctx.navigate("/square");
+    } catch (error) {
+      if (ctx.isCurrent()) toast(error.message || "删除失败，请稍后重试", { type: "error" });
+    } finally {
+      deleting = false;
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      settle();
+    }
+  }
+
   function paint() {
     const isHelp = post.post_kind === "help";
     const systemLabel = post.system_label || (post.system === "bazi" ? "八字" : "六爻");
@@ -468,6 +503,9 @@ export function render(ctx) {
     const shareBtn = h("button", { type: "button", class: "btn btn-sm" }, icon("share"), "分享");
     shareBtn.addEventListener("click", () => share(shareBtn));
     ui.share = shareBtn;
+    const deleteBtn = post.can_manage
+      ? h("button", { type: "button", class: "btn btn-danger btn-sm", onClick: event => removeOwnPost(event.currentTarget) }, icon("trash"), "删除帖子")
+      : null;
     // 「更多」菜单原先只有三项，都指向已下线的服务端完整帖子页（/?post= 又映射回本页，原地打转）。
     // 举报与「发布事情进展」要等公开契约给出表单可选值后，在本页内完成；在那之前不展示点了没用的入口。
     const primary = isHelp
@@ -522,7 +560,7 @@ export function render(ctx) {
         answer,
         helpAi,
         updates,
-        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, h("span", { class: "post-actions-spacer" }), primary)),
+        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, deleteBtn, h("span", { class: "post-actions-spacer" }), primary)),
       discussion);
     renderComments();
 

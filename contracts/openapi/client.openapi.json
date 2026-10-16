@@ -7399,6 +7399,43 @@
       }
     },
     "/api/community/posts/{slug}": {
+      "delete": {
+        "operationId": "api_delete_community_post_api_community_posts__slug__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "slug",
+            "required": true,
+            "schema": {
+              "title": "Slug",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientOk"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Delete Community Post"
+      },
       "get": {
         "operationId": "api_get_community_post_api_community_posts__slug__get",
         "parameters": [

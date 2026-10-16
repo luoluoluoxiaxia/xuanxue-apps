@@ -1,16 +1,16 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n20";
-import { icon } from "../lib/icons.js?v=n20";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n20";
-import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n20";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n20";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n20";
-import { pillarsToken } from "../ui/gua.js?v=n20";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n20";
-import { toast } from "../ui/toast.js?v=n20";
-import { copyText } from "../lib/share.js?v=n20";
-import { openFeedback } from "./feedback.js?v=n20";
+import { h, reducedMotion } from "../lib/dom.js?v=n21";
+import { icon } from "../lib/icons.js?v=n21";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n21";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n21";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n21";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n21";
+import { pillarsToken } from "../ui/gua.js?v=n21";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n21";
+import { toast } from "../ui/toast.js?v=n21";
+import { copyText } from "../lib/share.js?v=n21";
+import { openFeedback } from "./feedback.js?v=n21";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },
@@ -781,6 +781,7 @@ function archivesView(ctx, body) {
     const summary = profile.summary && typeof profile.summary === "object" ? profile.summary : {};
     const name = String(profile.name || "").trim() || (isLy ? "未命名卦盘" : "未命名命盘");
     const isPublic = profile.visibility === "public";
+    const postDeleted = profile.public_post?.status === "deleted";
     const slug = String(profile.public_post?.slug || "").trim();
     const task = TASK_STATE[profile.task_status];
     const history = Number(profile.history_count) || 0;
@@ -809,7 +810,7 @@ function archivesView(ctx, body) {
     // 没有标签时不留空行：「更多」按钮始终跟名字同一行。
     const badges = [
       !isLy && profile.is_default ? h("span", { class: "chip chip-gold" }, icon("sun"), "默认命盘") : null,
-      isLy || isPublic ? h("span", { class: ["chip", isPublic ? "chip-liuyao" : "chip-outline"] }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
+      isLy || isPublic ? h("span", { class: ["chip", isPublic && !postDeleted ? "chip-liuyao" : "chip-outline"] }, icon(isPublic && !postDeleted ? "globe" : "lock"), postDeleted ? "帖子已删除" : isPublic ? "公开" : "私密") : null,
       task ? h("span", { class: ["chip", "arc-task", `is-${task.tone}`] }, task.tone === "active" ? h("span", { class: "arc-pulse", "aria-hidden": "true" }) : null, task.label) : null,
     ].filter(Boolean);
 
@@ -831,7 +832,9 @@ function archivesView(ctx, body) {
         !isLy ? h("button", { type: "button", class: "btn btn-sm", onClick: () => openConversations(ctx, profile) }, icon("comment"), "对话记录") : null,
         defaultButton,
         isPublic
-          ? slug
+          ? postDeleted
+            ? h("span", { class: "arc-retained" }, "公开帖子已删除，档案已保留")
+            : slug
             ? h("a", { class: "btn btn-sm btn-ghost", href: `#/post/${encodeURIComponent(slug)}` }, icon("globe"), "查看公开卦帖")
             : h("span", { class: "arc-retained" }, "公开档案随卦帖保留")
           : null));

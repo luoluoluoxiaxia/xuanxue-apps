@@ -1,12 +1,12 @@
 // 广场：社区问题流。桌面三栏（话题 / 问题流 / 今日与等你来答），手机单栏 + 话题横滑。
-import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n20";
-import { icon } from "../lib/icons.js?v=n20";
-import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n20";
-import { session, local } from "../lib/store.js?v=n20";
-import { relativeTime, count } from "../lib/format.js?v=n20";
-import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n20";
-import { guaToken, pillarsToken } from "../ui/gua.js?v=n20";
-import { toast } from "../ui/toast.js?v=n20";
+import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n21";
+import { icon } from "../lib/icons.js?v=n21";
+import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n21";
+import { session, local } from "../lib/store.js?v=n21";
+import { relativeTime, count } from "../lib/format.js?v=n21";
+import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n21";
+import { guaToken, pillarsToken } from "../ui/gua.js?v=n21";
+import { toast } from "../ui/toast.js?v=n21";
 
 export const TOPICS = [
   ["", "全部话题", "compass"],
@@ -217,6 +217,18 @@ export function syncPost(slug, patch) {
   if (!slug || !patch) return;
   cache.forEach(state => state.items.forEach(item => { if (item.slug === slug) Object.assign(item, patch); }));
   (side.seeking?.items || []).forEach(item => { if (item.slug === slug) Object.assign(item, patch); });
+}
+
+export function removePost(slug) {
+  cache.forEach(state => {
+    state.items = state.items.filter(item => item.slug !== slug);
+    state.at = 0;
+  });
+  if (side.seeking) {
+    side.seeking.items = (side.seeking.items || []).filter(item => item.slug !== slug);
+    side.seeking.at = 0;
+  }
+  invalidateCached(detailPath(slug));
 }
 
 export async function likePost(item, button) {
