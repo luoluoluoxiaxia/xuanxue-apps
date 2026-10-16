@@ -1,16 +1,17 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n21";
-import { icon } from "../lib/icons.js?v=n21";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n21";
-import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n21";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n21";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n21";
-import { pillarsToken } from "../ui/gua.js?v=n21";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n21";
-import { toast } from "../ui/toast.js?v=n21";
-import { copyText } from "../lib/share.js?v=n21";
-import { openFeedback } from "./feedback.js?v=n21";
+import { h, reducedMotion } from "../lib/dom.js?v=n22";
+import { icon } from "../lib/icons.js?v=n22";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n22";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n22";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n22";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n22";
+import { pillarsToken } from "../ui/gua.js?v=n22";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n22";
+import { toast } from "../ui/toast.js?v=n22";
+import { copyText } from "../lib/share.js?v=n22";
+import { openFeedback } from "./feedback.js?v=n22";
+import { removePost } from "./feed.js?v=n22";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },
@@ -696,6 +697,51 @@ function archivesView(ctx, body) {
     }
   }
 
+  const deletingPosts = new Set();
+  async function removePublicPost(profile) {
+    const slug = profile.public_post?.slug;
+    if (!slug || deletingPosts.has(slug)) return;
+    deletingPosts.add(slug);
+    let card;
+    try {
+      const ok = await confirmDialog({
+        title: "确定删除这条公开帖子？",
+        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。这份档案和解读记录会保留。",
+        confirmText: "删除公开帖子",
+        danger: true,
+      });
+      if (!ctx.isCurrent()) return;
+      if (!ok) {
+        focusMore(profile);
+        return;
+      }
+      card = listNode.querySelector(`.arc-card[data-id="${Number(profile.id)}"]`);
+      setCardBusy(card, "正在删除公开帖子…");
+      await del(`/api/community/posts/${encodeURIComponent(slug)}`, { interaction: true });
+      removePost(slug);
+      if (!ctx.isCurrent()) return;
+      // Ignore an older profile request that may still contain the public link.
+      state.requestId += 1;
+      state.profiles = (state.profiles || []).map(item => item.public_post?.slug === slug
+        ? { ...item, public_post: { ...item.public_post, status: "deleted", url: "" } }
+        : item);
+      rememberProfiles();
+      paintTabs();
+      paintList();
+      focusMore(profile);
+      toast("公开帖子已删除，档案和解读记录已保留", { type: "ok" });
+      refreshSession().catch(() => {});
+    } catch (error) {
+      if (!ctx.isCurrent()) return;
+      clearCardBusy(card);
+      if (error?.status === 401) refreshSession().catch(() => {});
+      toast(`删除失败：${error?.message || "请稍后再试"}`, { type: "error" });
+      focusMore(profile);
+    } finally {
+      deletingPosts.delete(slug);
+    }
+  }
+
   function renameProfile(profile) {
     const isLy = systemOf(profile) === "liuyao";
     const id = uid("arc-rename");
@@ -783,6 +829,7 @@ function archivesView(ctx, body) {
     const isPublic = profile.visibility === "public";
     const postDeleted = profile.public_post?.status === "deleted";
     const slug = String(profile.public_post?.slug || "").trim();
+    const canDeletePost = slug && ["published", "hidden"].includes(profile.public_post?.status);
     const task = TASK_STATE[profile.task_status];
     const history = Number(profile.history_count) || 0;
     const question = isLy ? String(summary.question || "").trim() : "";
@@ -798,6 +845,8 @@ function archivesView(ctx, body) {
     }, icon("more"));
     moreButton.addEventListener("click", () => openMenu(moreButton, [
       { label: "重命名", icon: "edit", onSelect: () => renameProfile(profile) },
+      canDeletePost ? "sep" : null,
+      canDeletePost ? { label: "删除公开帖子", icon: "trash", onSelect: () => removePublicPost(profile) } : null,
       isPublic ? null : "sep",
       isPublic ? null : { label: "永久删除", icon: "trash", onSelect: () => removeProfile(profile) },
     ], { align: "end" }));
@@ -810,7 +859,7 @@ function archivesView(ctx, body) {
     // 没有标签时不留空行：「更多」按钮始终跟名字同一行。
     const badges = [
       !isLy && profile.is_default ? h("span", { class: "chip chip-gold" }, icon("sun"), "默认命盘") : null,
-      isLy || isPublic ? h("span", { class: ["chip", isPublic && !postDeleted ? "chip-liuyao" : "chip-outline"] }, icon(isPublic && !postDeleted ? "globe" : "lock"), postDeleted ? "帖子已删除" : isPublic ? "公开" : "私密") : null,
+      isLy || isPublic || postDeleted ? h("span", { class: ["chip", isPublic && !postDeleted ? "chip-liuyao" : "chip-outline"] }, icon(isPublic && !postDeleted ? "globe" : "lock"), postDeleted ? "帖子已删除" : isPublic ? "公开" : "私密") : null,
       task ? h("span", { class: ["chip", "arc-task", `is-${task.tone}`] }, task.tone === "active" ? h("span", { class: "arc-pulse", "aria-hidden": "true" }) : null, task.label) : null,
     ].filter(Boolean);
 
@@ -831,7 +880,7 @@ function archivesView(ctx, body) {
         h("a", { class: "btn btn-primary btn-sm", href: openHref }, icon(isLy ? "gua" : "pillars"), isLy ? "打开卦档" : "打开命盘"),
         !isLy ? h("button", { type: "button", class: "btn btn-sm", onClick: () => openConversations(ctx, profile) }, icon("comment"), "对话记录") : null,
         defaultButton,
-        isPublic
+        isPublic || postDeleted
           ? postDeleted
             ? h("span", { class: "arc-retained" }, "公开帖子已删除，档案已保留")
             : slug

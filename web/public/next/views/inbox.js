@@ -1,14 +1,14 @@
 // 消息：谁赞了、评论了、回复了或采纳了你的内容。
 // 按北京时间分成「今天 / 昨天 / 更早」；同一页内同一卦帖的赞合并成一条；点开后标记已读并跳到对应评论。
 // 从卦帖返回时先用上次的列表秒开并回到原位置，再静默拉取最新；再点一次底栏「消息」可手动刷新。
-import { h, on } from "../lib/dom.js?v=n21";
-import { icon } from "../lib/icons.js?v=n21";
-import { get, post, query } from "../lib/api.js?v=n21";
-import { session, inbox, refreshSession } from "../lib/store.js?v=n21";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n21";
-import { stateView } from "../ui/bits.js?v=n21";
-import { confirmDialog } from "../ui/overlay.js?v=n21";
-import { toast } from "../ui/toast.js?v=n21";
+import { h, on } from "../lib/dom.js?v=n22";
+import { icon } from "../lib/icons.js?v=n22";
+import { get, post, query } from "../lib/api.js?v=n22";
+import { session, inbox, refreshSession } from "../lib/store.js?v=n22";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n22";
+import { stateView } from "../ui/bits.js?v=n22";
+import { confirmDialog } from "../ui/overlay.js?v=n22";
+import { toast } from "../ui/toast.js?v=n22";
 
 const PAGE_LIMIT = 30;
 const READ_BATCH = 100;
