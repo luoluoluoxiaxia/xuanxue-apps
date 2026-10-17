@@ -1,5 +1,5 @@
 // 极简状态容器与账户会话：账户、额度与消息数都以服务端返回为准，客户端只缓存展示。
-import { get, post, setCsrfToken } from "./api.js?v=n22";
+import { get, post, setCsrfToken } from "./api.js?v=n23";
 
 export function createStore(initial) {
   let state = initial;
@@ -31,6 +31,9 @@ export const inbox = createStore({ unread: 0, loaded: false });
 
 let refreshing = null;
 
+export const RETURNING_KEY = "xz-next-returning";
+export const hasSignedInHere = () => local.get(RETURNING_KEY, "") === "1";
+
 export function applyAccount(payload) {
   const data = payload || {};
   const authenticated = !!data.authenticated;
@@ -49,6 +52,8 @@ export function applyAccount(payload) {
     document.dispatchEvent(new CustomEvent("xz:authchange", { detail: { authenticated } }));
   }
   if (!authenticated) inbox.set({ unread: 0, loaded: false });
+  // 在这台设备上登录过：以后打开登录面板默认停在「登录」，否则停在「注册」。
+  if (authenticated) local.set(RETURNING_KEY, "1");
   return session.get();
 }
 

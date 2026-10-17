@@ -1,12 +1,12 @@
 // 广场：社区问题流。桌面三栏（话题 / 问题流 / 今日与等你来答），手机单栏 + 话题横滑。
-import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n22";
-import { session, local } from "../lib/store.js?v=n22";
-import { relativeTime, count } from "../lib/format.js?v=n22";
-import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n22";
-import { guaToken, pillarsToken } from "../ui/gua.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
+import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n23";
+import { session, local } from "../lib/store.js?v=n23";
+import { relativeTime, count } from "../lib/format.js?v=n23";
+import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n23";
+import { guaToken, pillarsToken } from "../ui/gua.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
 
 export const TOPICS = [
   ["", "全部话题", "compass"],
@@ -83,7 +83,9 @@ function filterKey(filter) {
 function readFilter(queryParams) {
   const saved = local.json(FILTER_KEY, {}) || {};
   const view = queryParams.get("view") || saved.view || "latest";
-  const system = queryParams.has("system") ? queryParams.get("system") : (saved.system || "");
+  // 手机上没有盘法切换（见 .feed-system）：不沿用桌面上存下的盘法，免得被一个看不见的筛选卡住。
+  const narrow = window.matchMedia?.("(max-width: 719px)").matches;
+  const system = queryParams.has("system") ? queryParams.get("system") : (narrow ? "" : (saved.system || ""));
   const type = queryParams.has("type") ? queryParams.get("type") : (saved.type || "");
   return {
     view: VIEWS.some(([key]) => key === view) ? view : "latest",

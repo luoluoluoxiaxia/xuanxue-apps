@@ -1,15 +1,15 @@
-import { h, fill } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get } from "../lib/api.js?v=n22";
-import { local, session } from "../lib/store.js?v=n22";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n22";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n22";
-import { errorView, stateView } from "../ui/bits.js?v=n22";
-import { openBookImage } from "../ui/book-image.js?v=n22";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n22";
-import { openSheet } from "../ui/overlay.js?v=n22";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n22";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n22";
+import { h, fill } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get } from "../lib/api.js?v=n23";
+import { local, session } from "../lib/store.js?v=n23";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n23";
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks } from "../lib/books.js?v=n23";
+import { errorView, stateView } from "../ui/bits.js?v=n23";
+import { openBookImage } from "../ui/book-image.js?v=n23";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n23";
+import { openSheet } from "../ui/overlay.js?v=n23";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n23";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n23";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -47,7 +47,7 @@ function library(ctx) {
   const sorts = choices("book-sort", "排序", "书籍排序", [["recent", "最近阅读优先"], ["catalog", "书库顺序"]], sort, value => { sort = value; });
   const node = h("div", { class: "books-library" },
     h("header", { class: "books-hero" }, h("h1", null, "典籍书库"),
-      h("p", null, "原文初录稿开放查阅，疑缺随页标注；已整理的白话与校记随文保留，尚待逐书校勘。")),
+      h("p", null, "命理古籍原文在线读，部分已配白话。整理还在逐本进行，看不清或有疑问的地方随页标出。")),
     recent, h("div", { class: "books-filters" }, search, systems, sorts), count, results);
   function paintBooks() {
     local.setJson("xz-book-filters", { query: search.value, system, sort });
@@ -55,6 +55,8 @@ function library(ctx) {
     const rows = filterBooks(books, search.value, system);
     const position = book => readingPosition(local.json(positionKey(book.id)), book.section_count);
     if (sort === "recent") rows.sort((a, b) => (position(b)?.updatedAt || 0) - (position(a)?.updatedAt || 0));
+    // 暂时打不开的书排到最后，可读的书排在前面。
+    rows.sort((a, b) => Number(b.section_count > 0) - Number(a.section_count > 0));
     const latest = books.filter(book => position(book)).sort((a, b) => position(b).updatedAt - position(a).updatedAt)[0];
     fill(recent, latest ? h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
       icon("book"), h("span", null, h("small", null, "接着上次读"), h("b", null, latest.title)),
@@ -73,7 +75,7 @@ function library(ctx) {
           h("progress", { max: book.section_count, value: progress, "aria-label": `${book.title} 阅读进度` })) : null,
         available ? h("a", { class: "btn btn-soft", href: `#${readingPath(book.id, progress)}` },
           icon("book"), saved || progress > 1 ? "继续阅读" : "打开书籍", h("span", null, `${book.section_count} ${book.has_modern ? "篇" : "页"}`))
-          : h("p", { class: "books-unavailable" }, "电子成品待恢复"));
+          : h("p", { class: "books-unavailable" }, "整理中，暂时还不能阅读"));
     }) : stateView({ glyph: "search", title: "没有匹配的书籍", text: "试试其他书名，或切换体系。" }));
   }
   search.addEventListener("input", paintBooks);

@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n22";
-import { session, local, refreshSession } from "../lib/store.js?v=n22";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n22";
-import { stateView } from "../ui/bits.js?v=n22";
-import { elementClass } from "../ui/gua.js?v=n22";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
-import { sharePost } from "../lib/share.js?v=n22";
-import { openShareSheet } from "../ui/share-sheet.js?v=n22";
-import { confirmDialog } from "../ui/overlay.js?v=n22";
-import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n22";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n23";
+import { session, local, refreshSession } from "../lib/store.js?v=n23";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n23";
+import { stateView } from "../ui/bits.js?v=n23";
+import { elementClass } from "../ui/gua.js?v=n23";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
+import { sharePost } from "../lib/share.js?v=n23";
+import { openShareSheet } from "../ui/share-sheet.js?v=n23";
+import { confirmDialog, openMenu, openSheet } from "../ui/overlay.js?v=n23";
+import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n23";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
@@ -393,8 +393,8 @@ export function render(ctx) {
           ? "上次请的 AI 解读没有完成，没有扣积分，可以再请一次。"
           : "花你自己的积分请 AI 解读这一卦；解读会直接公开在这条帖子上，并注明是你请的。"),
         h("p", { class: "help-ai-meta" }, state.authenticated
-          ? `只扣账户余额，每日免费积分不能用 · 当前余额 ${balance} 分`
-          : "只扣账户余额，每日免费积分不能用")),
+          ? `只扣账户积分，今日免费额度不能用在这里 · 账户积分 ${balance} 分`
+          : "只扣账户积分，今日免费额度不能用在这里")),
       button);
   }
 
@@ -407,7 +407,7 @@ export function render(ctx) {
     // 余额够不够以服务端为准：本地的余额可能是旧的，不在这里拦。
     const confirmed = await confirmDialog({
       title: "用你的积分请 AI 解读？",
-      message: "按这次解读的实际用量从账户余额扣分，每日免费积分不能用。解读生成后直接公开在这条帖子上，并注明是你请的。",
+      message: "按这次解读的实际用量从账户积分里扣，今日免费额度不能用在这里。解读生成后直接公开在这条帖子上，并注明是你请的。",
       confirmText: "请 AI 解读",
       returnFocus: button,
     });
@@ -453,6 +453,70 @@ export function render(ctx) {
     }
   }
 
+  // 举报：原因是自由文本（最多 80 字），这里给常用几项，选「其他」时请用户补一句。
+  const REPORT_REASONS = ["广告或刷屏", "泄露隐私", "辱骂或骚扰", "违法或危险内容", "其他"];
+  function openReportSheet(returnFocus) {
+    let reason = "";
+    const group = h("div", { class: "choice-list", role: "radiogroup", "aria-label": "举报原因" });
+    const detail = h("textarea", { class: "textarea", rows: 3, maxlength: 1000, placeholder: "补充说明（选填）", "aria-label": "补充说明" });
+    const error = h("p", { class: "field-error", hidden: true, role: "alert" });
+    const send = h("button", { type: "button", class: "btn btn-primary btn-block" }, "提交举报");
+    const paint = () => group.replaceChildren(...REPORT_REASONS.map(label => h("button", {
+      type: "button", role: "radio", class: "choice", "aria-checked": String(reason === label),
+      onClick: () => { reason = label; error.hidden = true; paint(); },
+    }, h("span", { class: "choice-dot", "aria-hidden": "true" }), label)));
+    paint();
+    const sheet = openSheet({ title: "举报这条帖子", body: h("div", { class: "form-stack" }, group, detail, error, send), returnFocus });
+    send.addEventListener("click", async () => {
+      if (!reason) { error.textContent = "请选择一个原因"; error.hidden = false; return; }
+      if (reason === "其他" && !detail.value.trim()) { error.textContent = "选「其他」时请简单写一下原因"; error.hidden = false; detail.focus(); return; }
+      send.disabled = true;
+      try {
+        await apiPost("/api/community/reports", { slug, reason, detail: detail.value.trim() }, { interaction: true });
+        sheet.close?.();
+        toast("已收到举报，我们会尽快处理", { type: "ok" });
+      } catch (failure) {
+        error.textContent = failure.message || "提交失败，请稍后重试";
+        error.hidden = false;
+      } finally {
+        send.disabled = false;
+      }
+    });
+  }
+
+  // 事情进展：只有卦主能写；状态取值与公开契约一致。
+  const UPDATE_STATUSES = [["watching", "待观察"], ["verified", "已应验"], ["partial", "部分应验"], ["missed", "未应验"], ["invalid", "无法验证"]];
+  function openUpdateSheet(returnFocus) {
+    let status = "watching";
+    const group = h("div", { class: "seg", role: "radiogroup", "aria-label": "应验情况" });
+    const body = h("textarea", { class: "textarea", rows: 4, maxlength: 2000, placeholder: "事情后来怎样了？写下来，给卦友和以后的自己参考。", "aria-label": "事情进展" });
+    const error = h("p", { class: "field-error", hidden: true, role: "alert" });
+    const send = h("button", { type: "button", class: "btn btn-primary btn-block" }, "发布进展");
+    const paint = () => group.replaceChildren(...UPDATE_STATUSES.map(([value, label]) => h("button", {
+      type: "button", role: "radio", "aria-checked": String(status === value), onClick: () => { status = value; paint(); },
+    }, label)));
+    paint();
+    const sheet = openSheet({ title: "记录事情进展", body: h("div", { class: "form-stack" }, group, body, error, send), returnFocus });
+    autoGrow(body, 260);
+    send.addEventListener("click", async () => {
+      const text = body.value.trim();
+      if (!text) { error.textContent = "写一句事情的进展再发布"; error.hidden = false; body.focus(); return; }
+      send.disabled = true;
+      try {
+        await apiPost(`/api/community/posts/${encodeURIComponent(slug)}/updates`, { verification_status: status, body: text }, { interaction: true });
+        sheet.close?.();
+        toast("进展已发布", { type: "ok" });
+        invalidateCached(path);
+        if (ctx.isCurrent()) load({ countView: false, fresh: true, quiet: true });
+      } catch (failure) {
+        error.textContent = failure.message || "发布失败，请稍后重试";
+        error.hidden = false;
+      } finally {
+        send.disabled = false;
+      }
+    });
+  }
+
   async function removeOwnPost(button) {
     if (deleting) return;
     deleting = true;
@@ -460,7 +524,7 @@ export function render(ctx) {
     try {
       const confirmed = await confirmDialog({
         title: "确定删除这条帖子？",
-        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。你的个人档案和解读记录会保留。",
+        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。你的盘和解读记录会保留。",
         confirmText: "删除帖子",
         danger: true,
         returnFocus: button,
@@ -506,8 +570,12 @@ export function render(ctx) {
     const deleteBtn = post.can_manage
       ? h("button", { type: "button", class: "btn btn-danger btn-sm", onClick: event => removeOwnPost(event.currentTarget) }, icon("trash"), "删除帖子")
       : null;
-    // 「更多」菜单原先只有三项，都指向已下线的服务端完整帖子页（/?post= 又映射回本页，原地打转）。
-    // 举报与「发布事情进展」要等公开契约给出表单可选值后，在本页内完成；在那之前不展示点了没用的入口。
+    // 「更多」：卦主可以记录事情进展；其他人可以举报。都在本页的面板里完成。
+    const moreBtn = h("button", { type: "button", class: "btn btn-sm btn-ghost", "aria-haspopup": "menu", "aria-expanded": "false", "aria-label": "更多操作" }, icon("more"));
+    moreBtn.addEventListener("click", () => openMenu(moreBtn, [
+      post.can_manage ? { label: "记录事情进展", icon: "feather", onSelect: () => openUpdateSheet(moreBtn) } : null,
+      post.can_manage ? null : { label: "举报这条帖子", icon: "flag", onSelect: () => openReportSheet(moreBtn) },
+    ]));
     const primary = isHelp
       ? h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => focusComposer() }, icon("feather"), "写下判断")
       : h("a", { class: "btn btn-primary btn-sm", href: post.system === "bazi" ? "#/ask/bazi" : "#/ask/liuyao" }, icon("plus"), post.system === "bazi" ? "我也要排盘" : "我也要起卦");
@@ -560,8 +628,14 @@ export function render(ctx) {
         answer,
         helpAi,
         updates,
-        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, deleteBtn, h("span", { class: "post-actions-spacer" }), primary)),
-      discussion);
+        h("div", { class: "post-actions" }, likeBtn, ui.follow, shareBtn, deleteBtn, moreBtn, h("span", { class: "post-actions-spacer" }), primary)),
+      discussion,
+      // 手机上右栏隐藏：看完别人的卦，在页尾给一个「我也问一件」的出口，不让帖子页成为死胡同。
+      h("section", { class: "post-cta-m", "aria-label": "我也问一件" },
+        h("h2", null, "你也有放不下的事？"),
+        h("div", { class: "post-cta-m-actions" },
+          h("a", { class: "btn btn-primary", href: "#/ask/liuyao" }, icon("gua"), "六爻问一件事"),
+          h("a", { class: "btn", href: "#/ask/bazi" }, icon("pillars"), "八字看长期"))));
     renderComments();
 
     // 右栏：行动 + 同类问题

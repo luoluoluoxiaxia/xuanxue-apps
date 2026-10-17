@@ -5906,6 +5906,13 @@
             "type": "string"
           },
           "verification_status": {
+            "enum": [
+              "watching",
+              "verified",
+              "partial",
+              "missed",
+              "invalid"
+            ],
             "title": "Verification Status",
             "type": "string"
           }
@@ -5970,6 +5977,10 @@
             "type": "string"
           },
           "reason": {
+            "description": "举报原因，最多 80 字。客户端常用：广告或刷屏、泄露隐私、辱骂或骚扰、违法或危险内容、其他。",
+            "examples": [
+              "广告或刷屏"
+            ],
             "title": "Reason",
             "type": "string"
           },
@@ -7079,6 +7090,53 @@
           }
         },
         "summary": "Api Chart"
+      }
+    },
+    "/api/chart/preview": {
+      "post": {
+        "description": "注册前先看机械排盘结果：只计算、不建档、不写库、不调用模型，也不需要登录。\n\n六爻返回卦名、世应、六亲纳甲等卦面事实；八字返回四柱与大运。\n正式保存仍走 ``/api/chart``（需要账户）。",
+        "operationId": "api_chart_preview_api_chart_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BirthInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ClientBaziChart"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClientLiuyaoChart"
+                    }
+                  ],
+                  "title": "Response Api Chart Preview Api Chart Preview Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Chart Preview"
       }
     },
     "/api/chat-message-feedback": {
