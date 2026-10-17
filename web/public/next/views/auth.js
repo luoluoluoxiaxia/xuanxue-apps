@@ -1,17 +1,17 @@
 // 登录 / 注册 / 重设密码面板。账户由服务端决定，这里只提交表单并应用返回的账户状态。
 // 交互：字段就地校验（中文提示，聚焦第一个有误的字段）；回车依次前进到下一个待填项；
 // 验证码可整段粘贴；提交中按钮保持焦点；面板在请求途中被关掉时，等请求结束再回报结果。
-import { h, svg } from "../lib/dom.js?v=n22";
-import { icon, brandMark } from "../lib/icons.js?v=n22";
-import { post } from "../lib/api.js?v=n22";
-import { applyAccount } from "../lib/store.js?v=n22";
-import { openSheet } from "../ui/overlay.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
+import { h, svg } from "../lib/dom.js?v=n23";
+import { icon, brandMark } from "../lib/icons.js?v=n23";
+import { post } from "../lib/api.js?v=n23";
+import { applyAccount, hasSignedInHere } from "../lib/store.js?v=n23";
+import { openSheet } from "../ui/overlay.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
 
 const MODES = {
   login_password: { title: "登录玄枢", submit: "密码登录", busy: "正在登录…", done: "已登录", note: "密码无法登录时，可以验证邮箱后重设密码。" },
   login_code: { title: "登录玄枢", submit: "验证码登录", busy: "正在登录…", done: "邮箱验证完成，已登录", note: "验证码 10 分钟内有效。" },
-  register: { title: "创建账户", submit: "注册", busy: "正在注册…", done: "邮箱已验证，账户已创建", note: "邮箱不会在社区展示。" },
+  register: { title: "创建账户", submit: "注册", busy: "正在注册…", done: "邮箱已验证，账户已创建", note: "邮箱不会在社区展示。密码可以不设，以后用验证码登录。" },
   reset_password: { title: "重设密码", submit: "重设密码并登录", busy: "正在重设…", done: "密码已重设，已登录", note: "验证码 10 分钟内有效；重设后可使用新密码登录。" },
 };
 const PURPOSE = { register: "register", reset_password: "password_reset", login_code: "login", login_password: "login" };
@@ -50,7 +50,8 @@ function setIdle(button, ...content) {
   button.replaceChildren(...content);
 }
 
-export function openAuth({ reason = "", mode = "login_password" } = {}) {
+// 没指定模式时：这台设备上登录过的人先看到「登录」，第一次来的人先看到「注册」。
+export function openAuth({ reason = "", mode = "" } = {}) {
   if (open) return open.promise;
   let resolveResult;
   const promise = new Promise(resolve => { resolveResult = resolve; });
@@ -59,7 +60,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
   let inflight = null;
   let renders = 0;
   let stopTimer = () => {};
-  const state = { mode: MODES[mode] ? mode : "login_password", email: rememberedEmail };
+  const state = { mode: MODES[mode] ? mode : hasSignedInHere() ? "login_password" : "register", email: rememberedEmail };
   const content = h("div", { class: "auth" });
   const sheet = openSheet({
     title: "",
@@ -86,6 +87,8 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
     const usesCode = state.mode !== "login_password";
     const usesPassword = state.mode !== "login_code";
     const newPassword = isRegister || isReset;
+    // 注册时密码选填：先用验证码把账户建起来，想设密码以后再设。
+    const optionalPassword = isRegister;
     const purpose = PURPOSE[state.mode];
     const uid = `auth-${Math.random().toString(36).slice(2, 8)}`;
     const fields = {};
@@ -114,9 +117,9 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
     });
     const readEmail = () => halfWidth(email.value).trim();
     const password = usesPassword ? h("input", {
-      class: "input", type: "password", name: "password", required: true, maxlength: 128,
+      class: "input", type: "password", name: "password", required: !optionalPassword, maxlength: 128,
       autocomplete: newPassword ? "new-password" : "current-password", enterkeyhint: "go",
-      placeholder: newPassword ? `至少 ${PASSWORD_MIN} 位` : "输入密码",
+      placeholder: optionalPassword ? `选填 · 至少 ${PASSWORD_MIN} 位` : newPassword ? `至少 ${PASSWORD_MIN} 位` : "输入密码",
     }) : null;
     const reveal = password ? h("button", { type: "button", class: "auth-reveal", "aria-label": "显示密码", "aria-pressed": "false" }, icon("eye")) : null;
     const code = usesCode ? h("input", {
@@ -161,7 +164,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
         list.push(["code", code.value ? `验证码是 ${CODE_LENGTH} 位数字` : sent[purpose] ? `请填写邮件里的 ${CODE_LENGTH} 位验证码` : "请先发送验证码，再填写邮件里的数字"]);
       }
       if (usesPassword) {
-        if (!password.value) list.push(["password", newPassword ? "请设置密码" : "请输入密码"]);
+        if (!password.value) { if (!optionalPassword) list.push(["password", newPassword ? "请设置密码" : "请输入密码"]); }
         else if (newPassword && charCount(password.value) < PASSWORD_MIN) list.push(["password", `密码至少 ${PASSWORD_MIN} 位`]);
       }
       return list;
@@ -238,6 +241,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
       // 填满 6 位：验证码登录直接提交；注册 / 重设则前往密码。
       if (digits.length === CODE_LENGTH && codeLength < CODE_LENGTH) {
         if (state.mode === "login_code" && EMAIL_RE.test(readEmail())) requestSubmit();
+        else if (optionalPassword) submit.focus();
         else if (password && !password.value) password.focus();
       }
       codeLength = digits.length;
@@ -304,7 +308,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
     const form = h("form", { class: "auth-form", novalidate: true },
       field("email", "邮箱", email),
       usesCode ? field("code", "邮箱验证码", code, h("div", { class: "auth-code-row" }, code, sendCode)) : null,
-      password ? field("password", isReset ? "新密码" : "密码", password, h("div", { class: "auth-password" }, password, reveal)) : null,
+      password ? field("password", isReset ? "新密码" : optionalPassword ? "密码（选填）" : "密码", password, h("div", { class: "auth-password" }, password, reveal)) : null,
       alert,
       status,
       submit,
@@ -426,7 +430,7 @@ export function openAuth({ reason = "", mode = "login_password" } = {}) {
       const target = focus === "tab" ? methodSwitch?.querySelector('[aria-selected="true"]')
         : !EMAIL_RE.test(readEmail()) ? email
           : usesCode && code.value.length !== CODE_LENGTH ? (firstSend() ? sendCode : code)
-            : password && !password.value ? password : submit;
+            : password && !password.value && !optionalPassword ? password : submit;
       target?.focus({ preventScroll: true });
     });
   }

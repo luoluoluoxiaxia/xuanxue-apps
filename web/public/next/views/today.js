@@ -1,14 +1,14 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post, put } from "../lib/api.js?v=n22";
-import { session, refreshSession } from "../lib/store.js?v=n22";
-import { greeting } from "../lib/format.js?v=n22";
-import { stateView } from "../ui/bits.js?v=n22";
-import { openSheet } from "../ui/overlay.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
+import { h } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post, put } from "../lib/api.js?v=n23";
+import { session, refreshSession } from "../lib/store.js?v=n23";
+import { greeting } from "../lib/format.js?v=n23";
+import { stateView } from "../ui/bits.js?v=n23";
+import { openSheet } from "../ui/overlay.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
@@ -310,7 +310,7 @@ function gateNode(kind, payload, actions) {
     const profiles = Array.isArray(payload?.profiles) ? payload.profiles : [];
     return shell({
       title: "选择一张默认命盘",
-      text: "仅影响观象台，其他档案保留。设置后开始准备内容。",
+      text: "仅影响观象台，其他的盘保留。设置后开始准备内容。",
       body: profiles.length
         ? h("div", { class: "td-choices", role: "list" }, profiles.map(profile => {
           const active = Number(profile.id) === currentId;
@@ -325,7 +325,7 @@ function gateNode(kind, payload, actions) {
           button.addEventListener("click", () => actions.setDefault(profile.id, button));
           return h("div", { role: "listitem" }, button);
         }))
-        : h("div", { class: "td-gate-actions" }, h("a", { class: "btn btn-primary", href: "#/me/archives" }, icon("book"), "去我的盘选择")),
+        : h("div", { class: "td-gate-actions" }, h("a", { class: "btn btn-primary", href: "#/me/archives" }, icon("layers"), "去我的盘选择")),
     });
   }
   if (kind === "paused" || kind === "failed") {

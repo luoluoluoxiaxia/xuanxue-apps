@@ -504,11 +504,8 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   :root { --topbar-h: 54px; }
   body { font-size: 15px; }
   .topbar-inner { padding: 0 8px 0 16px; gap: 10px; }
-  .nav-tabs, .topbar-bell, .topbar-login-label, .topbar-user { display: none; }
-  .topbar-roadmap { display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 44px; padding: 0 8px; border-radius: var(--r-sm); color: var(--ink-3); font-size: 12px; white-space: nowrap; }
-  .topbar-roadmap .icon { width: 16px; height: 16px; }
-  .topbar-roadmap:hover { color: var(--ink); background: var(--bg-hover); }
-  .topbar-roadmap[aria-current="page"] { color: var(--brand-ink); background: var(--brand-soft); }
+  /* 手机顶栏只留品牌、返回与深浅色：路线图收在「我」里，登录入口就是底栏的「我」。 */
+  .nav-tabs, .topbar-bell, .topbar-login-label, .topbar-user, .topbar-login, .topbar-roadmap { display: none; }
   .app[data-depth="sub"] .topbar-back { display: inline-grid; }
   .app[data-depth="sub"] .brand-mark { display: none; }
   .brand-name { font-size: 18px; }
@@ -895,6 +892,7 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
 .side-cta-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 
 .post-mobilebar { display: none; }
+.post-cta-m { display: none; }
 
 @media (max-width: 1079px) {
   .post-layout { grid-template-columns: minmax(0, 1fr); max-width: 760px; }
@@ -916,6 +914,9 @@ input[type="checkbox"]:focus-visible, input[type="radio"]:focus-visible { border
   .composer-status { padding-left: 0; }
   .post-actions .btn-primary { display: none; }
   .post-side { display: none; }
+  .post-cta-m { display: grid; gap: 12px; padding: 20px 4px 8px; text-align: center; }
+  .post-cta-m h2 { font-size: 17px; font-weight: 700; }
+  .post-cta-m-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .post-mobilebar {
     position: fixed; left: 0; right: 0; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px)); z-index: 44;
     display: flex; align-items: center; gap: 6px;
@@ -1024,6 +1025,8 @@ a, button, summary, label, select, [role="button"], [role="tab"] { touch-action:
   .comment-action { height: 38px; }
   .link-btn { padding-block: 8px; }
   summary { min-height: 40px; }
+  .seg button { min-height: 40px; }
+  .ai-tool { width: 40px; height: 40px; }
 }
 
 /* 触屏没有真正的悬停：点过的按钮不应停留在悬停色。 */
@@ -1133,3 +1136,17 @@ button.feed-newpill:active { transform: scale(.97); }
 @media (max-width: 719px) {
   .is-typing .post-mobilebar { display: none; }
 }
+
+/* ---------- 面板里的小表单：举报原因、事情进展 ---------- */
+.form-stack { display: grid; gap: 14px; }
+.form-stack .seg { flex-wrap: wrap; border-radius: 18px; }
+.choice-list { display: grid; gap: 2px; }
+.choice {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 44px; padding: 0 10px; border-radius: var(--r-sm);
+  color: var(--ink-2); font-weight: 600; text-align: left;
+}
+.choice:hover { background: var(--bg-hover); color: var(--ink); }
+.choice-dot { width: 18px; height: 18px; flex: none; border-radius: 999px; border: 1.5px solid var(--line-strong); }
+.choice[aria-checked="true"] { color: var(--ink); }
+.choice[aria-checked="true"] .choice-dot { border: 5px solid var(--brand); }

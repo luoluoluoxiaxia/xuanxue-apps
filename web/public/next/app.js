@@ -1,24 +1,24 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n22";
-import { icon, brandMark } from "./lib/icons.js?v=n22";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n22";
-import { session, inbox, refreshSession, logout, displayName, local } from "./lib/store.js?v=n22";
-import { get } from "./lib/api.js?v=n22";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n22";
-import { toast } from "./ui/toast.js?v=n22";
-import { openAuth } from "./views/auth.js?v=n22";
-import * as FeedView from "./views/feed.js?v=n22";
-import * as PostView from "./views/post.js?v=n22";
-import * as AskView from "./views/ask.js?v=n22";
-import * as ReadingView from "./views/reading.js?v=n22";
-import * as TodayView from "./views/today.js?v=n22";
-import * as InboxView from "./views/inbox.js?v=n22";
-import * as MeView from "./views/me.js?v=n22";
-import * as BooksView from "./views/books.js?v=n22";
-import * as RoadmapView from "./views/roadmap.js?v=n22";
-import { openFeedback } from "./views/feedback.js?v=n22";
-import { routeFromLegacy } from "./lib/legacy.js?v=n22";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n23";
+import { icon, brandMark } from "./lib/icons.js?v=n23";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n23";
+import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n23";
+import { get } from "./lib/api.js?v=n23";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n23";
+import { toast } from "./ui/toast.js?v=n23";
+import { openAuth } from "./views/auth.js?v=n23";
+import * as FeedView from "./views/feed.js?v=n23";
+import * as PostView from "./views/post.js?v=n23";
+import * as AskView from "./views/ask.js?v=n23";
+import * as ReadingView from "./views/reading.js?v=n23";
+import * as TodayView from "./views/today.js?v=n23";
+import * as InboxView from "./views/inbox.js?v=n23";
+import * as MeView from "./views/me.js?v=n23";
+import * as BooksView from "./views/books.js?v=n23";
+import * as RoadmapView from "./views/roadmap.js?v=n23";
+import { openFeedback } from "./views/feedback.js?v=n23";
+import { routeFromLegacy } from "./lib/legacy.js?v=n23";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -91,7 +91,7 @@ const NAV = [
   { key: "plaza", label: "广场", href: "#/square", glyph: "plaza", match: isPlazaPath },
   { key: "today", label: "今日", href: "#/today", glyph: "sun", match: path => path.startsWith("/today") },
   { key: "books", label: "书库", href: "#/books", glyph: "book", match: path => path.startsWith("/books") },
-  { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "book", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
+  { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "layers", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
   { key: "roadmap", label: "路线图", href: "#/roadmap", glyph: "compass", match: path => path === "/roadmap" },
 ];
 
@@ -183,7 +183,7 @@ function renderAccountSlot() {
     return;
   }
   if (!state.authenticated) {
-    slot.replaceChildren(h("button", { type: "button", class: "btn btn-ghost topbar-login", "aria-label": "登录或注册", onClick: () => openAuth() }, icon("user"), h("span", { class: "topbar-login-label" }, "登录")));
+    slot.replaceChildren(h("button", { type: "button", class: "btn btn-ghost topbar-login", "aria-label": "登录或注册", onClick: () => openAuth({ mode: hasSignedInHere() ? "login_password" : "" }) }, icon("user"), h("span", { class: "topbar-login-label" }, "登录")));
     return;
   }
   const name = displayName(state.user);
@@ -200,7 +200,7 @@ export function openAccountMenu(anchor) {
   const balance = state.wallet ? `${state.wallet.balance ?? 0} 分` : "";
   openMenu(anchor, [
     { label: "我的主页", icon: "user", href: "#/me" },
-    { label: "我的盘", icon: "book", href: "#/me/archives" },
+    { label: "我的盘", icon: "layers", href: "#/me/archives" },
     { label: "积分", icon: "coins", href: "#/me/credits", meta: balance },
     { label: "路线图", icon: "compass", href: "#/roadmap" },
     "sep",

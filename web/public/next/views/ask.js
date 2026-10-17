@@ -1,20 +1,25 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post, put } from "../lib/api.js?v=n22";
-import { session, local, refreshSession } from "../lib/store.js?v=n22";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n22";
-import { readingDraftKey } from "../lib/sessions.js?v=n22";
-import { relativeTime, count } from "../lib/format.js?v=n22";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM } from "../lib/copy.js?v=n22";
-import { handoff } from "../lib/handoff.js?v=n22";
-import { humanizeError } from "../lib/interpret.js?v=n22";
-import { stateView } from "../ui/bits.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
-import { confirmDialog } from "../ui/overlay.js?v=n22";
-import { locationPicker } from "../ui/location.js?v=n22";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post, put } from "../lib/api.js?v=n23";
+import { session, local, refreshSession } from "../lib/store.js?v=n23";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n23";
+import { readingDraftKey } from "../lib/sessions.js?v=n23";
+import { relativeTime, count } from "../lib/format.js?v=n23";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n23";
+import { handoff } from "../lib/handoff.js?v=n23";
+import { humanizeError } from "../lib/interpret.js?v=n23";
+import { stateView } from "../ui/bits.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
+import { confirmDialog } from "../ui/overlay.js?v=n23";
+import { locationPicker } from "../ui/location.js?v=n23";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n23";
+import { baziPanel } from "../ui/chart-bazi.js?v=n23";
 
 const ASK_DRAFT = "xz-next-draft:ask";
+// 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
+const RISK_NOTE = `开始即表示${RISK_ACK_TEXT.replace(/^我已知晓：/, "你已知晓：")}`;
+const acceptRisk = () => local.set(RISK_ACK_KEY, "1");
 const readDraft = () => local.get(ASK_DRAFT, "");
 const writeDraft = text => (text.trim() ? local.set(ASK_DRAFT, text) : local.remove(ASK_DRAFT));
 
@@ -168,7 +173,7 @@ function home(ctx) {
             ? Object.values(summary.pillars || {}).join(" ")
             : [summary.ben_gua?.name, summary.bian_gua?.name].filter(Boolean).join(" → ") || summary.question || "六爻卦盘";
           // 八字盘开一段新对话：把首页写好的问题带进它的「新对话」草稿里。
-          return h("a", { class: "recent-card", href: `#/reading/${encodeURIComponent(item.id)}${bazi ? "?fresh=1" : ""}`, onClick: () => { if (bazi && textarea.value.trim()) { local.set(readingDraftKey(item.id), textarea.value.trim()); writeDraft(""); } } },
+          return h("a", { class: "recent-card", href: `#/reading/${encodeURIComponent(item.id)}${bazi && textarea.value.trim() ? "?fresh=1" : ""}`, onClick: () => { if (bazi && textarea.value.trim()) { local.set(readingDraftKey(item.id), textarea.value.trim()); writeDraft(""); } } },
             h("span", { class: ["chip", bazi ? "chip-bazi" : "chip-liuyao"] }, bazi ? "八字" : "六爻"),
             h("b", null, item.name || (bazi ? "未命名命盘" : "未命名卦盘")),
             h("span", { class: "recent-line serif" }, line));
@@ -195,8 +200,9 @@ function liuyaoFlow(ctx) {
     completedAt: restored?.completedAt || "",
     editing: null,                  // 手动录入时正在修改的爻位
     restored: !!restored,           // 这些爻是从上次未完成的起卦恢复的
-    // 默认「社区求助」（不调用 AI、不扣积分）；用户改过就沿用用户自己的选择。
-    visibility: restored?.visibility || "help",
+    // 默认「私密 AI 解读」：大多数人是来要答案的；求助放在最后，用户改过就沿用用户自己的选择。
+    // 从「请卦友帮你断」进来（?help=1）时默认求助。
+    visibility: restored?.visibility || (wantsHelp ? "help" : "private"),
     visibilityChosen: !!restored?.visibility,
     submitting: false,
     saved: null,                    // 已排好的盘：求助发布失败后重试时不再重复排盘
@@ -217,22 +223,26 @@ function liuyaoFlow(ctx) {
   const modeSeg = h("div", { class: "seg", role: "group", "aria-label": "起卦方式" });
   const builder = h("ol", { class: "gua-builder", "aria-label": "六爻（自上而下显示，自下而上成卦）" });
   const banner = h("div", { class: "gua-ready", hidden: true, role: "status", tabindex: "-1" });
+  // 卦成后先排出卦名与卦盘（纯计算、不需要登录），让用户在注册前就看到自己的卦。
+  const previewSlot = h("section", { class: "flow-step gua-preview", hidden: true, "aria-label": "卦盘" });
+  const preview = { key: "", payload: null };
   const stage = h("div", { class: "cast-stage" }, h("div", { class: "coins" }, coins), coinTags, castButton, castNote);
   const manualPad = h("div", { class: "manual-pad", hidden: true });
 
   const visibilityOptions = [
-    ["help", "向社区求助", "选择即同意公开脱敏卦象和问题，由社区回答。"],
     ["private", "私密 AI 解读", "仅自己可见，不进入社区。"],
     ["public", "公开 AI 解读", "选择即同意公开问题、卦象和首轮 AI 解答到广场。"],
+    ["help", "向社区求助", "选择即同意公开脱敏卦象和问题，由卦友回答，可能要等一阵。"],
   ];
   const visibilityGroup = h("div", { class: "vis-grid", role: "radiogroup", "aria-label": "回答方式" });
   radioKeys(visibilityGroup);
   const quotaLabel = () => {
     const quota = session.get().quota;
     const wallet = session.get().wallet;
-    if (!session.get().authenticated) return "登录后每日赠送免费积分";
+    if (!session.get().authenticated) return "注册即送积分 · 每天还有免费额度";
     if (!quota) return "";
-    return quota.remaining > 0 ? `今日免费 ${quota.remaining}/${quota.total} 分` : `今日免费已用 · 充值 ${wallet?.balance ?? 0} 分`;
+    if (quota.remaining > 0) return `今日免费额度还剩 ${quota.remaining} 分`;
+    return wallet?.balance ? `今日免费已用完 · 账户还有 ${wallet.balance} 分` : "今日免费已用完 · 明天 0 点恢复";
   };
   const renderVisibility = () => {
     // 账户状态刷新时也会重画：焦点原本在选项上就留在选中项上。
@@ -272,10 +282,11 @@ function liuyaoFlow(ctx) {
     h("section", { class: "flow-step" },
       h("div", { class: "flow-step-head" }, h("h2", null, "三钱六掷"), modeSeg),
       h("div", { class: "cast-layout" }, h("div", { class: "cast-left" }, stage, manualPad), h("div", { class: "cast-right" }, builder, banner))),
+    previewSlot,
     h("section", { class: "flow-step" },
       h("div", { class: "flow-step-head" }, h("h2", null, "怎么回答")),
       visibilityGroup),
-    h("div", { class: "flow-submit" }, submitError, submit),
+    h("div", { class: "flow-submit" }, submitError, submit, h("p", { class: "risk-note" }, RISK_NOTE)),
     ritual);
 
   /* ---- 摇钱 ---- */
@@ -433,8 +444,36 @@ function liuyaoFlow(ctx) {
     }
     builder.replaceChildren(...rows);
     const moving = state.lines.filter(line => line.value === 6 || line.value === 9).length;
+    const complete = state.lines.length === 6 && state.editing === null;
     banner.hidden = state.lines.length < 6;
-    banner.replaceChildren(h("span", null, h("b", null, `卦成 · ${moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"}`), h("small", null, "下一步：选择怎么回答")));
+    const key = complete ? JSON.stringify([state.lines.map(line => line.value), state.completedAt]) : "";
+    const named = complete && preview.key === key && preview.payload;
+    banner.replaceChildren(h("span", null,
+      h("b", null, `卦成 · ${named ? liuyaoTitle(preview.payload) : moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"}`),
+      h("small", null, named ? `${moving ? `动爻${CN_NUM[moving]}处` : "六爻安静"} · 下一步：选择怎么回答` : "下一步：选择怎么回答")));
+    if (!complete) { preview.key = ""; preview.payload = null; previewSlot.hidden = true; previewSlot.replaceChildren(); return; }
+    if (preview.key !== key) loadPreview(key);
+  }
+
+  // 预览失败不打扰用户：卦照样能起，只是先不显示卦名，开始解读后会正式排盘。
+  function loadPreview(key) {
+    preview.key = key;
+    preview.payload = null;
+    previewSlot.hidden = true;
+    post("/api/chart/preview", {
+      system: "liuyao",
+      method: state.mode === "manual" ? "manual" : "client_coins",
+      as_of: state.completedAt || localDateTimeISO(),
+      yaos: state.lines.map(line => line.value),
+    }).then(payload => {
+      if (!ctx.isCurrent() || preview.key !== key || !payload?.ben_gua) return;
+      preview.payload = payload;
+      previewSlot.replaceChildren(
+        h("div", { class: "flow-step-head" }, h("h2", null, "卦盘"), h("span", { class: "flow-hint" }, "点一爻看释读")),
+        liuyaoPanel(payload, { method: state.mode === "manual" ? "manual" : "client_coins", beside: true }));
+      previewSlot.hidden = false;
+      renderBuilder();
+    }).catch(() => {});
   }
 
   function startEdit(index) {
@@ -544,13 +583,16 @@ function liuyaoFlow(ctx) {
     submit.setAttribute("aria-disabled", String(!!missing));
     submit.replaceChildren(...[
       icon(state.visibility === "help" ? "hand" : exhausted ? "coins" : "sparkle"),
-      exhausted ? "积分暂不可用 · 查看账户" : labels[state.visibility],
+      exhausted ? "今日额度已用完" : labels[state.visibility],
       missing && h("small", null, ` · ${missing}`),
     ].filter(Boolean));
   }
 
   function showCreditsOut() {
-    submitError.replaceChildren("今日免费积分与账户积分已用完；明日北京时间 0 点刷新，或充值后继续。 ", h("a", { class: "link-btn", href: "#/me/credits?topup=1" }, "去充值"));
+    const topup = !!session.get().wallet?.topup_enabled;
+    submitError.replaceChildren(
+      topup ? "今日免费额度与账户积分已用完；明日北京时间 0 点恢复，或充值后继续。 " : "今日免费额度已用完，明日北京时间 0 点恢复。也可以先向卦友求助，不扣积分。 ",
+      topup ? h("a", { class: "link-btn", href: "#/me/credits?topup=1" }, "去充值") : h("button", { type: "button", class: "link-btn", onClick: () => { state.visibility = "help"; state.visibilityChosen = true; saveCast(); renderVisibility(); syncSubmit(); submitError.hidden = true; } }, "改为向卦友求助"));
     submitError.hidden = false;
   }
 
@@ -584,11 +626,12 @@ function liuyaoFlow(ctx) {
     const reasons = {
       help: "登录并验证邮箱后可免费求助，不调用 AI，不扣积分。",
       private: "私密提问，先登录或注册。",
-      public: "登录后使用每日免费积分。分享公开问题可增加每日积分。",
+      public: "登录后使用今日免费额度；分享公开问题可以增加额度。",
     };
     // 起卦提交时的登录默认停在「注册」。
     const ok = await ctx.requireAuth(reasons[state.visibility], { mode: "register" });
     if (!ok || !ctx.isCurrent() || state.submitting) return;
+    if (!help) acceptRisk();
     const quota = session.get().quota;
     if (!help && quota && quota.can_start_answer === false) {
       showCreditsOut();
@@ -618,7 +661,7 @@ function liuyaoFlow(ctx) {
       const chart = reuse ? reuse.chart : await post("/api/chart", body);
       if (!ctx.isCurrent()) return;
       const profileId = chart?.profile_id;
-      if (!profileId) throw new Error("排盘已完成，但没有拿到档案编号，请到「我的盘」查看。");
+      if (!profileId) throw new Error("排盘已完成，但没有拿到盘的编号，请到「我的盘」查看。");
       charted = true;
       state.saved = { signature, chart };
       refreshSession().catch(() => {});
@@ -697,18 +740,38 @@ function baziFlow(ctx) {
         ? focusHeader(ctx, "排盘后请卦友帮看", "广场只显示脱敏命盘，出生时间与地点不会公开。")
         : focusHeader(ctx, "八字看长期"));
   const body = h("div", { class: "birth-body" }, h("div", { class: "spinner-line" }, h("span", { class: "spinner" }), "正在准备…"));
+
+  // 首页写好的问题：在这里也让用户看到，排好盘后会带进解读页。
+  const pendingQuestion = readDraft().trim();
+  if (pendingQuestion && !editId && !setDefault) {
+    node.append(h("p", { class: "ask-carry" }, h("span", { class: "ask-carry-label" }, "你的问题"), h("span", { class: "ask-carry-text" }, pendingQuestion), h("small", null, "排好盘后接着问")));
+  }
   node.append(body);
+  // 未登录也可以先填出生信息；点「生成命盘」时再注册（与六爻一致），注册后直接排盘。
+  let submittingAfterAuth = false;
+  const beforeSubmit = async () => {
+    if (session.get().authenticated) return true;
+    submittingAfterAuth = true;
+    const ok = await ctx.requireAuth("注册后保存命盘并开始解读：命盘只对你本人可见，换设备也能接着问。", { mode: "register" });
+    if (!ok) submittingAfterAuth = false;
+    return ok && ctx.isCurrent();
+  };
+  const afterSubmitFailed = () => { submittingAfterAuth = false; };
 
   const start = async () => {
     const ready = session.get();
     if (!ready.ready) return;
     if (!ready.authenticated) {
-      body.replaceChildren(stateView({
-        glyph: "lock",
-        title: "登录后开始排盘",
-        text: "排盘免费，命盘只对你本人可见，换设备也能接着问。",
-        actions: [h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth() }, "登录 / 注册")],
-      }));
+      if (editId) {
+        body.replaceChildren(stateView({
+          glyph: "lock",
+          title: "登录后修改出生信息",
+          text: "命盘只对你本人可见。",
+          actions: [h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth() }, "登录")],
+        }));
+        return;
+      }
+      body.replaceChildren(birthForm(ctx, { setDefault, help: wantsHelp, beforeSubmit, afterSubmitFailed }));
       return;
     }
     if (editId) {
@@ -721,7 +784,7 @@ function baziFlow(ctx) {
         const gone = error?.status === 404;
         body.replaceChildren(stateView({
           tone: "error",
-          title: gone ? "这份档案不存在或已删除" : "档案没能打开",
+          title: gone ? "这张盘不存在或已删除" : "这张盘没能打开",
           text: error.message || "请稍后重试",
           actions: [
             gone ? null : h("button", { type: "button", class: "btn btn-soft", onClick: () => { body.replaceChildren(h("div", { class: "spinner-line", role: "status" }, h("span", { class: "spinner", "aria-hidden": "true" }), "正在打开…")); start(); } }, icon("refresh"), "重试"),
@@ -753,7 +816,7 @@ function baziFlow(ctx) {
     body.replaceChildren(...[
       unavailable,
       profiles.length && !setDefault ? existingProfiles(ctx, profiles, { help: wantsHelp }) : null,
-      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0 || !!profilesError, help: wantsHelp }),
+      birthForm(ctx, { setDefault, hasProfiles: profiles.length > 0 || !!profilesError, help: wantsHelp, beforeSubmit, afterSubmitFailed }),
     ].filter(Boolean));
   };
   start();
@@ -763,6 +826,8 @@ function baziFlow(ctx) {
     if (s.authenticated !== lastAuth || s.ready !== lastReady) {
       lastAuth = s.authenticated;
       lastReady = s.ready;
+      // 刚在「生成命盘」时注册登录：表单正在提交，不要重画把它冲掉。
+      if (submittingAfterAuth) return;
       start();
     }
   });
@@ -812,7 +877,7 @@ function existingProfiles(ctx, profiles, { help = false } = {}) {
     h("p", { class: "flow-or" }, h("span", null, "或者新建一张")));
 }
 
-function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = null, help = false } = {}) {
+function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = null, help = false, beforeSubmit = null, afterSubmitFailed = null } = {}) {
   const draft = editing ? null : readBirthDraft();
   const saved = editing?.input || draft || {};
   const savedGender = saved.gender === "male" ? "男" : saved.gender === "female" ? "女" : saved.gender;
@@ -876,7 +941,11 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   let manualBirthYear = null;
   const error = h("p", { class: "field-error", hidden: true, role: "alert" });
   const submitLabel = editing ? "更新并重新排盘" : "生成命盘";
-  const submit = h("button", { type: "submit", class: "btn btn-primary btn-lg btn-block submit-btn" }, icon("sparkle"), submitLabel);
+  // 未登录：先免费看盘（不建档），想保存或解读时再注册。
+  const previewFirst = () => !!beforeSubmit && !editing && !session.get().authenticated;
+  const firstLabel = () => (previewFirst() ? "先看命盘" : submitLabel);
+  const submit = h("button", { type: "submit", class: "btn btn-primary btn-lg btn-block submit-btn" }, icon("sparkle"), firstLabel());
+  const previewSlot = h("section", { class: "flow-step birth-preview", hidden: true, "aria-label": "命盘预览", tabindex: "-1" });
   const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
     h("span", { class: "spinner", "aria-hidden": "true" }),
     h("span", { class: "ritual-text", "aria-hidden": "true" }),
@@ -1128,7 +1197,9 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       timeSection,
       manualSection),
     h("div", { class: "flow-submit" }, error, submit),
-    h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后按新信息重新排盘，原有解读不再挂在这份档案下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。"),
+    previewSlot,
+    h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后按新信息重新排盘，原有解读不再挂在这张盘下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。"),
+    editing ? null : h("p", { class: "risk-note" }, RISK_NOTE),
     ritual);
 
   function fail(message, field) {
@@ -1320,9 +1391,56 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     return null;
   }
 
+  // 改了出生信息，之前的预览就作废，按钮回到「先看命盘」。
+  const clearPreview = () => {
+    if (previewSlot.hidden) return;
+    previewSlot.hidden = true;
+    previewSlot.replaceChildren();
+    submit.hidden = false;
+    submit.replaceChildren(icon("sparkle"), firstLabel());
+  };
+  form.addEventListener("input", clearPreview);
+  form.addEventListener("change", clearPreview);
+
+  async function showPreview() {
+    const bodyPayload = buildBody();
+    submit.disabled = true;
+    submit.textContent = "排盘中…";
+    try {
+      const payload = await post("/api/chart/preview", bodyPayload);
+      if (!ctx.isCurrent()) return;
+      const save = h("button", { type: "button", class: "btn btn-primary btn-lg btn-block" }, icon("sparkle"), "保存命盘，开始解读");
+      save.addEventListener("click", () => saveChart());
+      previewSlot.replaceChildren(
+        h("div", { class: "flow-step-head" }, h("h2", null, "你的命盘"), h("span", { class: "flow-hint" }, "还没保存 · 注册后保存并开始解读")),
+        baziPanel(payload, { name: bodyPayload.name || "", input: bodyPayload }),
+        h("div", { class: "flow-submit" }, save, h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), "保存后命盘只对你本人可见，换设备也能接着问。")));
+      previewSlot.hidden = false;
+      submit.hidden = true;
+      previewSlot.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
+      previewSlot.focus({ preventScroll: true });
+    } catch (failure) {
+      if (!ctx.isCurrent()) return;
+      const message = humanizeError(failure.message, "请稍后再试");
+      fail(`排盘失败：${message}`, fieldForMessage(message));
+    } finally {
+      submit.disabled = false;
+      if (!submit.hidden) submit.replaceChildren(icon("sparkle"), firstLabel());
+    }
+  }
+
   form.addEventListener("submit", async event => {
     event.preventDefault();
     if (!validate()) return;
+    saveBirthDraft();
+    if (previewFirst()) { await showPreview(); return; }
+    await saveChart();
+  });
+
+  async function saveChart() {
+    if (!validate()) return;
+    if (beforeSubmit && !(await beforeSubmit())) return;
+    if (!editing) acceptRisk();
     const bodyPayload = buildBody();
     submit.disabled = true;
     submit.textContent = editing ? "更新并排盘中…" : "排盘中…";
@@ -1338,7 +1456,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
         if (!ctx.isCurrent()) return;
         const payloadData = saved?.payload || saved;
         const warn = Array.isArray(payloadData?.warnings) && payloadData.warnings[0];
-        toast(warn ? String(warn) : "档案已更新，已按新信息重新排盘", { type: warn ? "info" : "ok" });
+        toast(warn ? String(warn) : "命盘已更新，已按新信息重新排盘", { type: warn ? "info" : "ok" });
         refreshSession().catch(() => {});
         handoff(editing.id, { system: "bazi", payload: payloadData, input: bodyPayload, sessionId: bodyPayload.session_id, name: saved?.name || payloadData?.profile_name || bodyPayload.name || "" });
         ctx.navigate(`/reading/${encodeURIComponent(editing.id)}`, { replace: true });
@@ -1347,14 +1465,14 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       const chart = await post("/api/chart", bodyPayload);
       if (!ctx.isCurrent()) return;
       const profileId = chart?.profile_id;
-      if (!profileId) throw new Error("排盘已完成，但没有拿到档案编号，请到「我的盘」查看。");
+      if (!profileId) throw new Error("排盘已完成，但没有拿到盘的编号，请到「我的盘」查看。");
       local.remove(BIRTH_DRAFT);
       refreshSession().catch(() => {});
       const warning = Array.isArray(chart.warnings) && chart.warnings[0];
       if (warning) toast(String(warning));
       if (setDefault) {
-        await put("/api/personal-home/default-profile", { profile_id: Number(profileId) }).catch(() => null);
-        toast("已设为默认命盘，正在准备今日内容", { type: "ok" });
+        const marked = await put("/api/personal-home/default-profile", { profile_id: Number(profileId) }).then(() => true, () => false);
+        toast(marked ? "已设为默认命盘，正在准备今日内容" : "命盘已生成，但没能设为默认，可以在「今日」里再选一次", { type: marked ? "ok" : "error" });
         ctx.navigate("/today", { replace: true });
         return;
       }
@@ -1364,6 +1482,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       handoff(profileId, { system: "bazi", payload: chart, input: bodyPayload, sessionId: bodyPayload.session_id, name: chart.profile_name || bodyPayload.name || "", openHelp: help });
       ctx.navigate(`/reading/${encodeURIComponent(profileId)}`, { replace: true });
     } catch (error) {
+      afterSubmitFailed?.();
       if (!ctx.isCurrent()) return;
       const message = humanizeError(error.message, "请稍后再试");
       fail(`${editing ? "更新失败" : "排盘失败"}：${message}`, fieldForMessage(message));
@@ -1373,7 +1492,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       clearInterval(timer);
       ritual.hidden = true;
     }
-  });
+  }
   if (!hasProfiles && !editing) requestAnimationFrame(() => name.focus({ preventScroll: true }));
   return form;
 }

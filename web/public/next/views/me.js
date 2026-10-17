@@ -1,21 +1,21 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n22";
-import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n22";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n22";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n22";
-import { pillarsToken } from "../ui/gua.js?v=n22";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
-import { copyText } from "../lib/share.js?v=n22";
-import { openFeedback } from "./feedback.js?v=n22";
-import { removePost } from "./feed.js?v=n22";
+import { h, reducedMotion } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n23";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n23";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n23";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n23";
+import { pillarsToken } from "../ui/gua.js?v=n23";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
+import { copyText } from "../lib/share.js?v=n23";
+import { openFeedback } from "./feedback.js?v=n23";
+import { removePost } from "./feed.js?v=n23";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },
-  { key: "archives", label: "我的盘", href: "#/me/archives", glyph: "book", title: "我的盘" },
+  { key: "archives", label: "我的盘", href: "#/me/archives", glyph: "layers", title: "我的盘" },
   { key: "credits", label: "积分", href: "#/me/credits", glyph: "coins", title: "积分" },
   { key: "settings", label: "设置", href: "#/me/settings", glyph: "sliders", title: "设置" },
 ];
@@ -90,7 +90,7 @@ function loginCard(ctx, { title, text, reason }) {
     h("h2", { class: "me-login-title" }, title),
     h("p", { class: "me-login-text" }, text),
     h("div", { class: "me-login-actions" },
-      h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth({ reason }) }, icon("user"), "登录"),
+      h("button", { type: "button", class: "btn btn-primary", onClick: () => ctx.openAuth({ reason, mode: "login_password" }) }, icon("user"), "登录"),
       h("button", { type: "button", class: "btn btn-soft", onClick: () => ctx.openAuth({ reason, mode: "register" }) }, "注册新账号")));
 }
 
@@ -107,7 +107,7 @@ function retryState({ title, text, onRetry, label = "重新加载" }) {
 async function confirmLogout(ctx) {
   const ok = await confirmDialog({
     title: "退出登录？",
-    message: "退出后，需要重新登录才能查看档案、积分与消息。",
+    message: "退出后，需要重新登录才能查看我的盘、积分与消息。",
     confirmText: "退出登录",
     danger: true,
   });
@@ -259,11 +259,11 @@ function profileCard(ctx) {
     const archive = state.archive || null;
     stats.replaceChildren(
       stat("命盘", archive?.bazi, "#/me/archives?tab=bazi"),
-      stat("卦档", archive?.liuyao, "#/me/archives?tab=liuyao"),
+      stat("卦盘", archive?.liuyao, "#/me/archives?tab=liuyao"),
       stat("解读", archive?.history_count, "#/me/archives"));
     const active = Number(archive?.active) || 0;
     note.hidden = !active;
-    note.replaceChildren(h("span", { class: "me-pulse", "aria-hidden": "true" }), `${active} 份档案正在生成解读`);
+    note.replaceChildren(h("span", { class: "me-pulse", "aria-hidden": "true" }), `${active} 张盘正在生成解读`);
   }
   return { node, update };
 }
@@ -274,12 +274,12 @@ function quotaMeter(quota) {
   const ratio = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
   return h("div", { class: "me-quota" },
     h("div", { class: "me-quota-head" },
-      h("span", null, "今日免费积分"),
+      h("span", null, "今日免费额度"),
       h("b", { class: "tnum" }, quota ? `${remaining} / ${total}` : "—")),
     h("div", {
       class: "me-meter",
       role: "progressbar",
-      "aria-label": "今日免费积分剩余",
+      "aria-label": "今日免费额度剩余",
       "aria-valuemin": "0",
       "aria-valuemax": String(total),
       "aria-valuenow": String(remaining),
@@ -293,7 +293,8 @@ function walletCard() {
     node.replaceChildren(
       h("div", { class: "me-wallet-head" },
         h("h2", { id: "me-wallet-title" }, "积分"),
-        h("a", { class: "btn btn-primary btn-sm", href: "#/me/credits?topup=1" }, icon("plus"), "充值")),
+        // 充值没开通时不放入口，免得点进去全是「暂未开放」。
+        state.wallet?.topup_enabled ? h("a", { class: "btn btn-primary btn-sm", href: "#/me/credits?topup=1" }, icon("plus"), "充值") : null),
       h("div", { class: "me-wallet-body" },
         h("div", { class: "me-wallet-balance" },
           h("span", null, "当前余额"),
@@ -368,7 +369,7 @@ function overviewView(ctx, body) {
             h("div", { class: "me-col" },
               loginCard(ctx, {
                 title: "登录后查看你的主页",
-                text: "命盘、卦档、积分与消息都在这里，只对你本人可见。",
+                text: "命盘、卦盘、积分与消息都在这里，只对你本人可见。",
                 reason: "登录后查看你的命盘、积分与消息。",
               })),
             h("div", { class: "me-col" }, linksCard(ctx, false), overviewFoot(ctx, false))));
@@ -521,7 +522,7 @@ function openConversations(ctx, profile) {
   };
 
   const load = async () => {
-    content.replaceChildren(spinnerLine("正在整理这份八字档案…"));
+    content.replaceChildren(spinnerLine("正在整理这张命盘…"));
     try {
       const list = await get(`/api/profiles/${encodeURIComponent(profile.id)}/conversations`, { cache: "no-store" });
       if (!content.isConnected || !ctx.isCurrent()) return;
@@ -530,7 +531,7 @@ function openConversations(ctx, profile) {
       if (!content.isConnected || !ctx.isCurrent()) return;
       if (error?.status === 401) refreshSession().catch(() => {});
       content.replaceChildren(retryState({
-        title: "档案加载失败，对话记录不受影响。",
+        title: "我的盘加载失败，对话记录不受影响。",
         text: error?.message || "",
         onRetry: load,
       }));
@@ -544,8 +545,8 @@ function archivesView(ctx, body) {
   const requested = ctx.query.get("tab");
   if (requested === "bazi" || requested === "liuyao") archiveTab = requested;
   const state = { profiles: null, requestId: 0, failed: false };
-  const head = pageHead({ title: "我的盘", sub: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。" });
-  const tabsNode = h("div", { class: "seg arc-tabs", role: "tablist", "aria-label": "档案类型" });
+  const head = pageHead({ title: "我的盘", sub: "八字命盘与六爻卦盘都自动保存在这里，只对你本人可见。" });
+  const tabsNode = h("div", { class: "seg arc-tabs", role: "tablist", "aria-label": "盘的类型" });
   const createSlot = h("div", { class: "arc-create" });
   const listNode = h("div", { class: "arc-list", id: "arc-panel", role: "tabpanel", "aria-live": "polite" });
   const toolbar = h("div", { class: "arc-toolbar" }, tabsNode, createSlot);
@@ -658,13 +659,13 @@ function archivesView(ctx, body) {
 
   async function removeProfile(profile) {
     const isLy = systemOf(profile) === "liuyao";
-    const unit = isLy ? "卦档" : "命盘";
+    const unit = isLy ? "卦盘" : "命盘";
     const history = Number(profile.history_count) || 0;
     // 解读还在进行时，先提醒：删除会连同进行中的解读一起中断。
     const running = profile.task_status === "pending" || profile.task_status === "running";
     const ok = await confirmDialog({
       title: `确定永久删除这份${unit}？`,
-      message: (running ? "这份档案还有一条解读正在进行，删除后会一并中断。" : "")
+      message: (running ? "这张盘还有一条解读正在进行，删除后会一并中断。" : "")
         + (history ? `同时删除 ${history} 条历史解读，且无法恢复。` : `这份${unit}将从账户中移除，删除后无法恢复。`),
       confirmText: "永久删除",
       cancelText: "取消",
@@ -685,7 +686,7 @@ function archivesView(ctx, body) {
       paintTabs();
       paintList();
       (listNode.querySelector(".arc-card .arc-actions .btn-primary") || tabsNode.querySelector('[aria-selected="true"]'))?.focus({ preventScroll: true });
-      toast("档案已永久删除", { type: "ok" });
+      toast("已永久删除", { type: "ok" });
       refreshSession().catch(() => {});
       load({ quiet: true });
     } catch (error) {
@@ -706,7 +707,7 @@ function archivesView(ctx, body) {
     try {
       const ok = await confirmDialog({
         title: "确定删除这条公开帖子？",
-        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。这份档案和解读记录会保留。",
+        message: "删除后将从广场移除，公开链接和评论也将无法访问，且不能恢复。这张盘和解读记录会保留。",
         confirmText: "删除公开帖子",
         danger: true,
       });
@@ -729,7 +730,7 @@ function archivesView(ctx, body) {
       paintTabs();
       paintList();
       focusMore(profile);
-      toast("公开帖子已删除，档案和解读记录已保留", { type: "ok" });
+      toast("公开帖子已删除，盘和解读记录已保留", { type: "ok" });
       refreshSession().catch(() => {});
     } catch (error) {
       if (!ctx.isCurrent()) return;
@@ -761,9 +762,9 @@ function archivesView(ctx, body) {
     const error = h("p", { class: "field-error", id: `${id}-error`, role: "alert", hidden: true });
     const form = h("form", { class: "arc-rename", id: `${id}-form`, novalidate: true },
       h("div", { class: "field" },
-        h("label", { class: "field-label", for: id }, isLy ? "卦档名称" : "命盘名称"),
+        h("label", { class: "field-label", for: id }, isLy ? "卦盘名称" : "命盘名称"),
         input,
-        h("span", { class: "field-hint" }, `最多 ${NAME_MAX} 个字，方便你在档案里区分。`),
+        h("span", { class: "field-hint" }, `最多 ${NAME_MAX} 个字，方便你在「我的盘」里区分。`),
         error));
     const cancel = h("button", { type: "button", class: "btn btn-ghost" }, "取消");
     const save = h("button", { type: "submit", class: "btn btn-primary", form: `${id}-form` }, "保存");
@@ -877,15 +878,15 @@ function archivesView(ctx, body) {
         h("span", { "aria-hidden": "true" }, "·"),
         h("span", { class: "tnum" }, `${history} 条解读`)),
       h("div", { class: "arc-actions" },
-        h("a", { class: "btn btn-primary btn-sm", href: openHref }, icon(isLy ? "gua" : "pillars"), isLy ? "打开卦档" : "打开命盘"),
+        h("a", { class: "btn btn-primary btn-sm", href: openHref }, icon(isLy ? "gua" : "pillars"), isLy ? "打开卦盘" : "打开命盘"),
         !isLy ? h("button", { type: "button", class: "btn btn-sm", onClick: () => openConversations(ctx, profile) }, icon("comment"), "对话记录") : null,
         defaultButton,
         isPublic || postDeleted
           ? postDeleted
-            ? h("span", { class: "arc-retained" }, "公开帖子已删除，档案已保留")
+            ? h("span", { class: "arc-retained" }, "公开帖子已删除，盘已保留")
             : slug
             ? h("a", { class: "btn btn-sm btn-ghost", href: `#/post/${encodeURIComponent(slug)}` }, icon("globe"), "查看公开卦帖")
-            : h("span", { class: "arc-retained" }, "公开档案随卦帖保留")
+            : h("span", { class: "arc-retained" }, "公开的盘随卦帖保留")
           : null));
   }
 
@@ -896,8 +897,8 @@ function archivesView(ctx, body) {
       const isBazi = archiveTab === "bazi";
       listNode.replaceChildren(h("div", { class: "arc-empty" }, stateView({
         glyph: isBazi ? "pillars" : "gua",
-        title: isBazi ? "暂无八字档案" : "暂无六爻档案",
-        text: isBazi ? "排一张八字，命盘会自动存进这里，随时回来继续追问。" : "起一卦，卦档会自动存进这里，之后可以回看与追问。",
+        title: isBazi ? "还没有八字命盘" : "还没有六爻卦盘",
+        text: isBazi ? "排一张八字，命盘会自动存进这里，随时回来继续追问。" : "起一卦，卦盘会自动存进这里，之后可以回看与追问。",
         actions: [h("a", { class: "btn btn-primary", href: isBazi ? "#/ask/bazi" : "#/ask/liuyao" }, icon(isBazi ? "pillars" : "gua"), isBazi ? "去排八字" : "去起六爻")],
       })));
       return;
@@ -924,7 +925,7 @@ function archivesView(ctx, body) {
     const requestId = ++state.requestId;
     if (!state.profiles) {
       listNode.setAttribute("aria-busy", "true");
-      listNode.replaceChildren(h("p", { class: "sr-only", role: "status" }, "正在读取档案…"), archiveSkeleton());
+      listNode.replaceChildren(h("p", { class: "sr-only", role: "status" }, "正在读取我的盘…"), archiveSkeleton());
     }
     const before = announce ? JSON.stringify(state.profiles) : "";
     if (announce) listNode.classList.add("is-refreshing");
@@ -941,12 +942,12 @@ function archivesView(ctx, body) {
       if (error?.status === 401) refreshSession().catch(() => {});
       state.failed = !state.profiles;
       if (quiet && state.profiles) {
-        toast(`读取档案失败：${error?.message || "请稍后再试"}`, { type: "error" });
+        toast(`读取我的盘失败：${error?.message || "请稍后再试"}`, { type: "error" });
         return;
       }
       listNode.setAttribute("aria-busy", "false");
       listNode.replaceChildren(retryState({
-        title: "档案加载失败，已保存内容不受影响。",
+        title: "我的盘加载失败，已保存内容不受影响。",
         text: error?.message || "",
         onRetry: () => {
           state.profiles = null;
@@ -971,9 +972,9 @@ function archivesView(ctx, body) {
     }
     if (key === "anon") {
       body.replaceChildren(pageHead({ title: "我的盘" }), loginCard(ctx, {
-        title: "登录后查看档案",
-        text: "八字命盘与六爻卦档都自动保存在这里，只对你本人可见。",
-        reason: "登录后查看私人档案。",
+        title: "登录后查看我的盘",
+        text: "八字命盘与六爻卦盘都自动保存在这里，只对你本人可见。",
+        reason: "登录后查看你的盘。",
       }));
       return;
     }
@@ -1139,7 +1140,7 @@ function quotaBlock(quota) {
   const ratio = total > 0 ? Math.min(100, (remaining / total) * 100) : 0;
   return h("div", { class: "cr-quota" },
     h("div", { class: "cr-quota-head" },
-      h("span", { class: "cr-label" }, icon("sun", "icon-sm"), "今日免费积分"),
+      h("span", { class: "cr-label" }, icon("sun", "icon-sm"), "今日免费额度"),
       h("span", { class: "cr-quota-reset" }, "北京时间 0 点刷新")),
     h("p", { class: "cr-quota-value" },
       h("b", { class: "tnum" }, quota ? String(remaining) : "—"),
@@ -1147,7 +1148,7 @@ function quotaBlock(quota) {
     h("div", {
       class: "me-meter",
       role: "progressbar",
-      "aria-label": "今日免费积分剩余",
+      "aria-label": "今日免费额度剩余",
       "aria-valuemin": "0",
       "aria-valuemax": String(total),
       "aria-valuenow": String(remaining),
@@ -1622,7 +1623,7 @@ function creditsView(ctx, body) {
         h("span", { class: "cr-label" }, icon("coins", "icon-sm"), "当前余额"),
         h("p", { class: "cr-balance-value" }, h("b", { class: "tnum" }, number(wallet?.balance)), h("span", null, "分")),
         h("p", { class: "cr-guarantee" }, icon("check", "icon-sm"), "回答始终完整送达，余额最低为 0。"),
-        h("button", { type: "button", class: "btn cr-topup", onClick: () => focusPacks() }, icon("plus"), "充值")),
+        wallet?.topup_enabled ? h("button", { type: "button", class: "btn cr-topup", onClick: () => focusPacks() }, icon("plus"), "充值") : null),
       quotaBlock(state.quota)));
   }
 
@@ -1649,6 +1650,9 @@ function creditsView(ctx, body) {
       h("span", { class: "cr-pack-est" }, available ? main : "暂未开放"),
       available ? h("span", { class: "cr-pack-go", "aria-hidden": "true" }, icon("arrowRight")) : null);
     };
+    // 充值没开通：整块不显示，额度说明留在上面的概览里。
+    packsNode.hidden = !enabled;
+    if (!enabled) { packsNode.replaceChildren(); return; }
     packsNode.replaceChildren(
       h("div", { class: "cr-section-head" },
         h("h2", { id: "cr-packs-title" }, "积分充值"),
@@ -1947,6 +1951,8 @@ function accountSection(ctx, state, nick) {
   return settingSection("账户", [
     h("div", { class: "set-row is-nick" }, nick.node),
     settingRow({ label: "登录邮箱", text: maskEmail(state.user?.email) || "—" }),
+    // 注册时可以不设密码：这里验证邮箱后设置或修改，不需要旧密码。
+    settingRow({ label: "登录密码", text: "验证邮箱后设置或修改；不设也能用验证码登录。", control: h("button", { type: "button", class: "btn btn-sm", onClick: () => ctx.openAuth({ mode: "reset_password", reason: "验证邮箱后设置新的登录密码。" }) }, "设置密码") }),
     settingRow({ label: "退出登录", text: "在这台设备上退出当前账户。", control: logout }),
   ]);
 }
@@ -1992,7 +1998,7 @@ function settingsView(ctx, body) {
     } else if (key === "anon") {
       sections.push(loginCard(ctx, {
         title: "登录后管理账户",
-        text: "设置社区昵称，查看档案、积分与消息。",
+        text: "设置社区昵称，查看我的盘、积分与消息。",
         reason: "登录后管理你的账户。",
       }));
     } else {

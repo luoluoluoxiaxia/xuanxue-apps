@@ -1,22 +1,22 @@
 // 解读工作台：同一张盘上的一段对话。桌面左对话右命盘；手机顶部命盘速览，点开看完整盘面。
-import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n22";
-import { icon } from "../lib/icons.js?v=n22";
-import { get, post } from "../lib/api.js?v=n22";
-import { session, local } from "../lib/store.js?v=n22";
-import { newSessionId, isSessionId } from "../lib/ids.js?v=n22";
-import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n22";
-import { Conversation, humanizeError } from "../lib/interpret.js?v=n22";
-import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n22";
-import { takeHandoff } from "../lib/handoff.js?v=n22";
-import { relativeTime, plainExcerpt } from "../lib/format.js?v=n22";
-import { errorView, stateView } from "../ui/bits.js?v=n22";
-import { openSheet, openMenu } from "../ui/overlay.js?v=n22";
-import { toast } from "../ui/toast.js?v=n22";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n22";
-import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n22";
-import { copyText, sharePost } from "../lib/share.js?v=n22";
-import { openShareSheet } from "../ui/share-sheet.js?v=n22";
-import { openFeedback } from "./feedback.js?v=n22";
+import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n23";
+import { icon } from "../lib/icons.js?v=n23";
+import { get, post } from "../lib/api.js?v=n23";
+import { session, local } from "../lib/store.js?v=n23";
+import { newSessionId, isSessionId } from "../lib/ids.js?v=n23";
+import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n23";
+import { Conversation, humanizeError } from "../lib/interpret.js?v=n23";
+import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n23";
+import { takeHandoff } from "../lib/handoff.js?v=n23";
+import { relativeTime, plainExcerpt } from "../lib/format.js?v=n23";
+import { errorView, stateView } from "../ui/bits.js?v=n23";
+import { openSheet, openMenu } from "../ui/overlay.js?v=n23";
+import { toast } from "../ui/toast.js?v=n23";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n23";
+import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n23";
+import { copyText, sharePost } from "../lib/share.js?v=n23";
+import { openShareSheet } from "../ui/share-sheet.js?v=n23";
+import { openFeedback } from "./feedback.js?v=n23";
 
 const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
 // 从解读页分享卦帖时记录的来源。
@@ -141,7 +141,7 @@ export function render(ctx) {
       }
       if (!session.get().ready) await new Promise(resolve => { const stop = session.subscribe(s => { if (s.ready) { stop(); resolve(); } }); });
       if (!session.get().authenticated) {
-        const ok = await ctx.requireAuth("登录后查看私人档案。");
+        const ok = await ctx.requireAuth("登录后查看你的盘。");
         if (!ok) {
           if (ctx.isCurrent()) showLockedOut();
           return;
@@ -172,6 +172,19 @@ export function render(ctx) {
           fetchConversations: () => get(`/api/profiles/${encodeURIComponent(id)}/conversations`, { cache: "no-store" }),
         });
         if (!ctx.isCurrent()) return;
+      }
+      // 八字盘没指定会话、也不是要开新对话：默认接着最近一段聊，而不是每次都从空白开始。
+      if (!sessionId && state.system !== "liuyao" && !freshConversation && !local.get(readingDraftKey(id), "").trim()) {
+        try {
+          const items = await get(`/api/profiles/${encodeURIComponent(id)}/conversations`, { cache: "no-store" });
+          if (!ctx.isCurrent()) return;
+          const latest = (Array.isArray(items) ? items : (items?.items || []))
+            .filter(item => isSessionId(item?.session_id))
+            .sort((a, b) => String(b.updated_at || "").localeCompare(String(a.updated_at || "")))[0];
+          if (latest) sessionId = latest.session_id;
+        } catch (_) {
+          // 取不到历史就开新对话；空白页里的「接着上次聊」入口会再试一次。
+        }
       }
       if (sessionId) {
         const batch = await post("/api/resume", { items: [{ key: state.system === "liuyao" ? "断卦" : "解读", chart_id: state.chartId, session_id: sessionId, profile_id: state.profileId, limit: 200 }] });
@@ -208,7 +221,7 @@ export function render(ctx) {
         h("a", { class: "back-link", href: "#/me/archives" }, icon("back"), "我的盘"),
         stateView({
           tone: "error",
-          title: gone ? "这份档案不存在或已删除" : "档案没能打开",
+          title: gone ? "这张盘不存在或已删除" : "这张盘没能打开",
           text: error?.message || "网络或服务暂时不可用",
           actions: [
             gone ? null : h("button", { type: "button", class: "btn btn-soft", onClick: () => { loadFailed = false; root.replaceChildren(loading); load(); } }, icon("refresh"), "重试"),
@@ -222,10 +235,10 @@ export function render(ctx) {
     lockedOut = true;
     root.replaceChildren(stateView({
       glyph: "lock",
-      title: "登录后查看这份档案",
-      text: "命盘、卦档与对话只对本人可见。",
+      title: "登录后查看这张盘",
+      text: "命盘、卦盘与对话只对本人可见。",
       actions: [h("button", { type: "button", class: "btn btn-primary", onClick: async () => {
-        const ok = await ctx.requireAuth("登录后查看私人档案。");
+        const ok = await ctx.requireAuth("登录后查看你的盘。");
         if (ok && ctx.isCurrent() && lockedOut) {
           lockedOut = false;
           root.replaceChildren(loading);
@@ -255,14 +268,8 @@ export function render(ctx) {
     activeTasks.forEach(task => conversation.attachTask(task));
     syncComposer();
     ticker = setInterval(onTick, 1000);
-    if (state.autoStart && state.system === "liuyao") {
-      if (riskAccepted()) startFirst();
-      else {
-        toast("卦已成，确认参考声明后将自动开始解读");
-        state.pendingStart = true;
-        requestAnimationFrame(() => nodes.thread.querySelector("[data-risk-ack]")?.focus());
-      }
-    }
+    // 起卦页的开始按钮下已写明参考声明，点了就算知晓，这里直接开始，不再要求勾选。
+    if (state.autoStart && state.system === "liuyao") startFirst();
     const liuyao = state.system === "liuyao";
     const running = activeTasks.some(task => task.status === "pending" || task.status === "running");
     if (serverMessages.length || activeTasks.length) {
@@ -274,12 +281,12 @@ export function render(ctx) {
     if (opened === "resumed" && (serverMessages.length || activeTasks.length)) {
       toast(running ? "已恢复上次对话，解读继续" : `已恢复这段${liuyao ? "六爻" : "八字"}对话，继续追问`);
     } else if (opened === "fresh") {
-      toast(`已用这份${liuyao ? "卦档" : "八字"}开启新对话`);
+      toast(`已用这份${liuyao ? "卦盘" : "八字"}开启新对话`);
     } else if (opened === "archive" && activeTasks.length) {
       const statuses = activeTasks.map(task => task.status);
-      if (running) toast("档案已打开，解读正在继续");
-      else if (statuses.includes("failed")) toast("档案已打开，可重试上次解读");
-      else if (statuses.includes("cancelled")) toast("档案已打开，上次解读已停止");
+      if (running) toast("盘已打开，解读正在继续");
+      else if (statuses.includes("failed")) toast("盘已打开，可重试上次解读");
+      else if (statuses.includes("cancelled")) toast("盘已打开，上次解读已停止");
     }
     // 排好盘后直接向社区求助：刚排好的盘由交接带来标记；选已有命盘时带 help=1。
     const helpQuery = ctx.query.get("help") === "1";
@@ -359,7 +366,7 @@ export function render(ctx) {
         h("div", { class: "rd-title" },
           h("a", { class: "back-link rd-back", href: "#/me/archives", "aria-label": "返回我的盘", title: "返回我的盘" }, icon("back")),
           h("span", { class: ["chip", liuyao ? "chip-liuyao" : "chip-bazi"] }, liuyao ? "六爻" : "八字"),
-          // 六爻卦档分公开 / 私密：公开的首轮解答会发布到广场。
+          // 六爻卦盘分公开 / 私密：公开的首轮解答会发布到广场。
           liuyao ? h("span", { class: ["chip", "chip-outline", "rd-vis"], title: isPublic ? "公开卦：首轮解答发布到广场" : "私密卦：仅自己可见" }, icon(isPublic ? "globe" : "lock"), isPublic ? "公开" : "私密") : null,
           h("h1", null, title)),
         headActions,
@@ -445,18 +452,11 @@ export function render(ctx) {
 
   function emptyState() {
     const liuyao = state.system === "liuyao";
-    const ack = riskAccepted() ? null : riskAckControl(() => {
-      renderThread();
-      syncComposer();
-      if (state.pendingStart) {
-        state.pendingStart = false;
-        startFirst();
-      }
-    });
+    const ack = riskAccepted() ? null : riskNote();
     if (liuyao) {
       const payload = state.payload || {};
       const moving = Array.isArray(payload.dong_yao) ? payload.dong_yao : [];
-      const start = h("button", { type: "button", class: "btn btn-primary", disabled: !riskAccepted(), onClick: () => startFirst() }, icon("sparkle"), "开始解读");
+      const start = h("button", { type: "button", class: "btn btn-primary", onClick: () => startFirst() }, icon("sparkle"), "开始解读");
       return h("div", { class: "thread-empty" },
         h("h2", null, "一卦已成"),
         h("p", null, `${liuyaoTitle(payload)} · 世${LY_POS[(payload.shi_yao || 1) - 1]}爻 应${LY_POS[(payload.ying_yao || 1) - 1]}爻 · ${moving.length ? `动爻${CN_NUM[moving.length] || moving.length}处` : "六爻安静"}`),
@@ -475,14 +475,9 @@ export function render(ctx) {
       h("p", { class: "starter-note" }, "点一下只会填入输入框，可以先改再发。"));
   }
 
-  function riskAckControl(onAccept) {
-    const box = h("input", { type: "checkbox", "data-risk-ack": "" });
-    box.addEventListener("change", () => {
-      if (!box.checked) return;
-      local.set(RISK_ACK_KEY, "1");
-      onAccept?.();
-    });
-    return h("label", { class: "check risk-ack" }, box, h("span", null, RISK_ACK_TEXT));
+  // 参考声明只作提示：第一次发送即视为知晓，不再单独勾选（见 preflight）。
+  function riskNote() {
+    return h("p", { class: "risk-note" }, `发送即表示${RISK_ACK_TEXT.replace(/^我已知晓：/, "你已知晓：")}`);
   }
 
   function messageNode(message) {
@@ -549,7 +544,7 @@ export function render(ctx) {
         const spent = credits && Number(credits.required_credits) > 0
           ? h("p", { class: "ai-credits" }, credits.platform_covered > 0
             ? "本次回答已完整送达 · 积分扣至 0，不足部分免扣"
-            : `本次 ${credits.required_credits} 分 · 今日免费剩余 ${credits.daily_remaining ?? 0} 分 · 充值剩余 ${credits.paid_balance_after ?? 0} 分`)
+            : `本次 ${credits.required_credits} 分 · 今日免费额度还剩 ${credits.daily_remaining ?? 0} 分 · 账户积分 ${credits.paid_balance_after ?? 0} 分`)
           : null;
         children.push(h("div", { class: "ai-tools" },
           feedbackButton(message, "like"),
@@ -900,7 +895,7 @@ export function render(ctx) {
     composer.send.setAttribute("aria-label", busy ? "停止生成" : "发送");
     composer.send.replaceChildren(...[icon(busy ? "stop" : "send", busy ? "icon-fill" : ""), busy && h("span", { class: "rd-send-label", "aria-hidden": "true" }, "停止")].filter(Boolean));
     const needsAck = !riskAccepted() && state.conversation?.messages.length;
-    composer.ackSlot.replaceChildren(...(needsAck ? [riskAckControl(syncComposer)] : []));
+    composer.ackSlot.replaceChildren(...(needsAck ? [riskNote()] : []));
     // 解读进行中：「重新起卦」「新对话」不可用（先等完成或停止）。
     if (nodes.restart) {
       nodes.restart.disabled = busy;
@@ -981,11 +976,8 @@ export function render(ctx) {
       toast("这份旧卦没有公开授权，请重新起卦", { type: "error" });
       return false;
     }
-    if (!riskAccepted()) {
-      toast("请先勾选参考声明");
-      (nodes.thread.querySelector("[data-risk-ack]") || nodes.composer.ackSlot.querySelector("input"))?.focus();
-      return false;
-    }
+    // 声明就写在输入区旁边：发出第一个问题即视为知晓。
+    if (!riskAccepted()) local.set(RISK_ACK_KEY, "1");
     const quota = session.get().quota;
     if (quota && quota.can_start_answer === false) {
       creditsExhausted();
@@ -993,7 +985,7 @@ export function render(ctx) {
     }
     if (!session.get().authenticated) {
       // 解读前的登录默认停在「注册」。
-      const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后使用每日免费积分解读。", { mode: "register" });
+      const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后用今日免费额度解读。", { mode: "register" });
       if (!ok) return false;
       const again = session.get().quota;
       if (again && again.can_start_answer === false) {
@@ -1006,7 +998,11 @@ export function render(ctx) {
 
   // 积分用完：「去充值」直接打开积分页的充值档位。
   function creditsExhausted() {
-    toast("今日免费积分与充值积分已用完；明日刷新，或充值后继续", { type: "error", action: { label: "去充值", onClick: () => ctx.navigate("/me/credits?topup=1") } });
+    if (session.get().wallet?.topup_enabled) {
+      toast("今日免费额度与账户积分已用完；明日 0 点恢复，或充值后继续", { type: "error", action: { label: "去充值", onClick: () => ctx.navigate("/me/credits?topup=1") } });
+    } else {
+      toast("今日免费额度已用完，明日北京时间 0 点恢复", { type: "error" });
+    }
   }
 
   async function ask(text, { onAccepted, ...options } = {}) {
