@@ -1,4 +1,4 @@
-// 「学一学这张盘」：把排盘输入放进本机草稿，学习页拿它向后端要课程。
+// 「看懂这张盘」：把排盘输入放进本机草稿，讲解页拿它向后端要一页讲解。
 // 出生信息不进 URL；键名沿用 xz-next-draft: 前缀，退出登录时随私人草稿一起清掉。
 import { h } from "./dom.js?v=n23";
 import { icon } from "./icons.js?v=n23";
@@ -6,7 +6,6 @@ import { local } from "./store.js?v=n23";
 import { localDateTimeISO } from "./ids.js?v=n23";
 
 const inputKey = system => `xz-next-draft:learn:${system}`;
-const progressKey = system => `xz-learn-progress:${system}`;
 
 const BAZI_FIELDS = [
   "system", "input_mode", "year", "month", "day", "hour", "minute", "calendar", "is_leap_month", "gender",
@@ -32,7 +31,7 @@ export function learnEntry(system, getInput) {
   return h("a", {
     class: "learn-entry", href: learnHref(system),
     onClick: () => saveLearnInput(system, getInput()),
-  }, icon("book", "icon-sm"), system === "liuyao" ? "学一学这一卦" : "学一学这张盘", icon("chevronRight", "icon-sm"));
+  }, icon("book", "icon-sm"), system === "liuyao" ? "这一卦怎么看" : "这张盘怎么看", icon("chevronRight", "icon-sm"));
 }
 
 // 八字只带排盘需要的字段，称呼、可见性等与学习无关的不存。
@@ -70,15 +69,4 @@ export function sampleLearnInput(system) {
     year: pick(1960, 2008), month: pick(1, 12), day: pick(1, 28), hour: pick(0, 23), minute: pick(0, 59),
     gender: Math.random() < 0.5 ? "男" : "女", location: "北京",
   };
-}
-
-export function learnProgress(system) {
-  const value = local.json(progressKey(system), []);
-  return new Set(Array.isArray(value) ? value : []);
-}
-
-export function markLessonDone(system, lessonId) {
-  const done = learnProgress(system);
-  done.add(lessonId);
-  local.setJson(progressKey(system), [...done]);
 }
