@@ -3712,6 +3712,201 @@
         "title": "ClientKnowledgeSummary",
         "type": "object"
       },
+      "ClientLearnCourse": {
+        "additionalProperties": false,
+        "properties": {
+          "lessons": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnLesson"
+            },
+            "title": "Lessons",
+            "type": "array"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "system": {
+            "enum": [
+              "bazi",
+              "liuyao"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "title",
+          "subtitle",
+          "lessons"
+        ],
+        "title": "ClientLearnCourse",
+        "type": "object"
+      },
+      "ClientLearnLesson": {
+        "additionalProperties": false,
+        "properties": {
+          "concept": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Concept",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "mine": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnRow"
+            },
+            "title": "Mine",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "quiz": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnQuestion"
+            },
+            "title": "Quiz",
+            "type": "array"
+          },
+          "reading": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnReading"
+            },
+            "title": "Reading",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "summary",
+          "concept",
+          "mine",
+          "steps",
+          "note",
+          "reading",
+          "quiz"
+        ],
+        "title": "ClientLearnLesson",
+        "type": "object"
+      },
+      "ClientLearnQuestion": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "integer"
+          },
+          "explain": {
+            "title": "Explain",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "prompt": {
+            "title": "Prompt",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "prompt",
+          "options",
+          "answer",
+          "explain"
+        ],
+        "title": "ClientLearnQuestion",
+        "type": "object"
+      },
+      "ClientLearnReading": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "book_title": {
+            "title": "Book Title",
+            "type": "string"
+          },
+          "section": {
+            "title": "Section",
+            "type": "integer"
+          },
+          "section_title": {
+            "title": "Section Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "book_id",
+          "book_title",
+          "section",
+          "section_title"
+        ],
+        "title": "ClientLearnReading",
+        "type": "object"
+      },
+      "ClientLearnRow": {
+        "additionalProperties": false,
+        "properties": {
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "detail"
+        ],
+        "title": "ClientLearnRow",
+        "type": "object"
+      },
       "ClientLiuyaoChart": {
         "additionalProperties": false,
         "properties": {
@@ -7090,6 +7285,45 @@
           }
         },
         "summary": "Api Chart"
+      }
+    },
+    "/api/chart/learn": {
+      "post": {
+        "description": "用这张盘生成入门课程：与预览同样只计算、不落库、不调用模型，未登录也能学。",
+        "operationId": "api_chart_learn_api_chart_learn_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BirthInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientLearnCourse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Chart Learn"
       }
     },
     "/api/chart/preview": {

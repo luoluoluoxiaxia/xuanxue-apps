@@ -17,6 +17,7 @@ import * as InboxView from "./views/inbox.js?v=n23";
 import * as MeView from "./views/me.js?v=n23";
 import * as BooksView from "./views/books.js?v=n23";
 import * as RoadmapView from "./views/roadmap.js?v=n23";
+import * as LearnView from "./views/learn.js?v=n23";
 import { openFeedback } from "./views/feedback.js?v=n23";
 import { routeFromLegacy } from "./lib/legacy.js?v=n23";
 
@@ -432,6 +433,7 @@ const ROUTES = [
   { path: "/books", view: BooksView },
   { path: "/books/:id", view: BooksView },
   { path: "/roadmap", view: RoadmapView },
+  { path: "/learn/:system", view: LearnView },
   { path: "/inbox", view: InboxView },
   { path: "/me", view: MeView },
   { path: "/me/:tab", view: MeView },

@@ -15,6 +15,7 @@ import { confirmDialog } from "../ui/overlay.js?v=n23";
 import { locationPicker } from "../ui/location.js?v=n23";
 import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n23";
 import { baziPanel } from "../ui/chart-bazi.js?v=n23";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n23";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
@@ -470,7 +471,8 @@ function liuyaoFlow(ctx) {
       preview.payload = payload;
       previewSlot.replaceChildren(
         h("div", { class: "flow-step-head" }, h("h2", null, "卦盘"), h("span", { class: "flow-hint" }, "点一爻看释读")),
-        liuyaoPanel(payload, { method: state.mode === "manual" ? "manual" : "client_coins", beside: true }));
+        liuyaoPanel(payload, { method: state.mode === "manual" ? "manual" : "client_coins", beside: true }),
+        learnEntry("liuyao", () => liuyaoLearnInput(payload, { question: question.value.trim() })));
       previewSlot.hidden = false;
       renderBuilder();
     }).catch(() => {});
@@ -1414,6 +1416,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       previewSlot.replaceChildren(
         h("div", { class: "flow-step-head" }, h("h2", null, "你的命盘"), h("span", { class: "flow-hint" }, "还没保存 · 注册后保存并开始解读")),
         baziPanel(payload, { name: bodyPayload.name || "", input: bodyPayload }),
+        learnEntry("bazi", () => baziLearnInput(bodyPayload)),
         h("div", { class: "flow-submit" }, save, h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), "保存后命盘只对你本人可见，换设备也能接着问。")));
       previewSlot.hidden = false;
       submit.hidden = true;
