@@ -1,5 +1,6 @@
 // 讲解页 #/learn/:system：一页讲清这张盘（或随机练习盘）怎么看。
 // 讲解正文、盘面、小结和自查题都由后端 /api/chart/guide 给出，这里只负责排版和答题。
+// 宽屏左盘右文、盘面跟着滚动固定在左边；窄屏顶部固定一条看盘条，点开看完整盘面。
 import { h, fill } from "../lib/dom.js?v=n23";
 import { icon } from "../lib/icons.js?v=n23";
 import { post } from "../lib/api.js?v=n23";
@@ -8,8 +9,9 @@ import { readingPath } from "../lib/books.js?v=n23";
 import { loadLearnInput, sampleLearnInput } from "../lib/learn.js?v=n23";
 import { humanizeError } from "../lib/interpret.js?v=n23";
 import { stateView, spinnerLine } from "../ui/bits.js?v=n23";
-import { baziPanel } from "../ui/chart-bazi.js?v=n23";
-import { liuyaoPanel } from "../ui/chart-liuyao.js?v=n23";
+import { openSheet } from "../ui/overlay.js?v=n23";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n23";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n23";
 
 const sampleKey = system => `xz-learn-sample:${system}`;
 const guideCache = new Map();
@@ -24,7 +26,7 @@ export function render(ctx) {
     input = sampleLearnInput(system);
     local.setJson(sampleKey(system), input);
   }
-  const node = h("div", { class: "learn-page page-narrow" });
+  const node = h("div", { class: "learn-page" });
   const title = gua ? "这一卦怎么看" : "这张盘怎么看";
   const href = src => `#/learn/${system}${src ? `?src=${src}` : ""}`;
 
@@ -79,9 +81,14 @@ export function render(ctx) {
       h("div", { class: "learn-switch" },
         h("button", { type: "button", class: "btn btn-ghost btn-sm", onClick: newSample }, icon("dice", "icon-sm"), practice ? "再换一张" : "换一张随机盘看看"),
         practice && own ? h("a", { class: "btn btn-ghost btn-sm", href: href("") }, icon("back", "icon-sm"), "回到我的盘") : null));
-    const chart = h("details", { class: "learn-chart" },
-      h("summary", null, icon("chevronDown", "icon-sm"), gua ? "对照卦盘" : "对照命盘"),
-      gua ? liuyaoPanel(guide.chart, { method: input.method }) : baziPanel(guide.chart, { input }));
+    const panel = beside => (gua
+      ? liuyaoPanel(guide.chart, { method: input.method, beside })
+      : baziPanel(guide.chart, { input, beside }));
+    const side = h("aside", { class: "learn-side", "aria-label": gua ? "卦盘" : "命盘" }, panel(true));
+    const strip = h("button", {
+      type: "button", class: "learn-strip", "aria-label": "查看完整盘面",
+      onClick: event => openSheet({ title: gua ? "卦盘" : "命盘", body: panel(false), wide: true, className: "sheet-chart", returnFocus: event.currentTarget }),
+    }, gua ? liuyaoStrip(guide.chart) : baziStrip(guide.chart), h("span", { class: "learn-strip-go" }, "看盘", icon("chevronDown", "icon-sm")));
     const body = h("article", { class: "learn-article" }, guide.sections.map((section, index) =>
       h("section", { class: "learn-step" },
         h("h2", null, h("span", { class: "learn-step-num tnum", "aria-hidden": "true" }, String(index + 1)), section.title),
@@ -101,7 +108,7 @@ export function render(ctx) {
     const next = h("nav", { class: "learn-pager", "aria-label": "下一步" },
       h("span"),
       h("a", { class: "btn btn-primary", href: `#/ask/${system}` }, "带着问题去问", icon("arrowRight", "icon-sm")));
-    return [head, chart, body, recap, ...tail, next];
+    return [head, h("div", { class: "learn-layout" }, side, h("div", { class: "learn-main" }, strip, body, recap, ...tail, next))];
   }
 
   function quizView(quiz) {
