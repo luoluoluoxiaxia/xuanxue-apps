@@ -17,6 +17,7 @@ import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n
 import { copyText, sharePost } from "../lib/share.js?v=n23";
 import { openShareSheet } from "../ui/share-sheet.js?v=n23";
 import { openFeedback } from "./feedback.js?v=n23";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n23";
 
 const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
 // 从解读页分享卦帖时记录的来源。
@@ -376,7 +377,7 @@ export function render(ctx) {
       live,
       jump,
       composer.node);
-    const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel);
+    const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel, chartLearnEntry());
     root.replaceChildren(h("div", { class: ["rd-layout", liuyao ? "is-liuyao" : "is-bazi"] }, conversationCol, side));
     nodes = { thread, composer, jump, panel, side, live, restart, helpSlot, question: questionLine };
     syncHelpAction();
@@ -420,11 +421,17 @@ export function render(ctx) {
     syncHelpAction();
   }
 
+  function chartLearnEntry() {
+    return state.system === "liuyao"
+      ? learnEntry("liuyao", () => liuyaoLearnInput(state.payload, state.input))
+      : learnEntry("bazi", () => baziLearnInput(state.input));
+  }
+
   function openChartSheet() {
     const liuyao = state.system === "liuyao";
     openSheet({
       title: liuyao ? "卦盘" : "命盘",
-      body: liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input }),
+      body: [liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input }), chartLearnEntry()],
       wide: true,
       className: "sheet-chart",
     });

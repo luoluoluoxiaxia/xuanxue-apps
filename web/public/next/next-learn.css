@@ -1,0 +1,73 @@
+/* 学习页 #/learn/:system：留白和字号做层级，行与行之间只用细线，不加卡片底色。 */
+.learn-page { padding: 8px 0 48px; }
+.learn-head { padding: 8px 0 20px; }
+.learn-head h1 { margin: 4px 0 6px; font-family: var(--font-serif); font-size: 28px; line-height: 1.3; color: var(--ink); }
+.learn-kicker { margin: 0; font-size: 13px; color: var(--ink-3); }
+.learn-subtitle { margin: 0; font-family: var(--font-serif); font-size: 20px; letter-spacing: .12em; color: var(--brand-ink); }
+.learn-switch { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 12px 0 0 -12px; }
+
+.learn-toc { list-style: none; margin: 0 0 8px; padding: 0 0 12px; border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 2px 18px; }
+.learn-toc a { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--ink-3); text-decoration: none; font-size: 14px; }
+.learn-toc a:hover { color: var(--ink); }
+.learn-toc-num { font-size: 12px; color: var(--ink-4); }
+.learn-toc .is-current a { color: var(--brand-ink); font-weight: 600; }
+.learn-toc .is-current .learn-toc-num { color: var(--brand-ink); }
+.learn-toc-check { color: var(--ink-4); }
+.learn-toc .is-current .learn-toc-check { color: var(--brand-ink); }
+
+.learn-lesson { padding-top: 20px; }
+.learn-title { margin: 4px 0 6px; font-family: var(--font-serif); font-size: 24px; line-height: 1.35; color: var(--ink); }
+.learn-summary { margin: 0; font-size: 16px; line-height: 1.7; color: var(--ink-2); }
+.learn-section { margin-top: 32px; }
+.learn-section h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .08em; color: var(--ink-3); }
+.learn-section > p { margin: 0 0 12px; font-size: 16px; line-height: 1.85; color: var(--ink); }
+
+.learn-rows { margin: 0; }
+.learn-row { display: grid; grid-template-columns: minmax(84px, 9em) 1fr; gap: 4px 16px; padding: 12px 0; border-top: 1px solid var(--line); }
+.learn-row:last-child { border-bottom: 1px solid var(--line); }
+.learn-row dt { font-size: 14px; color: var(--ink-3); padding-top: 2px; }
+.learn-row dd { margin: 0; min-width: 0; }
+.learn-row dd b { display: block; font-family: var(--font-serif); font-size: 18px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.learn-row dd small { display: block; margin-top: 2px; font-size: 13px; line-height: 1.6; color: var(--ink-3); }
+
+.learn-steps { margin: 0; padding-left: 1.4em; }
+.learn-steps li { margin: 0 0 8px; font-size: 15px; line-height: 1.8; color: var(--ink-2); }
+.learn-note { display: flex; gap: 8px; margin: 20px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink-3); }
+.learn-note .icon { flex: none; margin-top: 3px; }
+
+.learn-quiz { list-style: none; margin: 0; padding: 0; counter-reset: learn-q; }
+.learn-question { padding: 14px 0; border-top: 1px solid var(--line); counter-increment: learn-q; }
+.learn-prompt { margin: 0 0 10px; font-size: 16px; line-height: 1.7; color: var(--ink); }
+.learn-prompt::before { content: counter(learn-q) ". "; color: var(--ink-4); }
+.learn-options { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+.learn-option {
+  min-height: 40px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 16px; color: var(--ink-2);
+  border-bottom: 2px solid transparent;
+}
+.learn-option:hover:not(:disabled) { color: var(--brand-ink); }
+.learn-option:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+.learn-option:disabled { cursor: default; color: var(--ink-4); }
+.learn-option.is-right { color: var(--brand-ink); border-bottom-color: var(--brand); font-weight: 600; }
+.learn-option.is-wrong { color: var(--ink-3); text-decoration: line-through; }
+.learn-feedback { margin: 8px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+.learn-feedback b { margin-right: 4px; color: var(--ink); }
+.learn-score { margin: 12px 0 0; font-size: 14px; color: var(--brand-ink); }
+.learn-score:empty { display: none; }
+
+.learn-reading { list-style: none; margin: 0; padding: 0; }
+.learn-reading a { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; color: var(--ink-2); text-decoration: none; font-size: 15px; }
+.learn-reading a:hover { color: var(--brand-ink); }
+
+.learn-pager { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); }
+
+/* 排盘结果下方的入口：一行文字链接。 */
+.learn-entry { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 8px; color: var(--brand-ink); font-size: 15px; text-decoration: none; }
+.learn-entry:hover { text-decoration: underline; }
+
+@media (max-width: 640px) {
+  .learn-head h1 { font-size: 24px; }
+  .learn-title { font-size: 21px; }
+  .learn-row { grid-template-columns: 1fr; gap: 2px; }
+  .learn-toc { gap: 0 14px; }
+}
