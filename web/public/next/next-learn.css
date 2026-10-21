@@ -1,20 +1,17 @@
-/* 讲解页 #/learn/:system：一页文章。留白和字号做层级，每一步的结论用红色细线标出，不加卡片底色。 */
-.learn-page { padding: 8px 0 48px; }
+/* 讲解页 #/learn/:system：左盘右文。留白和字号做层级，每一步的结论用红色细线标出，不加卡片底色。 */
+.learn-page { max-width: 1180px; margin: 0 auto; padding: 8px 0 48px; }
+.learn-layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 48px; align-items: start; }
+.learn-side { position: sticky; top: calc(var(--topbar-h) + 16px); max-height: calc(100dvh - var(--topbar-h) - 32px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+.learn-main { min-width: 0; max-width: 720px; }
+.learn-strip { display: none; }
 .learn-head { padding: 8px 0 16px; }
 .learn-head h1 { margin: 4px 0 6px; font-family: var(--font-serif); font-size: 28px; line-height: 1.3; color: var(--ink); }
 .learn-kicker { margin: 0; font-size: 13px; color: var(--ink-3); }
 .learn-subtitle { margin: 0; font-family: var(--font-serif); font-size: 20px; letter-spacing: .12em; color: var(--brand-ink); }
 .learn-switch { display: flex; flex-wrap: wrap; gap: 4px 8px; margin: 12px 0 0 -12px; }
 
-.learn-chart { margin: 4px 0 8px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.learn-chart > summary { display: flex; align-items: center; gap: 6px; min-height: 44px; cursor: pointer; list-style: none; font-size: 14px; color: var(--ink-2); }
-.learn-chart > summary::-webkit-details-marker { display: none; }
-.learn-chart > summary .icon { transition: transform .2s var(--ease); }
-.learn-chart[open] > summary .icon { transform: rotate(180deg); }
-.learn-chart[open] { padding-bottom: 16px; }
-
-.learn-article { margin-top: 8px; }
 .learn-step { margin-top: 36px; }
+.learn-step:first-child { margin-top: 0; }
 .learn-step h2 { display: flex; align-items: baseline; gap: 10px; margin: 0 0 12px; font-family: var(--font-serif); font-size: 22px; line-height: 1.4; color: var(--ink); }
 .learn-step-num { flex: none; font-family: var(--font-sans); font-size: 14px; color: var(--brand-ink); }
 .learn-step p { margin: 0 0 12px; font-size: 17px; line-height: 1.9; color: var(--ink); }
@@ -55,6 +52,22 @@
 /* 排盘结果下方的入口：一行文字链接。 */
 .learn-entry { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; margin-top: 8px; color: var(--brand-ink); font-size: 15px; text-decoration: none; }
 .learn-entry:hover { text-decoration: underline; }
+
+/* 窄屏放不下左右两栏：盘面收成顶部固定的一条，点开看完整盘面。 */
+@media (max-width: 1023px) {
+  .learn-layout { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .learn-side { display: none; }
+  .learn-main { max-width: 720px; width: 100%; margin: 0 auto; }
+  .learn-strip {
+    position: sticky; top: calc(var(--topbar-h) + env(safe-area-inset-top, 0px)); z-index: 5;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    width: 100%; margin: 0 0 28px; padding: 10px 0;
+    background: var(--bg); border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    font: inherit; color: inherit; text-align: left; cursor: pointer;
+  }
+  .learn-strip-go { display: inline-flex; align-items: center; gap: 4px; flex: none; color: var(--brand-ink); font-size: 13px; font-weight: 700; }
+  .learn-head { max-width: 720px; margin: 0 auto; }
+}
 
 @media (max-width: 640px) {
   .learn-head h1 { font-size: 24px; }
