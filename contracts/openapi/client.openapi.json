@@ -3038,6 +3038,33 @@
         "title": "ClientFollowState",
         "type": "object"
       },
+      "ClientGuideSection": {
+        "additionalProperties": false,
+        "properties": {
+          "paragraphs": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Paragraphs",
+            "type": "array"
+          },
+          "takeaway": {
+            "title": "Takeaway",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "paragraphs",
+          "takeaway"
+        ],
+        "title": "ClientGuideSection",
+        "type": "object"
+      },
       "ClientHelpAiAnswer": {
         "additionalProperties": false,
         "description": "求助帖上由卦友花自己积分请来的 AI 解读（一帖一轮）。",
@@ -3746,6 +3773,78 @@
           "lessons"
         ],
         "title": "ClientLearnCourse",
+        "type": "object"
+      },
+      "ClientLearnGuide": {
+        "additionalProperties": false,
+        "properties": {
+          "chart": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientBaziChart"
+              },
+              {
+                "$ref": "#/components/schemas/ClientLiuyaoChart"
+              }
+            ],
+            "title": "Chart"
+          },
+          "quiz": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnQuestion"
+            },
+            "title": "Quiz",
+            "type": "array"
+          },
+          "reading": {
+            "items": {
+              "$ref": "#/components/schemas/ClientLearnReading"
+            },
+            "title": "Reading",
+            "type": "array"
+          },
+          "recap": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Recap",
+            "type": "array"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ClientGuideSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "subtitle": {
+            "title": "Subtitle",
+            "type": "string"
+          },
+          "system": {
+            "enum": [
+              "bazi",
+              "liuyao"
+            ],
+            "title": "System",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "system",
+          "title",
+          "subtitle",
+          "chart",
+          "sections",
+          "recap",
+          "quiz",
+          "reading"
+        ],
+        "title": "ClientLearnGuide",
         "type": "object"
       },
       "ClientLearnLesson": {
@@ -7285,6 +7384,45 @@
           }
         },
         "summary": "Api Chart"
+      }
+    },
+    "/api/chart/guide": {
+      "post": {
+        "description": "一页讲解这张盘怎么看：与预览同样只计算、不落库、不调用模型，未登录也能看。",
+        "operationId": "api_chart_guide_api_chart_guide_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BirthInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientLearnGuide"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Chart Guide"
       }
     },
     "/api/chart/learn": {
