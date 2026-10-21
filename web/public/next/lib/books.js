@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n23";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n24";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -8,6 +8,22 @@ export const BOOK_STATUS = {
   reading_edition: "原文 · 白话", first_pass: "原文初录 · 待校勘", working_draft: "有疑缺的工作稿", unavailable: "成品待恢复",
 };
 export const BOOK_SYSTEM = { bazi: "八字", liuyao: "六爻", general: "通用" };
+
+export const TEXT_ROLES = { original: "原文", original_note: "原注", commentary: "评注", modern_editorial: "现代整理说明", unclassified: "未分类" };
+export const TEXT_COMPLETENESS = { complete: "完整", incomplete: "不完整", excerpt: "节录", unknown: "完整度待核" };
+export const TEXT_COLLATION = { unproofread: "未校勘", partially_collated: "部分校勘", collated: "已校勘" };
+
+export function textVersionPath(bookId, versionId = "catalog", chapterId = "") {
+  const query = new URLSearchParams({ "text-version": versionId });
+  if (chapterId) query.set("chapter", chapterId);
+  return `/books/${encodeURIComponent(bookId)}?${query}`;
+}
+
+export function textExportPath(bookId, versionId, format = "txt", chapterId = "") {
+  const query = new URLSearchParams({ format });
+  if (chapterId) query.set("chapter_id", chapterId);
+  return `/api/books/${encodeURIComponent(bookId)}/text-versions/${encodeURIComponent(versionId)}/export?${query}`;
+}
 
 export function readingPath(id, number = 1) {
   return `/books/${encodeURIComponent(id)}?page=${number}`;
