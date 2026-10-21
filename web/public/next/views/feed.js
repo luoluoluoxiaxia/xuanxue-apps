@@ -1,12 +1,12 @@
 // 广场：社区问题流。桌面三栏（话题 / 问题流 / 今日与等你来答），手机单栏 + 话题横滑。
-import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n23";
-import { icon } from "../lib/icons.js?v=n23";
-import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n23";
-import { session, local } from "../lib/store.js?v=n23";
-import { relativeTime, count } from "../lib/format.js?v=n23";
-import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n23";
-import { guaToken, pillarsToken } from "../ui/gua.js?v=n23";
-import { toast } from "../ui/toast.js?v=n23";
+import { h, fill, on, whenVisible, reducedMotion } from "../lib/dom.js?v=n24";
+import { icon } from "../lib/icons.js?v=n24";
+import { get, post, query, prefetch, invalidateCached } from "../lib/api.js?v=n24";
+import { session, local } from "../lib/store.js?v=n24";
+import { relativeTime, count } from "../lib/format.js?v=n24";
+import { errorView, stateView, skeletonCard } from "../ui/bits.js?v=n24";
+import { guaToken, pillarsToken } from "../ui/gua.js?v=n24";
+import { toast } from "../ui/toast.js?v=n24";
 
 export const TOPICS = [
   ["", "全部话题", "compass"],

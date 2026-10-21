@@ -1730,6 +1730,110 @@
         "title": "ClientBookTermSpan",
         "type": "object"
       },
+      "ClientBookTextInventory": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "gap_note": {
+            "title": "Gap Note",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "versions": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTextVersionSummary"
+            },
+            "title": "Versions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "book_id",
+          "title",
+          "gap_note",
+          "versions"
+        ],
+        "title": "ClientBookTextInventory",
+        "type": "object"
+      },
+      "ClientBookTextVersion": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "changes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "chapters": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTextChapter"
+            },
+            "title": "Chapters",
+            "type": "array"
+          },
+          "edition_statement": {
+            "title": "Edition Statement",
+            "type": "string"
+          },
+          "license": {
+            "$ref": "#/components/schemas/ClientTextLicense"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/ClientTextQuality"
+          },
+          "relationship_to_archive": {
+            "title": "Relationship To Archive",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTextSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_version",
+          "book_id",
+          "version_id",
+          "title",
+          "edition_statement",
+          "relationship_to_archive",
+          "sources",
+          "license",
+          "quality",
+          "changes",
+          "chapters"
+        ],
+        "title": "ClientBookTextVersion",
+        "type": "object"
+      },
       "ClientCapabilities": {
         "additionalProperties": false,
         "properties": {
@@ -5181,6 +5285,333 @@
         "title": "ClientSystem",
         "type": "object"
       },
+      "ClientTextBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "title": "Attribution",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "original",
+              "original_note",
+              "commentary",
+              "modern_editorial",
+              "unclassified"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "source_locator": {
+            "title": "Source Locator",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "text",
+          "attribution",
+          "source_locator"
+        ],
+        "title": "ClientTextBlock",
+        "type": "object"
+      },
+      "ClientTextChapter": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ClientTextBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Ids",
+            "type": "array"
+          },
+          "source_locator": {
+            "title": "Source Locator",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "source_ids",
+          "source_locator",
+          "blocks"
+        ],
+        "title": "ClientTextChapter",
+        "type": "object"
+      },
+      "ClientTextLicense": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "title": "Attribution",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "reuse_basis": {
+            "title": "Reuse Basis",
+            "type": "string"
+          },
+          "share_alike": {
+            "title": "Share Alike",
+            "type": "boolean"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "url",
+          "attribution",
+          "reuse_basis",
+          "share_alike",
+          "notice"
+        ],
+        "title": "ClientTextLicense",
+        "type": "object"
+      },
+      "ClientTextQuality": {
+        "additionalProperties": false,
+        "properties": {
+          "collation_status": {
+            "enum": [
+              "unproofread",
+              "partially_collated",
+              "collated"
+            ],
+            "title": "Collation Status",
+            "type": "string"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "incomplete",
+              "excerpt",
+              "unknown"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "scope_note": {
+            "title": "Scope Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "completeness",
+          "collation_status",
+          "missing",
+          "scope_note"
+        ],
+        "title": "ClientTextQuality",
+        "type": "object"
+      },
+      "ClientTextSource": {
+        "additionalProperties": false,
+        "properties": {
+          "attribution": {
+            "title": "Attribution",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "revision_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Url"
+          },
+          "snapshot_sha256": {
+            "title": "Snapshot Sha256",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "url",
+          "revision_url",
+          "retrieved_at",
+          "snapshot_sha256",
+          "attribution"
+        ],
+        "title": "ClientTextSource",
+        "type": "object"
+      },
+      "ClientTextVersionSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "enum": [
+              "available",
+              "pending_local_file",
+              "candidate_only"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "collation_status": {
+            "enum": [
+              "unproofread",
+              "partially_collated",
+              "collated"
+            ],
+            "title": "Collation Status",
+            "type": "string"
+          },
+          "completeness": {
+            "enum": [
+              "complete",
+              "incomplete",
+              "excerpt",
+              "unknown"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "edition_statement": {
+            "title": "Edition Statement",
+            "type": "string"
+          },
+          "license_status": {
+            "enum": [
+              "pending_source_metadata",
+              "documented"
+            ],
+            "title": "License Status",
+            "type": "string"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "revision_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Url"
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "version_id",
+          "title",
+          "edition_statement",
+          "source_url",
+          "revision_url",
+          "retrieved_at",
+          "availability",
+          "completeness",
+          "collation_status",
+          "missing",
+          "license_status",
+          "sha256"
+        ],
+        "title": "ClientTextVersionSummary",
+        "type": "object"
+      },
       "ClientUpdateCreated": {
         "additionalProperties": false,
         "properties": {
@@ -7209,6 +7640,195 @@
           }
         },
         "summary": "Book Figure"
+      }
+    },
+    "/api/books/{book_id}/text-versions": {
+      "get": {
+        "operationId": "book_text_versions_api_books__book_id__text_versions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookTextInventory"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Text Versions"
+      }
+    },
+    "/api/books/{book_id}/text-versions/{version_id}": {
+      "get": {
+        "operationId": "book_text_version_api_books__book_id__text_versions__version_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookTextVersion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Text Version"
+      }
+    },
+    "/api/books/{book_id}/text-versions/{version_id}/export": {
+      "get": {
+        "operationId": "export_book_text_api_books__book_id__text_versions__version_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Version Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "txt",
+              "enum": [
+                "txt",
+                "md",
+                "json"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "chapter_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Chapter Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              },
+              "text/markdown": {
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Book Text"
       }
     },
     "/api/chart": {

@@ -254,3 +254,13 @@
 @media (max-width: 380px) {
   .book-directory > span { display: none; }
 }
+/* Electronic editions keep source paragraphs and long stable citations readable. */
+.book-electronic { max-width: 64rem; margin: 0 auto; padding: 1rem; min-width: 0; }
+.book-electronic h1 { font-size: clamp(22px, 4vw, 30px); line-height: 1.5; }
+.book-electronic .book-original p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.book-electronic .books-source, .book-text-citation { overflow-wrap: anywhere; }
+.book-electronic .book-layer { font: 13px/1.8 var(--font-sans); color: var(--ink-3); overflow-wrap: anywhere; }
+.book-electronic select { max-width: 100%; min-height: 44px; padding: .5rem; }
+.book-text-citation { user-select: text; }
+.book-text-downloads { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0; }
+.book-modern-editorial summary { cursor: pointer; font-size: 13px; color: var(--ink-3); }

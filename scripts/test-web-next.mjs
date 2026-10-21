@@ -10,6 +10,20 @@ globalThis.document = globalThis.document || { dispatchEvent() {} };
 const base = new URL('../web/public/next/', import.meta.url);
 const load = path => import(new URL(`${path}?v=n19`, base).href);
 
+test('electronic text routes preserve edition and chapter identities in reading and downloads', async () => {
+  const { textVersionPath, textExportPath, TEXT_ROLES } = await load('lib/books.js');
+  const route = new URL(textVersionPath('book/one', 'siku-v1', 'juan-11'), 'https://example.test');
+  assert.equal(route.pathname, '/books/book%2Fone');
+  assert.equal(route.searchParams.get('text-version'), 'siku-v1');
+  assert.equal(route.searchParams.get('chapter'), 'juan-11');
+  const download = new URL(textExportPath('book', 'edition/one', 'md', 'chapter&two'), 'https://example.test');
+  assert.equal(download.pathname, '/api/books/book/text-versions/edition%2Fone/export');
+  assert.equal(download.searchParams.get('chapter_id'), 'chapter&two');
+  assert.equal(download.searchParams.get('format'), 'md');
+  assert.equal(TEXT_ROLES.unclassified, '未分类');
+  assert.equal(TEXT_ROLES.modern_editorial, '现代整理说明');
+});
+
 test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
   const { get } = await load('lib/api.js');
   const previous = globalThis.fetch;
