@@ -27,10 +27,9 @@ iOS 与鸿蒙工程会在技术路线和真机原型通过后创建。
 npm ci
 npm run check
 npm run package:web
-
-cd android
-./gradlew :app:assembleDebug
 ```
+
+Android 开发和自动构建暂时暂停，CI 中的 `android` job 明确跳过；源码和已归档产物保留。Web 检查、公开边界、共享契约与相关单元测试继续执行，本轮不运行 Gradle。
 
 Web 发布物会生成到 `dist/web/xuanxue-web.tar.gz`。公开仓库 CI 只构建和归档客户端产物，不持有服务器 SSH 或生产部署凭据；正式部署由私有后端仓库按固定提交和摘要执行。
 
