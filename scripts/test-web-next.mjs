@@ -24,6 +24,27 @@ test('electronic text routes preserve edition and chapter identities in reading 
   assert.equal(TEXT_ROLES.modern_editorial, '现代整理说明');
 });
 
+test('reading opens the supplied body default and resolves old chapter links by exact source identity', async () => {
+  const { selectReadingSection, groupReadingSections, textReadingPosition } = await load('lib/books.js');
+  const reading = { default_section_id: 'chapter-r-002', sections: [
+    { id: 'edition-notes', kind: 'notes', title: '整理说明', source_location: '' },
+    { id: 'chapter-r-001', kind: 'preface', title: '原序', source_location: '第1页' },
+    { id: 'chapter-r-002', kind: 'body', title: '易中明義', source_location: '第2页' },
+    { id: 'appendix', kind: 'appendix', title: '附录', source_location: '第3页' },
+  ], source_sections: [{ chapter_id: 'source-chapter', section_id: 'chapter-r-001' }] };
+  assert.equal(selectReadingSection(reading, null), 2);
+  assert.equal(selectReadingSection(reading, 'chapter-r-002'), 2);
+  assert.equal(selectReadingSection(reading, 'source-chapter'), 1);
+  assert.equal(selectReadingSection(reading, 'unknown'), -1);
+  assert.deepEqual(groupReadingSections(reading.sections).map(group => group.title), ['正文', '序跋', '附录', '整理校记']);
+  assert.deepEqual(groupReadingSections(reading.sections, '明义').map(group => group.sections.map(section => section.id)), [['chapter-r-002']]);
+  assert.equal(groupReadingSections(reading.sections, '不存在').length, 0);
+  const saved = { versionId: 'reading-20261022-abc', sectionId: 'chapter-r-002', title: '易中明義', updatedAt: 100 };
+  assert.deepEqual(textReadingPosition(saved), saved);
+  for (const invalid of [null, 'broken', { ...saved, versionId: '../source' }, { ...saved, sectionId: 'chapter?other=1' },
+    { ...saved, updatedAt: NaN }, { ...saved, updatedAt: 0 }, { ...saved, title: '' }]) assert.equal(textReadingPosition(invalid), null);
+});
+
 test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
   const { get } = await load('lib/api.js');
   const previous = globalThis.fetch;

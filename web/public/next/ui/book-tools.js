@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n25";
-import { filterContents } from "../lib/books.js?v=n25";
-import { local } from "../lib/store.js?v=n25";
-import { openSheet } from "./overlay.js?v=n25";
+import { h, fill } from "../lib/dom.js?v=n26";
+import { filterContents } from "../lib/books.js?v=n26";
+import { local } from "../lib/store.js?v=n26";
+import { openSheet } from "./overlay.js?v=n26";
 
 export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
   let closed = false, scrollFrame;
@@ -125,7 +125,7 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
   return sheet;
 }
 
-export function openBookSettings({ preferences, mode, hasModern, onChange, returnFocus }) {
+export function openBookSettings({ preferences, mode, hasModern, hasLayout = true, onChange, returnFocus }) {
   const prefs = { ...preferences };
   function field(label, key, options) {
     const select = h("select", { "aria-label": label, onChange: event => {
@@ -138,8 +138,9 @@ export function openBookSettings({ preferences, mode, hasModern, onChange, retur
   return openSheet({ title: "阅读设置", className: "sheet-book-settings", returnFocus,
     body: h("div", { class: "book-settings" },
       hasModern ? field("阅读模式", "mode", [["original", "原文"], ["parallel", "原文与白话"], ["modern", "白话"]]) : null,
-      field("排版", "layout", [["continuous", "连续排版"], ["source", "保留原稿换行"]]),
-      h("p", { class: "books-notice" }, "连续排版的正文按屏幕宽度换行，诗诀与表格保留原结构。"),
+      hasLayout ? field("排版", "layout", [["continuous", "连续排版"], ["source", "保留原稿换行"]]) : null,
+      hasLayout ? h("p", { class: "books-notice" }, "连续排版的正文按屏幕宽度换行，诗诀与表格保留原结构。")
+        : h("p", { class: "books-notice" }, "正文随屏幕宽度换行，诗诀、卦图与表格保留原稿结构。"),
       field("字号", "size", [[18, "较小 · 18"], [20, "标准 · 20"], [22, "较大 · 22"], [24, "大字 · 24"]]),
       field("行距", "line", [[1.8, "紧凑"], [2, "舒适"], [2.2, "宽松"]]),
       field("字体", "font", [["serif", "宋体"], ["sans", "黑体"]]),
