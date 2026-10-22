@@ -1,19 +1,19 @@
-import { h, fill } from "../lib/dom.js?v=n31";
-import { icon } from "../lib/icons.js?v=n31";
-import { get } from "../lib/api.js?v=n31";
-import { local, session } from "../lib/store.js?v=n31";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n31";
+import { h, fill } from "../lib/dom.js?v=n32";
+import { icon } from "../lib/icons.js?v=n32";
+import { get } from "../lib/api.js?v=n32";
+import { local, session } from "../lib/store.js?v=n32";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n32";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n31";
-import { errorView, stateView } from "../ui/bits.js?v=n31";
-import { openBookImage } from "../ui/book-image.js?v=n31";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n31";
-import { openSheet } from "../ui/overlay.js?v=n31";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n31";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n31";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n31";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n32";
+import { errorView, stateView } from "../ui/bits.js?v=n32";
+import { openBookImage } from "../ui/book-image.js?v=n32";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n32";
+import { openSheet } from "../ui/overlay.js?v=n32";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n32";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n32";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n32";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -64,8 +64,6 @@ function library(ctx) {
   wideFilters.addEventListener("change", syncFilters);
   ctx.cleanup(() => wideFilters.removeEventListener("change", syncFilters));
   const node = h("div", { class: "books-library" },
-    h("header", { class: "books-hero" }, h("h1", null, "典籍书库"),
-      h("p", null, "按目录阅读，随时接着上次的位置继续。")),
     recent, h("div", { class: "books-filters" }, search, filterDetails), count, results);
   function paintBooks() {
     local.setJson("xz-book-filters", { query: search.value, system, sort });
@@ -93,6 +91,7 @@ function library(ctx) {
         h("div", { class: "books-card-copy" },
           h("div", { class: "books-card-meta" }, BOOK_SYSTEM[book.system]),
           h("h2", null, h("a", { href: `#${catalogPath}` }, book.title)),
+          book.summary ? h("p", { class: "books-card-summary" }, book.summary) : null,
           saved ? h("p", { class: "books-card-progress" }, `读到：${saved.title}`) : null),
         h("a", { class: "btn btn-soft books-electronic-open", href: `#${openPath}`, "aria-label": `${saved ? "继续阅读" : "阅读"}${book.title}` },
           icon("book"), saved ? "继续" : "阅读"));
