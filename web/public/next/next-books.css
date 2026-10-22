@@ -291,11 +291,16 @@
 .book-electronic-reader .book-reading-header h1 { font-size: 18px; line-height: 1.5; }
 .book-electronic-main { min-width: 0; }
 .book-electronic-sidebar { display: none; }
-.book-electronic-controls { display: flex; align-items: center; margin-top: 0; }
-.book-electronic-controls .book-electronic-select { min-width: 0; flex: 1; }
+.book-electronic-controls { display: flex; flex-wrap: wrap; align-items: center; margin-top: 0; }
+.book-electronic-controls .book-electronic-select { min-width: 0; flex: 1 1 180px; }
 .book-electronic-controls .book-electronic-select > span { flex-shrink: 0; }
 .book-electronic-controls .book-electronic-select select { width: 100%; min-width: 0; padding-right: 24px; }
 .book-electronic-controls .book-settings-open { margin-left: auto; }
+.book-electronic-contents-open { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; flex-shrink: 0; white-space: nowrap; }
+.book-electronic-sheet-group { margin: 0 0 20px; }
+.book-electronic-sheet-group > h3 { margin: 12px 10px; color: var(--ink-3); font: 600 13px/1.7 var(--font-sans); }
+.book-electronic-sheet-group > h3 > small { font-weight: 400; }
+.book-electronic-contents-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .book-text-projection { min-height: 45dvh; padding: 36px clamp(22px, 4vw, 52px); }
 .book-text-projection .book-section-header h2 { margin: 4px 0 12px; font-size: clamp(25px, 3vw, 30px); line-height: 1.7; overflow-wrap: anywhere; }
 .book-section-kind, .book-section-location { color: var(--ink-3); font: 12px/1.8 var(--font-sans); margin: 0; }
@@ -329,6 +334,7 @@
 .book-electronic-details p, .book-section-source p { line-height: 1.8; white-space: pre-wrap; }
 .book-electronic-details .book-text-downloads, .book-section-source .book-text-downloads { padding: 0 16px; }
 @media (min-width: 1100px) {
+  .book-electronic-contents-open { display: none; }
   .book-electronic-reader { max-width: 1200px; }
   .book-electronic-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
   .book-electronic-main { width: 100%; max-width: 840px; margin: 0 auto; }

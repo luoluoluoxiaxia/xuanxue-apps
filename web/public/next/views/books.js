@@ -1,18 +1,18 @@
-import { h, fill } from "../lib/dom.js?v=n26";
-import { icon } from "../lib/icons.js?v=n26";
-import { get } from "../lib/api.js?v=n26";
-import { local, session } from "../lib/store.js?v=n26";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n26";
+import { h, fill } from "../lib/dom.js?v=n27";
+import { icon } from "../lib/icons.js?v=n27";
+import { get } from "../lib/api.js?v=n27";
+import { local, session } from "../lib/store.js?v=n27";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n27";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
-  READING_KINDS, selectReadingSection, groupReadingSections, textReadingPosition } from "../lib/books.js?v=n26";
-import { errorView, stateView } from "../ui/bits.js?v=n26";
-import { openBookImage } from "../ui/book-image.js?v=n26";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n26";
-import { openSheet } from "../ui/overlay.js?v=n26";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n26";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n26";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n26";
+  READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition } from "../lib/books.js?v=n27";
+import { errorView, stateView } from "../ui/bits.js?v=n27";
+import { openBookImage } from "../ui/book-image.js?v=n27";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n27";
+import { openSheet } from "../ui/overlay.js?v=n27";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n27";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n27";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n27";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -21,6 +21,9 @@ const textRecentKey = id => `xz-book-text-recent:${id}`;
 const detailCache = new Map();
 const electronicCache = new Map();
 const annotationNavigation = new Map();
+const initialBookLocation = location.hash;
+const reloadBookLocation = ["reload", "back_forward"].includes(window.performance?.getEntriesByType?.("navigation")?.[0]?.type);
+let firstBookRender = true;
 
 function lifecycle(ctx, paint, request) {
   const loader = createKnowledgeLoader(state => { if (ctx.isCurrent()) paint(state); }, request);
@@ -66,7 +69,7 @@ function library(ctx) {
     const latest = books.filter(book => updated(book)).sort((a, b) => updated(b) - updated(a))[0];
     const textSaved = latest && textPosition(latest);
     const latestIsText = textSaved && textSaved.updatedAt >= (position(latest)?.updatedAt || 0);
-    fill(recent, latest ? latestIsText ? h("a", { class: "books-resume", href: `#${textVersionPath(latest.id, textSaved.versionId, textSaved.sectionId)}` },
+    fill(recent, latest ? latestIsText ? h("a", { class: "books-resume", href: `#${textVersionPath(latest.id, textSaved.versionId, textSaved.sectionId, { resume: true })}` },
       icon("book"), h("span", null, h("small", null, "继续阅读"), h("b", null, latest.title)), h("span", null, `${textSaved.title} →`))
       : h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
         icon("book"), h("span", null, h("small", null, "继续历史阅读稿"), h("b", null, latest.title)),
@@ -420,14 +423,58 @@ function reader(ctx) {
   return { node, title: "典籍阅读", layout: "book-reader", onRestore(value) { routeRestore = value; } };
 }
 
-function electronicReader(ctx) {
+function electronicReader(ctx, resumeOnReload = false) {
   const id = ctx.params.id;
   const versionId = ctx.query.get("text-version");
   const isCatalog = versionId === "catalog";
   let routeRestore = null;
+  let activeReading = null;
+  let saving = false;
+  let saveTimer;
+  let settingsTimer;
   let preferences = readingPreferences(local.json("xz-book-preferences"));
   const body = h("div");
   const node = h("div", { class: `book-electronic${isCatalog ? "" : " book-electronic-reader"}` }, body);
+  const readingTop = () => (parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-h")) || 64) + (activeReading?.controls.offsetHeight || 0) + 20;
+  function capturePosition() {
+    if (!activeReading) return null;
+    const { section, article } = activeReading;
+    const position = { versionId, sectionId: section.id, title: section.title, updatedAt: Date.now() };
+    if (window.scrollY <= 0) return position;
+    const anchors = [...article.querySelectorAll("[data-reading-anchor]")];
+    const visible = anchor => !anchor.closest("details:not([open])") && anchor.getBoundingClientRect().height > 0;
+    const top = readingTop();
+    let index = anchors.findIndex(anchor => visible(anchor) && anchor.getBoundingClientRect().bottom > top);
+    if (index < 0) index = anchors.findLastIndex(visible);
+    const rect = anchors[index]?.getBoundingClientRect();
+    return rect ? { ...position, anchor: index, offset: Math.max(0, Math.min(1, (top - rect.top) / rect.height)) } : position;
+  }
+  function savePosition() {
+    if (!saving || document.body.classList.contains("is-locked")) return;
+    const position = capturePosition();
+    if (position) { local.setJson(textProgressKey(id, versionId), position); local.setJson(textRecentKey(id), position); }
+  }
+  function restorePosition(position) {
+    if (!position || !activeReading || position.sectionId !== activeReading.section.id) return;
+    const anchor = activeReading.article.querySelectorAll("[data-reading-anchor]")[position.anchor];
+    if (!anchor || anchor.closest("details:not([open])")) { window.scrollTo(0, 0); return; }
+    const rect = anchor.getBoundingClientRect();
+    window.scrollTo(0, Math.max(0, window.scrollY + rect.top + rect.height * position.offset - readingTop()));
+  }
+  const trackScroll = () => { clearTimeout(saveTimer); saveTimer = setTimeout(savePosition, 250); };
+  const keepLinkPosition = event => {
+    const link = event.target.closest?.('a[href^="#/"]');
+    if (event.button !== 0 || !link) return;
+    // Focusing a sticky navigation link can move Chrome to its layout position
+    // before route cleanup saves the paragraph. Keep the actual reading place.
+    event.preventDefault(); link.focus({ preventScroll: true });
+  };
+  if (!isCatalog) {
+    window.addEventListener("scroll", trackScroll, { passive: true });
+    window.addEventListener("pagehide", savePosition);
+    document.addEventListener("mousedown", keepLinkPosition, true);
+    ctx.cleanup(() => { savePosition(); clearTimeout(saveTimer); clearTimeout(settingsTimer); window.removeEventListener("scroll", trackScroll); window.removeEventListener("pagehide", savePosition); document.removeEventListener("mousedown", keepLinkPosition, true); });
+  }
   const sourceLink = (url, label) => h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, label);
   const downloadLinks = (version, chapter = "") => h("nav", { class: "book-text-downloads", "aria-label": chapter ? "来源章节下载" : "全本文本下载" },
     [["md", "Markdown"], ["txt", "TXT"]].map(([format, label]) =>
@@ -451,14 +498,11 @@ function electronicReader(ctx) {
   function paintEdition({ edition: data, reading }) {
     const sections = reading.sections;
     const requested = ctx.query.get("chapter");
-    const saved = textReadingPosition(local.json(textProgressKey(id, versionId)));
-    let index = selectReadingSection(reading, requested || saved?.sectionId);
-    if (!requested && index < 0) index = selectReadingSection(reading, null);
+    const stored = textReadingPosition(local.json(textProgressKey(id, versionId)));
+    const saved = stored?.versionId === versionId ? stored : null;
+    const { index, position } = textReadingTarget(reading, { requested, saved,
+      resume: ctx.query.get("resume") === "1" || resumeOnReload, footnote: ctx.query.get("footnote") });
     const section = sections[index];
-    if (section) {
-      const position = { versionId, sectionId: section.id, title: section.title, updatedAt: Date.now() };
-      local.setJson(textProgressKey(id, versionId), position); local.setJson(textRecentKey(id), position);
-    }
     const sequence = section ? sections.filter(item => item.kind === section.kind) : [];
     const sequenceIndex = sequence.findIndex(item => item.id === section?.id);
     const path = item => textVersionPath(id, versionId, item.id);
@@ -496,10 +540,26 @@ function electronicReader(ctx) {
       article.dataset.layout = preferences.layout;
     };
     applyPreferences();
-    const settings = h("button", { type: "button", class: "btn btn-soft book-settings-open", "aria-label": "阅读设置", onClick: event =>
+    const settings = h("button", { type: "button", class: "btn btn-soft book-settings-open", "aria-label": "阅读设置", onClick: event => {
+      const readingPosition = capturePosition();
+      savePosition();
       openBookSettings({ preferences, mode: "original", hasModern: false, hasLayout: false, returnFocus: event.currentTarget,
-        onChange: value => { preferences = readingPreferences(value); local.setJson("xz-book-preferences", preferences); applyPreferences(); } }) },
+        onChange: value => {
+          preferences = readingPreferences(value); local.setJson("xz-book-preferences", preferences); applyPreferences();
+          restorePosition(readingPosition);
+        },
+        onClose: reason => {
+          if (reason === "route") return;
+          // The sheet releases the body's scroll lock after its close animation.
+          clearTimeout(settingsTimer); settingsTimer = setTimeout(() => { if (ctx.isCurrent()) { restorePosition(readingPosition); savePosition(); } }, 210);
+        } });
+    } },
       icon("sliders"), h("span", null, "阅读设置"));
+    const directory = h("button", { type: "button", class: "btn btn-soft book-electronic-contents-open", "aria-haspopup": "dialog", onClick: event => {
+      savePosition();
+      openElectronicBookContents({ bookTitle: reading.title, sections, current: section?.id, returnFocus: event.currentTarget,
+        onSelect: sectionId => { if (sectionId !== section?.id) ctx.navigate(textVersionPath(id, versionId, sectionId)); } });
+    } }, icon("search"), h("span", null, "搜索目录"));
     const select = h("select", { "aria-label": "选择章节", onChange: event => ctx.navigate(textVersionPath(id, versionId, event.currentTarget.value)) },
       !section ? h("option", { value: "", selected: true, disabled: true }, "选择章节") : null,
       groups.map(group => h("optgroup", { label: group.title }, group.sections.map(item =>
@@ -534,6 +594,10 @@ function electronicReader(ctx) {
       h("p", null, "下载对应的完整来源章节（可能包含相邻小节）："),
       (section.source_chapter_ids?.length ? section.source_chapter_ids : [section.source_chapter_id]).map(chapterId =>
         h("div", { class: "book-source-chapter-download" }, h("p", null, h("code", null, chapterId)), downloadLinks(versionId, chapterId)))) : null;
+    const controls = h("nav", { class: "book-reading-controls book-electronic-controls", "aria-label": "阅读工具", onMouseDown: event => {
+      const button = event.target.closest?.("button:not([disabled])");
+      if (event.button === 0 && button) { event.preventDefault(); button.focus({ preventScroll: true }); }
+    } }, h("label", { class: "book-electronic-select" }, h("span", null, "目录"), select), directory, settings);
     fill(body,
       h("header", { class: "book-reading-header" },
         h("a", { href: "#/books", class: "book-reading-back" }, icon("back"), h("span", null, "书库")),
@@ -541,16 +605,17 @@ function electronicReader(ctx) {
           h("span", { class: "book-reading-state" }, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`))),
       h("div", { class: "book-electronic-layout" }, sidebar,
         h("div", { class: "book-electronic-main" },
-          h("nav", { class: "book-reading-controls book-electronic-controls", "aria-label": "阅读工具" },
-            h("label", { class: "book-electronic-select" }, h("span", null, "目录"), select), settings),
+          controls,
           article,
           section ? h("nav", { class: "book-reading-pagination book-electronic-pagination", "aria-label": "章节翻页" },
             sequenceIndex > 0 ? h("a", { href: `#${path(sequence[sequenceIndex - 1])}` }, h("small", null, "上一节"), h("span", null, sequence[sequenceIndex - 1].title)) : h("span"),
             h("span", { class: "book-section-count" }, `${READING_KINDS[section.kind]} ${sequenceIndex + 1} / ${sequence.length}`),
             sequenceIndex + 1 < sequence.length ? h("a", { href: `#${path(sequence[sequenceIndex + 1])}` }, h("small", null, "下一节"), h("span", null, sequence[sequenceIndex + 1].title)) : h("span")) : null,
           citation, versionDetails)));
-    const footnote = ctx.query.get("footnote");
-    if (footnote) requestAnimationFrame(() => { if (ctx.isCurrent()) focusReadingFootnote(markdownContext, footnote); });
+    article.querySelectorAll(".book-original p, .book-original h3, .book-original h4, .book-original h5, .book-original h6, .book-original ul, .book-original ol, .book-original pre, .book-original table, .book-original .book-reading-stem-row, .book-reading-source-cue")
+      .forEach((anchor, anchorIndex) => { anchor.dataset.readingAnchor = anchorIndex; });
+    activeReading = section ? { article, controls, section, markdownContext } : null;
+    return position;
   }
   const basePath = `/api/books/${encodeURIComponent(id)}/text-versions${isCatalog ? "" : `/${encodeURIComponent(versionId)}`}`;
   const request = async (path, options) => {
@@ -566,22 +631,28 @@ function electronicReader(ctx) {
   };
   const life = lifecycle(ctx, ({ phase, data, error }) => {
     body.setAttribute("aria-busy", String(phase === "loading"));
-    if (phase === "loading") { fill(body, h("p", { role: "status" }, "正在打开书籍…")); return; }
-    if (phase === "error") { fill(body, errorView(error, refresh, { title: "书籍暂时没有打开" })); return; }
-    if (isCatalog) paintInventory(data); else paintEdition(data);
+    if (phase === "loading") { saving = false; fill(body, h("p", { role: "status" }, "正在打开书籍…")); return; }
+    if (phase === "error") { saving = false; fill(body, errorView(error, refresh, { title: "书籍暂时没有打开" })); return; }
+    const position = isCatalog ? (paintInventory(data), null) : paintEdition(data);
     // A history entry may return after its edition has left the small cache.
     // Restore only after the async text exists; explicit footnotes take priority.
     const restore = routeRestore;
     routeRestore = null;
-    if (typeof restore === "number" && !ctx.query.get("footnote")) {
-      requestAnimationFrame(() => { if (ctx.isCurrent()) window.scrollTo(0, restore); });
-    }
+    requestAnimationFrame(() => {
+      if (!ctx.isCurrent()) return;
+      if (ctx.query.get("footnote") && activeReading) focusReadingFootnote(activeReading.markdownContext, ctx.query.get("footnote"));
+      else if (typeof restore === "number") window.scrollTo(0, restore);
+      else if (position) restorePosition(position);
+      saving = !!activeReading; savePosition();
+    });
   }, request);
-  const refresh = () => { routeRestore = window.scrollY; electronicCache.delete(basePath); life.loader.load(basePath); };
+  const refresh = () => { savePosition(); routeRestore = window.scrollY; electronicCache.delete(basePath); life.loader.load(basePath); };
   life.setRefresh(refresh); life.loader.load(basePath);
   return { node, title: "典籍阅读", onRestore(value) { routeRestore = value; }, ...(!isCatalog ? { layout: "book-reader" } : {}) };
 }
 
 export function render(ctx) {
-  return ctx.params.id ? ctx.query.get("text-version") ? electronicReader(ctx) : reader(ctx) : library(ctx);
+  const resumeOnReload = firstBookRender && reloadBookLocation && location.hash === initialBookLocation;
+  firstBookRender = false;
+  return ctx.params.id ? ctx.query.get("text-version") ? electronicReader(ctx, resumeOnReload) : reader(ctx) : library(ctx);
 }

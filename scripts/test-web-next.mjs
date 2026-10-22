@@ -16,6 +16,10 @@ test('electronic text routes preserve edition and chapter identities in reading 
   assert.equal(route.pathname, '/books/book%2Fone');
   assert.equal(route.searchParams.get('text-version'), 'siku-v1');
   assert.equal(route.searchParams.get('chapter'), 'juan-11');
+  assert.equal(route.searchParams.has('resume'), false);
+  const resume = new URL(textVersionPath('book/one', 'siku-v1', 'juan-11', { resume: true }), 'https://example.test');
+  assert.equal(resume.searchParams.get('chapter'), 'juan-11');
+  assert.equal(resume.searchParams.get('resume'), '1');
   const download = new URL(textExportPath('book', 'edition/one', 'md', 'chapter&two'), 'https://example.test');
   assert.equal(download.pathname, '/api/books/book/text-versions/edition%2Fone/export');
   assert.equal(download.searchParams.get('chapter_id'), 'chapter&two');
@@ -41,8 +45,31 @@ test('reading opens the supplied body default and resolves old chapter links by 
   assert.equal(groupReadingSections(reading.sections, '不存在').length, 0);
   const saved = { versionId: 'reading-20261022-abc', sectionId: 'chapter-r-002', title: '易中明義', updatedAt: 100 };
   assert.deepEqual(textReadingPosition(saved), saved);
+  const anchored = { ...saved, anchor: 12, offset: .375 };
+  assert.deepEqual(textReadingPosition(anchored), anchored);
+  for (const fields of [{ anchor: -1, offset: .1 }, { anchor: 1.5, offset: .1 }, { anchor: 2, offset: NaN },
+    { anchor: 2, offset: 1.1 }, { anchor: 2 }, { offset: .1 }]) assert.deepEqual(textReadingPosition({ ...saved, ...fields }), saved);
   for (const invalid of [null, 'broken', { ...saved, versionId: '../source' }, { ...saved, sectionId: 'chapter?other=1' },
     { ...saved, updatedAt: NaN }, { ...saved, updatedAt: 0 }, { ...saved, title: '' }]) assert.equal(textReadingPosition(invalid), null);
+});
+
+test('electronic resume preserves a saved paragraph while contents, paging and footnotes remain explicit destinations', async () => {
+  const { textReadingTarget } = await load('lib/books.js');
+  const reading = { default_section_id: 'body-first', sections: [
+    { id: 'preface', kind: 'preface' }, { id: 'body-first', kind: 'body' }, { id: 'body-next', kind: 'body' },
+  ], source_sections: [{ chapter_id: 'old-source', section_id: 'preface' }] };
+  const saved = { versionId: 'reading-20261022-abc', sectionId: 'body-next', title: '下一节', updatedAt: 100, anchor: 7, offset: .4 };
+  assert.deepEqual(textReadingTarget(reading), { index: 1, position: null });
+  assert.deepEqual(textReadingTarget(reading, { saved }), { index: 2, position: saved });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'body-next', saved, resume: true }), { index: 2, position: saved });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'body-next', saved }), { index: 2, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'body-first', saved, resume: true }), { index: 1, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'body-next', saved, resume: true, footnote: '注一' }), { index: 2, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'old-source', saved }), { index: 0, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: 'missing', saved, resume: true }), { index: -1, position: null });
+  assert.deepEqual(textReadingTarget(reading, { saved: { ...saved, sectionId: 'removed' } }), { index: 1, position: null });
+  const legacy = { versionId: saved.versionId, sectionId: saved.sectionId, title: saved.title, updatedAt: saved.updatedAt };
+  assert.deepEqual(textReadingTarget(reading, { saved: legacy }), { index: 2, position: legacy });
 });
 
 test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
