@@ -49,6 +49,54 @@ test("headings and paragraphs keep source line breaks without mutating source in
   assert.equal(source, "# Heading\n\nFirst line\nsecond  line\n\n###### Sixth\nLast line");
 });
 
+test("balanced source comments are hidden while surrounding prose and literal examples remain", () => {
+  const source = "前文<!-- source-id -->后文\n\n<!-- locator\ncontinued -->\n\n正文\n\n`<!-- inline literal -->`\n\n```text\n<!-- fenced literal -->\n```\n\n<!-- unclosed stays";
+  const node = render(source);
+  assert.equal(tags(node, "p")[0].textContent, "前文后文\n");
+  assert.ok(node.textContent.includes("正文"));
+  assert.ok(!node.textContent.includes("source-id"));
+  assert.ok(!node.textContent.includes("locator"));
+  assert.deepEqual(tags(node, "code").map(code => code.textContent), ["<!-- inline literal -->", "<!-- fenced literal -->\n"]);
+  assert.ok(node.textContent.includes("<!-- unclosed stays"));
+  assert.ok(source.includes("<!-- source-id -->"));
+  const hiddenFence = render("<!-- hidden\n```text\nlocator\n```\n-->\n可读正文");
+  assert.equal(tags(hiddenFence, "pre").length, 0);
+  assert.ok(!hiddenFence.textContent.includes("locator"));
+  assert.ok(hiddenFence.textContent.includes("可读正文"));
+});
+
+test("emphasis and inline literals render through safe DOM and retain inert markup", () => {
+  const node = render("**重点**与*轻读*，__另一重点__ _斜体_，`https://example.test/<script>**原样**`\n\n**<img src=x onerror=bad()>** [bad](javascript:alert(1))");
+  assert.deepEqual(tags(node, "strong").map(item => item.textContent), ["重点", "另一重点", "<img src=x onerror=bad()>"]);
+  assert.deepEqual(tags(node, "em").map(item => item.textContent), ["轻读", "斜体"]);
+  assert.equal(tags(node, "code")[0].textContent, "https://example.test/<script>**原样**");
+  assert.equal(tags(node, "a").length, 0);
+  assert.equal(tags(node, "img").length, 0);
+  assert.equal(tags(node, "script").length, 0);
+  assert.ok(node.textContent.includes("[bad](javascript:alert(1))"));
+});
+
+test("lists preserve supplied numbering and pipe tables retain aligned and literal cells", () => {
+  const node = render("- **甲**\n- 乙\n    补行\n\n3. 第三\n4. 第四\n\n| 名目 | 字义 |\n| :--- | ---: |\n| 干\\|支 | `甲|乙` |\n| <script>x</script> | **原注** |");
+  assert.equal(tags(node, "ul").length, 1);
+  assert.equal(tags(node, "ol")[0].getAttribute("start"), "3");
+  assert.deepEqual(tags(node, "li").map(item => item.textContent), ["甲", "乙\n补行", "第三", "第四"]);
+  assert.deepEqual(tags(node, "th").map(item => item.textContent), ["名目", "字义"]);
+  assert.deepEqual(tags(node, "td").map(item => item.textContent), ["干|支", "甲|乙", "<script>x</script>", "原注"]);
+  assert.deepEqual(tags(node, "th").map(item => item.getAttribute("data-align")), ["left", "right"]);
+  assert.equal(tags(node, "script").length, 0);
+  assert.ok(all(node).find(item => item.className === "book-reading-table").getAttribute("tabindex") === "0");
+  assert.equal(tags(render("甲|乙\n文字|正文"), "table").length, 0);
+});
+
+test("unfenced aligned hexagram rows preserve every space and tab in a literal block", () => {
+  const source = "父母  戌土  ▅▅▅▅▅\n兄弟\t申金\t▅▅ ▅▅\n子孫  午火  ▅▅▅▅▅";
+  const node = render(source);
+  assert.equal(tags(node, "pre").length, 1);
+  assert.equal(tags(node, "code")[0].textContent, source);
+  assert.equal(tags(render("正文中  留空，但仍是一句。"), "pre").length, 0);
+});
+
 test("fenced original notes preserve every inner character, CRLF, whitespace and markup literally", () => {
   const original = "  alpha\t[注：𠮷]  \r\n# not a heading\r\n<details>\r\n[^x]: not a note\r\n<script>alert(1)</script>\r\nhttps://example.test/code\r\n";
   const source = `\`\`\`text\r\n${original}\`\`\`\r\n`;

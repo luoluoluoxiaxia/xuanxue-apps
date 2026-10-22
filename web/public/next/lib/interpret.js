@@ -1,9 +1,9 @@
 // 解读任务引擎：发起、流式接收（SSE 事件为完整任务快照）、断线轮询、停止、恢复。
 // 只维护消息数据并通过 onChange 通知视图局部更新，不直接操作页面。
-import { api, get, post, ApiError } from "./api.js?v=n25";
-import { newRequestId, isSessionId } from "./ids.js?v=n25";
-import { followupsFor, scenarioLabel } from "./copy.js?v=n25";
-import { refreshSession } from "./store.js?v=n25";
+import { api, get, post, ApiError } from "./api.js?v=n26";
+import { newRequestId, isSessionId } from "./ids.js?v=n26";
+import { followupsFor, scenarioLabel } from "./copy.js?v=n26";
+import { refreshSession } from "./store.js?v=n26";
 
 const TERMINAL = new Set(["done", "failed", "cancelled"]);
 const INPUT_KEYS = [

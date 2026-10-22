@@ -1762,6 +1762,51 @@
         "title": "ClientBookTextInventory",
         "type": "object"
       },
+      "ClientBookTextReading": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "default_section_id": {
+            "title": "Default Section Id",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/ClientReadingTextSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "source_sections": {
+            "items": {
+              "$ref": "#/components/schemas/ClientReadingSourceSection"
+            },
+            "title": "Source Sections",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version_id": {
+            "title": "Version Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "book_id",
+          "version_id",
+          "title",
+          "default_section_id",
+          "sections",
+          "source_sections"
+        ],
+        "title": "ClientBookTextReading",
+        "type": "object"
+      },
       "ClientBookTextVersion": {
         "additionalProperties": false,
         "properties": {
@@ -5072,6 +5117,114 @@
         "title": "ClientPublicReference",
         "type": "object"
       },
+      "ClientReadingSourceSection": {
+        "additionalProperties": false,
+        "properties": {
+          "chapter_id": {
+            "title": "Chapter Id",
+            "type": "string"
+          },
+          "section_id": {
+            "title": "Section Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "chapter_id",
+          "section_id"
+        ],
+        "title": "ClientReadingSourceSection",
+        "type": "object"
+      },
+      "ClientReadingTextBlock": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "original",
+              "original_note",
+              "commentary",
+              "modern_editorial",
+              "unclassified"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "source_location": {
+            "title": "Source Location",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "role",
+          "text",
+          "source_location"
+        ],
+        "title": "ClientReadingTextBlock",
+        "type": "object"
+      },
+      "ClientReadingTextSection": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ClientReadingTextBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "body",
+              "preface",
+              "appendix",
+              "notes"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "source_block_id": {
+            "title": "Source Block Id",
+            "type": "string"
+          },
+          "source_chapter_id": {
+            "title": "Source Chapter Id",
+            "type": "string"
+          },
+          "source_location": {
+            "title": "Source Location",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "kind",
+          "source_chapter_id",
+          "source_block_id",
+          "source_location",
+          "blocks"
+        ],
+        "title": "ClientReadingTextSection",
+        "type": "object"
+      },
       "ClientResumeBatch": {
         "additionalProperties": false,
         "properties": {
@@ -7829,6 +7982,59 @@
           }
         },
         "summary": "Export Book Text"
+      }
+    },
+    "/api/books/{book_id}/text-versions/{version_id}/reading": {
+      "get": {
+        "description": "Readable sections derived from, and linked to, the unchanged source edition.",
+        "operationId": "book_text_reading_api_books__book_id__text_versions__version_id__reading_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "book_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Book Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Version Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookTextReading"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Text Reading"
       }
     },
     "/api/chart": {

@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n25";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n26";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -23,6 +23,33 @@ export function textExportPath(bookId, versionId, format = "txt", chapterId = ""
   const query = new URLSearchParams({ format });
   if (chapterId) query.set("chapter_id", chapterId);
   return `/api/books/${encodeURIComponent(bookId)}/text-versions/${encodeURIComponent(versionId)}/export?${query}`;
+}
+
+export const READING_KINDS = { body: "正文", preface: "序跋", appendix: "附录", notes: "整理校记" };
+
+// New reading sections retain links to immutable source chapters. Never choose a
+// similar title when an old or malformed link has no exact source mapping.
+export function selectReadingSection(reading, requested) {
+  const id = requested || reading.default_section_id;
+  const direct = reading.sections.findIndex(section => section.id === id);
+  if (direct >= 0) return direct;
+  const mapped = reading.source_sections.find(item => item.chapter_id === id)?.section_id;
+  return mapped ? reading.sections.findIndex(section => section.id === mapped) : -1;
+}
+
+export function groupReadingSections(sections, query = "") {
+  const needle = searchText(query.trim());
+  return Object.entries(READING_KINDS).map(([kind, title]) => ({ kind, title,
+    sections: sections.filter(section => section.kind === kind && (!needle || searchText(`${section.title} ${section.source_location}`).includes(needle)))
+  })).filter(group => group.sections.length);
+}
+
+export function textReadingPosition(value) {
+  const identity = id => typeof id === "string" && id.length <= 120 && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(id);
+  if (!value || typeof value !== "object" || !identity(value.versionId) || !identity(value.sectionId) ||
+      typeof value.title !== "string" || !value.title.trim() || value.title.length > 300 ||
+      !Number.isFinite(value.updatedAt) || value.updatedAt <= 0) return null;
+  return { versionId: value.versionId, sectionId: value.sectionId, title: value.title, updatedAt: value.updatedAt };
 }
 
 export function readingPath(id, number = 1) {

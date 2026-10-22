@@ -1,21 +1,25 @@
-import { h, fill } from "../lib/dom.js?v=n25";
-import { icon } from "../lib/icons.js?v=n25";
-import { get } from "../lib/api.js?v=n25";
-import { local, session } from "../lib/store.js?v=n25";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n25";
+import { h, fill } from "../lib/dom.js?v=n26";
+import { icon } from "../lib/icons.js?v=n26";
+import { get } from "../lib/api.js?v=n26";
+import { local, session } from "../lib/store.js?v=n26";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n26";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
-  TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath } from "../lib/books.js?v=n25";
-import { errorView, stateView } from "../ui/bits.js?v=n25";
-import { openBookImage } from "../ui/book-image.js?v=n25";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n25";
-import { openSheet } from "../ui/overlay.js?v=n25";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n25";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n25";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n25";
+  TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
+  READING_KINDS, selectReadingSection, groupReadingSections, textReadingPosition } from "../lib/books.js?v=n26";
+import { errorView, stateView } from "../ui/bits.js?v=n26";
+import { openBookImage } from "../ui/book-image.js?v=n26";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n26";
+import { openSheet } from "../ui/overlay.js?v=n26";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n26";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n26";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n26";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
+const textProgressKey = (id, version) => `xz-book-text-progress:${id}:${version}`;
+const textRecentKey = id => `xz-book-text-recent:${id}`;
 const detailCache = new Map();
+const electronicCache = new Map();
 const annotationNavigation = new Map();
 
 function lifecycle(ctx, paint, request) {
@@ -49,38 +53,43 @@ function library(ctx) {
   const sorts = choices("book-sort", "排序", "书籍排序", [["recent", "最近阅读优先"], ["catalog", "书库顺序"]], sort, value => { sort = value; });
   const node = h("div", { class: "books-library" },
     h("header", { class: "books-hero" }, h("h1", null, "典籍书库"),
-      h("p", null, "按电子文字版本阅读与下载，来源、缺漏和未校勘说明随版本列出。历史阅读稿另列入口，保留原有进度与记录。")),
+      h("p", null, "十七种典籍，按目录阅读。原文中的疑字与缺文照存，版本说明和整理校记可随时查阅。")),
     recent, h("div", { class: "books-filters" }, search, systems, sorts), count, results);
   function paintBooks() {
     local.setJson("xz-book-filters", { query: search.value, system, sort });
     if (!books) return;
     const rows = filterBooks(books, search.value, system);
     const position = book => readingPosition(local.json(positionKey(book.id)), book.section_count);
-    if (sort === "recent") rows.sort((a, b) => (position(b)?.updatedAt || 0) - (position(a)?.updatedAt || 0));
-    // 暂时打不开的书排到最后，可读的书排在前面。
-    rows.sort((a, b) => Number(b.section_count > 0) - Number(a.section_count > 0));
-    const latest = books.filter(book => position(book)).sort((a, b) => position(b).updatedAt - position(a).updatedAt)[0];
-    fill(recent, latest ? h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
-      icon("book"), h("span", null, h("small", null, "继续历史阅读稿"), h("b", null, latest.title)),
-      h("span", null, `历史稿第 ${position(latest).number} ${latest.has_modern ? "篇" : "页"} →`)) : null);
-    count.textContent = `共 ${rows.length} 本 · 电子文字版本见各书目录`;
+    const textPosition = book => textReadingPosition(local.json(textRecentKey(book.id)));
+    const updated = book => Math.max(position(book)?.updatedAt || 0, textPosition(book)?.updatedAt || 0);
+    if (sort === "recent") rows.sort((a, b) => updated(b) - updated(a));
+    const latest = books.filter(book => updated(book)).sort((a, b) => updated(b) - updated(a))[0];
+    const textSaved = latest && textPosition(latest);
+    const latestIsText = textSaved && textSaved.updatedAt >= (position(latest)?.updatedAt || 0);
+    fill(recent, latest ? latestIsText ? h("a", { class: "books-resume", href: `#${textVersionPath(latest.id, textSaved.versionId, textSaved.sectionId)}` },
+      icon("book"), h("span", null, h("small", null, "继续阅读"), h("b", null, latest.title)), h("span", null, `${textSaved.title} →`))
+      : h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
+        icon("book"), h("span", null, h("small", null, "继续历史阅读稿"), h("b", null, latest.title)),
+        h("span", null, `历史稿第 ${position(latest).number} ${latest.has_modern ? "篇" : "页"} →`)) : null);
+    count.textContent = `共 ${rows.length} 本`;
     fill(results, rows.length ? rows.map(book => {
       const available = book.section_count > 0;
       const saved = position(book);
       const progress = saved?.number || readingNumber(local.get(progressKey(book.id), "1"), book.section_count);
       const catalogPath = textVersionPath(book.id);
       return h("article", { class: "books-card" },
-        h("div", { class: "books-card-meta" }, h("span", null, BOOK_SYSTEM[book.system]),
-          h("span", { class: "books-status" }, `历史稿 · ${BOOK_STATUS[book.status]}`)),
+        h("div", { class: "books-card-meta" }, h("span", null, BOOK_SYSTEM[book.system])),
         h("h2", null, h("a", { href: `#${catalogPath}` }, book.title)),
-        h("a", { class: "btn btn-soft books-electronic-open", href: `#${catalogPath}` }, icon("book"), "电子文字按章阅读与下载"),
+        h("a", { class: "btn btn-soft books-electronic-open", href: `#${catalogPath}` }, icon("book"), "阅读本书"),
+        h("details", { class: "books-history-details" }, h("summary", null, "历史阅读稿与旧记录"),
+        h("p", { class: "books-status" }, `历史稿 · ${BOOK_STATUS[book.status]}`),
         h("p", { class: "books-source" }, `历史稿来源：${book.source_label}`),
         h("p", { class: "books-notice" }, `历史稿说明：${book.notice}`),
         saved ? h("div", { class: "books-progress" }, h("small", null, `历史稿读到第 ${progress} / ${book.section_count} ${book.has_modern ? "篇" : "页"}`),
           h("progress", { max: book.section_count, value: progress, "aria-label": `${book.title} 历史阅读稿进度` })) : null,
         available ? h("a", { class: "books-history-open", href: `#${readingPath(book.id, progress)}` },
           saved || progress > 1 ? "继续历史阅读稿" : "打开历史阅读稿", h("span", null, ` · 历史稿 ${book.section_count} ${book.has_modern ? "篇" : "页"}`))
-          : h("p", { class: "books-unavailable" }, "历史阅读稿暂不可用，请查看电子文字版本"));
+          : h("p", { class: "books-unavailable" }, "历史阅读稿暂不可用，请查看电子文字版本")));
     }) : stateView({ glyph: "search", title: "没有匹配的书籍", text: "试试其他书名，或切换体系。" }));
   }
   search.addEventListener("input", paintBooks);
@@ -415,88 +424,154 @@ function electronicReader(ctx) {
   const id = ctx.params.id;
   const versionId = ctx.query.get("text-version");
   const isCatalog = versionId === "catalog";
+  let routeRestore = null;
+  let preferences = readingPreferences(local.json("xz-book-preferences"));
   const body = h("div");
-  const node = h("div", { class: "book-electronic" },
-    h("a", { href: "#/books", class: "btn btn-soft" }, "返回书库"), body);
+  const node = h("div", { class: `book-electronic${isCatalog ? "" : " book-electronic-reader"}` }, body);
   const sourceLink = (url, label) => h("a", { href: url, target: "_blank", rel: "noopener noreferrer" }, label);
-  const downloadLinks = (version, chapter = "") => h("nav", { class: "book-text-downloads", "aria-label": chapter ? "本章文本下载" : "全本文本下载" },
-    h("span", null, chapter ? "下载本章：" : "下载此版本全部已收录文字："),
-    [["md", "Markdown · 供 AI 分析"], ["txt", "TXT（可选）"]].map(([format, label]) =>
+  const downloadLinks = (version, chapter = "") => h("nav", { class: "book-text-downloads", "aria-label": chapter ? "来源章节下载" : "全本文本下载" },
+    [["md", "Markdown"], ["txt", "TXT"]].map(([format, label]) =>
       h("a", { class: "btn btn-soft", href: textExportPath(id, version, format, chapter), download: "" }, label)));
   function paintInventory(data) {
-    fill(body, h("h1", null, `${data.title} · 电子文字`),
-      h("p", { class: "books-notice" }, data.gap_note),
-      h("p", null, "各电子文字版本独立记录来源与缺漏；原 PDF 和历史校订继续保留。"),
+    fill(body, h("a", { href: "#/books", class: "book-reading-back" }, icon("back"), "书库"),
+      h("header", { class: "books-hero" }, h("h1", null, data.title), h("p", null, "选择版本，开始阅读。疑字、缺文与原注保留在相应位置。")),
       data.versions.length ? data.versions.map(version => {
         const available = version.availability === "available";
-        return h("section", { class: "books-card" }, h("h2", null, version.title),
-          h("p", null, version.edition_statement),
-          h("p", null, `${TEXT_COMPLETENESS[version.completeness]} · ${TEXT_COLLATION[version.collation_status]}`),
-          version.missing.map(item => h("p", { class: "books-notice" }, item)),
-          h("p", null, sourceLink(version.source_url, "查看来源")),
-          available ? h("a", { class: "btn btn-soft", href: `#${textVersionPath(id, version.version_id)}` }, "按章阅读与引用")
-            : h("p", { class: "books-notice" }, version.availability === "candidate_only" ? "仅来源候选，尚未取得整本正文。" : "工作副本待导入及许可核对，暂不提供正文下载。"),
-          available ? downloadLinks(version.version_id) : null);
-      }) : h("p", null, "尚无已核实可入库的电子文字版本。"),
-      h("a", { href: `#${readingPath(id)}` }, "打开历史阅读稿"));
+        return h("section", { class: "books-card book-version-card" }, h("h2", null, version.title),
+          h("p", { class: "book-quality-brief" }, `${TEXT_COMPLETENESS[version.completeness]} · ${TEXT_COLLATION[version.collation_status]}`),
+          available ? h("a", { class: "btn btn-primary", href: `#${textVersionPath(id, version.version_id)}` }, "开始阅读")
+            : h("p", { class: "books-notice" }, version.availability === "candidate_only" ? "尚未收录正文" : "正文待导入"),
+          h("details", { class: "book-version-details" }, h("summary", null, "版本与下载"),
+            h("p", null, version.edition_statement), version.missing.map(item => h("p", null, item)),
+            h("p", null, sourceLink(version.source_url, "查看来源")), available ? downloadLinks(version.version_id) : null));
+      }) : stateView({ glyph: "book", title: "此书尚无电子文字版本", text: "正文收录后会在这里列出。" }),
+      h("details", { class: "book-source-notice" }, h("summary", null, "收录说明与历史阅读稿"),
+        h("p", null, data.gap_note), h("p", null, h("a", { href: `#${readingPath(id)}` }, "打开历史阅读稿"))));
   }
-  function paintEdition(data) {
-    const chapters = data.chapters;
+  function paintEdition({ edition: data, reading }) {
+    const sections = reading.sections;
     const requested = ctx.query.get("chapter");
-    const index = requested ? chapters.findIndex(chapter => chapter.id === requested) : 0;
-    const chapter = chapters[index];
-    const markdownContext = createReadingMarkdownContext(chapter?.blocks.map(block => block.text) || [], {
-      chapters: data.version_id.startsWith("reading-20261022-") ? chapters : [], chapterId: chapter?.id,
+    const saved = textReadingPosition(local.json(textProgressKey(id, versionId)));
+    let index = selectReadingSection(reading, requested || saved?.sectionId);
+    if (!requested && index < 0) index = selectReadingSection(reading, null);
+    const section = sections[index];
+    if (section) {
+      const position = { versionId, sectionId: section.id, title: section.title, updatedAt: Date.now() };
+      local.setJson(textProgressKey(id, versionId), position); local.setJson(textRecentKey(id), position);
+    }
+    const sequence = section ? sections.filter(item => item.kind === section.kind) : [];
+    const sequenceIndex = sequence.findIndex(item => item.id === section?.id);
+    const path = item => textVersionPath(id, versionId, item.id);
+    const groups = groupReadingSections(sections);
+    const markdownContext = createReadingMarkdownContext(section?.blocks.map(block => block.text) || [], {
+      chapters: sections, chapterId: section?.id,
       footnotePath: (chapterId, label) => `${textVersionPath(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
-      navigate: path => ctx.navigate(path),
+      navigate: route => ctx.navigate(route),
     });
-    ctx.setTitle(`${data.title} · 电子文字`);
+    ctx.setTitle(`${section ? section.title + " · " : ""}${reading.title}`);
     const quality = data.quality;
+    const article = section ? h("article", { class: "book-reading-content book-text-projection", "aria-label": "书籍正文" },
+      h("header", { class: "book-section-header" },
+        h("p", { class: "book-section-kind" }, READING_KINDS[section.kind]),
+        h("h2", null, section.title),
+        section.source_location ? h("p", { class: "book-section-location" }, section.source_location) : null),
+      section.blocks.map(block => h(block.role === "modern_editorial" && section.kind !== "notes" ? "details" : "section",
+        { class: `book-block${block.role === "modern_editorial" ? " book-modern-editorial" : ""}`, dataset: { blockId: block.id } },
+        block.role === "modern_editorial" && section.kind !== "notes" ? h("summary", null, "整理说明") : null,
+        ["original_note", "commentary"].includes(block.role) ? h("p", { class: "book-layer" }, TEXT_ROLES[block.role]) : null,
+        h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)))))
+      : stateView({ glyph: "book", title: "此版本没有该章节", text: "请从目录选择章节，或返回版本页重新打开。" });
+    const applyPreferences = () => {
+      article.style.setProperty("--reading-size", `${preferences.size}px`);
+      article.style.setProperty("--reading-line", preferences.line);
+      article.style.setProperty("--reading-font", `var(--font-${preferences.font})`);
+      article.dataset.paper = preferences.paper;
+      article.dataset.layout = preferences.layout;
+    };
+    applyPreferences();
+    const settings = h("button", { type: "button", class: "btn btn-soft book-settings-open", "aria-label": "阅读设置", onClick: event =>
+      openBookSettings({ preferences, mode: "original", hasModern: false, hasLayout: false, returnFocus: event.currentTarget,
+        onChange: value => { preferences = readingPreferences(value); local.setJson("xz-book-preferences", preferences); applyPreferences(); } }) },
+      icon("sliders"), h("span", null, "阅读设置"));
     const select = h("select", { "aria-label": "选择章节", onChange: event => ctx.navigate(textVersionPath(id, versionId, event.currentTarget.value)) },
-      chapters.map(item => h("option", { value: item.id, selected: item.id === chapter?.id }, item.title)));
-    fill(body, h("h1", null, data.title),
-      h("a", { href: `#${textVersionPath(id)}` }, "查看电子文字版本"),
-      h("p", { class: "books-source" }, data.edition_statement),
-      h("aside", { class: "book-page-notice" },
-        h("strong", null, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`),
-        h("p", null, quality.scope_note), quality.missing.map(item => h("p", null, `缺漏：${item}`))),
+      !section ? h("option", { value: "", selected: true, disabled: true }, "选择章节") : null,
+      groups.map(group => h("optgroup", { label: group.title }, group.sections.map(item =>
+        h("option", { value: item.id, selected: item.id === section?.id }, item.title)))));
+    const rows = h("nav", { class: "book-electronic-contents", "aria-label": "章节目录" });
+    const search = h("input", { type: "search", placeholder: "搜索目录", "aria-label": "搜索章节目录" });
+    const paintContents = () => {
+      const filtered = groupReadingSections(sections, search.value);
+      fill(rows, filtered.length ? filtered.map(group => h("details", { class: "book-electronic-group", open: group.kind === "body" || group.kind === section?.kind || !!search.value.trim() },
+        h("summary", null, group.title, h("small", null, group.sections.length)),
+        group.sections.map(item => h("a", { href: `#${path(item)}`, "aria-current": item.id === section?.id ? "page" : null }, item.title))))
+        : h("p", { class: "books-notice" }, "没有匹配的章节"));
+    };
+    search.addEventListener("input", paintContents); paintContents();
+    const sidebar = h("aside", { class: "book-electronic-sidebar", "aria-label": `${reading.title}目录` },
+      h("div", { class: "book-electronic-sidebar-head" }, h("b", null, "目录"), h("span", null, `${sections.length} 节`)), search, rows);
+    const versionDetails = h("details", { class: "book-source-notice book-electronic-details" },
+      h("summary", null, "版本、来源与下载"),
+      h("p", null, data.title), h("p", null, data.edition_statement),
+      h("p", null, quality.scope_note), quality.missing.map(item => h("p", null, item)),
       h("p", null, data.relationship_to_archive),
-      h("details", { class: "book-source-notice" }, h("summary", null, "来源、署名、许可与整理更改"),
-        data.sources.map(source => h("p", null, sourceLink(source.url, source.title), ` · 取得日期：${source.retrieved_at} · ${source.attribution}`,
-          source.revision_url ? sourceLink(source.revision_url, "固定修订") : " · 未记录固定修订，下载文件附工作副本指纹。")),
-        h("p", null, sourceLink(data.license.url, data.license.name), ` · ${data.license.attribution}`),
-        h("p", null, data.license.reuse_basis), h("p", null, data.license.notice),
-        h("p", null, data.license.share_alike ? "适用相同方式共享义务；正文许可独立于项目代码许可。" : "正文许可独立于项目代码许可。"),
-        data.changes.map(change => h("p", null, change))),
-      downloadLinks(versionId),
-      h("label", null, "章节目录 ", select),
-      chapter ? h("article", { class: "book-reading-content" },
-        h("h2", null, chapter.title),
-        h("p", { class: "book-text-citation" }, "章节引用：", h("code", null, `${id}/${versionId}/${chapter.id}`)),
-        h("p", { class: "books-source" }, chapter.source_locator),
-        downloadLinks(versionId, chapter.id),
-        chapter.blocks.map(block => h(block.role === "modern_editorial" ? "details" : "section",
-          { class: `book-block${block.role === "modern_editorial" ? " book-modern-editorial" : ""}`, dataset: { blockId: block.id } },
-          block.role === "modern_editorial" ? h("summary", null, `现代整理说明 · ${block.source_locator}`) : null,
-          h("p", { class: "book-layer" }, `${TEXT_ROLES[block.role]} · ${block.source_locator} · ${block.attribution}`),
-          h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)))),
-        h("nav", { class: "book-reading-pagination", "aria-label": "章节翻页" },
-          index > 0 ? h("a", { href: `#${textVersionPath(id, versionId, chapters[index - 1].id)}` }, "上一章") : h("span"),
-          h("span", null, `${index + 1} / ${chapters.length}`),
-          index + 1 < chapters.length ? h("a", { href: `#${textVersionPath(id, versionId, chapters[index + 1].id)}` }, "下一章") : null))
-        : stateView({ glyph: "book", title: "此版本没有该章节", text: "请选择目录中的章节；不会跳到其他版本的相似文字。" }));
+      data.sources.map(source => h("p", null, sourceLink(source.url, source.title), ` · ${source.attribution}`,
+        source.revision_url ? sourceLink(source.revision_url, "固定修订") : null)),
+      h("p", null, sourceLink(data.license.url, data.license.name), ` · ${data.license.attribution}`),
+      h("p", null, data.license.reuse_basis), h("p", null, data.license.notice),
+      h("p", null, data.license.share_alike ? "适用相同方式共享义务；正文许可独立于项目代码许可。" : "正文许可独立于项目代码许可。"),
+      data.changes.map(change => h("p", null, change)),
+      h("p", null, "下载本版本完整原稿（包含来源说明与校记）："), downloadLinks(versionId),
+      h("p", null, h("a", { href: `#${textVersionPath(id)}` }, "查看其他版本")));
+    const citation = section ? h("details", { class: "book-source-notice book-section-source" }, h("summary", null, "本节来源与引用"),
+      h("p", { class: "book-text-citation" }, h("code", null, `${id}/${versionId}/${section.id}`)),
+      h("p", null, "对应来源章节：", h("code", null, section.source_chapter_id)),
+      h("p", null, "下载对应的完整来源章节（可能包含相邻小节）："), downloadLinks(versionId, section.source_chapter_id)) : null;
+    fill(body,
+      h("header", { class: "book-reading-header" },
+        h("a", { href: "#/books", class: "book-reading-back" }, icon("back"), h("span", null, "书库")),
+        h("div", { class: "book-reading-identity" }, h("h1", null, reading.title),
+          h("span", { class: "book-reading-state" }, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`))),
+      h("div", { class: "book-electronic-layout" }, sidebar,
+        h("div", { class: "book-electronic-main" },
+          h("nav", { class: "book-reading-controls book-electronic-controls", "aria-label": "阅读工具" },
+            h("label", { class: "book-electronic-select" }, h("span", null, "目录"), select), settings),
+          article,
+          section ? h("nav", { class: "book-reading-pagination book-electronic-pagination", "aria-label": "章节翻页" },
+            sequenceIndex > 0 ? h("a", { href: `#${path(sequence[sequenceIndex - 1])}` }, h("small", null, "上一节"), h("span", null, sequence[sequenceIndex - 1].title)) : h("span"),
+            h("span", { class: "book-section-count" }, `${READING_KINDS[section.kind]} ${sequenceIndex + 1} / ${sequence.length}`),
+            sequenceIndex + 1 < sequence.length ? h("a", { href: `#${path(sequence[sequenceIndex + 1])}` }, h("small", null, "下一节"), h("span", null, sequence[sequenceIndex + 1].title)) : h("span")) : null,
+          citation, versionDetails)));
     const footnote = ctx.query.get("footnote");
     if (footnote) requestAnimationFrame(() => { if (ctx.isCurrent()) focusReadingFootnote(markdownContext, footnote); });
   }
+  const basePath = `/api/books/${encodeURIComponent(id)}/text-versions${isCatalog ? "" : `/${encodeURIComponent(versionId)}`}`;
+  const request = async (path, options) => {
+    if (isCatalog) return get(path, options);
+    if (electronicCache.has(path)) return electronicCache.get(path);
+    const [edition, reading] = await Promise.all([get(path, options), get(`${path}/reading`, options)]);
+    const result = { edition, reading };
+    if (!options.signal.aborted) {
+      electronicCache.set(path, result);
+      if (electronicCache.size > 3) electronicCache.delete(electronicCache.keys().next().value);
+    }
+    return result;
+  };
   const life = lifecycle(ctx, ({ phase, data, error }) => {
     body.setAttribute("aria-busy", String(phase === "loading"));
-    if (phase === "loading") { fill(body, h("p", { role: "status" }, "正在打开电子文字…")); return; }
-    if (phase === "error") { fill(body, errorView(error, refresh, { title: "电子文字暂时没有打开" })); return; }
+    if (phase === "loading") { fill(body, h("p", { role: "status" }, "正在打开书籍…")); return; }
+    if (phase === "error") { fill(body, errorView(error, refresh, { title: "书籍暂时没有打开" })); return; }
     if (isCatalog) paintInventory(data); else paintEdition(data);
-  });
-  const refresh = () => life.loader.load(`/api/books/${encodeURIComponent(id)}/text-versions${isCatalog ? "" : `/${encodeURIComponent(versionId)}`}`);
-  life.setRefresh(refresh); refresh();
-  return { node, title: "电子文字与下载" };
+    // A history entry may return after its edition has left the small cache.
+    // Restore only after the async text exists; explicit footnotes take priority.
+    const restore = routeRestore;
+    routeRestore = null;
+    if (typeof restore === "number" && !ctx.query.get("footnote")) {
+      requestAnimationFrame(() => { if (ctx.isCurrent()) window.scrollTo(0, restore); });
+    }
+  }, request);
+  const refresh = () => { routeRestore = window.scrollY; electronicCache.delete(basePath); life.loader.load(basePath); };
+  life.setRefresh(refresh); life.loader.load(basePath);
+  return { node, title: "典籍阅读", onRestore(value) { routeRestore = value; }, ...(!isCatalog ? { layout: "book-reader" } : {}) };
 }
 
 export function render(ctx) {
