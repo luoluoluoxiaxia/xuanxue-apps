@@ -1,19 +1,20 @@
-import { h, fill } from "../lib/dom.js?v=n33";
-import { icon } from "../lib/icons.js?v=n33";
-import { get } from "../lib/api.js?v=n33";
-import { local, session } from "../lib/store.js?v=n33";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n33";
+import { h, fill } from "../lib/dom.js?v=n34";
+import { icon } from "../lib/icons.js?v=n34";
+import { get } from "../lib/api.js?v=n34";
+import { local, session } from "../lib/store.js?v=n34";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n34";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n33";
-import { errorView, stateView } from "../ui/bits.js?v=n33";
-import { openBookImage } from "../ui/book-image.js?v=n33";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n33";
-import { openSheet } from "../ui/overlay.js?v=n33";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n33";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n33";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n33";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n34";
+import { errorView, stateView } from "../ui/bits.js?v=n34";
+import { openBookImage } from "../ui/book-image.js?v=n34";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n34";
+import { openSheet } from "../ui/overlay.js?v=n34";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n34";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n34";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n34";
+import { bookCasesEntry } from "../lib/book-cases.js?v=n34";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -25,6 +26,11 @@ const annotationNavigation = new Map();
 const initialBookLocation = location.hash;
 const reloadBookLocation = ["reload", "back_forward"].includes(window.performance?.getEntriesByType?.("navigation")?.[0]?.type);
 let firstBookRender = true;
+
+function caseLink(book, ctx) {
+  const path = bookCasesEntry(book, ctx.query.get("from"));
+  return path ? h("a", { class: "book-cases-entry", href: `#${path}` }, "本书案例") : null;
+}
 
 function lifecycle(ctx, paint, request) {
   const loader = createKnowledgeLoader(state => { if (ctx.isCurrent()) paint(state); }, request);
@@ -39,7 +45,8 @@ function library(ctx) {
   const learning = ctx.query.get("view") === "learning";
   const views = h("nav", { class: "books-views", "aria-label": "书库视图" },
     h("a", { href: "#/books", "aria-current": learning ? null : "page" }, "全部书籍"),
-    h("a", { href: "#/books?view=learning", "aria-current": learning ? "page" : null }, "学习路线"));
+    h("a", { href: "#/books?view=learning", "aria-current": learning ? "page" : null }, "学习路线"),
+    h("a", { href: learning ? "#/book-cases?from=learning" : "#/book-cases" }, "案例"));
   if (learning) return learningLibrary(ctx, views);
   let books = null;
   const results = h("div", { class: "books-grid" });
@@ -97,7 +104,8 @@ function library(ctx) {
           h("div", { class: "books-card-meta" }, BOOK_SYSTEM[book.system]),
           h("h2", null, h("a", { href: `#${catalogPath}` }, book.title)),
           book.summary ? h("p", { class: "books-card-summary" }, book.summary) : null,
-          saved ? h("p", { class: "books-card-progress" }, `读到：${saved.title}`) : null),
+          saved ? h("p", { class: "books-card-progress" }, `读到：${saved.title}`) : null,
+          caseLink(book, ctx)),
         h("a", { class: "btn btn-soft books-electronic-open", href: `#${openPath}`, "aria-label": `${saved ? "继续阅读" : "阅读"}${book.title}` },
           icon("book"), saved ? "继续" : "阅读"));
     }) : stateView({ glyph: "search", title: "没有匹配的书籍", text: "试试其他书名，或切换体系。" }));
@@ -456,7 +464,7 @@ function reader(ctx) {
             h("p", { class: "books-notice" }, `${BOOK_SYSTEM[book.system]} · ${BOOK_STATUS[book.status]}`),
             h("p", { class: "books-source" }, book.source_label), h("p", { class: "books-notice" }, book.notice),
             h("a", { href: `#${links.text(id)}` }, "电子文字版本、章节引用与下载")) }) }, "版本说明"),
-      h("a", { class: "btn btn-soft", href: `#${links.text(id)}` }, "电子文字与下载"));
+      h("a", { class: "btn btn-soft", href: `#${links.text(id)}` }, "电子文字与下载"), caseLink(book, ctx));
     if (!book.section_count) { content.setAttribute("aria-busy", "false"); fill(content, h("p", null, "电子成品待恢复，请先阅读其他书籍。")); return; }
     controls.hidden = false;
     const number = readingNumber(ctx.query.get("page") || local.get(progressKey(id), "1"), book.section_count);
@@ -558,15 +566,22 @@ function electronicReader(ctx, resumeOnReload = false) {
           h("p", null, sourceLink(version.source_url, "查看来源")), available ? downloadLinks(version.version_id) : null));
     };
     const others = data.versions.filter(version => version !== primary);
+    const publishedBook = data.publishedBook;
+    const hasHistorical = publishedBook?.section_count > 0;
     fill(body, links.back(),
       h("header", { class: "books-hero" }, h("h1", null, data.title), h("p", null, "疑字、缺文与原注保留，版本详情可展开查看。")),
+      (hasHistorical && publishedBook.has_modern) || bookCasesEntry(publishedBook)
+        ? h("nav", { class: "book-edition-shortcuts", "aria-label": "其他阅读入口" },
+          hasHistorical && publishedBook.has_modern ? h("a", { href: `#${links.reading(id)}` }, `${publishedBook.source_label} · 原文白话对照`) : null,
+          caseLink(publishedBook, ctx)) : null,
       primary ? versionCard(primary, true) : stateView({ glyph: "book", title: "此书尚无可读文字版本", text: "正文收录后会在这里列出。" }),
       others.length ? h("details", { class: "book-source-notice book-other-versions" }, h("summary", null, `其他版本（${others.length}）`),
         others.map(version => versionCard(version))) : null,
-      h("details", { class: "book-source-notice" }, h("summary", null, data.hasHistorical ? "收录说明与历史阅读稿" : "收录说明"),
-        h("p", null, data.gap_note), data.hasHistorical ? h("p", null, h("a", { href: `#${links.reading(id)}` }, "打开历史阅读稿")) : null));
+      h("details", { class: "book-source-notice" }, h("summary", null, "收录说明"),
+        h("p", null, data.gap_note), hasHistorical && !publishedBook.has_modern
+          ? h("p", null, h("a", { href: `#${links.reading(id)}` }, `${publishedBook.source_label} · 原文阅读稿`)) : null));
   }
-  function paintEdition({ edition: data, reading }) {
+  function paintEdition({ edition: data, reading, publishedBook }) {
     editionCleanup();
     const sections = reading.sections;
     const requested = ctx.query.get("chapter");
@@ -805,7 +820,8 @@ function electronicReader(ctx, resumeOnReload = false) {
     const header = h("header", { class: "book-reading-header book-electronic-header" },
       links.back(),
       h("div", { class: "book-reading-identity" }, h("h1", null, reading.title),
-        h("span", { class: "book-reading-state" }, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`)), desktopSettings);
+        h("span", { class: "book-reading-state" }, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`)),
+      caseLink(publishedBook, ctx), desktopSettings);
     fill(body,
       header,
       h("div", { class: "book-electronic-layout" }, sidebar,
@@ -856,11 +872,11 @@ function electronicReader(ctx, resumeOnReload = false) {
     if (isCurrent) return get(path, options);
     if (isCatalog) {
       const [inventory, catalogue] = await Promise.all([get(path, options), get("/api/books", options)]);
-      return { ...inventory, hasHistorical: catalogue.books.some(book => book.id === id && book.section_count > 0) };
+      return { ...inventory, publishedBook: catalogue.books.find(book => book.id === id) };
     }
     if (electronicCache.has(path)) return electronicCache.get(path);
-    const [edition, reading] = await Promise.all([get(path, options), get(`${path}/reading`, options)]);
-    const result = { edition, reading };
+    const [edition, reading, catalogue] = await Promise.all([get(path, options), get(`${path}/reading`, options), get("/api/books", options)]);
+    const result = { edition, reading, publishedBook: catalogue.books.find(book => book.id === id) };
     if (!options.signal.aborted) {
       electronicCache.set(path, result);
       if (electronicCache.size > 3) electronicCache.delete(electronicCache.keys().next().value);

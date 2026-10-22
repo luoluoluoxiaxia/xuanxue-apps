@@ -1185,6 +1185,13 @@
       "ClientBook": {
         "additionalProperties": false,
         "properties": {
+          "case_count": {
+            "default": 0,
+            "description": "本书当前公开案例卡片数量，不代表全书案例总数。",
+            "minimum": 0.0,
+            "title": "Case Count",
+            "type": "integer"
+          },
           "doubtful_page_count": {
             "default": 0,
             "title": "Doubtful Page Count",
@@ -1488,6 +1495,280 @@
           "notes"
         ],
         "title": "ClientBookBlock",
+        "type": "object"
+      },
+      "ClientBookCaseChartItem": {
+        "additionalProperties": false,
+        "properties": {
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "value"
+        ],
+        "title": "ClientBookCaseChartItem",
+        "type": "object"
+      },
+      "ClientBookCaseDetail": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "book_title": {
+            "title": "Book Title",
+            "type": "string"
+          },
+          "chart": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookCaseChartItem"
+            },
+            "title": "Chart",
+            "type": "array"
+          },
+          "context_after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "同章后一原文段；没有时为null。",
+            "title": "Context After"
+          },
+          "context_before": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "同章前一原文段；没有时为null。",
+            "title": "Context Before"
+          },
+          "facts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Facts",
+            "type": "array"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "judgment": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Judgment",
+            "type": "array"
+          },
+          "kind": {
+            "enum": [
+              "named_case",
+              "unnamed_case",
+              "hypothetical",
+              "rule_example"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "modern_context": {
+            "description": "案例所在完整原段的白话，不是摘句的逐句对齐翻译。",
+            "title": "Modern Context",
+            "type": "string"
+          },
+          "original_context": {
+            "description": "案例摘句所在的完整原段。",
+            "title": "Original Context",
+            "type": "string"
+          },
+          "original_excerpt": {
+            "title": "Original Excerpt",
+            "type": "string"
+          },
+          "outcome": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Outcome",
+            "type": "array"
+          },
+          "outcome_status": {
+            "description": "recorded为书中所载结果；not_reported为此处未载具体结果，不代表尚未整理。",
+            "enum": [
+              "recorded",
+              "not_reported"
+            ],
+            "title": "Outcome Status",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookCaseSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uncertainties": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Uncertainties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "book_id",
+          "book_title",
+          "title",
+          "kind",
+          "summary",
+          "chart",
+          "facts",
+          "judgment",
+          "outcome",
+          "outcome_status",
+          "original_excerpt",
+          "original_context",
+          "modern_context",
+          "context_before",
+          "context_after",
+          "uncertainties",
+          "sources"
+        ],
+        "title": "ClientBookCaseDetail",
+        "type": "object"
+      },
+      "ClientBookCaseList": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookCaseSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "ClientBookCaseList",
+        "type": "object"
+      },
+      "ClientBookCaseSource": {
+        "additionalProperties": false,
+        "properties": {
+          "chapter": {
+            "title": "Chapter",
+            "type": "string"
+          },
+          "edition_label": {
+            "title": "Edition Label",
+            "type": "string"
+          },
+          "location": {
+            "title": "Location",
+            "type": "string"
+          },
+          "reading_path": {
+            "description": "同底本的站内书籍阅读路径。",
+            "maxLength": 400,
+            "pattern": "^/books/[a-z0-9]+(?:-[a-z0-9]+)*\\?page=[1-9][0-9]*$",
+            "title": "Reading Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "edition_label",
+          "chapter",
+          "location",
+          "reading_path"
+        ],
+        "title": "ClientBookCaseSource",
+        "type": "object"
+      },
+      "ClientBookCaseSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "book_id": {
+            "title": "Book Id",
+            "type": "string"
+          },
+          "book_title": {
+            "title": "Book Title",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "named_case",
+              "unnamed_case",
+              "hypothetical",
+              "rule_example"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "book_id",
+          "book_title",
+          "title",
+          "kind",
+          "summary"
+        ],
+        "title": "ClientBookCaseSummary",
         "type": "object"
       },
       "ClientBookContentsItem": {
@@ -7510,6 +7791,118 @@
           }
         },
         "summary": "Api Payment Orders"
+      }
+    },
+    "/api/book-cases": {
+      "get": {
+        "operationId": "list_book_cases_api_book_cases_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "book_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Book Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 24,
+              "maximum": 60,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookCaseList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Book Cases"
+      }
+    },
+    "/api/book-cases/{case_id}": {
+      "get": {
+        "operationId": "book_case_detail_api_book_cases__case_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientBookCaseDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Case Detail"
       }
     },
     "/api/books": {
