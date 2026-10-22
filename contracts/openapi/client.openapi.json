@@ -1230,6 +1230,13 @@
             "title": "Status",
             "type": "string"
           },
+          "summary": {
+            "default": "",
+            "description": "书库卡片的简短内容介绍。",
+            "maxLength": 30,
+            "title": "Summary",
+            "type": "string"
+          },
           "system": {
             "enum": [
               "bazi",

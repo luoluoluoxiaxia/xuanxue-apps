@@ -399,6 +399,7 @@
 .books-library-card { min-height: 148px; padding: 18px; gap: 16px; flex-direction: row; align-items: center; }
 .books-card-copy { min-width: 0; flex: 1; }
 .books-library-card h2 { margin: 6px 0 0; font-size: 21px; line-height: 1.5; overflow-wrap: anywhere; }
+.books-card-summary { margin: 8px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.7; overflow-wrap: anywhere; }
 .books-library-card .btn { margin: 0; min-height: 44px; flex-shrink: 0; align-self: center; padding: 0 12px; }
 .books-card-progress { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .book-other-versions > .book-version-card { margin: 12px; }
