@@ -23,8 +23,24 @@
 .book-case-open { margin-top: 10px; }
 .book-cases-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 24px; color: var(--ink-3); font-size: 13px; }
 .book-cases-pagination:empty { display: none; }
-.book-case-detail { max-width: 800px; min-width: 0; margin: 0 auto; }
+.book-case-detail { max-width: 1280px; min-width: 0; margin: 0 auto; }
 .book-case-detail-body { min-width: 0; }
+.book-case-study { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; align-items: start; }
+.book-case-analysis { width: 100%; min-width: 0; max-width: 800px; margin: 0 auto; }
+.book-case-full-chart { display: none; min-width: 0; }
+.book-case-full-chart > .chart-panel { width: 100%; min-width: 0; }
+.book-case-chart-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 64px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-elev); color: var(--ink); text-align: left; cursor: pointer; }
+.book-case-chart-strip > .chart-strip { min-width: 0; flex: 1; flex-wrap: wrap; }
+.book-case-chart-open { display: inline-flex; align-items: center; flex-shrink: 0; gap: 4px; color: var(--brand-ink); font-size: 12px; }
+.book-case-chart-strip:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; }
+.book-case-chart-status { margin: 16px 0; }
+.book-case-chart-status > .state { padding: 24px 16px; }
+@media (min-width: 1100px) {
+  .book-case-study.has-chart { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; margin-top: 20px; }
+  .book-case-full-chart { display: block; position: sticky; top: calc(var(--topbar-h, 64px) + 16px); max-height: calc(100dvh - var(--topbar-h, 64px) - 32px); overflow: auto; overscroll-behavior: contain; }
+  .book-case-chart-strip { display: none; }
+  .book-case-analysis > .book-case-section:first-child { margin-top: 0; }
+}
 .book-case-heading { padding: 20px 0 8px; }
 .book-case-heading h1 { margin: 8px 0 0; font: 600 28px/1.5 var(--font-serif); overflow-wrap: anywhere; }
 .book-case-section { margin: 22px 0; }

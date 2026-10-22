@@ -1,11 +1,11 @@
 // 古典解读浮层：点命盘的一柱、大运、流年、流月，或卦盘的一爻，查看这一格的排盘事实与静态古籍释义。
 // 桌面为居中对话框，手机为底部面板（均由 openSheet 提供）。干支颜色、十神、藏干等全部取接口字段；
 // 释义是 lib/copy.js 里的静态模板，不调用解读接口，也不在客户端推算旺衰喜忌。
-import { h, reducedMotion } from "../lib/dom.js?v=n34";
-import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n34";
-import { openSheet, closeAllSheets } from "./overlay.js?v=n34";
-import { openGlossary } from "./glossary.js?v=n34";
-import { elementClass } from "./gua.js?v=n34";
+import { h, reducedMotion } from "../lib/dom.js?v=n35";
+import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n35";
+import { openSheet, closeAllSheets } from "./overlay.js?v=n35";
+import { openGlossary } from "./glossary.js?v=n35";
+import { elementClass } from "./gua.js?v=n35";
 
 const str = value => (value === null || value === undefined ? "" : String(value)).trim();
 const orDash = value => str(value) || "—";
@@ -23,7 +23,7 @@ function textTags(items) {
   return [...new Set(list(items).map(str).filter(Boolean))].map(item => h("span", { class: "pop-tag" }, item));
 }
 
-function openChartPop(model, { liuyao = false, returnFocus = null } = {}) {
+function openChartPop(model, { liuyao = false, returnFocus = null, caseContext = null } = {}) {
   const trigger = returnFocus || document.activeElement;
   const chars = Array.from(str(model.ganzhi));
   const hero = h("div", { class: "pop-hero" },
@@ -37,13 +37,13 @@ function openChartPop(model, { liuyao = false, returnFocus = null } = {}) {
     ? h("section", { class: "pop-tags" }, h("h3", { class: "pop-sub" }, model.tagsLabel), h("div", { class: "pop-tag-list" }, model.tags))
     : null;
   const facts = h("dl", { class: "pop-facts" }, model.facts.filter(Boolean).map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, orDash(value)))));
-  const classic = h("section", { class: "pop-classic" }, h("h3", { class: "pop-sub" }, "古典解读"), h("p", null, model.classic));
-  const note = h("p", { class: "pop-note" }, liuyao ? POP_NOTE.liuyao : POP_NOTE.bazi);
+  const classic = h("section", { class: "pop-classic" }, h("h3", { class: "pop-sub" }, caseContext ? "盘面释读" : "古典解读"), h("p", null, model.classic));
+  const note = h("p", { class: "pop-note" }, caseContext ? "盘面释读供对照，原书判断见案例正文。" : liuyao ? POP_NOTE.liuyao : POP_NOTE.bazi);
   let sheet = null;
   // 六爻：回到断卦＝收起浮层（手机上连同看盘面板一起收起），回到对话。
   // 八字：名词解释在浮层收起、焦点回到原处之后再打开，免得焦点落到背后的页面上。
   const secondary = liuyao
-    ? h("button", { type: "button", class: "btn btn-ghost", onClick: () => closeAllSheets() }, "回到断卦")
+    ? h("button", { type: "button", class: "btn btn-ghost", onClick: () => caseContext ? sheet.close("chart") : closeAllSheets() }, caseContext ? "返回卦盘" : "回到断卦")
     : h("button", { type: "button", class: "btn btn-ghost", onClick: () => {
       sheet.close("glossary");
       setTimeout(() => openGlossary("bazi", { returnFocus: trigger }), reducedMotion() ? 0 : 220);

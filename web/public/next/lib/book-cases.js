@@ -1,5 +1,5 @@
 // 案例仅展示公开契约返回的内容，阅读链接始终由服务端指定底本与章节。
-import { query } from "./api.js?v=n34";
+import { query } from "./api.js?v=n35";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = value => typeof value === "string" && value.length <= 120 && SLUG.test(value) ? value : "";
@@ -37,10 +37,13 @@ export function bookCasesEntry(book, from = "") {
     ? bookCaseListPath({ book_id: book.id, from }) : null;
 }
 
-export function bookCaseReadingPath(path, from = "") {
-  if (typeof path !== "string" || path.length > 400 || !/^\/books\/[a-z0-9]+(?:-[a-z0-9]+)*\?page=[1-9][0-9]*$/.test(path)) return null;
+export function bookCaseReadingPath(path, from = "", bookId = "") {
+  if (typeof path !== "string" || path.length > 400) return null;
+  const match = path.match(/^\/books\/([a-z0-9]+(?:-[a-z0-9]+)*)\?(?:page=[1-9][0-9]*|text-version=([a-z0-9]+(?:-[a-z0-9]+)*)&chapter=[a-z0-9]+(?:-[a-z0-9]+)*)$/);
+  if (!match || (bookId && match[1] !== slug(bookId))) return null;
+  if (["current", "latest"].includes(match[2])) return null;
   return `${path}${from === "learning" ? "&from=learning" : ""}`;
 }
 
-export const bookCaseKindLabel = kind => ({ named_case: "具名命例", unnamed_case: "未具名命例",
+export const bookCaseKindLabel = kind => ({ named_case: "具名案例", unnamed_case: "未具名案例",
   hypothetical: "假设例", rule_example: "规则示例" })[kind] || "案例";

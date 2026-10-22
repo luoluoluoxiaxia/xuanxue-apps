@@ -1497,6 +1497,136 @@
         "title": "ClientBookBlock",
         "type": "object"
       },
+      "ClientBookCaseBaziChart": {
+        "additionalProperties": false,
+        "properties": {
+          "available_sections": {
+            "description": "已按书载条件完成计算的盘面分区；未列出不代表已确认没有。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Sections",
+            "type": "array"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "missing": {
+            "description": "原书未载且未推测补齐的条件。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ClientBookCaseBaziPayload"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "system": {
+            "const": "bazi",
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "source_label",
+          "available_sections",
+          "missing",
+          "system",
+          "payload"
+        ],
+        "title": "ClientBookCaseBaziChart",
+        "type": "object"
+      },
+      "ClientBookCaseBaziPayload": {
+        "additionalProperties": false,
+        "description": "Same natal calculation fields as a personal chart, with no invented time.",
+        "properties": {
+          "chart": {
+            "additionalProperties": true,
+            "title": "Chart",
+            "type": "object"
+          },
+          "month_command": {
+            "additionalProperties": true,
+            "title": "Month Command",
+            "type": "object"
+          },
+          "pillars_detail": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ClientBaziPillarDetail"
+            },
+            "title": "Pillars Detail",
+            "type": "object"
+          },
+          "profile": {
+            "additionalProperties": true,
+            "title": "Profile",
+            "type": "object"
+          },
+          "relations": {
+            "additionalProperties": true,
+            "title": "Relations",
+            "type": "object"
+          },
+          "roots": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Roots",
+            "type": "array"
+          },
+          "shensha": {
+            "additionalProperties": true,
+            "title": "Shensha",
+            "type": "object"
+          },
+          "tai_yuan": {
+            "title": "Tai Yuan",
+            "type": "string"
+          },
+          "wuxing_count": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Wuxing Count",
+            "type": "object"
+          },
+          "wuxing_count_with_hidden": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Wuxing Count With Hidden",
+            "type": "object"
+          },
+          "xun_kong": {
+            "title": "Xun Kong",
+            "type": "string"
+          }
+        },
+        "required": [
+          "profile",
+          "chart",
+          "month_command",
+          "pillars_detail",
+          "relations",
+          "roots",
+          "shensha",
+          "tai_yuan",
+          "xun_kong",
+          "wuxing_count",
+          "wuxing_count_with_hidden"
+        ],
+        "title": "ClientBookCaseBaziPayload",
+        "type": "object"
+      },
       "ClientBookCaseChartItem": {
         "additionalProperties": false,
         "properties": {
@@ -1587,9 +1717,16 @@
             "type": "string"
           },
           "modern_context": {
-            "description": "案例所在完整原段的白话，不是摘句的逐句对齐翻译。",
-            "title": "Modern Context",
-            "type": "string"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "案例所在完整原段的白话；尚无同底本已审白话时为null。",
+            "title": "Modern Context"
           },
           "original_context": {
             "description": "案例摘句所在的完整原段。",
@@ -1694,6 +1831,185 @@
         "title": "ClientBookCaseList",
         "type": "object"
       },
+      "ClientBookCaseLiuyaoChart": {
+        "additionalProperties": false,
+        "properties": {
+          "available_sections": {
+            "description": "已按书载条件完成计算的盘面分区；未列出不代表已确认没有。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Available Sections",
+            "type": "array"
+          },
+          "case_id": {
+            "title": "Case Id",
+            "type": "string"
+          },
+          "missing": {
+            "description": "原书未载且未推测补齐的条件。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/ClientBookCaseLiuyaoPayload"
+          },
+          "source_label": {
+            "title": "Source Label",
+            "type": "string"
+          },
+          "system": {
+            "const": "liuyao",
+            "title": "System",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_id",
+          "source_label",
+          "available_sections",
+          "missing",
+          "system",
+          "payload"
+        ],
+        "title": "ClientBookCaseLiuyaoChart",
+        "type": "object"
+      },
+      "ClientBookCaseLiuyaoPayload": {
+        "additionalProperties": false,
+        "properties": {
+          "ben_gua": {
+            "additionalProperties": true,
+            "title": "Ben Gua",
+            "type": "object"
+          },
+          "bian_gua": {
+            "additionalProperties": true,
+            "title": "Bian Gua",
+            "type": "object"
+          },
+          "cast_time": {
+            "additionalProperties": true,
+            "title": "Cast Time",
+            "type": "object"
+          },
+          "day_chen": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Day Chen"
+          },
+          "dong_yao": {
+            "items": {
+              "type": "integer"
+            },
+            "title": "Dong Yao",
+            "type": "array"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "month_jian": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month Jian"
+          },
+          "moving_shi_relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Moving Shi Relations"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "shi_yao": {
+            "title": "Shi Yao",
+            "type": "integer"
+          },
+          "shi_ying_relation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shi Ying Relation"
+          },
+          "system": {
+            "const": "liuyao",
+            "title": "System",
+            "type": "string"
+          },
+          "xun_kong": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xun Kong"
+          },
+          "yaos": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Yaos",
+            "type": "array"
+          },
+          "ying_yao": {
+            "title": "Ying Yao",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "system",
+          "method",
+          "question",
+          "cast_time",
+          "month_jian",
+          "day_chen",
+          "xun_kong",
+          "ben_gua",
+          "bian_gua",
+          "shi_yao",
+          "ying_yao",
+          "dong_yao",
+          "yaos"
+        ],
+        "title": "ClientBookCaseLiuyaoPayload",
+        "type": "object"
+      },
       "ClientBookCaseSource": {
         "additionalProperties": false,
         "properties": {
@@ -1712,7 +2028,7 @@
           "reading_path": {
             "description": "同底本的站内书籍阅读路径。",
             "maxLength": 400,
-            "pattern": "^/books/[a-z0-9]+(?:-[a-z0-9]+)*\\?page=[1-9][0-9]*$",
+            "pattern": "^/books/[a-z0-9]+(?:-[a-z0-9]+)*\\?(?:page=[1-9][0-9]*|text-version=[a-z0-9]+(?:-[a-z0-9]+)*&chapter=[a-z0-9]+(?:-[a-z0-9]+)*)$",
             "title": "Reading Path",
             "type": "string"
           }
@@ -7903,6 +8219,55 @@
           }
         },
         "summary": "Book Case Detail"
+      }
+    },
+    "/api/book-cases/{case_id}/chart": {
+      "get": {
+        "operationId": "book_case_chart_api_book_cases__case_id__chart_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "maxLength": 120,
+              "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ClientBookCaseBaziChart"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ClientBookCaseLiuyaoChart"
+                    }
+                  ],
+                  "title": "Response Book Case Chart Api Book Cases  Case Id  Chart Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Book Case Chart"
       }
     },
     "/api/books": {

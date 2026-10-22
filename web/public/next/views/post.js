@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n34";
-import { icon } from "../lib/icons.js?v=n34";
-import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n34";
-import { session, local, refreshSession } from "../lib/store.js?v=n34";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n34";
-import { stateView } from "../ui/bits.js?v=n34";
-import { elementClass } from "../ui/gua.js?v=n34";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n34";
-import { toast } from "../ui/toast.js?v=n34";
-import { sharePost } from "../lib/share.js?v=n34";
-import { openShareSheet } from "../ui/share-sheet.js?v=n34";
-import { confirmDialog, openMenu, openSheet } from "../ui/overlay.js?v=n34";
-import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n34";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n35";
+import { icon } from "../lib/icons.js?v=n35";
+import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n35";
+import { session, local, refreshSession } from "../lib/store.js?v=n35";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n35";
+import { stateView } from "../ui/bits.js?v=n35";
+import { elementClass } from "../ui/gua.js?v=n35";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n35";
+import { toast } from "../ui/toast.js?v=n35";
+import { sharePost } from "../lib/share.js?v=n35";
+import { openShareSheet } from "../ui/share-sheet.js?v=n35";
+import { confirmDialog, openMenu, openSheet } from "../ui/overlay.js?v=n35";
+import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n35";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;

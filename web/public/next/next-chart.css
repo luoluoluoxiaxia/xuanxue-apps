@@ -30,6 +30,15 @@
 }
 .cp-caveat .icon { margin-top: 2px; color: var(--brand-ink); }
 
+/* 书例沿用完整盘面；原书缺项保留明确文字，不画成零值或静卦。 */
+.is-book-case .cp-meta { overflow-wrap: anywhere; }
+.cp-case-missing { padding: 10px 12px; border-left: 2px solid var(--line-strong); background: var(--bg-sunken); overflow-wrap: anywhere; }
+.cp-case-unknown, .pp-unknown { color: var(--ink-3); font: 500 13px/1.6 var(--font-sans); }
+.is-book-case .cp-pillar:disabled { cursor: default; opacity: 1; }
+.cp-case-relation-group { display: grid; gap: 6px; min-width: 0; }
+.cp-case-relation-group + .cp-case-relation-group { margin-top: 12px; }
+.cp-case-relation-group h4 { margin: 0; color: var(--ink-3); font-size: 12px; font-weight: 600; }
+
 /* ---------- 五行：第四列写明「表层有 / 藏干见 / 未见」 ---------- */
 .cp-wx { grid-template-columns: 22px minmax(0, 1fr) 44px 40px; }
 .cp-wx-state { color: var(--ink-3); font-size: 11.5px; font-weight: 600; text-align: right; white-space: nowrap; }
