@@ -1192,6 +1192,13 @@
             "title": "Case Count",
             "type": "integer"
           },
+          "default_section_number": {
+            "default": 1,
+            "description": "首次阅读的篇页号；未指定时从第1篇页开始。",
+            "minimum": 1.0,
+            "title": "Default Section Number",
+            "type": "integer"
+          },
           "doubtful_page_count": {
             "default": 0,
             "title": "Doubtful Page Count",
@@ -1218,6 +1225,12 @@
             "default": 0,
             "title": "Partial Page Count",
             "type": "integer"
+          },
+          "reading_layout_id": {
+            "default": "",
+            "description": "本地阅读进度所对应的章节顺序标识；空值沿用既有进度键。",
+            "title": "Reading Layout Id",
+            "type": "string"
           },
           "section_count": {
             "title": "Section Count",
@@ -1439,6 +1452,12 @@
       "ClientBookBlock": {
         "additionalProperties": false,
         "properties": {
+          "attribution": {
+            "default": "",
+            "description": "原注、栏外文字或评注的归属说明；未记录时为空。",
+            "title": "Attribution",
+            "type": "string"
+          },
           "id": {
             "default": "",
             "description": "服务器分配的原文内容标识；与版式及正文节点序号无关。",
@@ -1666,7 +1685,7 @@
           },
           "chart_status": {
             "default": "incomplete",
-            "description": "available可按书载条件复盘；incomplete实叙条件不全；not_applicable为假设或规则。",
+            "description": "available可按书载条件复盘或进行明确标注的假设练习；incomplete实叙条件不全；not_applicable为未选练习盘的假设或规则。",
             "enum": [
               "available",
               "incomplete",
@@ -1792,6 +1811,14 @@
           "summary": {
             "title": "Summary",
             "type": "string"
+          },
+          "supporting_contexts": {
+            "description": "本条实际需要的共同题设、原表或相关段落；不代表新增案例。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookCaseSupportingContext"
+            },
+            "title": "Supporting Contexts",
+            "type": "array"
           },
           "title": {
             "title": "Title",
@@ -2114,6 +2141,51 @@
           "summary"
         ],
         "title": "ClientBookCaseSummary",
+        "type": "object"
+      },
+      "ClientBookCaseSupportingContext": {
+        "additionalProperties": false,
+        "properties": {
+          "location": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Location",
+            "type": "string"
+          },
+          "modern": {
+            "default": "",
+            "description": "对应完整原段的同版白话；尚未提供时为空字符串。",
+            "title": "Modern",
+            "type": "string"
+          },
+          "original": {
+            "description": "支持题设或判断的完整原段，保留原有表格与换行。",
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Original",
+            "type": "string"
+          },
+          "reading_path": {
+            "description": "支持段落所在的同书站内阅读页。",
+            "maxLength": 400,
+            "pattern": "^/books/[a-z0-9]+(?:-[a-z0-9]+)*\\?page=[1-9][0-9]*$",
+            "title": "Reading Path",
+            "type": "string"
+          },
+          "title": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "original",
+          "location",
+          "reading_path"
+        ],
+        "title": "ClientBookCaseSupportingContext",
         "type": "object"
       },
       "ClientBookContentsItem": {

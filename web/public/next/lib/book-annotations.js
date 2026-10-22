@@ -38,7 +38,7 @@ function canonicalText(node, content) {
   const element = node?.nodeType === 1 ? node : node?.parentElement;
   const layer = element?.closest?.(".book-original, .book-modern");
   if (!layer || !content.contains(layer)) return null;
-  const canonical = layer.querySelector("p, h3, pre");
+  const canonical = layer.querySelector("p, h2, h3, pre");
   return canonical && (node === canonical || canonical.contains(node)) ? canonical : null;
 }
 

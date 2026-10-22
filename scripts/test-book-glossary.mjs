@@ -62,14 +62,22 @@ class MockElement extends MockNode {
   constructor(tag, document) {
     super(1, document); this.tagName = tag.toUpperCase(); this.className = ""; this.dataset = {};
     this.attributes = new Map(); this.listeners = new Map(); this.style = {}; this.hidden = false;
+    this.classList = {
+      contains: name => this.className.split(" ").includes(name),
+      add: name => { this.className = [...new Set([...this.className.split(" "), name])].filter(Boolean).join(" "); },
+      remove: name => { this.className = this.className.split(" ").filter(value => value !== name).join(" "); },
+    };
   }
   set innerHTML(_) { throw new Error("Text content must never be parsed as HTML"); }
   setAttribute(name, value) { this.attributes.set(name, String(value)); if (name === "hidden") this.hidden = true; }
   removeAttribute(name) { this.attributes.delete(name); }
-  getAttribute(name) { return this.attributes.get(name) ?? null; }
+  getAttribute(name) { return this.attributes.get(name) ?? (name.startsWith("data-")
+    ? this.dataset[name.slice(5).replace(/-([a-z])/g, (_, char) => char.toUpperCase())] ?? null : null); }
   matches(selector) {
     return selector.split(",").some(item => {
       item = item.trim();
+      const parts = item.split(/\s+/);
+      if (parts.length > 1) return this.matches(parts.at(-1)) && !!this.parentElement?.closest(parts.slice(0, -1).join(" "));
       const [head] = item.split("[");
       const matched = head.startsWith(".") ? this.className.split(" ").includes(head.slice(1)) : this.tagName.toLowerCase() === head;
       if (!matched) return false;
@@ -81,6 +89,10 @@ class MockElement extends MockNode {
     for (const child of this.childNodes) { if (child.nodeType !== 1) continue; if (child.matches(selector)) return child; const found = child.querySelector(selector); if (found) return found; }
     return null;
   }
+  querySelectorAll(selector) {
+    return this.childNodes.flatMap(child => child.nodeType === 1
+      ? [...(child.matches(selector) ? [child] : []), ...child.querySelectorAll(selector)] : []);
+  }
   addEventListener(type, handler) { const list = this.listeners.get(type) || []; list.push(handler); this.listeners.set(type, list); }
   removeEventListener(type, handler) { this.listeners.set(type, (this.listeners.get(type) || []).filter(value => value !== handler)); }
   emit(type, event = {}) {
@@ -89,6 +101,7 @@ class MockElement extends MockNode {
     return event;
   }
   focus() { this.ownerDocument.activeElement = this; }
+  scrollIntoView() { this.scrolled = true; }
   getBoundingClientRect() { return this.className === "book-glossary-popover"
     ? { left: 0, top: 0, right: 320, bottom: 200, width: 320, height: 200 }
     : { left: 50, top: 100, right: 90, bottom: 128, width: 40, height: 28 }; }
@@ -101,11 +114,12 @@ function offsetWithin(root, node, offset) {
   throw new Error("Range boundary is outside the canonical text");
 }
 class MockRange {
-  setStart(node, offset) { this.startContainer = node; this.startOffset = offset; this.root ||= node.parentElement.closest("p, h3, pre"); }
+  setStart(node, offset) { this.startContainer = node; this.startOffset = offset; this.root ||= node.parentElement.closest("p, h2, h3, pre"); }
   setEnd(node, offset) { this.endContainer = node; this.endOffset = offset; }
   selectNodeContents(node) { this.root = node; this.startContainer = node; this.startOffset = 0; this.endContainer = node; this.endOffset = node.childNodes.length; }
   cloneRange() { return Object.assign(new MockRange(), this); }
   toString() { return this.root.textContent.slice(offsetWithin(this.root, this.startContainer, this.startOffset), offsetWithin(this.root, this.endContainer, this.endOffset)); }
+  getBoundingClientRect() { return { left: 50, top: 100, right: 90, bottom: 128, width: 40, height: 28 }; }
 }
 function mockEnvironment() {
   const document = new MockElement("document", null); document.ownerDocument = document;
@@ -144,6 +158,77 @@ test("term wrappers retain canonical text, source breaks and annotation ranges a
   const section = { number: 1, edition_sha256: "a".repeat(64), blocks: [{ id: "block-1", text, modern: "" }] };
   const selected = selectionAnchor(content, section, { rangeCount: 1, isCollapsed: false, getRangeAt: () => range });
   assert.equal(selected.anchor.start, 1); assert.equal(selected.anchor.end, 7); assert.equal(selected.anchor.quote, annotation.quote);
+});
+
+test("actual opening title h2 in both reader layers supports selection, saved highlights and note location", async () => {
+  const { document, window } = mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  window.document = document; window.ResizeObserver = class {};
+  window.scrollY = 0; window.scrollTo = () => {};
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const { setupBookAnnotations } = await import("../web/public/next/ui/book-annotations.js?v=n37");
+  const { session } = await import("../web/public/next/lib/store.js?v=n37");
+  const { Decorator, DecorationController } = await import("../web/public/vendor/readium-decorator-1.2.5.js?v=n37");
+  const original = { fetch: globalThis.fetch, MessageChannel: globalThis.MessageChannel,
+    requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame,
+    mount: Decorator.prototype.mount, unmount: Decorator.prototype.unmount,
+    apply: DecorationController.prototype.applyDecorations, destroy: DecorationController.prototype.destroy,
+    session: session.get() };
+  const painted = [], cleanups = [];
+  // Keep the actual reader, anchor, note UI and decoration adapter. Only the
+  // vendor's browser paint backend is captured at its public adapter boundary.
+  Decorator.prototype.mount = () => true; Decorator.prototype.unmount = () => true;
+  DecorationController.prototype.applyDecorations = (values, group) => painted.push({ values, group });
+  DecorationController.prototype.destroy = () => {};
+  globalThis.MessageChannel = undefined;
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.cancelAnimationFrame = () => {};
+  const block = { id: "opening-heading", role: "heading", text: "占𠮷用神", modern: "读𠮷用神", notes: [],
+    terms: [occurrence(2, 4), occurrence(2, 4, "modern")] };
+  const before = structuredClone(block);
+  const section = { number: 4, edition_sha256: "a".repeat(64), blocks: [block] };
+  const items = ["original", "modern"].map(layer => ({ id: `heading-${layer}`, kind: "highlight", color: "yellow",
+    anchor_status: "matched", section_number: 4, edition_sha256: section.edition_sha256,
+    block_id: block.id, layer, start: 1, end: 4, quote: "𠮷用神" }));
+  globalThis.fetch = async (path, options) => {
+    assert.ok(path.startsWith("/api/books/synthetic-source/annotations?")); assert.equal(options.method, "GET");
+    return { ok: true, status: 200, text: async () => JSON.stringify({ items, total: 2 }) };
+  };
+  let annotations;
+  try {
+    session.set({ authenticated: true, user: { id: "synthetic-reader" } });
+    const content = document.createElement("div"); content.className = "book-reading-content"; document.body.append(content);
+    content.append(renderBookBlock(block, { hasModern: true, openingTitle: true,
+      renderText: (parts, terms, layer) => renderBookText(parts, terms, layer, senses()) }));
+    for (const item of items) {
+      const heading = content.querySelector(`.book-${item.layer} h2`);
+      assert.ok(heading); assert.equal(heading.textContent, item.layer === "original" ? block.text : block.modern);
+      assert.equal(heading.querySelector(".book-term").textContent, "用神");
+      const range = annotationRange(heading, item);
+      const selected = selectionAnchor(content, section, { rangeCount: 1, isCollapsed: false, getRangeAt: () => range });
+      assert.equal(selected.reason, ""); assert.equal(selected.anchor.block_id, block.id);
+      assert.equal(selected.anchor.layer, item.layer); assert.equal(selected.anchor.quote, "𠮷用神");
+      assert.deepEqual([selected.anchor.start, selected.anchor.end], [1, 4]);
+    }
+    annotations = setupBookAnnotations({ content, book: { id: "synthetic-source" }, getSection: () => section,
+      getMode: () => "parallel", ctx: { isCurrent: () => true, cleanup: callback => cleanups.push(callback) } });
+    annotations.onSection(section); await new Promise(resolve => setImmediate(resolve));
+    const marks = painted.find(({ group, values }) => group.startsWith("xz-book-marks-") && values.length === 2)?.values;
+    assert.ok(marks, "Both h2 anchors must reach the real decoration adapter");
+    for (const item of items) {
+      const heading = content.querySelector(`.book-${item.layer} h2`);
+      const mark = marks.find(value => value.id === item.id);
+      assert.equal(mark.locator.locations.serialize().cssSelector, `[data-book-decoration-node="${heading.getAttribute("data-book-decoration-node")}"]`);
+      assert.equal(annotations.locate(item), true, `Locate saved ${item.layer} h2 note`);
+    }
+    assert.deepEqual(block, before);
+  } finally {
+    cleanups.forEach(cleanup => cleanup());
+    session.set(original.session);
+    Decorator.prototype.mount = original.mount; Decorator.prototype.unmount = original.unmount;
+    DecorationController.prototype.applyDecorations = original.apply; DecorationController.prototype.destroy = original.destroy;
+    for (const key of ["fetch", "MessageChannel", "requestAnimationFrame", "cancelAnimationFrame"]) globalThis[key] = original[key];
+  }
 });
 
 test("glossary supports keyboard, touch, selection priority, readable hover and section cleanup", async () => {

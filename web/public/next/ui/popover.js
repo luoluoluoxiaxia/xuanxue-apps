@@ -1,11 +1,11 @@
 // 古典解读浮层：点命盘的一柱、大运、流年、流月，或卦盘的一爻，查看这一格的排盘事实与静态古籍释义。
 // 桌面为居中对话框，手机为底部面板（均由 openSheet 提供）。干支颜色、十神、藏干等全部取接口字段；
 // 释义是 lib/copy.js 里的静态模板，不调用解读接口，也不在客户端推算旺衰喜忌。
-import { h, reducedMotion } from "../lib/dom.js?v=n36";
-import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n36";
-import { openSheet, closeAllSheets } from "./overlay.js?v=n36";
-import { openGlossary } from "./glossary.js?v=n36";
-import { elementClass } from "./gua.js?v=n36";
+import { h, reducedMotion } from "../lib/dom.js?v=n37";
+import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n37";
+import { openSheet, closeAllSheets } from "./overlay.js?v=n37";
+import { openGlossary } from "./glossary.js?v=n37";
+import { elementClass } from "./gua.js?v=n37";
 
 const str = value => (value === null || value === undefined ? "" : String(value)).trim();
 const orDash = value => str(value) || "—";
@@ -150,8 +150,9 @@ export function yaoPop(yao = {}, options = {}) {
   const wuxing = str(yao.wuxing);
   const fu = yao.fu_shen || null;
   const bian = yao.bian || null;
+  const missingLiuShen = !!options.caseContext && !str(yao.liu_shen);
   const withElement = line => `${str(line.liu_qin)}${str(line.najia)}${line.wuxing ? `（${line.wuxing}）` : ""}`;
-  const classic = `${pos} ${najia}${wuxing ? `（${wuxing}）` : ""}，六亲为${orDash(yao.liu_qin)}，临${orDash(yao.liu_shen)}。`
+  const classic = `${pos} ${najia}${wuxing ? `（${wuxing}）` : ""}，六亲为${orDash(yao.liu_qin)}，${missingLiuShen ? "六神未载" : `临${orDash(yao.liu_shen)}`}。`
     + (yao.moving ? `此爻发动${yao.old_young ? `（${yao.old_young}）` : ""}，动则有变。` : "此爻安静。")
     + (fu ? `本爻之下伏${str(fu.liu_qin)}${str(fu.najia)}。` : "");
   return openChartPop({
@@ -166,7 +167,7 @@ export function yaoPop(yao = {}, options = {}) {
     facts: [
       ["纳甲", `${najia}${wuxing ? `（${wuxing}）` : ""}`],
       ["六亲", yao.liu_qin],
-      ["六神", yao.liu_shen],
+      ["六神", missingLiuShen ? "未载" : yao.liu_shen],
       ["动静", yao.moving ? ["动", str(yao.old_young)].filter(Boolean).join(" · ") : "静"],
       yao.shi ? ["世应", "世爻"] : null,
       yao.ying ? ["世应", "应爻"] : null,

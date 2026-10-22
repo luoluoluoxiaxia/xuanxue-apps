@@ -132,6 +132,28 @@ function environment(query = "", id = "") {
 environment();
 const { render } = await import("../web/public/next/views/book-cases.js");
 const tick = () => new Promise(resolve => setImmediate(resolve));
+test("reader directories keep case access beside existing links without adding a header row", async () => {
+  environment();
+  globalThis.cancelAnimationFrame = () => {};
+  const { createBookSidebar, openBookContents } = await import("../web/public/next/ui/book-tools.js");
+  const options = { book: { id: "display-book", title: "展示书", section_count: 1 }, contents: [], current: 1,
+    onSelect() {}, onNotes() {}, onCollapse() {}, libraryPath: "#/books?view=learning", libraryLabel: "返回学习路线" };
+  const casePath = "/book-cases?book_id=display-book&from=learning";
+  const sidebar = createBookSidebar({ ...options, casePath });
+  assert.equal(byText(sidebar.node, "a", "本书案例").getAttribute("href"), `#${casePath}`);
+  assert.equal(byText(sidebar.node, "a", "返回学习路线").getAttribute("href"), options.libraryPath);
+  sidebar.destroy();
+  const empty = createBookSidebar(options);
+  assert.equal(byText(empty.node, "a", "本书案例"), undefined);
+  empty.destroy();
+  const sheet = openBookContents({ ...options, casePath });
+  assert.equal(byText(document.body, "a", "本书案例").getAttribute("href"), `#${casePath}`);
+  assert.equal(byText(document.body, "a", "本书案例").parentElement.className, "book-contents-links");
+  sheet.close("route");
+  const noCase = openBookContents(options);
+  assert.equal(byText(document.body, "a", "本书案例"), undefined);
+  noCase.close("route");
+});
 const book = { id: "ziping-zhenquan", title: "子平真诠", case_count: 1 };
 // Synthetic display data, not a transcription of a historical person's chart.
 const summary = { id: "display-example", book_id: book.id, book_title: book.title, title: "展示测试案例", kind: "named_case", summary: "原书分析与四柱。" };
@@ -305,11 +327,11 @@ test("an incomplete source mention puts the exact full-paragraph modern text fir
   assert.equal(article.querySelector(".book-case-text").textContent, data.modern_context);
   assert.equal(article.querySelectorAll(".book-case-modern").length, 1);
   assert.equal(byText(article, "h2", "原书分析"), undefined);
-  assert.equal(byText(article, "h2", "书载结果"), undefined);
+  assert.equal(article.childNodes.filter(node => node.tagName === "SECTION" && node.querySelector("h2")?.textContent === "书载结果").length, 0);
   const disclosures = tags(article, "details");
   assert.equal(disclosures.length, 2);
   assert.ok(disclosures.every(details => !details.open && details.getAttribute("open") === null));
-  assert.match(disclosures[0].textContent, /原文摘句甲子原句。事实原句事实逐字原句判断原句作者判断原句结果原句结果逐字原句/);
+  assert.match(disclosures[0].textContent, /原文摘句甲子原句。书载信息事实逐字原句作者判断作者判断原句书载结果结果逐字原句/);
   assert.match(result.node.textContent, /原书未载完整排盘条件，暂不能复盘。/);
   assert.doesNotMatch(result.node.textContent, /盘面暂时没有打开|逐句译文|独立人物|同一人物/);
   assert.equal(result.node.querySelector(".chart-panel"), null);
@@ -322,7 +344,77 @@ test("an incomplete source mention puts the exact full-paragraph modern text fir
   env.cleanup();
 });
 
-test("hypothetical and rule entries never request or invent a chart even when the source excerpt contains four pillars", async () => {
+test("supporting contexts fold the shared setup, keep its exact translation first and preserve safe reading links", async () => {
+  const env = environment("from=learning", "supported-mention"), paths = [];
+  const data = { ...caseDetail(), id: "supported-mention", study_format: "source_mention", chart_status: "incomplete",
+    supporting_contexts: [
+      { title: "共同题设", original: "𠀀原表\n初爻\t<script>原句</script>", modern: "𠀀对应段白话。\n若有此条件，才作此判断。<img onerror=alert(1)>",
+        location: "合成底本第 1 页", reading_path: "/books/ziping-zhenquan?page=2" },
+      { title: "相关原表", original: "只有原文的完整表。\n第二行。", modern: "", location: "合成底本第 2 页", reading_path: "/books/ziping-zhenquan?page=3" },
+      { title: "另一相关段", original: "另一段原文。", modern: "另一段白话。", location: "合成底本第 3 页", reading_path: "/books/other-book?page=4" },
+    ] };
+  const before = structuredClone(data);
+  const result = render(env.ctx, async path => { paths.push(path); return data; }); await tick();
+  const article = result.node.querySelector(".book-case-analysis");
+  assert.equal(article.childNodes[0].querySelector("h2").textContent, "所在段白话");
+  assert.equal(article.childNodes[0].querySelector(".book-case-text").textContent, data.modern_context);
+  const disclosure = byText(article, "summary", "题设与相关段落").parentElement;
+  assert.equal(disclosure.tagName, "DETAILS");
+  assert.ok(tags(disclosure, "details").every(node => !node.open && node.getAttribute("open") === null));
+  const sections = tags(disclosure, "section");
+  assert.equal(sections.length, 3);
+  assert.deepEqual(sections.map(node => tags(node, "h3")[0].textContent), data.supporting_contexts.map(context => context.title));
+  assert.equal(sections[0].querySelector(".book-case-text").textContent, data.supporting_contexts[0].modern);
+  assert.ok(byText(sections[0], "p", "对应段白话"));
+  const original = byText(sections[0], "summary", "查看对应原文").parentElement;
+  assert.equal(original.querySelector(".book-case-original").textContent, data.supporting_contexts[0].original);
+  assert.ok(all(sections[0]).indexOf(sections[0].querySelector(".book-case-text")) < all(sections[0]).indexOf(original));
+  assert.equal(tags(sections[1], "details").length, 0);
+  assert.equal(byText(sections[1], "p", "对应段白话"), undefined);
+  assert.ok(byText(sections[1], "p", "对应段原文"));
+  assert.equal(sections[1].querySelector(".book-case-original").textContent, data.supporting_contexts[1].original);
+  assert.match(sections[0].textContent, /合成底本第 1 页/);
+  assert.equal(tags(sections[0], "a")[0].getAttribute("href"), "#/books/ziping-zhenquan?page=2&from=learning");
+  assert.equal(tags(sections[1], "a")[0].getAttribute("href"), "#/books/ziping-zhenquan?page=3&from=learning");
+  assert.match(sections[2].textContent, /另一段白话.*合成底本第 3 页/);
+  assert.equal(tags(sections[2], "a").length, 0);
+  assert.equal(tags(result.node, "script").length, 0); assert.equal(tags(result.node, "img").length, 0);
+  assert.match(disclosure.textContent, /<script>原句<\/script>/);
+  assert.match(disclosure.textContent, /<img onerror=alert\(1\)>/);
+  assert.equal(tags(result.node, "header").length, 1);
+  assert.deepEqual(paths, ["/api/book-cases/supported-mention"]);
+  assert.deepEqual(data, before);
+  env.cleanup();
+});
+
+test("absent or empty supporting contexts add no nodes to the existing source mention tree", async () => {
+  const shape = node => ({ tag: node.tagName, data: node.data, className: node.className,
+    attributes: [...node.attributes], children: node.childNodes.map(shape) });
+  let legacyShape;
+  for (const supporting_contexts of [undefined, []]) {
+    const env = environment("", "source-without-support");
+    const data = { ...caseDetail(), id: "source-without-support", study_format: "source_mention", chart_status: "incomplete" };
+    if (supporting_contexts !== undefined) data.supporting_contexts = supporting_contexts;
+    const result = render(env.ctx, async () => data); await tick();
+    const article = result.node.querySelector(".book-case-analysis");
+    assert.equal(byText(article, "summary", "题设与相关段落"), undefined);
+    assert.deepEqual(article.childNodes.map(node => node.tagName), ["SECTION", "DETAILS", "DETAILS", "FOOTER"]);
+    assert.equal(tags(article, "details").length, 2);
+    if (!legacyShape) legacyShape = shape(result.node);
+    else assert.deepEqual(shape(result.node), legacyShape);
+    env.cleanup();
+  }
+  const env = environment("", "legacy-card");
+  const data = { ...caseDetail(), id: "legacy-card", chart_status: "incomplete", supporting_contexts: [
+    { title: "仅供源提及的上下文", original: "原段。", modern: "白话。", location: "第 1 页", reading_path: "/books/ziping-zhenquan?page=2" },
+  ] };
+  const result = render(env.ctx, async () => data); await tick();
+  assert.equal(byText(result.node, "summary", "题设与相关段落"), undefined);
+  assert.equal(tags(result.node.querySelector(".book-case-analysis"), "details").length, 2);
+  env.cleanup();
+});
+
+test("unselected hypothetical and rule entries never infer a chart from four quoted pillars", async () => {
   for (const kind of ["hypothetical", "rule_example"]) {
     const env = environment("", `${kind}-mention`), paths = [];
     const data = { ...caseDetail(), id: `${kind}-mention`, kind, study_format: "source_mention", chart_status: "not_applicable" };
@@ -335,6 +427,26 @@ test("hypothetical and rule entries never request or invent a chart even when th
     assert.doesNotMatch(result.node.textContent, /盘面暂时没有打开|修改信息|出生日期/);
     env.cleanup();
   }
+});
+
+test("an explicitly available hypothetical exercise retains its category and opens the real shared six-line panel", async () => {
+  const env = environment("kind=hypothetical", "exercise-example"), paths = [];
+  const data = { ...caseDetail(), id: "exercise-example", kind: "hypothetical", study_format: "source_mention" };
+  const chart = { ...liuyaoCaseChart(data.id), source_label: "《测试书》假设推演练习" };
+  const result = render(env.ctx, async path => { paths.push(path); return path.endsWith("/chart") ? chart : data; });
+  document.body.append(result.node); await tick();
+  const panel = result.node.querySelector(".book-case-full-chart");
+  assert.equal(panel.getAttribute("aria-label"), "推演练习盘");
+  assert.equal(tags(panel.querySelector("tbody"), "tr").length, 6);
+  assert.match(result.node.textContent, /六爻 · 假设推演/);
+  assert.match(panel.textContent, /假设推演练习/);
+  const strip = result.node.querySelector(".book-case-chart-strip");
+  assert.equal(strip.getAttribute("aria-label"), "查看完整推演练习盘");
+  strip.emit("click");
+  assert.match(document.body.querySelector(".sheet-chart").textContent, /推演练习盘.*师之涣/);
+  assert.deepEqual(paths, ["/api/book-cases/exercise-example", "/api/book-cases/exercise-example/chart"]);
+  assert.equal(data.kind, "hypothetical");
+  env.cleanup();
 });
 
 test("a complete source mention keeps the primary paragraph readable while its real shared chart loads separately", async () => {
@@ -386,9 +498,34 @@ test("six-line cases use the actual shared paipan and immutable source links wit
   row.emit("click");
   const pop = document.body.querySelector(".sheet-pop");
   assert.match(pop.textContent, /盘面释读供对照，原书判断见案例正文。/);
+  assert.match(pop.querySelector(".pop-classic").textContent, /临玄武。/);
   assert.doesNotMatch(pop.textContent, /回到断卦|回到断卦对话继续问/);
   byText(pop, "button", "返回卦盘").emit("click");
   await tick();
+  assert.ok(document.body.querySelector(".sheet-chart"));
+  env.cleanup();
+  assert.equal(document.body.querySelector(".overlay"), null);
+});
+
+test("book cases without a recorded day show unknown six spirits in the real shared line popover", async () => {
+  const env = environment("", "unknown-day-example");
+  const data = { ...caseDetail(), id: "unknown-day-example", kind: "unnamed_case", study_format: "source_mention" };
+  const chart = liuyaoCaseChart(data.id);
+  chart.missing = ["月建", "日辰、六神与旬空"];
+  Object.assign(chart.payload, { month_jian: null, day_chen: null, xun_kong: null });
+  chart.payload.yaos = chart.payload.yaos.map(yao => ({ ...yao, liu_shen: null, kong: null, to_month: null, to_day: null }));
+  const result = render(env.ctx, detailRequest(data, chart));
+  document.body.append(result.node); await tick();
+  result.node.querySelector(".book-case-chart-strip").emit("click");
+  const sheet = document.body.querySelector(".sheet-chart");
+  assert.match(sheet.textContent, /未载/);
+  sheet.querySelector("tbody").querySelector("tr").emit("click");
+  const pop = document.body.querySelector(".sheet-pop");
+  assert.match(pop.querySelector(".pop-classic").textContent, /六神未载。/);
+  assert.doesNotMatch(pop.textContent, /临—|青龙|朱雀|勾陈|螣蛇|白虎|玄武/);
+  const fact = pop.querySelector(".pop-facts").childNodes.find(node => tags(node, "dt")[0]?.textContent === "六神");
+  assert.equal(tags(fact, "dd")[0].textContent, "未载");
+  byText(pop, "button", "返回卦盘").emit("click"); await tick();
   assert.ok(document.body.querySelector(".sheet-chart"));
   env.cleanup();
   assert.equal(document.body.querySelector(".overlay"), null);

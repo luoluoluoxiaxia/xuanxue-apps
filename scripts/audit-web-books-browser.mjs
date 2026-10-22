@@ -237,8 +237,8 @@ function inspectReader({ book, section, mode }) {
   section.blocks.forEach((expected, index) => {
     const element = blocks[index];
     if (!element) return;
-    const original = element.querySelector('.book-original > p, .book-original > pre, .book-original > h3');
-    const modern = element.querySelector('.book-modern > p');
+    const original = element.querySelector('.book-original > p, .book-original > pre, .book-original > h2, .book-original > h3');
+    const modern = element.querySelector('.book-modern > p, .book-modern > h2, .book-modern > h3, .book-modern > pre');
     const notes = [...element.querySelectorAll('.book-notes > p')];
     if (original?.textContent !== expected.text) fail('original-text', 'Original text differs byte for byte.', { index });
     if ((modern?.textContent || '') !== expected.modern) fail('modern-text', 'Modern text differs byte for byte.', { index });

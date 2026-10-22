@@ -9,14 +9,40 @@ class MockNode {
   constructor(tagName = "", data = "") {
     this.tagName = tagName.toUpperCase(); this.data = data; this.childNodes = [];
     this.attributes = new Map(); this.listeners = new Map(); this.open = false;
+    this.dataset = {};
+    this.style = { setProperty(name, value) { this[name] = value; } };
+    this.classList = {
+      contains: name => String(this.className || "").split(" ").includes(name),
+      add: name => { this.className = `${this.className || ""} ${name}`.trim(); },
+      remove: name => { this.className = String(this.className || "").split(" ").filter(value => value !== name).join(" "); },
+    };
   }
   append(...children) { for (const child of children) { child.parentElement = this; this.childNodes.push(child); } }
+  replaceChildren(...children) { this.childNodes = []; this.append(...children); }
+  after(node) { const siblings = this.parentElement.childNodes; node.parentElement = this.parentElement; siblings.splice(siblings.indexOf(this) + 1, 0, node); }
+  remove() { if (this.parentElement) this.parentElement.childNodes = this.parentElement.childNodes.filter(node => node !== this); }
+  get children() { return this.childNodes.filter(node => node.tagName); }
   set textContent(value) { this.childNodes = [new MockNode("", String(value))]; }
   get textContent() { return this.tagName ? this.childNodes.map(child => child.textContent).join("") : this.data; }
-  set innerHTML(_) { throw new Error("Source must never be parsed as HTML"); }
+  set innerHTML(value) {
+    assert.equal(this.tagName, "TEMPLATE", "Source must never be parsed as HTML");
+    assert.match(value, /^<svg\b/);
+    this.content = { firstElementChild: new MockNode("svg") };
+  }
   setAttribute(name, value) { this.attributes.set(name, String(value)); }
-  getAttribute(name) { return this.attributes.get(name) ?? null; }
+  getAttribute(name) { return this.attributes.get(name) ?? (name.startsWith("data-") ? this.dataset[name.slice(5).replace(/-([a-z])/g, (_, char) => char.toUpperCase())] ?? null : null); }
+  removeAttribute(name) { this.attributes.delete(name); }
   addEventListener(name, handler) { this.listeners.set(name, handler); }
+  removeEventListener(name, handler) { if (this.listeners.get(name) === handler) this.listeners.delete(name); }
+  contains(node) { return node === this || this.childNodes.some(child => child.contains(node)); }
+  matches(selector) {
+    const attr = selector.match(/^(.*?)\[([^=\]]+)(?:="([^"]*)")?\]$/);
+    if (attr) return (!attr[1] || this.matches(attr[1])) && this.getAttribute(attr[2]) !== null && (attr[3] === undefined || this.getAttribute(attr[2]) === attr[3]);
+    return selector.startsWith(".") ? this.classList.contains(selector.slice(1)) : this.tagName === selector.toUpperCase();
+  }
+  querySelectorAll(selector) { return all(this).slice(1).filter(node => selector.split(",").some(value => node.matches(value.trim()))); }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+  getBoundingClientRect() { return { top: 0, bottom: 100, height: 100, left: 0, width: 400 }; }
   scrollIntoView() { this.scrolled = true; }
   focus() { this.focused = true; }
 }
@@ -30,6 +56,45 @@ function environment() {
 }
 const version = "reading-20261022-synthetic";
 function render(text, context, doc = environment()) { return renderEditionText(version, text, context, doc); }
+
+test("the actual reader block renders one title in each language layer and preserves its source anchor and notes", async () => {
+  globalThis.Node = MockNode;
+  globalThis.document = { ...environment(), addEventListener() {}, removeEventListener() {} };
+  globalThis.location = { hash: "", search: "", origin: "https://example.test" };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const { renderBookText } = await import("../web/public/next/ui/book-glossary.js");
+  const renderText = (parts, terms, layer) => renderBookText(parts, terms, layer, new Map());
+  const block = { id: "b-opening-source-1", role: "heading", text: "占法卦數", modern: "占法卦数",
+    notes: ["源题名保留。"], terms: [] };
+  const before = structuredClone(block);
+  const node = renderBookBlock(block, { hasModern: true, hasFigure: false, openingTitle: true, renderText });
+  const layer = name => all(node).find(child => child.className === name);
+  assert.equal(node.dataset.blockId, block.id);
+  assert.deepEqual(tags(layer("book-original"), "h2").map(item => item.textContent), [block.text]);
+  assert.deepEqual(tags(layer("book-modern"), "h2").map(item => item.textContent), [block.modern]);
+  assert.equal(tags(node, "h3").length, 0);
+  assert.ok(tags(node, "details").some(item => item.textContent.includes(block.notes[0])));
+  // Existing mode CSS selects these exact language-layer nodes. Each surviving
+  // column has one real h2, including modern-only mode where original is hidden.
+  const css = readFileSync(new URL("../web/public/next/next-books.css", import.meta.url), "utf8");
+  assert.ok(css.includes('[data-mode="original"] .book-modern { display: none; }'));
+  assert.ok(css.includes('[data-mode="modern"] .book-block:has(.book-modern) .book-original { display: none; }'));
+  for (const mode of ["original", "modern", "parallel"]) {
+    const columns = mode === "parallel" ? ["book-original", "book-modern"] : [`book-${mode}`];
+    for (const name of columns) assert.equal(tags(layer(name), "h2").length, 1, `${mode} ${name}`);
+  }
+  const subheading = renderBookBlock(block, { hasModern: true, hasFigure: false, openingTitle: false, renderText });
+  assert.equal(tags(subheading, "h2").length, 0);
+  assert.equal(tags(subheading, "h3").length, 2);
+  for (const attribution of ["原注", "原書欄外小字，歸屬未定", "某氏評注"]) {
+    const note = renderBookBlock({ ...block, role: "note", text: "原注内容。", attribution }, { hasModern: true, renderText });
+    const labels = all(note).filter(item => String(item.className || "").split(" ").includes("book-layer") &&
+      item.parentElement.className === "book-original");
+    assert.deepEqual(labels.map(item => item.textContent), [attribution]);
+  }
+  assert.deepEqual(block, before);
+});
 
 // Actual 2026-10-22 Ziping reading segments, reduced to the fields used for
 // navigation. Source paragraph numbers and the fifteen boundaries are frozen
@@ -557,16 +622,104 @@ test("footnote display numbers stay stable when navigating to another chapter", 
   assert.equal(note.textContent, "3. third note"); assert.equal(note.getAttribute("id"), "reading-footnote-3");
 });
 
-test("library titles open catalogs and primary entries open current or saved electronic reading", () => {
+test("library titles keep version catalogs and reader cards use the shared progress selector", () => {
   const source = readFileSync(new URL("../web/public/next/views/books.js", import.meta.url), "utf8");
   const library = source.slice(source.indexOf("function library(ctx)"), source.indexOf("function reader(ctx)"));
   assert.ok(library.includes("const catalogPath = textVersionPath(book.id)"));
   assert.match(library, /h\("h2", null, h\("a", \{ href: `#\$\{catalogPath\}` \}/);
-  assert.ok(library.includes('const openPath = saved ? textVersionPath(book.id, saved.versionId, saved.sectionId, { resume: true }) : textVersionPath(book.id, "current")'));
+  assert.ok(library.includes('const entry = book => bookReadingEntry(book, { reading: local.json(bookReadingKeys(book).position), text: local.json(textRecentKey(book.id)) })'));
+  assert.ok(library.includes('const openPath = target.path'));
   assert.match(library, /class: "btn btn-soft books-electronic-open", href: `#\$\{openPath\}`/);
-  assert.ok(library.includes('saved ? "继续" : "阅读"'));
-  assert.ok(library.includes("继续历史阅读稿"));
-  assert.ok(source.includes("publishedBook.source_label} · 原文白话对照"));
-  assert.match(source, /hasHistorical && publishedBook\.has_modern \? h\("a", \{ href: `#\$\{links\.reading\(id\)\}`/);
+  assert.ok(library.includes('target.continuing ? "继续" : "阅读"'));
+  assert.ok(!library.includes("历史阅读稿"));
+  assert.ok(source.includes('"原文与白话阅读"'));
+  assert.ok(source.includes('whitePosition ? whitePosition.number : bookDefaultSectionNumber(publishedBook)'));
+  assert.ok(source.includes('"Markdown 原文阅读版"'));
+  assert.match(source, /hasWhite \? h\("section", \{ class: "books-card book-version-card book-version-primary"/);
   assert.ok(source.includes("原文阅读稿"));
+});
+
+test("the real library, reader and version catalog isolate a new layout from an old page 29 and resume only its own saved progress", async () => {
+  const storage = new Map();
+  globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
+  globalThis.Node = MockNode; globalThis.Element = MockNode;
+  globalThis.location = { hash: "#/books", search: "", origin: "https://example.test" };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
+  const { render: renderBooks } = await import("../web/public/next/views/books.js");
+  const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
+  const book = { id: "layout-progress-test", title: "目录进度测试书", system: "liuyao", source_label: "测试底本", status: "reading_edition",
+    has_modern: true, section_count: 85, default_section_number: 4, reading_layout_id: "db1d3509b7ead1e8", case_count: 0 };
+  const olderBook = { ...book, id: "legacy-progress-test", reading_layout_id: undefined, section_count: 33, default_section_number: 1 };
+  const oldKeys = bookReadingKeys({ id: book.id }); const keys = bookReadingKeys(book);
+  const oldPosition = JSON.stringify({ number: 29, anchor: 4, offset: .3, updatedAt: 500 });
+  storage.set(oldKeys.progress, "29"); storage.set(oldKeys.position, oldPosition);
+  storage.set(bookReadingKeys(olderBook).progress, "29");
+  storage.set(bookReadingKeys(olderBook).position, oldPosition);
+  const paths = []; const previousFetch = globalThis.fetch;
+  globalThis.fetch = async path => {
+    paths.push(path);
+    const selected = path.includes(olderBook.id) ? olderBook : book;
+    const contents = Array.from({ length: selected.section_count }, (_, index) => ({ number: index + 1, title: `篇${index + 1}`, location: "测试来源", partial: false }));
+    const match = path.match(/\/sections\/(\d+)$/);
+    const data = path === "/api/books" ? { books: [book, olderBook] }
+      : path.endsWith("/text-versions") ? { title: selected.title, versions: [], gap_note: "测试收录说明" }
+      : match ? { book_id: selected.id, number: Number(match[1]), title: `篇${match[1]}`, location: "测试来源", partial: false,
+        notice: "", page_notes: [], figures: [], blocks: [{ id: `test-block-${match[1]}`, role: "text", text: "测试原文。", modern: "测试白话。", notes: [] }] }
+      : { book: selected, contents };
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  function mount(id = "", query = "") {
+    globalThis.document = { ...environment(), documentElement: new MockNode("html"), addEventListener() {}, removeEventListener() {} };
+    globalThis.window = { scrollY: 0, addEventListener() {}, removeEventListener() {}, getSelection: () => null, scrollTo() {},
+      matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }) };
+    const cleanups = []; let current = true;
+    const ctx = { params: { id }, query: new URLSearchParams(query), cleanup: fn => cleanups.push(fn), onRefresh() {},
+      isCurrent: () => current, setTitle() {}, navigate() {} };
+    const view = renderBooks(ctx); document.body.append(view.node);
+    for (const node of all(view.node)) node.offsetHeight = 0;
+    return { node: view.node, cleanup() { cleanups.forEach(fn => fn()); current = false; } };
+  }
+  const ready = async () => { for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve)); };
+  const whiteLink = node => tags(node, "a").find(link => /^(阅读|继续)原文白话$/.test(link.textContent));
+  try {
+    let view = mount(); await ready();
+    assert.equal(tags(view.node, "a").find(link => link.getAttribute("aria-label") === `阅读${book.title}`).getAttribute("href"), `#/books/${book.id}?page=4`);
+    view.cleanup();
+    view = mount(book.id, "text-version=catalog"); await ready();
+    assert.equal(whiteLink(view.node).textContent, "阅读原文白话");
+    assert.equal(whiteLink(view.node).getAttribute("href"), `#/books/${book.id}?page=4`);
+    view.cleanup();
+    view = mount(book.id); await ready();
+    assert.ok(paths.includes(`/api/books/${book.id}/sections/4`));
+    assert.ok(!paths.includes(`/api/books/${book.id}/sections/29`));
+    assert.equal(storage.get(keys.progress), "4");
+    assert.equal(JSON.parse(storage.get(keys.position)).number, 4);
+    view.cleanup();
+    view = mount(book.id, "page=29"); await ready();
+    assert.ok(paths.includes(`/api/books/${book.id}/sections/29`), "an explicit case page remains reachable");
+    view.cleanup();
+    view = mount(book.id, "page=82"); await ready(); view.cleanup();
+    assert.equal(storage.get(keys.progress), "82");
+    assert.equal(JSON.parse(storage.get(keys.position)).number, 82);
+    const start = paths.length;
+    view = mount(book.id); await ready();
+    assert.ok(paths.slice(start).includes(`/api/books/${book.id}/sections/82`));
+    view.cleanup();
+    view = mount(book.id, "text-version=catalog"); await ready();
+    assert.equal(whiteLink(view.node).textContent, "继续原文白话");
+    assert.equal(whiteLink(view.node).getAttribute("href"), `#/books/${book.id}?page=82`);
+    view.cleanup();
+    view = mount(olderBook.id); await ready();
+    assert.ok(paths.includes(`/api/books/${olderBook.id}/sections/29`));
+    view.cleanup();
+    const text = { versionId: "frozen-md-one", sectionId: "body-one", title: "冻结MD原文", updatedAt: Date.now() + 10000 };
+    storage.set(`xz-book-text-recent:${book.id}`, JSON.stringify(text));
+    view = mount(); await ready();
+    assert.equal(tags(view.node, "a").find(link => link.getAttribute("aria-label") === `继续阅读${book.title}`).getAttribute("href"), `#/books/${book.id}?text-version=frozen-md-one&chapter=body-one&resume=1`);
+    view.cleanup();
+    assert.equal(storage.get(oldKeys.progress), "29");
+    assert.equal(storage.get(oldKeys.position), oldPosition);
+  } finally { globalThis.fetch = previousFetch; }
 });
