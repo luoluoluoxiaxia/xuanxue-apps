@@ -1,25 +1,26 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n33";
-import { icon, brandMark } from "./lib/icons.js?v=n33";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n33";
-import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n33";
-import { get } from "./lib/api.js?v=n33";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n33";
-import { toast } from "./ui/toast.js?v=n33";
-import { openAuth } from "./views/auth.js?v=n33";
-import * as FeedView from "./views/feed.js?v=n33";
-import * as PostView from "./views/post.js?v=n33";
-import * as AskView from "./views/ask.js?v=n33";
-import * as ReadingView from "./views/reading.js?v=n33";
-import * as TodayView from "./views/today.js?v=n33";
-import * as InboxView from "./views/inbox.js?v=n33";
-import * as MeView from "./views/me.js?v=n33";
-import * as BooksView from "./views/books.js?v=n33";
-import * as RoadmapView from "./views/roadmap.js?v=n33";
-import * as LearnView from "./views/learn.js?v=n33";
-import { openFeedback } from "./views/feedback.js?v=n33";
-import { routeFromLegacy } from "./lib/legacy.js?v=n33";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n34";
+import { icon, brandMark } from "./lib/icons.js?v=n34";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n34";
+import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n34";
+import { get } from "./lib/api.js?v=n34";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n34";
+import { toast } from "./ui/toast.js?v=n34";
+import { openAuth } from "./views/auth.js?v=n34";
+import * as FeedView from "./views/feed.js?v=n34";
+import * as PostView from "./views/post.js?v=n34";
+import * as AskView from "./views/ask.js?v=n34";
+import * as ReadingView from "./views/reading.js?v=n34";
+import * as TodayView from "./views/today.js?v=n34";
+import * as InboxView from "./views/inbox.js?v=n34";
+import * as MeView from "./views/me.js?v=n34";
+import * as BooksView from "./views/books.js?v=n34";
+import * as BookCasesView from "./views/book-cases.js?v=n34";
+import * as RoadmapView from "./views/roadmap.js?v=n34";
+import * as LearnView from "./views/learn.js?v=n34";
+import { openFeedback } from "./views/feedback.js?v=n34";
+import { routeFromLegacy } from "./lib/legacy.js?v=n34";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -85,13 +86,15 @@ export async function requireAuth(reason, { mode = "", force = false } = {}) {
 // 首页就是「问」：大多数人来这里是为了问一件具体的事；广场是看看别人问了什么。
 const isAskPath = path => path === "/" || path.startsWith("/ask");
 const isPlazaPath = path => path.startsWith("/square") || path.startsWith("/post");
-// 没有站内上一页（例如从分享链接直接打开）时「返回」去哪：帖子回广场，消息回「我」，其余回首页。
-const backFallback = path => (isPlazaPath(path) ? "/square" : path.startsWith("/inbox") ? "/me" : "/");
+// 分享链接直接打开时，返回所属列表；案例仍归于书库。
+const isBooksPath = path => path.startsWith("/books") || path === "/book-cases" || path.startsWith("/book-cases/");
+const backFallback = path => (isPlazaPath(path) ? "/square" : path.startsWith("/inbox") ? "/me"
+  : path.startsWith("/book-cases/") ? "/book-cases" : isBooksPath(path) ? "/books" : "/");
 const NAV = [
   { key: "ask", label: "问", href: "#/", glyph: "message", match: isAskPath },
   { key: "plaza", label: "广场", href: "#/square", glyph: "plaza", match: isPlazaPath },
   { key: "today", label: "今日", href: "#/today", glyph: "sun", match: path => path.startsWith("/today") },
-  { key: "books", label: "书库", href: "#/books", glyph: "book", match: path => path.startsWith("/books") },
+  { key: "books", label: "书库", href: "#/books", glyph: "book", match: isBooksPath },
   { key: "mine", label: "我的盘", href: "#/me/archives", glyph: "layers", match: path => path.startsWith("/me/archives") || path.startsWith("/reading") },
   { key: "roadmap", label: "路线图", href: "#/roadmap", glyph: "compass", match: path => path === "/roadmap" },
 ];
@@ -273,7 +276,7 @@ function syncNav(path) {
   const tabKey = isAskPath(path) ? "ask"
     : isPlazaPath(path) ? "plaza"
       : path.startsWith("/today") ? "today"
-        : path.startsWith("/books") ? "books"
+        : isBooksPath(path) ? "books"
           : path.startsWith("/me") || path.startsWith("/reading") || path.startsWith("/inbox") ? "me" : "";
   shell.tabbar.querySelectorAll("[data-tab]").forEach(link => {
     if (link.dataset.tab === tabKey) link.setAttribute("aria-current", "page");
@@ -432,6 +435,8 @@ const ROUTES = [
   { path: "/today", view: TodayView },
   { path: "/books", view: BooksView },
   { path: "/books/:id", view: BooksView },
+  { path: "/book-cases", view: BookCasesView },
+  { path: "/book-cases/:id", view: BookCasesView },
   { path: "/roadmap", view: RoadmapView },
   { path: "/learn/:system", view: LearnView },
   { path: "/inbox", view: InboxView },

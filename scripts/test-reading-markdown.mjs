@@ -566,6 +566,7 @@ test("library titles open catalogs and primary entries open current or saved ele
   assert.match(library, /class: "btn btn-soft books-electronic-open", href: `#\$\{openPath\}`/);
   assert.ok(library.includes('saved ? "继续" : "阅读"'));
   assert.ok(library.includes("继续历史阅读稿"));
-  assert.ok(source.includes("收录说明与历史阅读稿"));
-  assert.match(source, /href: `#\$\{links\.reading\(id\)\}` \}, "打开历史阅读稿"/);
+  assert.ok(source.includes("publishedBook.source_label} · 原文白话对照"));
+  assert.match(source, /hasHistorical && publishedBook\.has_modern \? h\("a", \{ href: `#\$\{links\.reading\(id\)\}`/);
+  assert.ok(source.includes("原文阅读稿"));
 });
