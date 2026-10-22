@@ -1,17 +1,17 @@
 // 我的：个人主页、我的盘（档案）、积分与充值、设置——四个标签页共用一个外壳。
 // 账户、额度、档案与充值状态都以服务端返回为准；这里只负责展示与提交。
-import { h, reducedMotion } from "../lib/dom.js?v=n28";
-import { icon } from "../lib/icons.js?v=n28";
-import { get, post, put, patch, del, query } from "../lib/api.js?v=n28";
-import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n28";
-import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n28";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n28";
-import { pillarsToken } from "../ui/gua.js?v=n28";
-import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n28";
-import { toast } from "../ui/toast.js?v=n28";
-import { copyText } from "../lib/share.js?v=n28";
-import { openFeedback } from "./feedback.js?v=n28";
-import { removePost } from "./feed.js?v=n28";
+import { h, reducedMotion } from "../lib/dom.js?v=n29";
+import { icon } from "../lib/icons.js?v=n29";
+import { get, post, put, patch, del, query } from "../lib/api.js?v=n29";
+import { session, inbox, applyAccount, refreshSession } from "../lib/store.js?v=n29";
+import { relativeTime, fullTime, shortDate, money, plainExcerpt } from "../lib/format.js?v=n29";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n29";
+import { pillarsToken } from "../ui/gua.js?v=n29";
+import { openSheet, confirmDialog, openMenu } from "../ui/overlay.js?v=n29";
+import { toast } from "../ui/toast.js?v=n29";
+import { copyText } from "../lib/share.js?v=n29";
+import { openFeedback } from "./feedback.js?v=n29";
+import { removePost } from "./feed.js?v=n29";
 
 const TABS = [
   { key: "", label: "主页", href: "#/me", glyph: "user", title: "我的" },

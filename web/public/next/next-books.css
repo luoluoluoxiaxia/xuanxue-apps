@@ -335,7 +335,9 @@
 .book-electronic-details p, .book-section-source p { line-height: 1.8; white-space: pre-wrap; }
 .book-electronic-details .book-text-downloads, .book-section-source .book-text-downloads { padding: 0 16px; }
 @media (min-width: 1100px) {
+  .book-electronic-controls .book-electronic-select { display: none; }
   .book-electronic-contents-open { display: none; }
+  .book-electronic-controls { width: fit-content; max-width: 100%; margin-left: auto; padding: 0; border: 0; background: transparent; box-shadow: none; }
   .book-electronic-reader { max-width: 1200px; }
   .book-electronic-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); align-items: start; gap: 24px; }
   .book-electronic-main { width: 100%; max-width: 840px; margin: 0 auto; }
