@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n26";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n27";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -13,9 +13,10 @@ export const TEXT_ROLES = { original: "原文", original_note: "原注", comment
 export const TEXT_COMPLETENESS = { complete: "完整", incomplete: "不完整", excerpt: "节录", unknown: "完整度待核" };
 export const TEXT_COLLATION = { unproofread: "未校勘", partially_collated: "部分校勘", collated: "已校勘" };
 
-export function textVersionPath(bookId, versionId = "catalog", chapterId = "") {
+export function textVersionPath(bookId, versionId = "catalog", chapterId = "", { resume = false } = {}) {
   const query = new URLSearchParams({ "text-version": versionId });
   if (chapterId) query.set("chapter", chapterId);
+  if (resume) query.set("resume", "1");
   return `/books/${encodeURIComponent(bookId)}?${query}`;
 }
 
@@ -49,7 +50,23 @@ export function textReadingPosition(value) {
   if (!value || typeof value !== "object" || !identity(value.versionId) || !identity(value.sectionId) ||
       typeof value.title !== "string" || !value.title.trim() || value.title.length > 300 ||
       !Number.isFinite(value.updatedAt) || value.updatedAt <= 0) return null;
-  return { versionId: value.versionId, sectionId: value.sectionId, title: value.title, updatedAt: value.updatedAt };
+  const position = { versionId: value.versionId, sectionId: value.sectionId, title: value.title, updatedAt: value.updatedAt };
+  // Older records identify only the section. A malformed anchor must not make
+  // that valid section disappear from the library's continue-reading entry.
+  if (Number.isSafeInteger(value.anchor) && value.anchor >= 0 && Number.isFinite(value.offset) && value.offset >= 0 && value.offset <= 1) {
+    position.anchor = value.anchor; position.offset = value.offset;
+  }
+  return position;
+}
+
+export function textReadingTarget(reading, { requested = "", saved = null, resume = false, footnote = "" } = {}) {
+  let index = selectReadingSection(reading, requested || saved?.sectionId);
+  if (!requested && index < 0) index = selectReadingSection(reading, null);
+  const section = reading.sections[index];
+  // Explicit contents, pagination and footnote links are destinations, while a
+  // continue-reading link (or an edition without a chapter) resumes its anchor.
+  const position = section && saved?.sectionId === section.id && (!requested || resume) && !footnote ? saved : null;
+  return { index, position };
 }
 
 export function readingPath(id, number = 1) {

@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n26";
-import { filterContents } from "../lib/books.js?v=n26";
-import { local } from "../lib/store.js?v=n26";
-import { openSheet } from "./overlay.js?v=n26";
+import { h, fill } from "../lib/dom.js?v=n27";
+import { filterContents, groupReadingSections } from "../lib/books.js?v=n27";
+import { local } from "../lib/store.js?v=n27";
+import { openSheet } from "./overlay.js?v=n27";
 
 export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
   let closed = false, scrollFrame;
@@ -125,7 +125,54 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
   return sheet;
 }
 
-export function openBookSettings({ preferences, mode, hasModern, hasLayout = true, onChange, returnFocus }) {
+export function openElectronicBookContents({ bookTitle, sections, current, onSelect, returnFocus }) {
+  const readingY = window.scrollY;
+  const search = h("input", { type: "search", maxLength: 160, placeholder: "搜索章节标题或来源页", "aria-label": "搜索章节目录" });
+  const count = h("p", { class: "books-count", role: "status", "aria-live": "polite" });
+  const rows = h("nav", { class: "book-contents-list", "aria-label": "章节列表" });
+  let closed = false, selected = false, scrollFrame, rowsObserver;
+  const sheet = openSheet({ title: `${bookTitle} · 目录`, className: "sheet-book-contents", returnFocus,
+    body: [h("div", { class: "book-contents-search" }, search, count), rows],
+    onClose: reason => {
+      closed = true; cancelAnimationFrame(scrollFrame); rowsObserver?.disconnect();
+      if (!selected && reason !== "route") window.scrollTo(0, readingY);
+    } });
+  function positionContents() {
+    cancelAnimationFrame(scrollFrame);
+    scrollFrame = requestAnimationFrame(() => {
+      if (closed) return;
+      const row = rows.querySelector('[aria-current="page"]');
+      if (search.value.trim() || !row) { rows.scrollTop = 0; return; }
+      const rect = rows.getBoundingClientRect();
+      const scale = rows.offsetHeight ? rect.height / rows.offsetHeight : 1;
+      const top = (row.getBoundingClientRect().top - rect.top) / (scale || 1) + rows.scrollTop;
+      rows.scrollTop = Math.max(0, top - Math.max(0, (rows.clientHeight - row.offsetHeight) / 2));
+    });
+  }
+  function paint() {
+    const groups = groupReadingSections(sections, search.value);
+    const matches = groups.reduce((total, group) => total + group.sections.length, 0);
+    count.textContent = `${matches} / ${sections.length} 节`;
+    fill(rows, groups.length ? groups.map(group => h("section", { class: "book-electronic-sheet-group" },
+      h("h3", null, group.title, h("small", null, ` · ${group.sections.length}`)),
+      group.sections.map(item => h("button", { type: "button", class: "book-contents-item", "aria-current": item.id === current ? "page" : null,
+        onClick: () => { selected = true; sheet.close(); onSelect(item.id); } },
+        h("span", { class: "book-electronic-contents-label" }, h("b", null, item.title),
+          item.source_location && item.source_location !== item.title ? h("small", null, item.source_location) : null),
+        item.id === current ? h("small", null, "正在阅读") : null))))
+      : h("p", { class: "books-notice", role: "status" }, "没有匹配的章节，试试其他标题或清空搜索。"));
+    positionContents();
+  }
+  if (typeof ResizeObserver === "function") {
+    rowsObserver = new ResizeObserver(() => { if (!search.value.trim()) positionContents(); });
+    rowsObserver.observe(rows);
+  }
+  search.addEventListener("input", paint); paint();
+  requestAnimationFrame(() => { if (!closed) search.focus({ preventScroll: true }); });
+  return sheet;
+}
+
+export function openBookSettings({ preferences, mode, hasModern, hasLayout = true, onChange, onClose, returnFocus }) {
   const prefs = { ...preferences };
   function field(label, key, options) {
     const select = h("select", { "aria-label": label, onChange: event => {
@@ -135,7 +182,7 @@ export function openBookSettings({ preferences, mode, hasModern, hasLayout = tru
     } }, options.map(([value, text]) => h("option", { value, selected: value === (key === "mode" ? mode : prefs[key]) }, text)));
     return h("label", null, h("span", null, label), select);
   }
-  return openSheet({ title: "阅读设置", className: "sheet-book-settings", returnFocus,
+  return openSheet({ title: "阅读设置", className: "sheet-book-settings", returnFocus, onClose,
     body: h("div", { class: "book-settings" },
       hasModern ? field("阅读模式", "mode", [["original", "原文"], ["parallel", "原文与白话"], ["modern", "白话"]]) : null,
       hasLayout ? field("排版", "layout", [["continuous", "连续排版"], ["source", "保留原稿换行"]]) : null,
