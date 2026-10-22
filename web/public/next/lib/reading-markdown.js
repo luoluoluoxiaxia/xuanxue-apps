@@ -50,6 +50,12 @@ function withoutReadingComments(value) {
 }
 
 const listItem = line => /^ {0,3}([-+*]|\d+[.)])[ \t]+(.+)$/.exec(lineText(line));
+function metricalLine(line) {
+  const columns = line.trim().split(/[\t\u3000]+/);
+  const lengths = columns.map(column => [...column].length);
+  return columns.length <= 2 && columns.every((column, index) => /^[\p{Script=Han}]+$/u.test(column)
+    && [4, 5, 7].includes(lengths[index])) ? lengths.join(":") : null;
+}
 function tableCells(line) {
   let value = lineText(line).trim();
   if (!value.includes("|")) return null;
@@ -77,12 +83,26 @@ export function readingMarkdownTokens(text, depth = 0) {
   const flush = () => {
     if (!paragraph.length) return;
     // Some transcriptions use aligned plain text instead of Markdown fences for
-    // hexagram rows. Keep those columns intact when prose uses flowing layout.
-    const diagramRows = paragraph.filter(line => /[▅▆▇▉█▁─━′″○●×]/.test(line) && /\S[ \t]+\S/.test(line));
-    const tabRows = paragraph.filter(line => /\S\t+\S/.test(line));
-    const columnRows = paragraph.filter(line => (line.match(/\S {2,}(?=\S)/g) || []).length >= 2);
-    const aligned = diagramRows.length >= 2 || tabRows.length >= 2 || columnRows.length >= 2;
-    tokens.push({ type: aligned ? "code" : "paragraph", text: paragraph.join("") });
+    // hexagram rows. Isolate only consecutive aligned rows: surrounding prose
+    // can be many pages long without an empty source line.
+    const alignedLine = line => (/[▅▆▇▉█▁─━′″○●×]/.test(line) && /\S[ \t]+\S/.test(line))
+      || /\S\t+\S/.test(line) || (line.match(/\S(?: {2,}|\u3000+)(?=\S)/g) || []).length >= 2;
+    const rowKind = line => {
+      const metre = metricalLine(line);
+      return metre ? `verse:${metre}` : alignedLine(line) ? "diagram" : null;
+    };
+    let proseStart = 0;
+    for (let i = 0; i < paragraph.length;) {
+      const kind = rowKind(paragraph[i]);
+      if (!kind) { i++; continue; }
+      const start = i;
+      while (i < paragraph.length && rowKind(paragraph[i]) === kind) i++;
+      if (i - start < 2) continue;
+      if (start > proseStart) tokens.push({ type: "paragraph", text: paragraph.slice(proseStart, start).join("") });
+      tokens.push({ type: "code", text: paragraph.slice(start, i).join("") });
+      proseStart = i;
+    }
+    if (proseStart < paragraph.length) tokens.push({ type: "paragraph", text: paragraph.slice(proseStart).join("") });
     paragraph = [];
   };
   for (let i = 0; i < lines.length; i++) {
@@ -159,6 +179,13 @@ export function readingMarkdownTokens(text, depth = 0) {
 // Prefer definitions in this chapter, then index supplied chapters of this edition.
 export function createReadingMarkdownContext(texts, options = {}) {
   const definitions = new Map();
+  const sourceOrder = new Map();
+  const collectOrder = tokens => {
+    for (const token of tokens) {
+      if (token.type === "footnote" && !sourceOrder.has(token.label)) sourceOrder.set(token.label, sourceOrder.size + 1);
+      if (token.children) collectOrder(token.children);
+    }
+  };
   const collect = (tokens, chapterId) => {
     for (const token of tokens) {
       if (token.type === "footnote" && !definitions.has(token.label)) definitions.set(token.label, { ...token, chapterId });
@@ -167,11 +194,17 @@ export function createReadingMarkdownContext(texts, options = {}) {
   };
   for (const text of texts) collect(readingMarkdownTokens(text), options.chapterId);
   for (const chapter of options.chapters || []) {
-    if (chapter.id === options.chapterId) continue;
-    for (const block of chapter.blocks) collect(readingMarkdownTokens(block.text), chapter.id);
+    for (const block of chapter.blocks) {
+      const tokens = readingMarkdownTokens(block.text);
+      collectOrder(tokens);
+      if (chapter.id !== options.chapterId) collect(tokens, chapter.id);
+    }
   }
-  let index = 0;
-  for (const token of definitions.values()) token.id = `reading-footnote-${++index}`;
+  for (const token of definitions.values()) {
+    if (!sourceOrder.has(token.label)) sourceOrder.set(token.label, sourceOrder.size + 1);
+    token.number = sourceOrder.get(token.label);
+    token.id = `reading-footnote-${token.number}`;
+  }
   return { definitions, renderedDefinitions: new Set(), ...options };
 }
 
@@ -194,20 +227,55 @@ function httpsUrl(value) {
   catch { return false; }
 }
 
-function appendInline(parent, text, context, doc, depth = 0) {
+function appendReadingText(parent, text, context, doc, softBreaks = false) {
+  const appendPlain = value => {
+    if (!softBreaks) { parent.append(doc.createTextNode(value)); return; }
+    const breaks = /([\p{Script=Han}，。！？；：、）】》」』〕〉…])(\r?\n[ \t]*)(?=[\p{Script=Han}“‘「『（【《〈〔])/gu;
+    let end = 0;
+    for (const match of value.matchAll(breaks)) {
+      parent.append(doc.createTextNode(value.slice(end, match.index) + match[1]));
+      const line = doc.createElement("span"); line.className = "book-reading-soft-break";
+      line.textContent = match[2]; parent.append(line);
+      end = match.index + match[0].length;
+    }
+    parent.append(doc.createTextNode(value.slice(end)));
+  };
+  let end = 0;
+  for (const match of text.matchAll(/&KR[0-9a-f]{4,};|\uf0b7|\?{2,}/gi)) {
+    const source = match[0];
+    const known = (context.bookId === "sanming-tonghui" && source.startsWith("&KR"))
+      || (context.bookId === "wuxing-jingji" && source === "\uf0b7")
+      || (context.bookId === "yilin-buyi" && source.startsWith("??"));
+    if (!known) continue;
+    appendPlain(text.slice(end, match.index));
+    const marker = doc.createElement("span"); marker.className = "book-reading-missing-glyph";
+    const label = `原稿字形待核：${source === "\uf0b7" ? "U+F0B7" : source}`;
+    marker.setAttribute("title", label); marker.setAttribute("aria-label", label);
+    marker.setAttribute("data-source-text", source); marker.textContent = "□"; parent.append(marker);
+    end = match.index + source.length;
+  }
+  appendPlain(text.slice(end));
+}
+
+function appendInline(parent, text, context, doc, depth = 0, softBreaks = false) {
+  const appendText = value => appendReadingText(parent, value, context, doc, softBreaks);
   // Consume any HTML-like span as literal text before looking for URLs inside it.
   // Unsupported Markdown links are also consumed whole, including unsafe schemes.
   const pattern = /<[^>\n]*>|\[\^(?<footnote>[^\]\s]+)\]|\[(?<label>[^\]\n]+)\]\((?<url>[^)\n]*)\)|https:\/\/[^\s<>"'`]+|(?<code>`+)(?<literal>[^\n]*?)\k<code>(?!`)|\*\*(?<strong>\S(?:[^\n]*?\S)?)\*\*|(?<!\*)\*(?<em>\S(?:[^*\n]*?\S)?)\*(?!\*)|(?<![\p{L}\p{N}_])__(?<strongUnder>\S(?:[^\n]*?\S)?)__(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])_(?<emUnder>\S(?:[^_\n]*?\S)?)_(?![\p{L}\p{N}_])/giu;
   let end = 0;
   for (const match of text.matchAll(pattern)) {
-    parent.append(doc.createTextNode(text.slice(end, match.index)));
+    appendText(text.slice(end, match.index));
     let node = doc.createTextNode(match[0]);
     const { footnote, label, url: suppliedUrl, code, literal, strong, em, strongUnder, emUnder } = match.groups;
-    if (code || strong || em || strongUnder || emUnder) {
+    if (context.bookId === "wuxing-jingji" && /^<[\p{Script=Han}][^<>\n]*>$/u.test(match[0])) {
+      node = doc.createElement("span"); node.className = "book-reading-inline-note";
+      node.setAttribute("data-source-text", match[0]); node.setAttribute("title", `原书夹注：${match[0]}`);
+      appendReadingText(node, `〔${match[0].slice(1, -1)}〕`, context, doc, softBreaks);
+    } else if (code || strong || em || strongUnder || emUnder) {
       node = doc.createElement(code ? "code" : strong || strongUnder ? "strong" : "em");
       const content = literal ?? strong ?? em ?? strongUnder ?? emUnder;
       if (code || depth >= 16) node.textContent = content;
-      else appendInline(node, content, context, doc, depth + 1);
+      else appendInline(node, content, context, doc, depth + 1, softBreaks);
     } else if (footnote) {
       const target = context.definitions.get(footnote);
       if (target) {
@@ -215,13 +283,15 @@ function appendInline(parent, text, context, doc, depth = 0) {
         const link = doc.createElement("a");
         const path = target.chapterId !== context.chapterId ? context.footnotePath(target.chapterId, footnote) : null;
         link.setAttribute("href", path ? `#${path}` : `#${target.id}`);
+        link.setAttribute("aria-label", `查看注${target.number}`);
+        link.setAttribute("title", `原稿脚注：${footnote}`);
         // Footnote navigation must not replace the application's hash route.
         link.addEventListener("click", event => {
           event.preventDefault();
           if (path) context.navigate(path);
           else focusReadingFootnote(context, footnote, doc);
         });
-        link.textContent = match[0];
+        link.textContent = String(target.number);
         node.append(link);
       } else {
         node = doc.createElement("span");
@@ -251,7 +321,17 @@ function appendInline(parent, text, context, doc, depth = 0) {
     parent.append(node);
     end = match.index + match[0].length;
   }
-  parent.append(doc.createTextNode(text.slice(end)));
+  appendText(text.slice(end));
+}
+
+function literalPresentation(text) {
+  const lines = text.split(/\r?\n/).filter(line => line.trim());
+  const metrical = lines.length >= 2 && lines.every(line => metricalLine(line));
+  // A four-/five-/seven-character line can be laid out in two columns with a
+  // tab. It still needs its original spacing, but not a code-like appearance.
+  if (metrical) return "text";
+  if (!/\p{Script=Han}/u.test(text)) return "code";
+  return /[▅▆▇▉█▁─━′″○●×]|\t| {2,}|\u3000/u.test(text) ? "diagram" : "text";
 }
 
 export function renderEditionText(versionId, text, context, doc = document) {
@@ -261,13 +341,31 @@ export function renderEditionText(versionId, text, context, doc = document) {
   context ||= createReadingMarkdownContext([text]);
   const container = doc.createElement("div"); container.className = "book-reading-markdown";
   const render = (parent, tokens) => {
-    for (const token of tokens) {
+    for (let index = 0; index < tokens.length; index++) {
+      const token = tokens[index];
+      if (context.bookId === "ditian-sui-chanwei") {
+        const stems = item => item?.type === "paragraph"
+          && /^[甲乙丙丁戊己庚辛壬癸子丑寅卯辰巳午未申酉戌亥]{1,16}$/u.test(item.text.trim());
+        if (stems(token)) {
+          let end = index + 1;
+          while (end < tokens.length && stems(tokens[end])) end++;
+          if (end - index >= 3) {
+            const row = doc.createElement("div"); row.className = "book-reading-stem-row";
+            for (const item of tokens.slice(index, end)) {
+              const stem = doc.createElement("span"); stem.className = "book-reading-stem-token";
+              stem.textContent = item.text; row.append(stem);
+            }
+            parent.append(row); index = end - 1; continue;
+          }
+        }
+      }
       const tag = { paragraph: "p", code: "pre", details: "details", footnote: "p", list: "div", table: "div" }[token.type] || `h${token.level}`;
       const node = doc.createElement(tag);
       if (token.type === "code") {
+        node.className = `book-reading-literal book-reading-literal-${literalPresentation(token.text)}`;
         node.setAttribute("tabindex", "0");
         node.setAttribute("aria-label", "原样文字，可横向滚动");
-        const code = doc.createElement("code"); code.textContent = token.text; node.append(code);
+        const code = doc.createElement("code"); appendReadingText(code, token.text, context, doc); node.append(code);
       } else if (token.type === "list") {
         const list = doc.createElement(token.ordered ? "ol" : "ul");
         if (token.ordered && token.start !== 1) list.setAttribute("start", token.start);
@@ -278,12 +376,26 @@ export function renderEditionText(versionId, text, context, doc = document) {
         wrapper.setAttribute("tabindex", "0"); wrapper.setAttribute("aria-label", "表格，可横向滚动");
         const table = doc.createElement("table");
         const head = doc.createElement("thead"), body = doc.createElement("tbody");
+        const trigramStrokes = context.bookId === "yiyin" && token.columns.length === 4
+          && token.columns.every((value, index) => value === ["卦名", "上爻", "中爻", "下爻"][index]);
         for (const [isHead, values] of [[true, token.columns], ...token.rows.map(row => [false, row])]) {
           const row = doc.createElement("tr");
           values.forEach((value, index) => {
             const cell = doc.createElement(isHead ? "th" : "td");
             if (isHead) cell.setAttribute("scope", "col");
-            cell.setAttribute("data-align", token.align[index]); appendInline(cell, value, context, doc); row.append(cell);
+            cell.setAttribute("data-align", token.align[index]);
+            if (trigramStrokes && !isHead && index > 0 && ["/", "//"].includes(value)) {
+              // This source table already supplies every stroke. Only decode
+              // its explicit slash notation; never derive strokes from names.
+              const stroke = doc.createElement("span"); stroke.className = "book-reading-trigram-stroke";
+              stroke.textContent = value === "/" ? "⚊" : "⚋";
+              stroke.setAttribute("data-source-text", value);
+              stroke.setAttribute("title", `原稿线画：${value}`);
+              stroke.setAttribute("role", "img");
+              stroke.setAttribute("aria-label", value === "/" ? "一条横线，原稿 /" : "两段横线，原稿 //");
+              cell.setAttribute("data-align", "center"); cell.append(stroke);
+            } else appendInline(cell, value, context, doc);
+            row.append(cell);
           });
           (isHead ? head : body).append(row);
         }
@@ -292,16 +404,21 @@ export function renderEditionText(versionId, text, context, doc = document) {
         const label = doc.createElement("summary"); appendInline(label, token.summary, context, doc);
         node.append(label); render(node, token.children);
       } else {
+        if (token.type === "paragraph" && /^(?:〔原注〕|〔原刊[栏欄]外小注，[归歸][属屬]未定〕)$/.test(token.text.trim())) {
+          node.className = "book-reading-source-label";
+        }
         if (token.type === "footnote") {
           node.className = "book-reading-footnote";
+          const definition = context.definitions.get(token.label);
+          node.setAttribute("title", `原稿脚注：${token.label}`);
           if (!context.renderedDefinitions.has(token.label)) {
-            node.setAttribute("id", context.definitions.get(token.label).id);
+            node.setAttribute("id", definition.id);
             node.setAttribute("tabindex", "-1");
             context.renderedDefinitions.add(token.label);
           }
-          node.append(doc.createTextNode(`[^${token.label}]: `));
+          node.append(doc.createTextNode(`${definition.number}. `));
         }
-        appendInline(node, token.text, context, doc);
+        appendInline(node, token.text, context, doc, 0, token.type === "paragraph");
       }
       parent.append(node);
     }

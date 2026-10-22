@@ -464,7 +464,7 @@ function electronicReader(ctx) {
     const path = item => textVersionPath(id, versionId, item.id);
     const groups = groupReadingSections(sections);
     const markdownContext = createReadingMarkdownContext(section?.blocks.map(block => block.text) || [], {
-      chapters: sections, chapterId: section?.id,
+      chapters: sections, chapterId: section?.id, bookId: id,
       footnotePath: (chapterId, label) => `${textVersionPath(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
       navigate: route => ctx.navigate(route),
     });
@@ -475,11 +475,18 @@ function electronicReader(ctx) {
         h("p", { class: "book-section-kind" }, READING_KINDS[section.kind]),
         h("h2", null, section.title),
         section.source_location ? h("p", { class: "book-section-location" }, section.source_location) : null),
-      section.blocks.map(block => h(block.role === "modern_editorial" && section.kind !== "notes" ? "details" : "section",
-        { class: `book-block${block.role === "modern_editorial" ? " book-modern-editorial" : ""}`, dataset: { blockId: block.id } },
-        block.role === "modern_editorial" && section.kind !== "notes" ? h("summary", null, "整理说明") : null,
-        ["original_note", "commentary"].includes(block.role) ? h("p", { class: "book-layer" }, TEXT_ROLES[block.role]) : null,
-        h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)))))
+      section.blocks.map(block => {
+        if (block.role === "modern_editorial" && block.label === "未辨片段") {
+          return h("aside", { class: "book-reading-source-cue", dataset: { blockId: block.id } }, block.text);
+        }
+        const folded = ["aside", "transcription"].includes(block.presentation) || block.role === "modern_editorial" && section.kind !== "notes";
+        const label = block.label || (block.presentation === "aside" ? "栏外小注" : block.presentation === "transcription" ? "图表附注与未辨记录" : "整理说明");
+        return h(folded ? "details" : "section",
+          { class: `book-block${folded ? " book-folded-text" : ""}${["original_note", "commentary"].includes(block.role) ? " book-source-note" : ""}`, dataset: { blockId: block.id } },
+          folded ? h("summary", null, label) : null,
+          !folded && ["original_note", "commentary"].includes(block.role) ? h("p", { class: "book-layer" }, block.label || TEXT_ROLES[block.role]) : null,
+          h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)));
+      }))
       : stateView({ glyph: "book", title: "此版本没有该章节", text: "请从目录选择章节，或返回版本页重新打开。" });
     const applyPreferences = () => {
       article.style.setProperty("--reading-size", `${preferences.size}px`);
@@ -524,8 +531,9 @@ function electronicReader(ctx) {
       h("p", null, h("a", { href: `#${textVersionPath(id)}` }, "查看其他版本")));
     const citation = section ? h("details", { class: "book-source-notice book-section-source" }, h("summary", null, "本节来源与引用"),
       h("p", { class: "book-text-citation" }, h("code", null, `${id}/${versionId}/${section.id}`)),
-      h("p", null, "对应来源章节：", h("code", null, section.source_chapter_id)),
-      h("p", null, "下载对应的完整来源章节（可能包含相邻小节）："), downloadLinks(versionId, section.source_chapter_id)) : null;
+      h("p", null, "下载对应的完整来源章节（可能包含相邻小节）："),
+      (section.source_chapter_ids?.length ? section.source_chapter_ids : [section.source_chapter_id]).map(chapterId =>
+        h("div", { class: "book-source-chapter-download" }, h("p", null, h("code", null, chapterId)), downloadLinks(versionId, chapterId)))) : null;
     fill(body,
       h("header", { class: "book-reading-header" },
         h("a", { href: "#/books", class: "book-reading-back" }, icon("back"), h("span", null, "书库")),

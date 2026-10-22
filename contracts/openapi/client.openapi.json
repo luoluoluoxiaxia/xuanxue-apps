@@ -5143,6 +5143,21 @@
             "title": "Id",
             "type": "string"
           },
+          "label": {
+            "default": "",
+            "title": "Label",
+            "type": "string"
+          },
+          "presentation": {
+            "default": "prose",
+            "enum": [
+              "prose",
+              "aside",
+              "transcription"
+            ],
+            "title": "Presentation",
+            "type": "string"
+          },
           "role": {
             "enum": [
               "original",
@@ -5204,6 +5219,13 @@
             "title": "Source Chapter Id",
             "type": "string"
           },
+          "source_chapter_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Chapter Ids",
+            "type": "array"
+          },
           "source_location": {
             "title": "Source Location",
             "type": "string"
@@ -5218,6 +5240,7 @@
           "title",
           "kind",
           "source_chapter_id",
+          "source_chapter_ids",
           "source_block_id",
           "source_location",
           "blocks"

@@ -89,12 +89,148 @@ test("lists preserve supplied numbering and pipe tables retain aligned and liter
   assert.equal(tags(render("甲|乙\n文字|正文"), "table").length, 0);
 });
 
+test("Yiyin's explicit eight-trigram slash table displays only the supplied strokes", () => {
+  const names = ["乾三连", "坤六断", "震仰盂", "艮覆碗", "离中虚", "坎中满", "兑上缺", "巽下断"];
+  const strokes = [["/", "/", "/"], ["//", "//", "//"], ["//", "//", "/"], ["/", "//", "//"],
+    ["/", "//", "/"], ["//", "/", "//"], ["//", "/", "/"], ["/", "/", "//"]];
+  const source = "| 卦名 | 上爻 | 中爻 | 下爻 |\n| --- | --- | --- | --- |\n"
+    + names.map((name, index) => `| ${name} | ${strokes[index].join(" | ")} |`).join("\n");
+  const context = createReadingMarkdownContext([source], { bookId: "yiyin" });
+  const node = render(source, context);
+  assert.deepEqual(tags(node, "td").filter((_, index) => index % 4 === 0).map(cell => cell.textContent), names);
+  const displayed = all(node).filter(item => item.className === "book-reading-trigram-stroke");
+  assert.equal(displayed.length, 24);
+  assert.deepEqual(displayed.map(item => item.getAttribute("data-source-text")), strokes.flat());
+  assert.deepEqual(displayed.map(item => item.textContent), strokes.flat().map(value => value === "/" ? "⚊" : "⚋"));
+  for (const item of displayed) {
+    assert.ok(item.getAttribute("title").includes(item.getAttribute("data-source-text")));
+    assert.ok(item.getAttribute("aria-label").includes(item.getAttribute("data-source-text")));
+  }
+  for (const bookId of [undefined, "zengshan-buyi"]) {
+    assert.equal(all(render(source, createReadingMarkdownContext([source], { bookId }))).filter(item => item.className === "book-reading-trigram-stroke").length, 0);
+  }
+  const otherHeader = source.replace("卦名", "项目");
+  assert.equal(all(render(otherHeader, createReadingMarkdownContext([otherHeader], { bookId: "yiyin" }))).filter(item => item.className === "book-reading-trigram-stroke").length, 0);
+  assert.equal(source.includes("⚊"), false);
+});
+
 test("unfenced aligned hexagram rows preserve every space and tab in a literal block", () => {
   const source = "父母  戌土  ▅▅▅▅▅\n兄弟\t申金\t▅▅ ▅▅\n子孫  午火  ▅▅▅▅▅";
   const node = render(source);
   assert.equal(tags(node, "pre").length, 1);
   assert.equal(tags(node, "code")[0].textContent, source);
   assert.equal(tags(render("正文中  留空，但仍是一句。"), "pre").length, 0);
+});
+
+test("an unfenced hexagram inside a long prose paragraph isolates its consecutive rows only", () => {
+  const before = "論動變之理，當以卦情參看。\n作者接著說明取用與判斷的方法。\n";
+  const rows = "父母  戌土  ▅▅▅▅▅\n兄弟  申金  ▅▅ ▅▅\n子孫  午火  ▅▅▅▅▅\n官鬼  卯木  ▅▅▅▅▅\n妻財  子水  ▅▅ ▅▅\n父母  戌土  ▅▅ ▅▅\n";
+  const after = "此卦之中，仍須逐一核對動爻。\n此後的長篇解說也應繼續正常閱讀。";
+  const source = before + rows + after;
+  const tokens = readingMarkdownTokens(source);
+  assert.deepEqual(tokens, [{ type: "paragraph", text: before }, { type: "code", text: rows }, { type: "paragraph", text: after }]);
+  assert.equal(tokens.map(token => token.text).join(""), source);
+  const node = render(source);
+  assert.equal(tags(node, "pre").length, 1);
+  assert.equal(tags(node, "code")[0].textContent, rows);
+  assert.deepEqual(tags(node, "p").map(item => item.textContent), [before, after]);
+  const separated = readingMarkdownTokens("孤立  一列  數據\n中間仍然是正文。\n另一  單獨  數據");
+  assert.equal(separated.length, 1); assert.equal(separated[0].type, "paragraph");
+});
+
+test("short metrical runs keep lineation without promoting scanned prose into verse", () => {
+  const before = "下面另有歌訣，原來的行序仍應保留。\n";
+  const verse = "三才變化　四營成易\n六爻爲義　八卦爲體\n";
+  const after = "此後回到正文，仍然繼續敘述取用的條件。";
+  const tokens = readingMarkdownTokens(before + verse + after);
+  assert.deepEqual(tokens, [{ type: "paragraph", text: before }, { type: "code", text: verse }, { type: "paragraph", text: after }]);
+  const node = render(before + verse + after);
+  assert.equal(tags(node, "pre")[0].className, "book-reading-literal book-reading-literal-text");
+  assert.equal(tags(node, "code")[0].textContent, verse);
+  assert.equal(readingMarkdownTokens("長篇掃描正文不應只因有規律的換行就被當成歌訣\n下一行也仍然是一般正文的完整轉錄")[0].type, "paragraph");
+  const table = "旺　相　休　囚　死\n春　木　火　水　金　土";
+  assert.deepEqual(readingMarkdownTokens(table), [{ type: "code", text: table }]);
+  assert.equal(tags(render(table), "pre")[0].className, "book-reading-literal book-reading-literal-diagram");
+});
+
+test("Chinese soft line breaks stay in source text and receive a display-only marker", () => {
+  const source = "原文的掃描行在這裡\n接續下文，不應多一個空格。\n  這裡仍然是正文。\nEnglish line\nnext English line";
+  const node = render(source);
+  assert.equal(node.textContent, source);
+  const breaks = all(node).filter(item => item.className === "book-reading-soft-break");
+  assert.deepEqual(breaks.map(item => item.textContent), ["\n", "\n  "]);
+  const literal = render("```text\n原來的行序\n仍然要保留\n```");
+  assert.equal(all(literal).filter(item => item.className === "book-reading-soft-break").length, 0);
+});
+
+test("Chinese reading text and short verse in literal fences keep their exact lines without a code presentation", () => {
+  for (const source of ["甲乙東方木\n", "正月\n丙\n癸\n調和氣候為要。丙火為主。癸水為佐。\n", "三才變化\t四營成易\n六爻爲義\t八卦爲體\n"]) {
+    const node = render(`~~~~text\n${source}~~~~`);
+    assert.equal(tags(node, "pre")[0].className, "book-reading-literal book-reading-literal-text");
+    assert.equal(tags(node, "code")[0].textContent, source);
+  }
+  const rows = "旺　相　休　囚　死\n春　木　火　水　金　土\n";
+  const table = render(`~~~~text\n${rows}~~~~`);
+  assert.equal(tags(table, "pre")[0].className, "book-reading-literal book-reading-literal-diagram");
+  assert.equal(tags(table, "code")[0].textContent, rows);
+  const diagram = render("~~~~text\n父母\t戌土\t▅▅▅▅▅\n兄弟\t申金\t▅▅ ▅▅\n~~~~");
+  assert.equal(tags(diagram, "pre")[0].className, "book-reading-literal book-reading-literal-diagram");
+  const technical = render("```js\nconst value = 1;\n```");
+  assert.equal(tags(technical, "pre")[0].className, "book-reading-literal book-reading-literal-code");
+});
+
+test("stand-alone source note labels have a secondary presentation and retain their words", () => {
+  const node = render("〔原注〕\n\n注文\n\n〔原刊栏外小注，归属未定〕\n\n栏外原文");
+  assert.deepEqual(all(node).filter(item => item.className === "book-reading-source-label").map(item => item.textContent), ["〔原注〕\n", "〔原刊栏外小注，归属未定〕\n"]);
+  assert.ok(node.textContent.includes("注文"));
+  assert.ok(node.textContent.includes("栏外原文"));
+  assert.equal(all(render("原文里有〔原注〕字样，不是单独标签。")).filter(item => item.className === "book-reading-source-label").length, 0);
+});
+
+test("known Chinese angle notes display as inline source notes without parsing HTML", () => {
+  const text = '本論<按三曆會同雲：螣蛇為凶神>下文<贵>。<script>bad()</script><img src=x onerror="bad()">';
+  const context = createReadingMarkdownContext([text], { bookId: "wuxing-jingji" });
+  const node = render(text, context);
+  assert.equal(node.textContent, '本論〔按三曆會同雲：螣蛇為凶神〕下文〔贵〕。<script>bad()</script><img src=x onerror="bad()">');
+  const notes = all(node).filter(item => item.className === "book-reading-inline-note");
+  assert.deepEqual(notes.map(item => item.getAttribute("data-source-text")), ["<按三曆會同雲：螣蛇為凶神>", "<贵>"]);
+  assert.equal(tags(node, "script").length, 0); assert.equal(tags(node, "img").length, 0);
+  assert.equal(render(text).textContent, text);
+});
+
+test("known manuscript glyph markers show a gap with exact source labels and stay book scoped", () => {
+  for (const [bookId, text, source, label] of [["sanming-tonghui", "甲&KR1134;乙", "&KR1134;", "&KR1134;"],
+    ["wuxing-jingji", "甲\uf0b7乙", "\uf0b7", "U+F0B7"], ["yilin-buyi", "甲????乙", "????", "????"]]) {
+    const context = createReadingMarkdownContext([text], { bookId });
+    const node = render(text, context);
+    assert.equal(node.textContent, "甲□乙");
+    const marker = all(node).find(item => item.className === "book-reading-missing-glyph");
+    assert.equal(marker.getAttribute("data-source-text"), source);
+    assert.ok(marker.getAttribute("title").includes(label)); assert.ok(marker.getAttribute("aria-label").includes(label));
+    assert.equal(render(text).textContent, text);
+    assert.equal(readingMarkdownTokens(text).map(token => token.text).join(""), text);
+    const literal = render(`~~~~text\n${text}\n~~~~`, context);
+    assert.equal(tags(literal, "code")[0].textContent, "甲□乙\n");
+  }
+  const ordinary = "为何？为什么??真的???";
+  assert.equal(render(ordinary).textContent, ordinary);
+  const old = renderEditionText("archive-v1", "甲&KR1134;乙", { bookId: "sanming-tonghui" }, environment());
+  assert.equal(old.textContent, "甲&KR1134;乙");
+});
+
+test("Chanwei isolated stem paragraphs compact by source token without inventing chart columns", () => {
+  const source = "乾造\n\n甲子\n\n乙丑\n\n丙子丙申\n\n丁卯\n\n此例仍須參看前後解說，不改變正文。\n\n戊辰\n\n己巳";
+  const tokens = readingMarkdownTokens(source);
+  const context = createReadingMarkdownContext([source], { bookId: "ditian-sui-chanwei" });
+  const node = render(source, context);
+  const rows = all(node).filter(item => item.className === "book-reading-stem-row");
+  assert.equal(rows.length, 1);
+  const stems = all(node).filter(item => item.className === "book-reading-stem-token");
+  assert.deepEqual(stems.map(item => item.textContent), ["甲子\n", "乙丑\n", "丙子丙申\n", "丁卯\n"]);
+  assert.deepEqual(tags(node, "p").map(item => item.textContent), ["乾造\n", "此例仍須參看前後解說，不改變正文。\n", "戊辰\n", "己巳"]);
+  assert.equal(node.textContent, tokens.map(token => token.text).join(""));
+  assert.equal(all(render(source)).filter(item => item.className === "book-reading-stem-row").length, 0);
+  assert.deepEqual(readingMarkdownTokens(source), tokens);
 });
 
 test("fenced original notes preserve every inner character, CRLF, whitespace and markup literally", () => {
@@ -166,13 +302,15 @@ test("chapter-local footnotes resolve across blocks, retain missing markers and 
   const context = createReadingMarkdownContext(texts);
   const nodes = texts.map(text => render(text, context, doc)); doc.body.append(...nodes);
   const link = tags(nodes[0], "a")[0];
-  assert.equal(link.textContent, "[^a]");
+  assert.equal(link.textContent, "1");
+  assert.equal(link.getAttribute("aria-label"), "查看注1");
+  assert.equal(link.getAttribute("title"), "原稿脚注：a");
   assert.equal(link.getAttribute("href"), "#reading-footnote-1");
   const missing = all(nodes[0]).find(node => node.className === "book-footnote-unresolved");
   assert.equal(missing.textContent, "[^missing]");
   assert.ok(missing.getAttribute("title").includes("此版本未提供"));
   const target = doc.getElementById("reading-footnote-1");
-  assert.equal(target.textContent, "[^a]: Supplied note\ncontinuation");
+  assert.equal(target.textContent, "1. Supplied note\ncontinuation");
   assert.equal(tags(nodes[1], "details")[0].open, false);
   let prevented = false;
   link.listeners.get("click")({ preventDefault() { prevented = true; } });
@@ -214,7 +352,8 @@ test("cross-chapter footnotes navigate within the edition route and focus only t
   doc.body.append(render(chapters[1].blocks[0].text, destination, doc));
   assert.equal(focusReadingFootnote(destination, "四補1", doc), true);
   const target = doc.getElementById(destination.definitions.get("四補1").id);
-  assert.equal(target.textContent, "[^四補1]: supplied definition"); assert.equal(target.focused, true);
+  assert.equal(target.textContent, "1. supplied definition"); assert.equal(target.focused, true);
+  assert.equal(target.getAttribute("title"), "原稿脚注：四補1");
   assert.equal(tags(doc.body, "details")[0].open, true);
   assert.equal(focusReadingFootnote(context, "四補1", doc), false);
   assert.equal(focusReadingFootnote(destination, "absent", doc), false);
@@ -227,6 +366,22 @@ test("chapter-local definitions take priority over a repeated label elsewhere in
   assert.equal(context.definitions.get("same").chapterId, "current");
   assert.equal(context.definitions.get("same").text, "local");
   assert.equal(tags(render(chapters[1].blocks[0].text, context), "a")[0].getAttribute("href"), "#reading-footnote-1");
+});
+
+test("footnote display numbers stay stable when navigating to another chapter", () => {
+  const chapters = [{ id: "first", blocks: [{ text: "[^first]: first note\n\nRead cross-chapter[^third]" }] },
+    { id: "second", blocks: [{ text: "[^second]: second note" }] },
+    { id: "last", blocks: [{ text: "[^third]: third note" }] }];
+  const options = { chapters, navigate() {}, footnotePath: chapter => `/books/example?chapter=${chapter}` };
+  const origin = createReadingMarkdownContext(chapters[0].blocks.map(block => block.text), { ...options, chapterId: "first" });
+  const destination = createReadingMarkdownContext(chapters[2].blocks.map(block => block.text), { ...options, chapterId: "last" });
+  assert.equal(origin.definitions.get("third").number, 3);
+  assert.equal(destination.definitions.get("third").number, 3);
+  assert.equal(origin.definitions.get("third").id, destination.definitions.get("third").id);
+  const link = tags(render(chapters[0].blocks[0].text, origin), "a")[0];
+  assert.equal(link.textContent, "3"); assert.equal(link.getAttribute("aria-label"), "查看注3");
+  const note = tags(render(chapters[2].blocks[0].text, destination), "p")[0];
+  assert.equal(note.textContent, "3. third note"); assert.equal(note.getAttribute("id"), "reading-footnote-3");
 });
 
 test("library titles and primary entries open electronic catalogs; historical sources and routes stay labeled", () => {
