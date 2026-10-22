@@ -476,11 +476,11 @@ function electronicReader(ctx) {
         h("h2", null, section.title),
         section.source_location ? h("p", { class: "book-section-location" }, section.source_location) : null),
       section.blocks.map(block => {
-        if (block.role === "modern_editorial" && block.label === "未辨片段") {
+        if (block.role === "modern_editorial" && ["未辨片段", "原稿附注"].includes(block.label)) {
           return h("aside", { class: "book-reading-source-cue", dataset: { blockId: block.id } }, block.text);
         }
         const folded = ["aside", "transcription"].includes(block.presentation) || block.role === "modern_editorial" && section.kind !== "notes";
-        const label = block.label || (block.presentation === "aside" ? "栏外小注" : block.presentation === "transcription" ? "图表附注与未辨记录" : "整理说明");
+        const label = block.label || (block.presentation === "aside" ? "栏外小注" : block.presentation === "transcription" ? "原稿杂注与未辨记录" : "整理说明");
         return h(folded ? "details" : "section",
           { class: `book-block${folded ? " book-folded-text" : ""}${["original_note", "commentary"].includes(block.role) ? " book-source-note" : ""}`, dataset: { blockId: block.id } },
           folded ? h("summary", null, label) : null,

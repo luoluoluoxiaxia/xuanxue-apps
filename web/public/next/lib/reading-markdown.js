@@ -85,8 +85,14 @@ export function readingMarkdownTokens(text, depth = 0) {
     // Some transcriptions use aligned plain text instead of Markdown fences for
     // hexagram rows. Isolate only consecutive aligned rows: surrounding prose
     // can be many pages long without an empty source line.
-    const alignedLine = line => (/[▅▆▇▉█▁─━′″○●×]/.test(line) && /\S[ \t]+\S/.test(line))
-      || /\S\t+\S/.test(line) || (line.match(/\S(?: {2,}|\u3000+)(?=\S)/g) || []).length >= 2;
+    const alignedLine = line => {
+      // Printed spacing and a circle in a long prose line are not a table.
+      // Genuine unfenced rows in this corpus are short; explicit source fences
+      // keep wider tables independently of this conservative display heuristic.
+      if ([...lineText(line).trim()].length > 120) return false;
+      return (/[▅▆▇▉█▁─━′″○●×]/.test(line) && /\S[ \t]+\S/.test(line))
+        || /\S\t+\S/.test(line) || (line.match(/\S(?: {2,}|\u3000+)(?=\S)/g) || []).length >= 2;
+    };
     const rowKind = line => {
       const metre = metricalLine(line);
       return metre ? `verse:${metre}` : alignedLine(line) ? "diagram" : null;
@@ -334,6 +340,20 @@ function literalPresentation(text) {
   return /[▅▆▇▉█▁─━′″○●×]|\t| {2,}|\u3000/u.test(text) ? "diagram" : "text";
 }
 
+function sourceReadingParagraphs(text, bookId) {
+  if (!["yiyin", "zengshan-buyi"].includes(bookId)) return [text];
+  const paragraphs = [];
+  let start = 0;
+  // These two supplied manuscripts separate completed prose sentences with a
+  // single source newline. A line that ends mid-sentence still flows normally.
+  for (const match of text.matchAll(/[。！？][”’」』）】》〕〉]*[ \t]*\r?\n/g)) {
+    const end = match.index + match[0].length;
+    paragraphs.push(text.slice(start, end)); start = end;
+  }
+  if (start < text.length) paragraphs.push(text.slice(start));
+  return paragraphs.length ? paragraphs : [text];
+}
+
 export function renderEditionText(versionId, text, context, doc = document) {
   if (!readingVersion(versionId)) {
     const paragraph = doc.createElement("p"); paragraph.textContent = text; return paragraph;
@@ -358,6 +378,16 @@ export function renderEditionText(versionId, text, context, doc = document) {
             parent.append(row); index = end - 1; continue;
           }
         }
+      }
+      if (token.type === "paragraph") {
+        for (const text of sourceReadingParagraphs(token.text, context.bookId)) {
+          const paragraph = doc.createElement("p");
+          if (/^(?:〔原注〕|〔原刊[栏欄]外小注，[归歸][属屬]未定〕)$/.test(text.trim())) {
+            paragraph.className = "book-reading-source-label";
+          }
+          appendInline(paragraph, text, context, doc, 0, true); parent.append(paragraph);
+        }
+        continue;
       }
       const tag = { paragraph: "p", code: "pre", details: "details", footnote: "p", list: "div", table: "div" }[token.type] || `h${token.level}`;
       const node = doc.createElement(tag);
@@ -404,9 +434,6 @@ export function renderEditionText(versionId, text, context, doc = document) {
         const label = doc.createElement("summary"); appendInline(label, token.summary, context, doc);
         node.append(label); render(node, token.children);
       } else {
-        if (token.type === "paragraph" && /^(?:〔原注〕|〔原刊[栏欄]外小注，[归歸][属屬]未定〕)$/.test(token.text.trim())) {
-          node.className = "book-reading-source-label";
-        }
         if (token.type === "footnote") {
           node.className = "book-reading-footnote";
           const definition = context.definitions.get(token.label);

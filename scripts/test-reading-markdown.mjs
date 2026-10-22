@@ -138,6 +138,19 @@ test("an unfenced hexagram inside a long prose paragraph isolates its consecutiv
   assert.equal(separated.length, 1); assert.equal(separated[0].type, "paragraph");
 });
 
+test("long Chinese prose with printed spacing or circles never becomes an unfenced diagram", () => {
+  const passage = "柱干為禄夲定一生職位髙低支作命基布三限夀元終始年生為根月建為苖日管經營斷中年之休咎";
+  for (const spacing of ["　　", "  ", "\t"]) {
+    const long = passage.repeat(80) + spacing + "○先推胎息之由次入變通之道" + spacing + passage.repeat(80);
+    const source = long + "\n印旺　官生　福重\n";
+    const tokens = readingMarkdownTokens(source);
+    assert.deepEqual(tokens, [{ type: "paragraph", text: source }]);
+    const node = render(source);
+    assert.equal(tags(node, "pre").length, 0);
+    assert.equal(tags(node, "p")[0].textContent, source);
+  }
+});
+
 test("short metrical runs keep lineation without promoting scanned prose into verse", () => {
   const before = "下面另有歌訣，原來的行序仍應保留。\n";
   const verse = "三才變化　四營成易\n六爻爲義　八卦爲體\n";
@@ -231,6 +244,25 @@ test("Chanwei isolated stem paragraphs compact by source token without inventing
   assert.equal(node.textContent, tokens.map(token => token.text).join(""));
   assert.equal(all(render(source)).filter(item => item.className === "book-reading-stem-row").length, 0);
   assert.deepEqual(readingMarkdownTokens(source), tokens);
+});
+
+test("Yiyin and Zengshan completed source lines create prose paragraphs without changing words or line order", () => {
+  const source = "此句先說明取用的條件。\n下行承接新的論述。\n「作者又說如此！」\n最後一段含\n未完之意。";
+  const expected = ["此句先說明取用的條件。\n", "下行承接新的論述。\n", "「作者又說如此！」\n", "最後一段含\n未完之意。"];
+  for (const bookId of ["yiyin", "zengshan-buyi"]) {
+    const context = createReadingMarkdownContext([source], { bookId });
+    const node = render(source, context);
+    assert.deepEqual(tags(node, "p").map(item => item.textContent), expected);
+    assert.equal(node.textContent, source);
+    assert.equal(all(node).filter(item => item.className === "book-reading-soft-break").length, 1);
+    const literal = render(`~~~~text\n${source}\n~~~~`, context);
+    assert.equal(tags(literal, "code")[0].textContent, `${source}\n`);
+    assert.equal(tags(literal, "p").length, 0);
+  }
+  assert.deepEqual(tags(render(source), "p").map(item => item.textContent), [source]);
+  assert.deepEqual(readingMarkdownTokens(source), [{ type: "paragraph", text: source }]);
+  const internal = render("### 胞胎逢印綬\n\n經云胞胎逢印綬禄享千鍾如庚寅辛卯丙申乙酉等日時。", createReadingMarkdownContext([], { bookId: "sanming-tonghui" }));
+  assert.equal(tags(internal, "h3")[0].textContent, "胞胎逢印綬");
 });
 
 test("fenced original notes preserve every inner character, CRLF, whitespace and markup literally", () => {
