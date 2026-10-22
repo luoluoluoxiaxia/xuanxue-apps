@@ -1,19 +1,19 @@
-import { h, fill } from "../lib/dom.js?v=n32";
-import { icon } from "../lib/icons.js?v=n32";
-import { get } from "../lib/api.js?v=n32";
-import { local, session } from "../lib/store.js?v=n32";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n32";
+import { h, fill } from "../lib/dom.js?v=n33";
+import { icon } from "../lib/icons.js?v=n33";
+import { get } from "../lib/api.js?v=n33";
+import { local, session } from "../lib/store.js?v=n33";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n33";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n32";
-import { errorView, stateView } from "../ui/bits.js?v=n32";
-import { openBookImage } from "../ui/book-image.js?v=n32";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n32";
-import { openSheet } from "../ui/overlay.js?v=n32";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n32";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n32";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n32";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n33";
+import { errorView, stateView } from "../ui/bits.js?v=n33";
+import { openBookImage } from "../ui/book-image.js?v=n33";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n33";
+import { openSheet } from "../ui/overlay.js?v=n33";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n33";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n33";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n33";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -36,6 +36,11 @@ function lifecycle(ctx, paint, request) {
 }
 
 function library(ctx) {
+  const learning = ctx.query.get("view") === "learning";
+  const views = h("nav", { class: "books-views", "aria-label": "书库视图" },
+    h("a", { href: "#/books", "aria-current": learning ? null : "page" }, "全部书籍"),
+    h("a", { href: "#/books?view=learning", "aria-current": learning ? "page" : null }, "学习路线"));
+  if (learning) return learningLibrary(ctx, views);
   let books = null;
   const results = h("div", { class: "books-grid" });
   const count = h("p", { class: "books-count", role: "status", "aria-live": "polite" });
@@ -64,7 +69,7 @@ function library(ctx) {
   wideFilters.addEventListener("change", syncFilters);
   ctx.cleanup(() => wideFilters.removeEventListener("change", syncFilters));
   const node = h("div", { class: "books-library" },
-    recent, h("div", { class: "books-filters" }, search, filterDetails), count, results);
+    views, recent, h("div", { class: "books-filters" }, search, filterDetails), count, results);
   function paintBooks() {
     local.setJson("xz-book-filters", { query: search.value, system, sort });
     filterState.textContent = `${BOOK_SYSTEM[system] || "全部"} · ${sort === "recent" ? "最近阅读" : "书库顺序"}`;
@@ -111,8 +116,44 @@ function library(ctx) {
   return { node, title: "典籍书库" };
 }
 
+function learningLibrary(ctx, views) {
+  const content = h("div", { class: "book-learning-paths" });
+  const node = h("div", { class: "books-library" }, views, content);
+  const life = lifecycle(ctx, ({ phase, data, error }) => {
+    content.setAttribute("aria-busy", String(phase === "loading"));
+    if (phase === "loading") { fill(content, h("p", { role: "status" }, "正在打开学习路线…")); return; }
+    if (phase === "error") { fill(content, errorView(error, refresh, { title: "学习路线暂时没有打开" })); return; }
+    const paths = data.learning_paths || [];
+    fill(content, paths.length ? paths.map(path => h("section", { class: "book-learning-track", "aria-label": path.title },
+      h("h2", null, path.title),
+      h("ol", { class: "book-learning-steps" }, path.nodes.map((step, index) => h("li", null,
+        h("div", { class: "book-learning-node" },
+          h("h3", null, step.books.map(book => h("a", { href: `#${book.path}${book.path.includes("?") ? "&" : "?"}from=learning` }, book.title))),
+          h("p", null, step.title)),
+        index < path.nodes.length - 1 ? icon("arrowRight", "book-learning-arrow") : null)))))
+      : stateView({ glyph: "book", title: "学习路线尚未开放", text: "可以先在全部书籍中选择阅读。" }));
+  });
+  const refresh = () => life.loader.load("/api/books");
+  life.setRefresh(refresh); refresh();
+  return { node, title: "学习路线 · 典籍书库" };
+}
+
+function bookLinks(ctx) {
+  const learning = ctx.query.get("from") === "learning";
+  const carry = path => learning ? `${path}${path.includes("?") ? "&" : "?"}from=learning` : path;
+  return {
+    libraryPath: learning ? "#/books?view=learning" : "#/books",
+    libraryLabel: learning ? "返回学习路线" : "返回书库",
+    reading: (...args) => carry(readingPath(...args)),
+    text: (...args) => carry(textVersionPath(...args)),
+    back: () => h("a", { class: "book-reading-back", href: learning ? "#/books?view=learning" : "#/books",
+      "aria-label": learning ? "返回学习路线" : "返回典籍书库" }, icon("back"), h("span", null, learning ? "学习路线" : "书库")),
+  };
+}
+
 function reader(ctx) {
   const id = ctx.params.id;
+  const links = bookLinks(ctx);
   let book = null;
   let contents = [];
   let activeSection = null;
@@ -139,7 +180,7 @@ function reader(ctx) {
       event.preventDefault(); button.focus({ preventScroll: true });
     } });
   const pagination = h("nav", { class: "book-reading-pagination", "aria-label": "正文翻页" });
-  const backLink = h("a", { class: "book-reading-back", href: "#/books", "aria-label": "返回典籍书库" }, icon("back"), h("span", null, "书库"));
+  const backLink = links.back();
   const heading = h("header", { class: "book-reading-header" }, backLink);
   const sidebarSlot = h("div", { class: "book-sidebar-slot" });
   const readerBody = h("div", { class: "book-reader-body" }, controls, content, pagination);
@@ -162,7 +203,7 @@ function reader(ctx) {
       } else {
         annotationNavigation.set(id, { userId: session.get().user?.id, annotation });
         savePosition();
-        ctx.navigate(readingPath(id, annotation.section_number));
+        ctx.navigate(links.reading(id, annotation.section_number));
       }
     } });
   controls.after(annotations.statusNode);
@@ -317,14 +358,14 @@ function reader(ctx) {
       }
     }
     fill(pagination,
-      section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${readingPath(id, section.number - 1)}` }, "上一页") : h("span"),
+      section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${links.reading(id, section.number - 1)}` }, "上一页") : h("span"),
       h("span", null, `${section.number} / ${book.section_count}`),
-      section.number < book.section_count ? h("a", { class: "btn btn-soft", rel: "next", href: `#${readingPath(id, section.number + 1)}` }, "下一页") : h("span"));
+      section.number < book.section_count ? h("a", { class: "btn btn-soft", rel: "next", href: `#${links.reading(id, section.number + 1)}` }, "下一页") : h("span"));
     local.set(progressKey(id), String(section.number));
   }
   function go(number) {
     if (!book || number < 1 || number > book.section_count || number === activeSection?.number) return;
-    savePosition(); ctx.navigate(readingPath(id, number));
+    savePosition(); ctx.navigate(links.reading(id, number));
   }
   function paintControls(number) {
     fill(controls,
@@ -333,7 +374,8 @@ function reader(ctx) {
       h("button", { type: "button", class: "btn btn-ghost book-directory",
         "aria-label": `打开${book.title}目录，当前第 ${number} ${book.has_modern ? "篇" : "页"}，共 ${book.section_count} ${book.has_modern ? "篇" : "页"}`,
         onClick: event => wideDirectory.matches ? setDirectory(!directoryOpen)
-          : openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget }) },
+          : openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget,
+            libraryPath: links.libraryPath, libraryLabel: links.libraryLabel }) },
         icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, `${number} / ${book.section_count}`)),
       h("button", { type: "button", class: "btn btn-ghost book-settings-open", "aria-label": "字号与排版设置", onClick: event => openBookSettings({ preferences, mode, hasModern: false, returnFocus: event.currentTarget,
         onChange: (prefs, nextMode) => {
@@ -365,6 +407,7 @@ function reader(ctx) {
       activeSection = section; paintSection(); paintControls(number); content.setAttribute("aria-busy", "false");
       sidebar?.destroy();
       sidebar = createBookSidebar({ book, contents, current: number, onSelect: go,
+        libraryPath: links.libraryPath, libraryLabel: links.libraryLabel,
         onNotes: returnFocus => annotations.openNotes(returnFocus), onCollapse: () => setDirectory(false) });
       fill(sidebarSlot, sidebar.node);
       annotations.onSection(section);
@@ -412,8 +455,8 @@ function reader(ctx) {
           body: h("div", { class: "book-edition" },
             h("p", { class: "books-notice" }, `${BOOK_SYSTEM[book.system]} · ${BOOK_STATUS[book.status]}`),
             h("p", { class: "books-source" }, book.source_label), h("p", { class: "books-notice" }, book.notice),
-            h("a", { href: `#${textVersionPath(id)}` }, "电子文字版本、章节引用与下载")) }) }, "版本说明"),
-      h("a", { class: "btn btn-soft", href: `#${textVersionPath(id)}` }, "电子文字与下载"));
+            h("a", { href: `#${links.text(id)}` }, "电子文字版本、章节引用与下载")) }) }, "版本说明"),
+      h("a", { class: "btn btn-soft", href: `#${links.text(id)}` }, "电子文字与下载"));
     if (!book.section_count) { content.setAttribute("aria-busy", "false"); fill(content, h("p", null, "电子成品待恢复，请先阅读其他书籍。")); return; }
     controls.hidden = false;
     const number = readingNumber(ctx.query.get("page") || local.get(progressKey(id), "1"), book.section_count);
@@ -427,6 +470,7 @@ function reader(ctx) {
 
 function electronicReader(ctx, resumeOnReload = false) {
   const id = ctx.params.id;
+  const links = bookLinks(ctx);
   const versionId = ctx.query.get("text-version");
   const isCurrent = versionId === "current";
   const isCatalog = versionId === "catalog" || isCurrent;
@@ -495,7 +539,7 @@ function electronicReader(ctx, resumeOnReload = false) {
     const primary = data.versions.find(version => version.availability === "available");
     const saved = textReadingPosition(local.json(textRecentKey(id)));
     if (isCurrent && primary) {
-      ctx.navigate(textVersionPath(id, primary.version_id, saved?.versionId === primary.version_id ? saved.sectionId : "",
+      ctx.navigate(links.text(id, primary.version_id, saved?.versionId === primary.version_id ? saved.sectionId : "",
         { resume: saved?.versionId === primary.version_id }), { replace: true });
       return;
     }
@@ -505,7 +549,7 @@ function electronicReader(ctx, resumeOnReload = false) {
       return h("section", { class: `books-card book-version-card${preferred ? " book-version-primary" : ""}` },
         h("h2", null, preferred ? "当前阅读版" : version.title),
         h("p", { class: "book-quality-brief" }, `${TEXT_COMPLETENESS[version.completeness]} · ${TEXT_COLLATION[version.collation_status]}`),
-        available ? h("a", { class: preferred ? "btn btn-primary" : "btn btn-soft", href: `#${textVersionPath(id, version.version_id,
+        available ? h("a", { class: preferred ? "btn btn-primary" : "btn btn-soft", href: `#${links.text(id, version.version_id,
           continuing ? saved.sectionId : "", { resume: continuing })}` }, continuing ? "继续阅读" : "开始阅读")
           : h("p", { class: "books-notice" }, version.availability === "candidate_only" ? "尚未收录正文" : "正文待导入"),
         h("details", { class: "book-version-details" }, h("summary", null, "版本、来源与下载"),
@@ -514,13 +558,13 @@ function electronicReader(ctx, resumeOnReload = false) {
           h("p", null, sourceLink(version.source_url, "查看来源")), available ? downloadLinks(version.version_id) : null));
     };
     const others = data.versions.filter(version => version !== primary);
-    fill(body, h("a", { href: "#/books", class: "book-reading-back" }, icon("back"), "书库"),
+    fill(body, links.back(),
       h("header", { class: "books-hero" }, h("h1", null, data.title), h("p", null, "疑字、缺文与原注保留，版本详情可展开查看。")),
       primary ? versionCard(primary, true) : stateView({ glyph: "book", title: "此书尚无可读文字版本", text: "正文收录后会在这里列出。" }),
       others.length ? h("details", { class: "book-source-notice book-other-versions" }, h("summary", null, `其他版本（${others.length}）`),
         others.map(version => versionCard(version))) : null,
       h("details", { class: "book-source-notice" }, h("summary", null, data.hasHistorical ? "收录说明与历史阅读稿" : "收录说明"),
-        h("p", null, data.gap_note), data.hasHistorical ? h("p", null, h("a", { href: `#${readingPath(id)}` }, "打开历史阅读稿")) : null));
+        h("p", null, data.gap_note), data.hasHistorical ? h("p", null, h("a", { href: `#${links.reading(id)}` }, "打开历史阅读稿")) : null));
   }
   function paintEdition({ edition: data, reading }) {
     editionCleanup();
@@ -533,7 +577,7 @@ function electronicReader(ctx, resumeOnReload = false) {
     const section = sections[index];
     const sequence = section ? sections.filter(item => item.kind === section.kind) : [];
     const sequenceIndex = sequence.findIndex(item => item.id === section?.id);
-    const path = item => textVersionPath(id, versionId, item.id);
+    const path = item => links.text(id, versionId, item.id);
     const navigationSections = sections.filter(item => item.kind !== "notes" || item.id === section?.id);
     const hasPunctuation = sections.some(item => item.blocks.some(block => typeof block.punctuated_text === "string"));
     const sectionHasPunctuation = section?.blocks.some(block => typeof block.punctuated_text === "string");
@@ -546,7 +590,7 @@ function electronicReader(ctx, resumeOnReload = false) {
     const makeMarkdownContext = () => createReadingMarkdownContext(section?.blocks.map(block => readingBlockText(block, renderingPunctuation)) || [], {
       chapters: sections.map(item => ({ ...item, blocks: item.blocks.map(block => ({ ...block, text: readingBlockText(block, renderingPunctuation) })) })),
       chapterId: section?.id, bookId: id,
-      footnotePath: (chapterId, label) => `${textVersionPath(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
+      footnotePath: (chapterId, label) => `${links.text(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
       navigate: route => ctx.navigate(route),
     });
     let markdownContext = makeMarkdownContext();
@@ -702,7 +746,7 @@ function electronicReader(ctx, resumeOnReload = false) {
     const directory = h("button", { type: "button", class: "btn btn-soft book-electronic-contents-open", "aria-label": "目录与搜索", "aria-haspopup": "dialog", onClick: event => {
       savePosition();
       openElectronicBookContents({ bookTitle: reading.title, sections: navigationSections, current: section?.id, returnFocus: event.currentTarget,
-        onSelect: sectionId => { if (sectionId !== section?.id) ctx.navigate(textVersionPath(id, versionId, sectionId)); } });
+        onSelect: sectionId => { if (sectionId !== section?.id) ctx.navigate(links.text(id, versionId, sectionId)); } });
     } }, icon("book"), h("span", null, section?.title || "章节目录"),
       section ? h("small", null, `${sequenceIndex + 1} / ${sequence.length}`) : null, icon("chevronDown"));
     const rows = h("nav", { class: "book-electronic-contents", "aria-label": "章节目录" });
@@ -747,7 +791,7 @@ function electronicReader(ctx, resumeOnReload = false) {
         h("ul", null, sections.filter(item => item.kind === "notes").map(item =>
           h("li", null, h("a", { href: `#${path(item)}` }, item.title))))) : null,
       h("p", null, "下载本版本完整原稿（包含来源说明与校记）："), downloadLinks(versionId),
-      h("p", null, h("a", { href: `#${textVersionPath(id)}` }, "查看其他版本")));
+      h("p", null, h("a", { href: `#${links.text(id)}` }, "查看其他版本")));
     const citation = section ? h("details", { class: "book-source-notice book-section-source" }, h("summary", null, "本节来源与引用"),
       h("p", { class: "book-text-citation" }, h("code", null, `${id}/${versionId}/${section.id}`)),
       h("p", null, "下载对应的完整来源章节（可能包含相邻小节）："),
@@ -759,7 +803,7 @@ function electronicReader(ctx, resumeOnReload = false) {
     } }, directory, settings);
     const desktopSettings = h("div", { class: "book-desktop-settings" });
     const header = h("header", { class: "book-reading-header book-electronic-header" },
-      h("a", { href: "#/books", class: "book-reading-back", "aria-label": "返回典籍书库" }, icon("back"), h("span", null, "书库")),
+      links.back(),
       h("div", { class: "book-reading-identity" }, h("h1", null, reading.title),
         h("span", { class: "book-reading-state" }, `${TEXT_COMPLETENESS[quality.completeness]} · ${TEXT_COLLATION[quality.collation_status]}`)), desktopSettings);
     fill(body,
