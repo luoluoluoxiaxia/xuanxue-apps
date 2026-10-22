@@ -1,11 +1,11 @@
-import { h, fill } from "../lib/dom.js?v=n35";
-import { get, post, patch, del, query } from "../lib/api.js?v=n35";
-import { session } from "../lib/store.js?v=n35";
-import { ANNOTATION_COLORS, ANCHOR_STATUS_LABELS, annotationMatches, annotationRange, selectionAnchor } from "../lib/book-annotations.js?v=n35";
-import { createBookDecorator } from "../lib/book-decoration.js?v=n35";
-import { openSheet, confirmDialog } from "./overlay.js?v=n35";
-import { errorView, spinnerLine } from "./bits.js?v=n35";
-import { toast, toastError } from "./toast.js?v=n35";
+import { h, fill } from "../lib/dom.js?v=n36";
+import { get, post, patch, del, query } from "../lib/api.js?v=n36";
+import { session } from "../lib/store.js?v=n36";
+import { ANNOTATION_COLORS, ANCHOR_STATUS_LABELS, annotationMatches, annotationRange, selectionAnchor } from "../lib/book-annotations.js?v=n36";
+import { createBookDecorator } from "../lib/book-decoration.js?v=n36";
+import { openSheet, confirmDialog } from "./overlay.js?v=n36";
+import { errorView, spinnerLine } from "./bits.js?v=n36";
+import { toast, toastError } from "./toast.js?v=n36";
 
 const SELECTION_MESSAGES = {
   cross_block: "请一次选取同一段、同一栏的文字，再保存划线。跨段内容可分次标记。",

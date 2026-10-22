@@ -2,22 +2,40 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
-  bookCasesEntry, bookCaseReadingPath } from "../web/public/next/lib/book-cases.js";
+  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel } from "../web/public/next/lib/book-cases.js";
 
 test("case queries preserve book, paging and learning context while API calls use only public parameters", () => {
   const filter = readBookCaseQuery(new URLSearchParams("book_id=ziping-zhenquan&offset=24&limit=12&from=learning"));
-  assert.deepEqual(filter, { book_id: "ziping-zhenquan", offset: 24, limit: 12, from: "learning" });
+  assert.deepEqual(filter, { book_id: "ziping-zhenquan", kind: "", offset: 24, limit: 12, from: "learning" });
   assert.equal(bookCaseListPath(filter), "/book-cases?book_id=ziping-zhenquan&offset=24&limit=12&from=learning");
   assert.equal(bookCaseListPath(filter, { book_id: "ditian-sui", offset: 0 }), "/book-cases?book_id=ditian-sui&limit=12&from=learning");
   assert.equal(bookCaseDetailPath("display-example", filter), "/book-cases/display-example?book_id=ziping-zhenquan&offset=24&limit=12&from=learning");
   assert.equal(bookCaseApiPath(filter), "/api/book-cases?book_id=ziping-zhenquan&offset=24&limit=12");
   assert.deepEqual(readBookCaseQuery(new URLSearchParams("book_id=../private&offset=-1&limit=999&from=other")),
-    { book_id: "", offset: 0, limit: 24, from: "" });
+    { book_id: "", kind: "", offset: 0, limit: 24, from: "" });
   assert.equal(bookCaseApiPath({}), "/api/book-cases?offset=0&limit=24");
   const contract = JSON.parse(readFileSync(new URL("../contracts/openapi/client.openapi.json", import.meta.url), "utf8"));
-  assert.deepEqual(contract.paths["/api/book-cases"].get.parameters.map(item => item.name), ["book_id", "offset", "limit"]);
+  assert.deepEqual(contract.paths["/api/book-cases"].get.parameters.map(item => item.name), ["book_id", "kind", "offset", "limit"]);
   assert.ok(contract.paths["/api/book-cases/{case_id}"].get);
   assert.ok(contract.paths["/api/book-cases/{case_id}/chart"].get);
+  const detail = contract.components.schemas.ClientBookCaseDetail.properties;
+  assert.deepEqual(detail.study_format.enum, ["case", "source_mention"]);
+  assert.deepEqual(detail.chart_status.enum, ["available", "incomplete", "not_applicable"]);
+  assert.equal(detail.related_case_ids.items.type, "string");
+});
+
+test("kind filters retain the source category through paging, detail and return while ignoring invalid values", () => {
+  const filter = readBookCaseQuery(new URLSearchParams("book_id=ziping-zhenquan&kind=hypothetical&offset=24&from=learning"));
+  assert.equal(bookCaseApiPath(filter), "/api/book-cases?book_id=ziping-zhenquan&kind=hypothetical&offset=24&limit=24");
+  assert.equal(bookCaseDetailPath("source-mention", filter), "/book-cases/source-mention?book_id=ziping-zhenquan&kind=hypothetical&offset=24&from=learning");
+  assert.equal(bookCaseListPath(filter, { offset: 48 }), "/book-cases?book_id=ziping-zhenquan&kind=hypothetical&offset=48&from=learning");
+  assert.equal(bookCaseKindLabel("hypothetical"), "假设推演");
+  assert.equal(bookCaseKindLabel("rule_example"), "规则条目");
+  for (const kind of ["__proto__", "constructor", "named", "all", "../private"]) {
+    assert.equal(readBookCaseQuery(new URLSearchParams({ kind })).kind, "");
+    assert.equal(bookCaseApiPath({ kind }), "/api/book-cases?offset=0&limit=24");
+    assert.equal(bookCaseKindLabel(kind), "学习条目");
+  }
 });
 
 test("book case entries require a positive public count and source links keep the server edition page", () => {
@@ -118,6 +136,7 @@ const book = { id: "ziping-zhenquan", title: "子平真诠", case_count: 1 };
 // Synthetic display data, not a transcription of a historical person's chart.
 const summary = { id: "display-example", book_id: book.id, book_title: book.title, title: "展示测试案例", kind: "named_case", summary: "原书分析与四柱。" };
 const caseDetail = () => ({ ...summary,
+  study_format: "case", chart_status: "available", related_case_ids: [],
   chart: [{ label: "年柱", value: "壬午" }, { label: "月柱", value: "己酉" }, { label: "日柱", value: "甲午" }, { label: "时柱", value: "丙寅" }],
   facts: ["原书具名命例。"], judgment: ["作者认为这一结构有利。"], outcome: [], outcome_status: "not_reported",
   original_excerpt: "原文案例。", original_context: "案例所在完整原段。", modern_context: "所在完整段落的白话。",
@@ -160,12 +179,12 @@ test("case list loads public records, filters books, preserves paging and report
     return path === "/api/books" ? { books: [book, { id: "empty", title: "未收录书籍", case_count: 0 }] }
       : { items: [summary, { ...summary, id: "second-case", title: "第二例" }], total: 6, offset: 2, limit: 2 };
   });
-  assert.match(result.node.textContent, /正在打开案例/);
+  assert.match(result.node.textContent, /正在打开学习条目/);
   result.onRestore(350);
   await tick();
   assert.deepEqual(paths, ["/api/book-cases?book_id=ziping-zhenquan&offset=2&limit=2", "/api/books"]);
-  assert.match(result.node.textContent, /当前已收录 6 条案例/);
-  assert.equal(byText(result.node, "a", "案例").getAttribute("href"), "#/book-cases?from=learning");
+  assert.match(result.node.textContent, /当前已收录 6 条学习条目 · 按原文提及保存/);
+  assert.equal(byText(result.node, "a", "案例与推演").getAttribute("href"), "#/book-cases?from=learning");
   assert.equal(result.node.textContent.includes("未收录书籍"), false);
   assert.equal(byText(result.node, "a", "展示测试案例").getAttribute("href"), "#/book-cases/display-example?book_id=ziping-zhenquan&offset=2&limit=2&from=learning");
   assert.equal(byText(result.node, "a", "上一页").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&limit=2&from=learning");
@@ -180,12 +199,12 @@ test("unknown or empty book scope stays usable without exposing an internal id a
   const env = environment("book_id=not-in-catalogue");
   const result = render(env.ctx, async path => path === "/api/books" ? { books: [] } : { items: [], total: 0, offset: 0, limit: 24 });
   await tick();
-  assert.match(result.node.textContent, /这本书暂未收录案例/);
-  assert.match(result.node.textContent, /当前已收录 0 条案例/);
+  assert.match(result.node.textContent, /这本书暂未收录学习条目/);
+  assert.match(result.node.textContent, /当前已收录 0 条学习条目/);
   assert.equal(all(result.node).find(node => node.className === "book-cases-pagination").childNodes.length, 0);
   assert.equal(tags(result.node, "h1")[0].className, "sr-only");
   assert.equal(result.node.textContent.includes("not-in-catalogue"), false);
-  assert.equal(byText(result.node, "a", "查看全部案例").getAttribute("href"), "#/book-cases");
+  assert.equal(byText(result.node, "a", "查看全部条目").getAttribute("href"), "#/book-cases");
   env.cleanup();
 });
 
@@ -196,8 +215,31 @@ test("single-page intake shows one count without a repeated heading, introductio
   await tick();
   assert.equal(tags(result.node, "h1")[0].className, "sr-only");
   assert.equal(tags(result.node, "header").length, 0);
-  assert.match(result.node.textContent, /当前已收录 1 条案例/);
+  assert.match(result.node.textContent, /当前已收录 1 条学习条目/);
   assert.equal(all(result.node).find(node => node.className === "book-cases-pagination").childNodes.length, 0);
+  env.cleanup();
+});
+
+test("source mention lists count learning entries and let book or kind change without losing the other filter", async () => {
+  const env = environment("book_id=ziping-zhenquan&kind=hypothetical&offset=24&from=learning");
+  const paths = [];
+  const result = render(env.ctx, async path => {
+    paths.push(path);
+    return path === "/api/books" ? { books: [{ ...book, case_count: 157 }] }
+      : { items: [{ ...summary, kind: "hypothetical", title: "假设配置" }], total: 53, offset: 24, limit: 24 };
+  });
+  result.onRestore(420); await tick();
+  assert.equal(paths[0], "/api/book-cases?book_id=ziping-zhenquan&kind=hypothetical&offset=24&limit=24");
+  assert.match(result.node.textContent, /当前已收录 53 条学习条目 · 按原文提及保存/);
+  assert.doesNotMatch(result.node.textContent, /独立|53.*人物|53.*条案例/);
+  const [bookSelect, kindSelect] = tags(result.node, "select");
+  assert.equal(kindSelect.value, "hypothetical");
+  assert.equal(tags(kindSelect, "option").length, 5);
+  kindSelect.value = "rule_example"; kindSelect.emit("change");
+  bookSelect.value = ""; bookSelect.emit("change");
+  assert.deepEqual(env.navigated, ["/book-cases?book_id=ziping-zhenquan&kind=rule_example&from=learning", "/book-cases?kind=hypothetical&from=learning"]);
+  assert.equal(byText(result.node, "a", "下一页").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&kind=hypothetical&offset=48&from=learning");
+  assert.deepEqual(env.scrolls, [[0, 420]]);
   env.cleanup();
 });
 
@@ -208,7 +250,7 @@ test("case detail separates book judgment and unreported outcome and folds sourc
   const paths = [];
   const response = detailRequest(data);
   const result = render(env.ctx, async path => { paths.push(path); return response(path); });
-  assert.match(result.node.textContent, /正在打开案例/);
+  assert.match(result.node.textContent, /正在打开学习条目/);
   await tick();
   assert.deepEqual(paths, ["/api/book-cases/display-example", "/api/book-cases/display-example/chart"]);
   const fullChart = all(result.node).find(node => node.classList.contains("book-case-full-chart"));
@@ -232,7 +274,7 @@ test("case detail separates book judgment and unreported outcome and folds sourc
   assert.equal(tags(result.node, "script").length, 0); assert.equal(tags(result.node, "img").length, 0);
   assert.match(result.node.textContent, /<script>alert\(1\)<\/script>/);
   assert.equal(tags(result.node, "a").find(node => node.textContent.startsWith("回到原书章节")).getAttribute("href"), "#/books/ziping-zhenquan?page=5&from=learning");
-  assert.equal(byText(result.node, "a", "返回案例").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&offset=24&from=learning");
+  assert.equal(byText(result.node, "a", "返回学习条目").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&offset=24&from=learning");
   env.cleanup();
 });
 
@@ -246,6 +288,69 @@ test("recorded results remain server text and missing neighboring context is omi
   assert.equal(byText(result.node, "h2", "所在段白话"), undefined);
   assert.ok(byText(result.node, "summary", "原文与说明"));
   assert.equal(byText(result.node, "summary", "原文与白话"), undefined);
+  env.cleanup();
+});
+
+test("an incomplete source mention puts the exact full-paragraph modern text first and folds all source quotes without a chart call", async () => {
+  const env = environment("book_id=ziping-zhenquan&kind=named_case&offset=24&from=learning", "source-mention");
+  const data = { ...caseDetail(), id: "source-mention", study_format: "source_mention", chart_status: "incomplete",
+    modern_context: "第一段白话𠀀。\n\n第二段保留条件与结论。", original_excerpt: "甲子原句。", original_context: "完整原段：甲子原句。另句。",
+    facts: ["事实逐字原句"], judgment: ["作者判断原句"], outcome_status: "recorded", outcome: ["结果逐字原句"],
+    related_case_ids: ["related-mention", "related-mention", "source-mention"] };
+  const before = structuredClone(data), paths = [];
+  const result = render(env.ctx, async path => { paths.push(path); return data; }); await tick();
+  assert.deepEqual(paths, ["/api/book-cases/source-mention"]);
+  const article = result.node.querySelector(".book-case-analysis");
+  assert.equal(article.childNodes[0].querySelector("h2").textContent, "所在段白话");
+  assert.equal(article.querySelector(".book-case-text").textContent, data.modern_context);
+  assert.equal(article.querySelectorAll(".book-case-modern").length, 1);
+  assert.equal(byText(article, "h2", "原书分析"), undefined);
+  assert.equal(byText(article, "h2", "书载结果"), undefined);
+  const disclosures = tags(article, "details");
+  assert.equal(disclosures.length, 2);
+  assert.ok(disclosures.every(details => !details.open && details.getAttribute("open") === null));
+  assert.match(disclosures[0].textContent, /原文摘句甲子原句。事实原句事实逐字原句判断原句作者判断原句结果原句结果逐字原句/);
+  assert.match(result.node.textContent, /原书未载完整排盘条件，暂不能复盘。/);
+  assert.doesNotMatch(result.node.textContent, /盘面暂时没有打开|逐句译文|独立人物|同一人物/);
+  assert.equal(result.node.querySelector(".chart-panel"), null);
+  assert.equal(byText(result.node, "button", "重试"), undefined);
+  assert.equal(byText(result.node, "a", "相关条目 1").getAttribute("href"), "#/book-cases/related-mention?book_id=ziping-zhenquan&kind=named_case&offset=24&from=learning");
+  assert.equal(result.node.querySelector(".book-case-related").querySelectorAll("a").length, 1);
+  assert.equal(byText(result.node, "a", "返回学习条目").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&kind=named_case&offset=24&from=learning");
+  assert.deepEqual(data, before);
+  env.reconnect(); assert.equal(paths.length, 1);
+  env.cleanup();
+});
+
+test("hypothetical and rule entries never request or invent a chart even when the source excerpt contains four pillars", async () => {
+  for (const kind of ["hypothetical", "rule_example"]) {
+    const env = environment("", `${kind}-mention`), paths = [];
+    const data = { ...caseDetail(), id: `${kind}-mention`, kind, study_format: "source_mention", chart_status: "not_applicable" };
+    const result = render(env.ctx, async path => { paths.push(path); return data; }); await tick();
+    assert.equal(paths.length, 1);
+    assert.equal(result.node.querySelector(".chart-panel"), null);
+    assert.equal(result.node.querySelector(".book-case-chart-strip"), null);
+    assert.match(result.node.textContent, kind === "hypothetical" ? /本条为假设推演，按原文条件阅读。/ : /本条为规则说明，按原文条件阅读。/);
+    assert.equal(byText(result.node, "button", "重试"), undefined);
+    assert.doesNotMatch(result.node.textContent, /盘面暂时没有打开|修改信息|出生日期/);
+    env.cleanup();
+  }
+});
+
+test("a complete source mention keeps the primary paragraph readable while its real shared chart loads separately", async () => {
+  const env = environment("", "complete-mention"), paths = []; let resolveChart;
+  const data = { ...caseDetail(), id: "complete-mention", study_format: "source_mention", chart_status: "available" };
+  const result = render(env.ctx, path => {
+    paths.push(path);
+    return path.endsWith("/chart") ? new Promise(resolve => { resolveChart = resolve; }) : Promise.resolve(data);
+  }); await tick();
+  const primary = result.node.querySelector(".book-case-modern");
+  assert.ok(primary.textContent.includes(data.modern_context));
+  assert.match(result.node.textContent, /正在打开盘面/);
+  resolveChart(caseChart(data.id)); await tick();
+  assert.equal(result.node.querySelector(".book-case-modern"), primary);
+  assert.equal(result.node.querySelectorAll(".cp-pillar").length, 4);
+  assert.deepEqual(paths, ["/api/book-cases/complete-mention", "/api/book-cases/complete-mention/chart"]);
   env.cleanup();
 });
 
@@ -332,8 +437,8 @@ test("a missing chart preserves the original case and never substitutes the old 
   assert.match(result.node.textContent, /此例盘面暂不可用/);
   assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
   assert.match(result.node.textContent, /案例所在完整原段/);
-  assert.doesNotMatch(result.node.textContent, /这个案例暂不可用/);
-  assert.equal(result.node.querySelector(".book-case-full-chart"), null);
+  assert.doesNotMatch(result.node.textContent, /这个条目暂不可用/);
+  assert.equal(result.node.querySelector(".chart-panel"), null);
   assert.equal(result.node.querySelector(".book-case-chart-strip"), null);
   assert.equal(result.node.querySelector(".book-case-chart"), null);
   assert.equal(byText(result.node, "button", "重试"), undefined);
@@ -341,9 +446,9 @@ test("a missing chart preserves the original case and never substitutes the old 
 });
 
 test("chart network errors retain the book analysis and retry explicitly or when reconnected", async () => {
-  const env = environment("", "display-example"); let attempts = 0;
+  const env = environment("", "display-example"); let attempts = 0, detailRequests = 0;
   const result = render(env.ctx, async path => {
-    if (!path.endsWith("/chart")) return caseDetail();
+    if (!path.endsWith("/chart")) { detailRequests++; return caseDetail(); }
     if (++attempts < 3) throw new Error("盘面连接中断");
     return caseChart();
   });
@@ -351,21 +456,28 @@ test("chart network errors retain the book analysis and retry explicitly or when
   assert.match(result.node.textContent, /盘面暂时没有打开/);
   assert.match(result.node.textContent, /盘面连接中断/);
   assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  const article = result.node.querySelector(".book-case-analysis");
+  const disclosure = tags(article, "details")[0]; disclosure.open = true;
   byText(result.node, "button", "重试").emit("click"); await tick();
   assert.equal(attempts, 2);
+  assert.equal(result.node.querySelector(".book-case-analysis"), article);
+  assert.equal(disclosure.open, true);
   env.reconnect(); await tick();
   assert.equal(attempts, 3); assert.ok(result.node.querySelector(".chart-panel"));
   assert.equal(byText(result.node, "button", "重试"), undefined);
+  assert.equal(detailRequests, 1);
   env.reconnect(); await tick(); assert.equal(attempts, 3);
   env.cleanup();
 });
 
-test("parallel detail and chart loads wait for both and reject a different case's chart", async () => {
+test("the original case opens before its permitted chart and a different case's chart is rejected", async () => {
   const env = environment("", "display-example"); const pending = [];
   const result = render(env.ctx, (path, options) => new Promise(resolve => pending.push({ path, signal: options.signal, resolve })));
-  assert.equal(pending.length, 2);
+  assert.equal(pending.length, 1);
   pending[0].resolve(caseDetail()); await tick();
-  assert.match(result.node.textContent, /正在打开案例与盘面/);
+  assert.equal(pending.length, 2);
+  assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  assert.match(result.node.textContent, /正在打开盘面/);
   pending[1].resolve(caseChart("other-case")); await tick();
   assert.match(result.node.textContent, /案例与盘面未能对应/);
   assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
@@ -375,15 +487,18 @@ test("parallel detail and chart loads wait for both and reject a different case'
   env.cleanup(); assert.ok(pending.every(item => item.signal.aborted));
 });
 
-test("a refreshed case cannot be overwritten by a late detail and chart pair", async () => {
+test("refresh aborts the old chart and a late chart cannot overwrite the new case", async () => {
   const env = environment("", "display-example"); const pending = [];
   const result = render(env.ctx, (path, options) => new Promise(resolve => pending.push({ path, signal: options.signal, resolve })));
+  pending[0].resolve({ ...caseDetail(), title: "旧案例不应出现" }); await tick();
+  assert.equal(pending.length, 2);
   env.refresh(); assert.ok(pending.slice(0, 2).every(item => item.signal.aborted));
-  pending[2].resolve({ ...caseDetail(), title: "新案例标题" }); pending[3].resolve(caseChart()); await tick();
+  pending[2].resolve({ ...caseDetail(), title: "新案例标题" }); await tick();
+  pending[3].resolve(caseChart()); await tick();
   assert.match(result.node.textContent, /新案例标题/);
-  pending[0].resolve({ ...caseDetail(), title: "旧案例不应出现" }); pending[1].resolve(caseChart()); await tick();
+  pending[1].resolve(caseChart()); await tick();
   assert.doesNotMatch(result.node.textContent, /旧案例不应出现/);
-  assert.deepEqual(env.titles, ["新案例标题 · 典籍案例"]);
+  assert.deepEqual(env.titles, ["旧案例不应出现 · 典籍研读", "新案例标题 · 典籍研读"]);
   env.cleanup();
 });
 
@@ -397,7 +512,7 @@ test("404 is a terminal unavailable state while network errors retry and recover
     return { ...caseDetail(), id: "missing-case" };
   });
   await tick();
-  assert.match(result.node.textContent, /这个案例暂不可用/);
+  assert.match(result.node.textContent, /这个条目暂不可用/);
   assert.equal(byText(result.node, "button", "重试"), undefined);
   env.refresh(); await tick();
   assert.match(result.node.textContent, /连接中断/);
@@ -437,4 +552,17 @@ test("leaving a case detail aborts it and suppresses both late content and title
   pending.forEach(item => item.resolve(item.path.endsWith("/chart") ? caseChart() : caseDetail())); await tick();
   assert.equal(result.node.textContent, before);
   assert.deepEqual(env.titles, []);
+});
+
+test("leaving while a permitted chart is loading aborts its request and never publishes the late chart", async () => {
+  const env = environment("", "display-example"); let resolveChart, chartSignal;
+  const result = render(env.ctx, (path, options) => path.endsWith("/chart")
+    ? new Promise(resolve => { resolveChart = resolve; chartSignal = options.signal; }) : Promise.resolve(caseDetail()));
+  await tick();
+  assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  const before = result.node.textContent;
+  env.cleanup(); assert.equal(chartSignal.aborted, true);
+  resolveChart(caseChart()); await tick();
+  assert.equal(result.node.textContent, before);
+  assert.equal(result.node.querySelector(".chart-panel"), null);
 });

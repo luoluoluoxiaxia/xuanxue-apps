@@ -1,20 +1,20 @@
-import { h, fill } from "../lib/dom.js?v=n35";
-import { icon } from "../lib/icons.js?v=n35";
-import { get } from "../lib/api.js?v=n35";
-import { local, session } from "../lib/store.js?v=n35";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n35";
+import { h, fill } from "../lib/dom.js?v=n36";
+import { icon } from "../lib/icons.js?v=n36";
+import { get } from "../lib/api.js?v=n36";
+import { local, session } from "../lib/store.js?v=n36";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n36";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n35";
-import { errorView, stateView } from "../ui/bits.js?v=n35";
-import { openBookImage } from "../ui/book-image.js?v=n35";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n35";
-import { openSheet } from "../ui/overlay.js?v=n35";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n35";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n35";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n35";
-import { bookCasesEntry } from "../lib/book-cases.js?v=n35";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n36";
+import { errorView, stateView } from "../ui/bits.js?v=n36";
+import { openBookImage } from "../ui/book-image.js?v=n36";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n36";
+import { openSheet } from "../ui/overlay.js?v=n36";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n36";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n36";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n36";
+import { bookCasesEntry } from "../lib/book-cases.js?v=n36";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -29,7 +29,7 @@ let firstBookRender = true;
 
 function caseLink(book, ctx) {
   const path = bookCasesEntry(book, ctx.query.get("from"));
-  return path ? h("a", { class: "book-cases-entry", href: `#${path}` }, "本书案例") : null;
+  return path ? h("a", { class: "book-cases-entry", href: `#${path}` }, "本书案例与推演") : null;
 }
 
 function lifecycle(ctx, paint, request) {
@@ -46,7 +46,7 @@ function library(ctx) {
   const views = h("nav", { class: "books-views", "aria-label": "书库视图" },
     h("a", { href: "#/books", "aria-current": learning ? null : "page" }, "全部书籍"),
     h("a", { href: "#/books?view=learning", "aria-current": learning ? "page" : null }, "学习路线"),
-    h("a", { href: learning ? "#/book-cases?from=learning" : "#/book-cases" }, "案例"));
+    h("a", { href: learning ? "#/book-cases?from=learning" : "#/book-cases" }, "案例与推演"));
   if (learning) return learningLibrary(ctx, views);
   let books = null;
   const results = h("div", { class: "books-grid" });

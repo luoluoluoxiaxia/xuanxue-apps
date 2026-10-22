@@ -1664,6 +1664,17 @@
             "title": "Chart",
             "type": "array"
           },
+          "chart_status": {
+            "default": "incomplete",
+            "description": "available可按书载条件复盘；incomplete实叙条件不全；not_applicable为假设或规则。",
+            "enum": [
+              "available",
+              "incomplete",
+              "not_applicable"
+            ],
+            "title": "Chart Status",
+            "type": "string"
+          },
           "context_after": {
             "anyOf": [
               {
@@ -1753,12 +1764,30 @@
             "title": "Outcome Status",
             "type": "string"
           },
+          "related_case_ids": {
+            "description": "原始提及记录明确关联的公开条目ID；不表示同人或同造。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Related Case Ids",
+            "type": "array"
+          },
           "sources": {
             "items": {
               "$ref": "#/components/schemas/ClientBookCaseSource"
             },
             "title": "Sources",
             "type": "array"
+          },
+          "study_format": {
+            "default": "case",
+            "description": "case为已整理案例卡；source_mention为按原段呈现的源提及，不代表独立人物。",
+            "enum": [
+              "case",
+              "source_mention"
+            ],
+            "title": "Study Format",
+            "type": "string"
           },
           "summary": {
             "title": "Summary",
@@ -8129,6 +8158,28 @@
                 }
               ],
               "title": "Book Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "named_case",
+                    "unnamed_case",
+                    "hypothetical",
+                    "rule_example"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
             }
           },
           {
