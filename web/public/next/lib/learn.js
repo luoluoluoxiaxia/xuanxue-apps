@@ -1,9 +1,9 @@
 // 「看懂这张盘」：把排盘输入放进本机草稿，讲解页拿它向后端要一页讲解。
 // 出生信息不进 URL；键名沿用 xz-next-draft: 前缀，退出登录时随私人草稿一起清掉。
-import { h } from "./dom.js?v=n27";
-import { icon } from "./icons.js?v=n27";
-import { local } from "./store.js?v=n27";
-import { localDateTimeISO } from "./ids.js?v=n27";
+import { h } from "./dom.js?v=n28";
+import { icon } from "./icons.js?v=n28";
+import { local } from "./store.js?v=n28";
+import { localDateTimeISO } from "./ids.js?v=n28";
 
 const inputKey = system => `xz-next-draft:learn:${system}`;
 

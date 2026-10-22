@@ -5158,6 +5158,18 @@
             "title": "Presentation",
             "type": "string"
           },
+          "punctuated_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "现代整理句读，仅调整标点与分段；未整理时省略。text 始终保留原稿。",
+            "title": "Punctuated Text"
+          },
           "role": {
             "enum": [
               "original",

@@ -47,6 +47,9 @@ test('reading opens the supplied body default and resolves old chapter links by 
   assert.deepEqual(textReadingPosition(saved), saved);
   const anchored = { ...saved, anchor: 12, offset: .375 };
   assert.deepEqual(textReadingPosition(anchored), anchored);
+  assert.deepEqual(textReadingPosition({ ...anchored, punctuation: 'source' }), { ...anchored, punctuation: 'source' });
+  assert.deepEqual(textReadingPosition({ ...anchored, punctuation: 'punctuated' }), { ...anchored, punctuation: 'punctuated' });
+  assert.deepEqual(textReadingPosition({ ...anchored, punctuation: 'unknown' }), anchored);
   for (const fields of [{ anchor: -1, offset: .1 }, { anchor: 1.5, offset: .1 }, { anchor: 2, offset: NaN },
     { anchor: 2, offset: 1.1 }, { anchor: 2 }, { offset: .1 }]) assert.deepEqual(textReadingPosition({ ...saved, ...fields }), saved);
   for (const invalid of [null, 'broken', { ...saved, versionId: '../source' }, { ...saved, sectionId: 'chapter?other=1' },
@@ -70,6 +73,40 @@ test('electronic resume preserves a saved paragraph while contents, paging and f
   assert.deepEqual(textReadingTarget(reading, { saved: { ...saved, sectionId: 'removed' } }), { index: 1, position: null });
   const legacy = { versionId: saved.versionId, sectionId: saved.sectionId, title: saved.title, updatedAt: saved.updatedAt };
   assert.deepEqual(textReadingTarget(reading, { saved: legacy }), { index: 2, position: legacy });
+});
+
+test('reading uses only supplied editorial punctuation and always offers the exact source text', async () => {
+  const { readingBlockText, readingPreferences } = await load('lib/books.js');
+  const block = { id: 'first', text: '動究是交重之爻靜就是單拆之爻', punctuated_text: '動究是交重之爻，靜就是單拆之爻。' };
+  const source = structuredClone(block);
+  assert.equal(readingBlockText(block), block.punctuated_text);
+  assert.equal(readingBlockText(block, readingPreferences().punctuation), block.punctuated_text);
+  assert.equal(readingBlockText(block, 'source'), block.text);
+  assert.equal(readingBlockText({ text: '未整理原稿' }), '未整理原稿');
+  assert.equal(readingBlockText({ text: '未整理原稿', punctuated_text: null }), '未整理原稿');
+  assert.equal(readingBlockText({ text: '原稿', punctuated_text: '' }), '');
+  assert.equal(readingPreferences({ punctuation: 'source' }).punctuation, 'source');
+  for (const invalid of [null, 1, [], 'SOURCE', 'guess']) assert.equal(readingPreferences({ punctuation: invalid }).punctuation, 'punctuated');
+  assert.deepEqual(block, source);
+});
+
+test('punctuation switches locate the same original words when one paragraph becomes several', async () => {
+  const { readingCharacterLength, readingCharacterAnchor } = await load('lib/books.js');
+  const original = '動究是交重之爻靜就是單拆之爻交拆之爻屬陰重單之爻屬陽';
+  const paragraphs = ['動究是交重之爻，靜就是單拆之爻。', '交拆之爻屬陰，重單之爻屬陽。'];
+  const start = readingCharacterLength(paragraphs[0]);
+  const targetCharacter = start + 5;
+  const target = readingCharacterAnchor([
+    { anchor: 7, start: 0, length: start },
+    { anchor: 8, start, length: readingCharacterLength(paragraphs[1]) },
+  ], targetCharacter);
+  assert.deepEqual(target, { anchor: 8, offset: 5 / readingCharacterLength(paragraphs[1]) });
+  assert.deepEqual(readingCharacterAnchor([{ anchor: 3, start: 0, length: readingCharacterLength(original) }], targetCharacter),
+    { anchor: 3, offset: targetCharacter / readingCharacterLength(original) });
+  assert.equal(readingCharacterLength(original), readingCharacterLength(paragraphs.join('\n\n')));
+  assert.equal(readingCharacterLength('甲，𠀀。\n\n乙□⚊⚋'), 6);
+  assert.deepEqual(readingCharacterAnchor([{ anchor: 1, start: 0, length: 0 }], 1), null);
+  assert.deepEqual(readingCharacterAnchor([{ anchor: 2, start: 0, length: 10 }], 50), { anchor: 2, offset: 1 });
 });
 
 test('cancelled response bodies remain cancellation instead of stale authentication errors', async () => {
@@ -105,11 +142,11 @@ test('book filters keep working drafts and unavailable records visible with thei
 
 test('reading settings and bookmarks recover safely from corrupt or stale local storage', async () => {
   const { readingPreferences, readingPosition } = await load('lib/books.js');
-  const defaults = { size: 20, line: 2, font: 'serif', paper: 'white', layout: 'continuous' };
+  const defaults = { size: 20, line: 2, font: 'serif', paper: 'white', layout: 'continuous', punctuation: 'punctuated' };
   for (const value of [null, 'broken', [], { size: 900, line: -1, font: 'injected', paper: 'other', layout: 'other' }]) {
     assert.deepEqual(readingPreferences(value), defaults);
   }
-  const prefs = { size: 24, line: 2.2, font: 'sans', paper: 'warm', layout: 'source' };
+  const prefs = { size: 24, line: 2.2, font: 'sans', paper: 'warm', layout: 'source', punctuation: 'punctuated' };
   assert.deepEqual(readingPreferences(prefs), prefs);
   assert.deepEqual(readingPreferences({ size: 24, line: 2.2, font: 'sans', paper: 'warm' }), { ...prefs, layout: 'continuous' });
   for (const layout of [null, 1, [], 'SOURCE', 'normal']) assert.equal(readingPreferences({ layout }).layout, 'continuous');

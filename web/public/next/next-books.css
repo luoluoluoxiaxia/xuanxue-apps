@@ -290,6 +290,7 @@
 .book-electronic-reader .book-reading-header { margin: 0 0 12px; }
 .book-electronic-reader .book-reading-header h1 { font-size: 18px; line-height: 1.5; }
 .book-electronic-main { min-width: 0; }
+.book-punctuation-hint { margin-left: 10px; font: inherit; color: var(--ink-3); }
 .book-electronic-sidebar { display: none; }
 .book-electronic-controls { display: flex; flex-wrap: wrap; align-items: center; margin-top: 0; }
 .book-electronic-controls .book-electronic-select { min-width: 0; flex: 1 1 180px; }
