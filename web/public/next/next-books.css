@@ -386,3 +386,80 @@
 .book-reading-stem-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25em 1em; margin: .7em 0; }
 .book-reading-stem-token { display: inline-block; white-space: normal; font: inherit; }
 .book-reading-trigram-stroke { display: inline-block; min-width: 1.5em; font: 26px/1.3 var(--font-sans); text-align: center; vertical-align: middle; }
+
+/* Keep the library compact and give each reading tool one visible entry. */
+.books-filters { grid-template-columns: minmax(180px, 1fr) auto; }
+.books-filter-fields { display: flex; align-items: center; gap: 20px; }
+.books-filter-details > summary { display: flex; align-items: center; gap: 8px; min-height: 44px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.books-filter-details > summary small { margin-left: auto; color: var(--ink-3); font-weight: 400; }
+.books-filter-details > summary::marker { content: ""; }
+.books-filter-details > summary::-webkit-details-marker { display: none; }
+.books-library .books-resume { margin-bottom: 16px; padding: 14px 18px; }
+.books-library .books-count { margin: 10px 0; }
+.books-library-card { min-height: 148px; padding: 18px; gap: 16px; flex-direction: row; align-items: center; }
+.books-card-copy { min-width: 0; flex: 1; }
+.books-library-card h2 { margin: 6px 0 0; font-size: 21px; line-height: 1.5; overflow-wrap: anywhere; }
+.books-library-card .btn { margin: 0; min-height: 44px; flex-shrink: 0; align-self: center; padding: 0 12px; }
+.books-card-progress { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.book-other-versions > .book-version-card { margin: 12px; }
+.book-desktop-settings { display: none; }
+.book-electronic-controls { padding: 0; gap: 8px; border: 0; background: transparent; box-shadow: none; margin: 0 0 12px; }
+.book-electronic-controls .book-electronic-contents-open { display: flex; flex: 1; justify-content: flex-start; min-width: 0; color: var(--ink-2); background: var(--bg-elev); border: 1px solid var(--line); }
+.book-electronic-contents-open > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.book-electronic-contents-open > small { color: var(--ink-3); font-size: 12px; }
+.book-electronic-controls .book-settings-open { width: 44px; padding: 0; }
+.book-electronic-controls .book-settings-open > span { display: none; }
+.book-text-projection { min-height: 0; padding: 24px clamp(22px, 3vw, 40px); }
+.book-text-projection .book-section-header { margin-bottom: 16px; }
+.book-text-projection .book-section-header h2 { margin: 3px 0 8px; line-height: 1.5; }
+.book-text-projection .book-block { margin-bottom: 12px; }
+.book-text-projection .book-reading-markdown > :first-child { margin-top: 0; }
+.book-text-projection .book-reading-markdown > :last-child { margin-bottom: 0; }
+.book-text-projection .book-source-note { padding-left: 12px; }
+.book-text-projection .book-source-note > .book-layer { font: 12px/1.6 var(--font-sans); margin: 0 0 4px; }
+.book-text-projection .book-note-compact { display: flex; align-items: baseline; gap: 8px; }
+.book-note-compact > .book-layer { flex-shrink: 0; }
+.book-note-compact > .book-original { flex: 1; min-width: 0; }
+.book-text-projection .book-reading-markdown pre.book-reading-literal-diagram { padding: 8px 10px; line-height: 1.55; }
+.book-overflow-frame { min-width: 0; }
+.book-overflow-frame.book-has-overflow::after { content: "左右滑动查看完整图表"; display: block; margin-top: 4px; color: var(--ink-3); font: 12px/1.6 var(--font-sans); }
+.book-text-projection .book-reading-markdown pre.book-reading-compact-chart { padding: 6px 10px; line-height: 1.45; }
+.book-text-projection .book-reading-markdown pre.book-reading-compact-chart code { line-height: inherit; }
+.book-text-projection .book-reading-markdown .book-reading-subdivision { margin-top: 0; font-size: .95em; font-weight: 500; }
+.book-stem-group { display: flex; flex-wrap: wrap; align-items: baseline; gap: .25em 1em; margin: .75em 0; }
+.book-text-projection .book-stem-group > .book-block { margin: 0; }
+.book-text-projection .book-stem-group .book-original p { margin: 0; }
+.book-nayin-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(7.2em, 1fr)); gap: .25em .75em; margin: .75em 0; font-size: var(--reading-size, 20px); }
+.book-text-projection .book-nayin-list > .book-block, .book-text-projection .book-nayin-list .book-original p { margin: 0; }
+.book-edition-notes { padding: 0 16px 12px; }
+.book-edition-notes > summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.book-edition-notes li { margin: 8px 0; font: 13px/1.6 var(--font-sans); }
+@media (min-width: 900px) {
+  .books-filter-details > summary { display: none; }
+}
+@media (min-width: 1100px) {
+  .book-electronic-reader .book-electronic-header { position: sticky; top: var(--topbar-h); z-index: 36; background: var(--bg); margin-bottom: 12px; }
+  .book-desktop-settings { display: block; flex-shrink: 0; }
+  .book-desktop-settings .book-settings-open { min-height: 44px; }
+  .book-electronic-controls { display: none; }
+  .book-electronic-sidebar { top: calc(var(--topbar-h) + var(--book-header-height, 44px) + 12px); height: calc(100dvh - var(--topbar-h) - var(--book-header-height, 44px) - 28px); }
+}
+@media (max-width: 899px) {
+  .books-filters { display: block; }
+  .books-filter-fields { display: grid; gap: 4px; padding: 4px 0 8px; }
+}
+@media (max-width: 560px) {
+  .books-hero { padding-bottom: 12px; }
+  .books-grid { gap: 10px; }
+  .books-library-card { min-height: 104px; padding: 14px 16px; gap: 12px; }
+  .books-library-card h2 { font-size: 20px; }
+  .books-library-card .btn { padding: 0 10px; }
+  .books-library-card .btn .icon { display: none; }
+  .book-electronic-header .book-reading-back > span { display: inline; }
+  .book-electronic-header .book-reading-back .icon { display: none; }
+  .book-electronic-header .book-reading-identity { gap: 1px 8px; }
+  .book-electronic-reader .book-reading-header h1 { font-size: 16px; }
+  .book-reading-state { font-size: 11px; }
+  .book-text-projection { padding: 18px 20px; }
+  .book-text-projection .book-section-header h2 { font-size: 24px; }
+}

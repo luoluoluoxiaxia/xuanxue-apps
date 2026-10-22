@@ -105,7 +105,9 @@ export function readingMarkdownTokens(text, depth = 0) {
       while (i < paragraph.length && rowKind(paragraph[i]) === kind) i++;
       if (i - start < 2) continue;
       if (start > proseStart) tokens.push({ type: "paragraph", text: paragraph.slice(proseStart, start).join("") });
-      tokens.push({ type: "code", text: paragraph.slice(start, i).join("") });
+      const token = { type: "code", text: paragraph.slice(start, i).join("") };
+      if (kind.startsWith("verse:")) token.verse = true;
+      tokens.push(token);
       proseStart = i;
     }
     if (proseStart < paragraph.length) tokens.push({ type: "paragraph", text: paragraph.slice(proseStart).join("") });
@@ -267,13 +269,22 @@ function appendInline(parent, text, context, doc, depth = 0, softBreaks = false)
   const appendText = value => appendReadingText(parent, value, context, doc, softBreaks);
   // Consume any HTML-like span as literal text before looking for URLs inside it.
   // Unsupported Markdown links are also consumed whole, including unsafe schemes.
-  const pattern = /<[^>\n]*>|\[\^(?<footnote>[^\]\s]+)\]|\[(?<label>[^\]\n]+)\]\((?<url>[^)\n]*)\)|https:\/\/[^\s<>"'`]+|(?<code>`+)(?<literal>[^\n]*?)\k<code>(?!`)|\*\*(?<strong>\S(?:[^\n]*?\S)?)\*\*|(?<!\*)\*(?<em>\S(?:[^*\n]*?\S)?)\*(?!\*)|(?<![\p{L}\p{N}_])__(?<strongUnder>\S(?:[^\n]*?\S)?)__(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])_(?<emUnder>\S(?:[^_\n]*?\S)?)_(?![\p{L}\p{N}_])/giu;
+  const pattern = /<[^>\n]*>|\[\^(?<footnote>[^\]\s]+)\]|\[(?<label>[^\]\n]+)\]\((?<url>[^)\n]*)\)|https:\/\/[^\s<>"'`]+|(?<code>`+)(?<literal>[^\n]*?)\k<code>(?!`)|\*\*(?<strong>\S(?:[^\n]*?\S)?)\*\*|(?<!\*)\*(?<em>\S(?:[^*\n]*?\S)?)\*(?!\*)|(?<![\p{L}\p{N}_])__(?<strongUnder>\S(?:[^\n]*?\S)?)__(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])_(?<emUnder>\S(?:[^_\n]*?\S)?)_(?![\p{L}\p{N}_])|(?<hardBreak> {2,}\r?\n)(?=[^\r\n])/giu;
   let end = 0;
   for (const match of text.matchAll(pattern)) {
     appendText(text.slice(end, match.index));
     let node = doc.createTextNode(match[0]);
-    const { footnote, label, url: suppliedUrl, code, literal, strong, em, strongUnder, emUnder } = match.groups;
-    if (context.bookId === "wuxing-jingji" && /^<[\p{Script=Han}][^<>\n]*>$/u.test(match[0])) {
+    const { footnote, label, url: suppliedUrl, code, literal, strong, em, strongUnder, emUnder, hardBreak } = match.groups;
+    if (hardBreak && softBreaks) {
+      // Keep the exact source whitespace in textContent, but honor Markdown's
+      // explicit two-space line ending in prose. Fences and inline literals
+      // never enter this branch; an ordinary scan newline still flows softly.
+      parent.append(node, doc.createElement("br"));
+      end = match.index + match[0].length;
+      continue;
+    } else if (hardBreak) {
+      // Other inline contexts retain their existing literal whitespace.
+    } else if (context.bookId === "wuxing-jingji" && /^<[\p{Script=Han}][^<>\n]*>$/u.test(match[0])) {
       node = doc.createElement("span"); node.className = "book-reading-inline-note";
       node.setAttribute("data-source-text", match[0]); node.setAttribute("title", `原书夹注：${match[0]}`);
       appendReadingText(node, `〔${match[0].slice(1, -1)}〕`, context, doc, softBreaks);
@@ -340,6 +351,29 @@ function literalPresentation(text) {
   return /[▅▆▇▉█▁─━′″○●×]|\t| {2,}|\u3000/u.test(text) ? "diagram" : "text";
 }
 
+function appendVerseText(parent, text, context, doc) {
+  const lines = text.match(/[^\n]*\n|[^\n]+$/g) || [];
+  const indents = lines.filter(line => line.trim()).map(line => /^[ \t\u3000]*/.exec(line)[0]);
+  let common = indents[0] || "";
+  for (const indent of indents.slice(1)) {
+    while (common && !indent.startsWith(common)) common = common.slice(0, -1);
+  }
+  if (!common) { appendReadingText(parent, text, context, doc); return; }
+  for (const line of lines) {
+    if (line.startsWith(common)) {
+      // A detected unfenced metrical run can share a scan-page left margin.
+      // Hide only that common prefix; relative spacing, columns and the exact
+      // source text remain available. Literal fences and diagrams bypass this.
+      const indent = doc.createElement("span");
+      indent.className = "book-reading-verse-indent";
+      indent.setAttribute("hidden", "");
+      indent.textContent = common;
+      parent.append(indent);
+      appendReadingText(parent, line.slice(common.length), context, doc);
+    } else appendReadingText(parent, line, context, doc);
+  }
+}
+
 function sourceReadingParagraphs(text, bookId) {
   if (!["yiyin", "zengshan-buyi"].includes(bookId)) return [text];
   const paragraphs = [];
@@ -395,7 +429,10 @@ export function renderEditionText(versionId, text, context, doc = document) {
         node.className = `book-reading-literal book-reading-literal-${literalPresentation(token.text)}`;
         node.setAttribute("tabindex", "0");
         node.setAttribute("aria-label", "原样文字，可横向滚动");
-        const code = doc.createElement("code"); appendReadingText(code, token.text, context, doc); node.append(code);
+        const code = doc.createElement("code");
+        if (token.verse) appendVerseText(code, token.text, context, doc);
+        else appendReadingText(code, token.text, context, doc);
+        node.append(code);
       } else if (token.type === "list") {
         const list = doc.createElement(token.ordered ? "ol" : "ul");
         if (token.ordered && token.start !== 1) list.setAttribute("start", token.start);
