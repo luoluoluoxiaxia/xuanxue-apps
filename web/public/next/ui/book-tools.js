@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n27";
-import { filterContents, groupReadingSections } from "../lib/books.js?v=n27";
-import { local } from "../lib/store.js?v=n27";
-import { openSheet } from "./overlay.js?v=n27";
+import { h, fill } from "../lib/dom.js?v=n28";
+import { filterContents, groupReadingSections } from "../lib/books.js?v=n28";
+import { local } from "../lib/store.js?v=n28";
+import { openSheet } from "./overlay.js?v=n28";
 
 export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
   let closed = false, scrollFrame;
@@ -172,7 +172,7 @@ export function openElectronicBookContents({ bookTitle, sections, current, onSel
   return sheet;
 }
 
-export function openBookSettings({ preferences, mode, hasModern, hasLayout = true, onChange, onClose, returnFocus }) {
+export function openBookSettings({ preferences, mode, hasModern, hasLayout = true, hasPunctuation = false, onChange, onClose, returnFocus }) {
   const prefs = { ...preferences };
   function field(label, key, options) {
     const select = h("select", { "aria-label": label, onChange: event => {
@@ -185,6 +185,7 @@ export function openBookSettings({ preferences, mode, hasModern, hasLayout = tru
   return openSheet({ title: "阅读设置", className: "sheet-book-settings", returnFocus, onClose,
     body: h("div", { class: "book-settings" },
       hasModern ? field("阅读模式", "mode", [["original", "原文"], ["parallel", "原文与白话"], ["modern", "白话"]]) : null,
+      hasPunctuation ? field("句读", "punctuation", [["punctuated", "整理句读"], ["source", "原稿句读"]]) : null,
       hasLayout ? field("排版", "layout", [["continuous", "连续排版"], ["source", "保留原稿换行"]]) : null,
       hasLayout ? h("p", { class: "books-notice" }, "连续排版的正文按屏幕宽度换行，诗诀与表格保留原结构。")
         : h("p", { class: "books-notice" }, "正文随屏幕宽度换行，诗诀、卦图与表格保留原稿结构。"),

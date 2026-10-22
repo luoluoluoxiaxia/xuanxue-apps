@@ -1,18 +1,19 @@
-import { h, fill } from "../lib/dom.js?v=n27";
-import { icon } from "../lib/icons.js?v=n27";
-import { get } from "../lib/api.js?v=n27";
-import { local, session } from "../lib/store.js?v=n27";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n27";
+import { h, fill } from "../lib/dom.js?v=n28";
+import { icon } from "../lib/icons.js?v=n28";
+import { get } from "../lib/api.js?v=n28";
+import { local, session } from "../lib/store.js?v=n28";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n28";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
-  READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition } from "../lib/books.js?v=n27";
-import { errorView, stateView } from "../ui/bits.js?v=n27";
-import { openBookImage } from "../ui/book-image.js?v=n27";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n27";
-import { openSheet } from "../ui/overlay.js?v=n27";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n27";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n27";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n27";
+  READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n28";
+import { errorView, stateView } from "../ui/bits.js?v=n28";
+import { openBookImage } from "../ui/book-image.js?v=n28";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n28";
+import { openSheet } from "../ui/overlay.js?v=n28";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n28";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n28";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n28";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -439,7 +440,7 @@ function electronicReader(ctx, resumeOnReload = false) {
   function capturePosition() {
     if (!activeReading) return null;
     const { section, article } = activeReading;
-    const position = { versionId, sectionId: section.id, title: section.title, updatedAt: Date.now() };
+    const position = { versionId, sectionId: section.id, title: section.title, updatedAt: Date.now(), punctuation: activeReading.punctuation };
     if (window.scrollY <= 0) return position;
     const anchors = [...article.querySelectorAll("[data-reading-anchor]")];
     const visible = anchor => !anchor.closest("details:not([open])") && anchor.getBoundingClientRect().height > 0;
@@ -507,29 +508,45 @@ function electronicReader(ctx, resumeOnReload = false) {
     const sequenceIndex = sequence.findIndex(item => item.id === section?.id);
     const path = item => textVersionPath(id, versionId, item.id);
     const groups = groupReadingSections(sections);
-    const markdownContext = createReadingMarkdownContext(section?.blocks.map(block => block.text) || [], {
-      chapters: sections, chapterId: section?.id, bookId: id,
+    const hasPunctuation = sections.some(item => item.blocks.some(block => typeof block.punctuated_text === "string"));
+    const sectionHasPunctuation = section?.blocks.some(block => typeof block.punctuated_text === "string");
+    const actualPunctuation = () => sectionHasPunctuation && preferences.punctuation !== "source" ? "punctuated" : "source";
+    // Records saved before editorial punctuation existed use source paragraphs.
+    // Recover their original words before mapping to the preferred paragraphing.
+    const savedPunctuation = position?.punctuation || "source";
+    const remapResume = Number.isSafeInteger(position?.anchor) && savedPunctuation !== actualPunctuation();
+    let renderingPunctuation = remapResume ? savedPunctuation : preferences.punctuation;
+    const makeMarkdownContext = () => createReadingMarkdownContext(section?.blocks.map(block => readingBlockText(block, renderingPunctuation)) || [], {
+      chapters: sections.map(item => ({ ...item, blocks: item.blocks.map(block => ({ ...block, text: readingBlockText(block, renderingPunctuation) })) })),
+      chapterId: section?.id, bookId: id,
       footnotePath: (chapterId, label) => `${textVersionPath(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
       navigate: route => ctx.navigate(route),
     });
+    let markdownContext = makeMarkdownContext();
+    const blockViews = [];
+    const punctuationHint = sectionHasPunctuation ? h("span", { class: "book-punctuation-hint", hidden: preferences.punctuation === "source" }, "整理句读") : null;
     ctx.setTitle(`${section ? section.title + " · " : ""}${reading.title}`);
     const quality = data.quality;
     const article = section ? h("article", { class: "book-reading-content book-text-projection", "aria-label": "书籍正文" },
       h("header", { class: "book-section-header" },
-        h("p", { class: "book-section-kind" }, READING_KINDS[section.kind]),
+        h("p", { class: "book-section-kind" }, READING_KINDS[section.kind], punctuationHint),
         h("h2", null, section.title),
         section.source_location ? h("p", { class: "book-section-location" }, section.source_location) : null),
       section.blocks.map(block => {
         if (block.role === "modern_editorial" && ["未辨片段", "原稿附注"].includes(block.label)) {
-          return h("aside", { class: "book-reading-source-cue", dataset: { blockId: block.id } }, block.text);
+          const cue = h("aside", { class: "book-reading-source-cue", dataset: { blockId: block.id } }, readingBlockText(block, renderingPunctuation));
+          blockViews.push({ block, node: cue, plain: true });
+          return cue;
         }
         const folded = ["aside", "transcription"].includes(block.presentation) || block.role === "modern_editorial" && section.kind !== "notes";
         const label = block.label || (block.presentation === "aside" ? "栏外小注" : block.presentation === "transcription" ? "原稿杂注与未辨记录" : "整理说明");
+        const text = h("div", { class: "book-original" }, renderEditionText(data.version_id, readingBlockText(block, renderingPunctuation), markdownContext));
+        blockViews.push({ block, node: text, plain: false });
         return h(folded ? "details" : "section",
           { class: `book-block${folded ? " book-folded-text" : ""}${["original_note", "commentary"].includes(block.role) ? " book-source-note" : ""}`, dataset: { blockId: block.id } },
           folded ? h("summary", null, label) : null,
           !folded && ["original_note", "commentary"].includes(block.role) ? h("p", { class: "book-layer" }, block.label || TEXT_ROLES[block.role]) : null,
-          h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)));
+          text);
       }))
       : stateView({ glyph: "book", title: "此版本没有该章节", text: "请从目录选择章节，或返回版本页重新打开。" });
     const applyPreferences = () => {
@@ -538,14 +555,53 @@ function electronicReader(ctx, resumeOnReload = false) {
       article.style.setProperty("--reading-font", `var(--font-${preferences.font})`);
       article.dataset.paper = preferences.paper;
       article.dataset.layout = preferences.layout;
+      if (punctuationHint) punctuationHint.hidden = preferences.punctuation === "source";
+    };
+    const markReadingAnchors = () => article.querySelectorAll(".book-original p, .book-original h3, .book-original h4, .book-original h5, .book-original h6, .book-original ul, .book-original ol, .book-original pre, .book-original table, .book-original .book-reading-stem-row, .book-reading-source-cue")
+      .forEach((anchor, anchorIndex) => { anchor.dataset.readingAnchor = anchorIndex; });
+    const characterStart = (view, anchor) => {
+      if (view.node === anchor) return 0;
+      const range = document.createRange();
+      range.setStart(view.node, 0); range.setEndBefore(anchor);
+      return readingCharacterLength(range.toString());
+    };
+    const capturePunctuationPosition = position => {
+      const anchor = article.querySelectorAll("[data-reading-anchor]")[position?.anchor];
+      const blockId = anchor?.closest("[data-block-id]")?.dataset.blockId;
+      const view = blockViews.find(item => item.block.id === blockId);
+      return view ? { blockId, character: characterStart(view, anchor) + readingCharacterLength(anchor.textContent) * position.offset } : null;
+    };
+    const punctuationPosition = (source, fallback) => {
+      const view = blockViews.find(item => item.block.id === source?.blockId);
+      if (!view) return fallback;
+      const anchors = [view.node, ...view.node.querySelectorAll("[data-reading-anchor]")]
+        .filter(anchor => anchor.hasAttribute("data-reading-anchor") && !anchor.closest("details:not([open])"));
+      const target = readingCharacterAnchor(anchors.map(anchor => ({ anchor: Number(anchor.dataset.readingAnchor),
+        start: characterStart(view, anchor), length: readingCharacterLength(anchor.textContent) })), source.character);
+      return target ? { ...fallback, ...target } : fallback;
+    };
+    const paintPunctuation = () => {
+      renderingPunctuation = preferences.punctuation;
+      markdownContext = makeMarkdownContext();
+      for (const view of blockViews) {
+        const open = [...view.node.querySelectorAll("details")].map(details => details.open);
+        fill(view.node, view.plain ? readingBlockText(view.block, renderingPunctuation)
+          : renderEditionText(data.version_id, readingBlockText(view.block, renderingPunctuation), markdownContext));
+        view.node.querySelectorAll("details").forEach((details, index) => { details.open = !!open[index]; });
+      }
+      markReadingAnchors();
+      if (activeReading) { activeReading.markdownContext = markdownContext; activeReading.punctuation = actualPunctuation(); }
     };
     applyPreferences();
     const settings = h("button", { type: "button", class: "btn btn-soft book-settings-open", "aria-label": "阅读设置", onClick: event => {
-      const readingPosition = capturePosition();
+      let readingPosition = capturePosition();
+      const sourcePosition = capturePunctuationPosition(readingPosition);
       savePosition();
-      openBookSettings({ preferences, mode: "original", hasModern: false, hasLayout: false, returnFocus: event.currentTarget,
+      openBookSettings({ preferences, mode: "original", hasModern: false, hasLayout: false, hasPunctuation, returnFocus: event.currentTarget,
         onChange: value => {
+          const punctuationChanged = preferences.punctuation !== value.punctuation;
           preferences = readingPreferences(value); local.setJson("xz-book-preferences", preferences); applyPreferences();
+          if (punctuationChanged) { paintPunctuation(); readingPosition = punctuationPosition(sourcePosition, readingPosition); }
           restorePosition(readingPosition);
         },
         onClose: reason => {
@@ -612,9 +668,14 @@ function electronicReader(ctx, resumeOnReload = false) {
             h("span", { class: "book-section-count" }, `${READING_KINDS[section.kind]} ${sequenceIndex + 1} / ${sequence.length}`),
             sequenceIndex + 1 < sequence.length ? h("a", { href: `#${path(sequence[sequenceIndex + 1])}` }, h("small", null, "下一节"), h("span", null, sequence[sequenceIndex + 1].title)) : h("span")) : null,
           citation, versionDetails)));
-    article.querySelectorAll(".book-original p, .book-original h3, .book-original h4, .book-original h5, .book-original h6, .book-original ul, .book-original ol, .book-original pre, .book-original table, .book-original .book-reading-stem-row, .book-reading-source-cue")
-      .forEach((anchor, anchorIndex) => { anchor.dataset.readingAnchor = anchorIndex; });
-    activeReading = section ? { article, controls, section, markdownContext } : null;
+    markReadingAnchors();
+    activeReading = section ? { article, controls, section, markdownContext, punctuation: actualPunctuation() } : null;
+    if (remapResume) {
+      const sourcePosition = capturePunctuationPosition(position);
+      paintPunctuation();
+      routeRestore = null;
+      return punctuationPosition(sourcePosition, position);
+    }
     return position;
   }
   const basePath = `/api/books/${encodeURIComponent(id)}/text-versions${isCatalog ? "" : `/${encodeURIComponent(versionId)}`}`;

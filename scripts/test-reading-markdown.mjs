@@ -65,6 +65,19 @@ test("balanced source comments are hidden while surrounding prose and literal ex
   assert.ok(hiddenFence.textContent.includes("可读正文"));
 });
 
+test("supplied punctuation renders through the same safe Markdown path and leaves the source intact", async () => {
+  const { readingBlockText } = await import("../web/public/next/lib/books.js");
+  const block = { text: "正文原稿\n\n<script>alert(1)</script>", punctuated_text: "正文，整理句读。\n\n<script>alert(1)</script>\n\n```text\n甲\t乙\n丙\t丁\n```" };
+  const source = structuredClone(block);
+  const node = render(readingBlockText(block));
+  assert.equal(tags(node, "p")[0].textContent, "正文，整理句读。\n");
+  assert.equal(tags(node, "script").length, 0);
+  assert.ok(node.textContent.includes("<script>alert(1)</script>"));
+  assert.equal(tags(node, "code")[0].textContent, "甲\t乙\n丙\t丁\n");
+  assert.equal(readingBlockText(block, "source"), block.text);
+  assert.deepEqual(block, source);
+});
+
 test("emphasis and inline literals render through safe DOM and retain inert markup", () => {
   const node = render("**重点**与*轻读*，__另一重点__ _斜体_，`https://example.test/<script>**原样**`\n\n**<img src=x onerror=bad()>** [bad](javascript:alert(1))");
   assert.deepEqual(tags(node, "strong").map(item => item.textContent), ["重点", "另一重点", "<img src=x onerror=bad()>"]);
