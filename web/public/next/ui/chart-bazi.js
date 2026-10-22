@@ -1,19 +1,21 @@
 // 八字命盘面板：四柱、命局速览、五行分布、大运流年与走势；进阶里另有所选大运的机械事实、当前流月引动与十二流月。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n34";
-import { icon } from "../lib/icons.js?v=n34";
-import { local } from "../lib/store.js?v=n34";
-import { TREND_NOTE } from "../lib/copy.js?v=n34";
-import { elementClass } from "./gua.js?v=n34";
-import { openGlossary } from "./glossary.js?v=n34";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n34";
+import { h, svg, esc } from "../lib/dom.js?v=n35";
+import { icon } from "../lib/icons.js?v=n35";
+import { local } from "../lib/store.js?v=n35";
+import { TREND_NOTE } from "../lib/copy.js?v=n35";
+import { elementClass } from "./gua.js?v=n35";
+import { openGlossary } from "./glossary.js?v=n35";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n35";
 
 const MODE_KEY = "xz-next-bazi-mode";
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
 const WUXING = ["木", "火", "土", "金", "水"];
 const list = value => (Array.isArray(value) ? value : []);
 const present = value => value !== null && value !== undefined && value !== "";
+const caseHas = (context, section) => Array.isArray(context?.available_sections) && context.available_sections.includes(section);
+const caseMissing = context => list(context?.missing).filter(item => typeof item === "string" && item.trim());
 const ageRange = step => step?.age_range || [step?.start_age, step?.end_age].filter(present).join("–");
 const yearRange = step => step?.year_range || (step?.start_year ? `${step.start_year}–${step.end_year || ""}` : "");
 
@@ -65,7 +67,7 @@ function infoButton(text, label, key, open) {
   }, icon("info", "icon-sm"), text);
 }
 
-function pillarsBlock(payload, advanced) {
+function pillarsBlock(payload, advanced, caseContext = null) {
   const pillars = payload?.chart?.pillars || {};
   const detail = payload?.pillars_detail || {};
   return h("div", { class: "cp-pillars", role: "group", "aria-label": "四柱（点一柱看古典解读）" },
@@ -73,17 +75,19 @@ function pillarsBlock(payload, advanced) {
       const item = detail[key] || {};
       const text = String(pillars[key] || item.pillar || "");
       const chars = Array.from(text);
-      const god = key === "day" ? "日元" : (item.stem_ten_god || "");
+      const known = !caseContext || chars.length === 2;
+      const god = key === "day" && known ? "日元" : (item.stem_ten_god || "");
       return h("button", {
         type: "button",
         class: ["cp-pillar", key === "day" && "is-day"],
         "data-key": `pillar-${key}`,
-        onClick: event => pillarPop(key, text, item, { returnFocus: event.currentTarget }),
+        disabled: !known,
+        onClick: known ? event => pillarPop(key, text, item, { returnFocus: event.currentTarget, caseContext }) : null,
       },
       h("span", { class: "cp-pillar-label" }, label),
-      h("span", { class: "cp-pillar-god" }, god || "—"),
-      h("b", { class: ["cp-pillar-char", elementClass(item.stem_element)] }, chars[0] || "—"),
-      h("b", { class: ["cp-pillar-char", elementClass(item.branch_element)] }, chars[1] || "—"),
+      h("span", { class: "cp-pillar-god" }, god || (caseContext ? "未载" : "—")),
+      h("b", { class: ["cp-pillar-char", !known && "cp-case-unknown", elementClass(item.stem_element)] }, known ? chars[0] || "—" : "未载"),
+      known ? h("b", { class: ["cp-pillar-char", elementClass(item.branch_element)] }, chars[1] || "—") : null,
       h("span", { class: "cp-pillar-el" }, [item.stem_element, item.branch_element].filter(Boolean).join(" · ")),
       advanced && Array.isArray(item.hidden) && item.hidden.length
         ? h("span", { class: "cp-hidden" }, item.hidden.map(hidden => h("span", { class: elementClass(hidden.element) }, `${hidden.stem || ""}`, h("small", null, hidden.ten_god || ""))))
@@ -91,24 +95,47 @@ function pillarsBlock(payload, advanced) {
       advanced && (item.di_shi || item.na_yin)
         ? h("span", { class: "cp-pillar-extra" }, [item.di_shi, item.na_yin].filter(Boolean).join(" · "))
         : null,
-      h("span", { class: "sr-only" }, "，查看古典解读"));
+      known ? h("span", { class: "sr-only" }, "，查看古典解读") : null);
     }));
 }
 
-function factsBlock(payload) {
+function factsBlock(payload, caseContext = null) {
   const dm = payload?.chart?.day_master || {};
   const mc = payload?.month_command || {};
   const roots = Array.isArray(payload?.roots) ? payload.roots : [];
   const rootBranches = [...new Set(roots.map(root => root.branch).filter(Boolean))];
+  const absent = caseContext ? "未载" : "—";
   const facts = [
-    ["日主", dm.stem ? `${dm.stem} · ${dm.yin_yang || ""}${dm.element || ""}` : "—"],
-    ["月令", mc.branch ? `${mc.branch}月 · ${mc.main_qi || ""}本气` : "—"],
-    ["根气", roots.length ? `${rootBranches.join("、")} · ${roots.length}处` : "原局未见"],
-    ["生肖", payload?.chart?.shengxiao || "—"],
-    ["胎元", payload?.tai_yuan || "—"],
-    ["旬空", payload?.xun_kong || "—"],
+    ["日主", dm.stem ? `${dm.stem} · ${dm.yin_yang || ""}${dm.element || ""}` : absent],
+    ["月令", mc.branch ? `${mc.branch}月${mc.main_qi ? ` · ${mc.main_qi}本气` : caseContext ? " · 本气未载" : " · 本气"}` : absent],
+    ["根气", caseContext && !Array.isArray(payload?.roots) ? "未载" : roots.length ? `${rootBranches.join("、")} · ${roots.length}处` : "原局未见"],
+    ["生肖", payload?.chart?.shengxiao || absent],
+    ["胎元", payload?.tai_yuan || absent],
+    ["旬空", payload?.xun_kong || absent],
   ];
   return h("dl", { class: "cp-facts" }, facts.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, value))));
+}
+
+function caseSectionMissing(title) {
+  return h("section", { class: "cp-section" }, h("div", { class: "cp-section-head" }, h("h3", null, title)),
+    h("p", { class: "cp-note" }, "原书资料未载，暂不能核定。"));
+}
+
+function caseRelationsBlock(payload) {
+  return h("section", { class: "cp-section cp-case-relations" },
+    h("div", { class: "cp-section-head" }, h("h3", null, "原局干支关系")),
+    [["heavenly_stems", "天干"], ["earthly_branches", "地支"]].map(([key, label]) => {
+      const values = payload?.relations?.[key];
+      return h("div", { class: "cp-case-relation-group" }, h("h4", null, label),
+        Array.isArray(values) ? values.length ? h("div", { class: "cp-chips" }, values.map(value => h("span", { class: "chip" }, value)))
+          : h("p", { class: "cp-note" }, "原局未见该类关系。") : h("p", { class: "cp-note" }, "未载"));
+    }));
+}
+
+function caseWuxingBlock(payload) {
+  const complete = [payload?.wuxing_count, payload?.wuxing_count_with_hidden].every(counts =>
+    counts && WUXING.every(name => Number.isFinite(counts[name]) && counts[name] >= 0));
+  return complete ? wuxingBlock(payload) : caseSectionMissing("五行分布");
 }
 
 // 五行：表层与含藏干两个数都来自接口；「表层有 / 藏干见 / 未见」只是把这两个数换成文字。
@@ -502,17 +529,17 @@ export function baziMeta(payload, input = {}) {
 }
 
 // beside：摆在解读页标题旁边（桌面右栏），命盘名页面上已经有了，盘头只留出生信息和层级切换。
-export function baziPanel(payload, { name = "", input = {}, beside = false } = {}) {
+export function baziPanel(payload, { name = "", input = {}, beside = false, caseContext = null } = {}) {
   // relationsOpen / endpointsOpen：进阶里「作用关系」默认展开、「逐柱落点」默认收起，重绘时沿用用户的选择。
   const state = {
     dayun: null,
     year: null,
-    advanced: local.get(MODE_KEY, "basic") === "advanced",
+    advanced: caseContext ? true : local.get(MODE_KEY, "basic") === "advanced",
     relationsOpen: true,
     endpointsOpen: false,
   };
-  const root = h("section", { class: "chart-panel is-bazi", "aria-label": "八字命盘" });
-  const caveat = isManualChart(payload, input) ? anchorWarning(payload) : "";
+  const root = h("section", { class: ["chart-panel is-bazi", caseContext && "is-book-case"], "aria-label": caseContext ? "书例八字盘" : "八字命盘" });
+  const caveat = !caseContext && isManualChart(payload, input) ? anchorWarning(payload) : "";
   let dayun = null;
   // 选大运、流年只重绘这一段，其余盘面不动。
   const renderDayun = () => {
@@ -525,7 +552,7 @@ export function baziPanel(payload, { name = "", input = {}, beside = false } = {
   };
   const render = () => {
     const keep = snapshot(root);
-    const setMode = advanced => { state.advanced = advanced; local.set(MODE_KEY, advanced ? "advanced" : "basic"); render(); };
+    const setMode = advanced => { state.advanced = advanced; if (!caseContext) local.set(MODE_KEY, advanced ? "advanced" : "basic"); render(); };
     const modeSeg = h("div", { class: "seg cp-mode", role: "group", "aria-label": "显示层级" },
       h("button", { type: "button", "aria-pressed": String(!state.advanced), "data-key": "mode-basic", onClick: () => setMode(false) }, "基础"),
       h("button", { type: "button", "aria-pressed": String(state.advanced), "data-key": "mode-advanced", onClick: () => setMode(true) }, "进阶"));
@@ -534,17 +561,20 @@ export function baziPanel(payload, { name = "", input = {}, beside = false } = {
       h("header", { class: "cp-head" },
         h("div", { class: "cp-title" },
           beside ? null : h("p", { class: "kicker" }, "八字命盘"),
-          beside ? null : h("h2", null, name || payload?.profile_name || "我的命盘"),
-          h("p", { class: "cp-meta" }, baziMeta(payload, input))),
+          beside ? null : h("h2", null, name || (caseContext ? "书例复盘" : payload?.profile_name || "我的命盘")),
+          h("p", { class: "cp-meta" }, caseContext ? caseContext.source_label || "书载四柱复盘" : baziMeta(payload, input))),
         modeSeg),
       caveat ? h("p", { class: "cp-caveat" }, icon("info", "icon-sm"), h("span", null, caveat)) : null,
-      pillarsBlock(payload, state.advanced),
-      state.advanced ? null : h("p", { class: "cp-hint" }, icon("info", "icon-sm"), "点任意一柱看古典解读；藏干、神煞与十二流月在「进阶」里。"),
-      factsBlock(payload),
-      wuxingBlock(payload),
-      renderDayun(),
-      state.advanced ? liuyueBlock(payload) : null,
-      state.advanced ? shenshaBlock(payload) : null,
+      !caseContext || caseHas(caseContext, "pillars") ? pillarsBlock(payload, state.advanced, caseContext) : caseSectionMissing("四柱"),
+      state.advanced ? null : h("p", { class: "cp-hint" }, icon("info", "icon-sm"), caseContext
+        ? "点一柱看古典解读；藏干、纳音与神煞在「进阶」里。" : "点任意一柱看古典解读；藏干、神煞与十二流月在「进阶」里。"),
+      !caseContext || caseHas(caseContext, "facts") ? factsBlock(payload, caseContext) : null,
+      caseContext ? caseHas(caseContext, "wuxing") ? caseWuxingBlock(payload) : null : wuxingBlock(payload),
+      caseContext ? caseHas(caseContext, "relations") ? caseRelationsBlock(payload) : null : renderDayun(),
+      !caseContext && state.advanced ? liuyueBlock(payload) : null,
+      state.advanced && (!caseContext || caseHas(caseContext, "shensha")) ? caseContext && (!payload?.shensha || typeof payload.shensha !== "object")
+        ? caseSectionMissing("神煞") : shenshaBlock(payload) : null,
+      caseContext && caseMissing(caseContext).length ? h("p", { class: "cp-note cp-case-missing" }, `未载：${caseMissing(caseContext).join("、")}`) : null,
       h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("bazi") }, icon("book"), "名词解释"),
     ].filter(Boolean));
     restore(root, keep);
@@ -554,11 +584,13 @@ export function baziPanel(payload, { name = "", input = {}, beside = false } = {
 }
 
 // 手机顶部的命盘速览条
-export function baziStrip(payload) {
+export function baziStrip(payload, { caseContext = null } = {}) {
   const pillars = payload?.chart?.pillars || {};
   const detail = payload?.pillars_detail || {};
   const dm = payload?.chart?.day_master || {};
   return h("div", { class: "chart-strip" },
-    h("span", { class: "strip-pillars" }, ORDER.map(([key]) => ganzhi(pillars[key], detail[key]?.stem_element, detail[key]?.branch_element, key === "day" ? "is-day" : ""))),
-    dm.stem ? h("span", { class: "strip-dm" }, `日主 ${dm.stem}${dm.element || ""}`) : null);
+    caseContext && !caseHas(caseContext, "pillars") ? h("span", null, "书例四柱未载")
+      : h("span", { class: "strip-pillars" }, ORDER.map(([key]) => caseContext && !pillars[key]
+        ? h("span", { class: "cp-case-unknown" }, "未载") : ganzhi(pillars[key], detail[key]?.stem_element, detail[key]?.branch_element, key === "day" ? "is-day" : ""))),
+    dm.stem && (!caseContext || caseHas(caseContext, "facts")) ? h("span", { class: "strip-dm" }, `日主 ${dm.stem}${dm.element || ""}`) : null);
 }

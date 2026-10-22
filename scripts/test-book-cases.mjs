@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
   bookCasesEntry, bookCaseReadingPath } from "../web/public/next/lib/book-cases.js";
-import { render } from "../web/public/next/views/book-cases.js";
 
 test("case queries preserve book, paging and learning context while API calls use only public parameters", () => {
   const filter = readBookCaseQuery(new URLSearchParams("book_id=ziping-zhenquan&offset=24&limit=12&from=learning"));
@@ -18,6 +17,7 @@ test("case queries preserve book, paging and learning context while API calls us
   const contract = JSON.parse(readFileSync(new URL("../contracts/openapi/client.openapi.json", import.meta.url), "utf8"));
   assert.deepEqual(contract.paths["/api/book-cases"].get.parameters.map(item => item.name), ["book_id", "offset", "limit"]);
   assert.ok(contract.paths["/api/book-cases/{case_id}"].get);
+  assert.ok(contract.paths["/api/book-cases/{case_id}/chart"].get);
 });
 
 test("book case entries require a positive public count and source links keep the server edition page", () => {
@@ -25,7 +25,16 @@ test("book case entries require a positive public count and source links keep th
   assert.equal(bookCasesEntry({ id: "ziping-zhenquan", case_count: 1 }, "learning"), "/book-cases?book_id=ziping-zhenquan&from=learning");
   assert.equal(bookCaseReadingPath("/books/ziping-zhenquan?page=5", "learning"), "/books/ziping-zhenquan?page=5&from=learning");
   assert.equal(bookCaseReadingPath("/books/ziping-zhenquan?page=5"), "/books/ziping-zhenquan?page=5");
+  assert.equal(bookCaseReadingPath("/books/book?text-version=reading-20261022-abc123&chapter=section-019-r-001", "learning", "book"),
+    "/books/book?text-version=reading-20261022-abc123&chapter=section-019-r-001&from=learning");
+  assert.equal(bookCaseReadingPath("/books/ziping-zhenquan?text-version=reading-1926-frozen&chapter=zpzq-005", "", "ziping-zhenquan"),
+    "/books/ziping-zhenquan?text-version=reading-1926-frozen&chapter=zpzq-005");
+  assert.equal(bookCaseReadingPath("/books/other?page=5", "", "book"), null);
   for (const path of ["javascript:alert(1)", "//elsewhere.test/books/book?page=1", "/books/book?page=0", "/books/book?text-version=current", "/books/book?page=5&other=1"])
+    assert.equal(bookCaseReadingPath(path), null);
+  for (const path of ["/books/book?text-version=../private&chapter=3", "/books/book?text-version=version&chapter=",
+    "/books/book?text-version=current&chapter=section-001", "/books/book?text-version=latest&chapter=section-001",
+    "/books/book?text-version=version&chapter=1#outside", "/books/book?text-version=version&chapter=1&from=other"])
     assert.equal(bookCaseReadingPath(path), null);
 });
 
@@ -36,6 +45,12 @@ class MockNode {
     this.tagName = tag.toUpperCase(); this.data = data; this.childNodes = [];
     this.attributes = new Map(); this.listeners = new Map(); this.dataset = {}; this.value = "";
     this.disabled = false; this.open = false; this.className = "";
+    this.style = { setProperty(name, value) { this[name] = value; } };
+    this.classList = {
+      add: (...names) => { this.className = [...new Set([...this.className.split(" "), ...names])].filter(Boolean).join(" "); },
+      remove: (...names) => { this.className = this.className.split(" ").filter(name => !names.includes(name)).join(" "); },
+      contains: name => this.className.split(" ").includes(name),
+    };
   }
   append(...children) { children.forEach(child => { child.parentElement = this; this.childNodes.push(child); }); }
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
@@ -43,13 +58,28 @@ class MockNode {
   get textContent() { return this.tagName ? this.childNodes.map(child => child.textContent).join("") : this.data; }
   set innerHTML(value) {
     assert.equal(this.tagName, "TEMPLATE", "API text must never be assigned to innerHTML");
-    assert.match(value, /^<svg class="icon /);
+    assert.match(value, /^<svg\b/);
     this.content = { firstElementChild: new MockNode("svg") };
   }
   setAttribute(name, value) { this.attributes.set(name, String(value)); }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
   addEventListener(name, callback) { this.listeners.set(name, callback); }
-  emit(name) { this.listeners.get(name)?.({ currentTarget: this, target: this }); }
+  removeEventListener(name, callback) { if (this.listeners.get(name) === callback) this.listeners.delete(name); }
+  emit(name) { this.listeners.get(name)?.({ currentTarget: this, target: this, preventDefault() {} }); }
+  contains(node) { return node === this || this.childNodes.some(child => child.contains(node)); }
+  get isConnected() { return document.body.contains(this); }
+  remove() { if (this.parentElement) this.parentElement.childNodes = this.parentElement.childNodes.filter(child => child !== this); }
+  focus() { document.activeElement = this; }
+  matches(selector) {
+    const name = selector.trim().split(/\s+/).at(-1);
+    if (name.startsWith(".")) return this.classList.contains(name.slice(1));
+    const attr = name.match(/^\[([^=\]]+)(?:="([^"]*)")?\]$/);
+    return attr ? this.getAttribute(attr[1]) !== null && (attr[2] === undefined || this.getAttribute(attr[1]) === attr[2])
+      : this.tagName === name.toUpperCase();
+  }
+  closest(selector) { return selector.split(",").some(item => this.matches(item)) ? this : this.parentElement?.closest(selector) || null; }
+  querySelectorAll(selector) { return all(this).slice(1).filter(node => selector.split(",").some(item => node.matches(item))); }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
 }
 const all = node => [node, ...node.childNodes.flatMap(all)];
 const tags = (node, name) => all(node).filter(child => child.tagName === name.toUpperCase());
@@ -57,11 +87,16 @@ const byText = (node, name, text) => tags(node, name).find(child => child.textCo
 function environment(query = "", id = "") {
   const listeners = new Map();
   globalThis.Node = MockNode;
-  globalThis.document = { createElement: tag => new MockNode(tag), createTextNode: text => new MockNode("", text) };
+  globalThis.Element = MockNode;
+  globalThis.document = { body: new MockNode("body"), activeElement: null,
+    createElement: tag => new MockNode(tag), createTextNode: text => new MockNode("", text),
+    addEventListener() {}, removeEventListener() {}, contains: node => document.body.contains(node) };
+  globalThis.history = { state: {}, pushState(state) { this.state = state; }, back() { this.state = {}; } };
   globalThis.window = {
     addEventListener: (name, callback) => listeners.set(name, callback),
     removeEventListener: (name, callback) => { if (listeners.get(name) === callback) listeners.delete(name); },
     scrollTo: (...args) => scrolls.push(args),
+    matchMedia: () => ({ matches: true }),
   };
   globalThis.requestAnimationFrame = callback => callback();
   const cleanups = [], navigated = [], titles = [], scrolls = [];
@@ -74,6 +109,10 @@ function environment(query = "", id = "") {
     cleanup() { current = false; cleanups.forEach(callback => callback()); }, listeners,
   };
 }
+// Import the real shared chart and sheet components after installing a native
+// DOM-shaped environment. No panel, paipan, strip or overlay is replaced.
+environment();
+const { render } = await import("../web/public/next/views/book-cases.js");
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const book = { id: "ziping-zhenquan", title: "子平真诠", case_count: 1 };
 // Synthetic display data, not a transcription of a historical person's chart.
@@ -85,6 +124,33 @@ const caseDetail = () => ({ ...summary,
   context_before: "前一段原文。", context_after: "后一段原文。", uncertainties: [],
   sources: [{ edition_label: "1926年校勘本", chapter: "论用神", location: "书内页码", reading_path: "/books/ziping-zhenquan?page=5" }],
 });
+const caseChart = (id = summary.id) => ({ case_id: id, system: "bazi", source_label: "按原书四柱复盘",
+  available_sections: ["pillars", "facts", "wuxing", "relations", "shensha"], missing: ["出生日期", "性别", "起运岁数"],
+  payload: { profile: {}, chart: { pillars: { year: "壬午", month: "己酉", day: "甲午", hour: "丙寅" }, day_master: { stem: "甲", yin_yang: "阳", element: "木" } },
+    month_command: { branch: "酉", main_qi: "辛" }, roots: [{ branch: "寅" }],
+    pillars_detail: { year: { stem_ten_god: "偏印", hidden: [{ stem: "丁", element: "火", ten_god: "伤官" }], na_yin: "杨柳木" },
+      month: { stem_ten_god: "正财" }, day: { hidden: [{ stem: "丁", ten_god: "伤官" }] }, hour: { stem_ten_god: "食神" } },
+    wuxing_count: { 木: 2, 火: 3, 土: 1, 金: 1, 水: 1 }, wuxing_count_with_hidden: { 木: 3, 火: 5, 土: 4, 金: 1, 水: 1 },
+    relations: { heavenly_stems: ["甲己合"], earthly_branches: ["午午自刑"] }, shensha: {}, tai_yuan: "庚子", xun_kong: "辰巳" },
+});
+const detailRequest = (data = caseDetail(), chart = caseChart(data.id)) => async path => path.endsWith("/chart") ? chart : data;
+// Six-line public chart response shape. Positions are supplied by the server,
+// bottom to top; this fixture performs no hexagram or calendar calculation.
+const liuyaoCaseChart = id => ({ case_id: id, system: "liuyao", source_label: "按原书月日、爻象复盘",
+  available_sections: ["lines", "facts"], missing: ["公历日期", "占时"], payload: {
+    question: "占升迁", ben_gua: { name: "师", palace: "坎", shi: 3, ying: 6 }, bian_gua: { name: "涣" },
+    month_jian: "未", day_chen: "甲午", xun_kong: "辰巳", dong_yao: [5, 6],
+    yaos: [
+      { pos: 1, yin_yang: "阴", moving: false, old_young: "少阴", liu_shen: "青龙", liu_qin: "子孙", najia: "戊寅", wuxing: "木", shi: false, ying: false, kong: false },
+      { pos: 2, yin_yang: "阳", moving: false, old_young: "少阳", liu_shen: "朱雀", liu_qin: "官鬼", najia: "戊辰", wuxing: "土", shi: false, ying: false, kong: true },
+      { pos: 3, yin_yang: "阴", moving: false, old_young: "少阴", liu_shen: "勾陈", liu_qin: "妻财", najia: "戊午", wuxing: "火", shi: true, ying: false, kong: false },
+      { pos: 4, yin_yang: "阴", moving: false, old_young: "少阴", liu_shen: "螣蛇", liu_qin: "官鬼", najia: "癸丑", wuxing: "土", shi: false, ying: false, kong: false },
+      { pos: 5, yin_yang: "阴", moving: true, old_young: "老阴", liu_shen: "白虎", liu_qin: "兄弟", najia: "癸亥", wuxing: "水", shi: false, ying: false, kong: false,
+        bian: { yin_yang: "阳", liu_qin: "妻财", najia: "辛巳", wuxing: "火" } },
+      { pos: 6, yin_yang: "阴", moving: true, old_young: "老阴", liu_shen: "玄武", liu_qin: "父母", najia: "癸酉", wuxing: "金", shi: false, ying: true, kong: false,
+        bian: { yin_yang: "阳", liu_qin: "子孙", najia: "辛卯", wuxing: "木" } },
+    ],
+  } });
 
 test("case list loads public records, filters books, preserves paging and reports current intake counts", async () => {
   const env = environment("book_id=ziping-zhenquan&offset=2&limit=2&from=learning");
@@ -140,15 +206,25 @@ test("case detail separates book judgment and unreported outcome and folds sourc
   const data = caseDetail();
   data.original_excerpt = "<script>alert(1)</script>"; data.modern_context = "<img onerror=alert(1)>";
   const paths = [];
-  const result = render(env.ctx, async path => { paths.push(path); return data; });
+  const response = detailRequest(data);
+  const result = render(env.ctx, async path => { paths.push(path); return response(path); });
   assert.match(result.node.textContent, /正在打开案例/);
   await tick();
-  assert.deepEqual(paths, ["/api/book-cases/display-example"]);
-  assert.deepEqual(tags(result.node, "dd").map(node => node.textContent), ["壬午", "己酉", "甲午", "丙寅"]);
+  assert.deepEqual(paths, ["/api/book-cases/display-example", "/api/book-cases/display-example/chart"]);
+  const fullChart = all(result.node).find(node => node.classList.contains("book-case-full-chart"));
+  assert.ok(fullChart.querySelector(".chart-panel"));
+  assert.equal(fullChart.querySelectorAll(".cp-pillar").length, 4);
+  assert.match(fullChart.textContent, /偏印.*壬.*午/);
+  assert.match(fullChart.textContent, /杨柳木/);
+  assert.match(fullChart.textContent, /原局干支关系/);
+  assert.match(fullChart.textContent, /甲己合/);
+  assert.match(fullChart.textContent, /午午自刑/);
+  assert.match(fullChart.textContent, /出生日期、性别、起运岁数/);
+  assert.doesNotMatch(fullChart.textContent, /大运流年|公历|近似锚点/);
   assert.equal(byText(result.node, "h2", "原书分析").parentElement.textContent, "原书分析作者认为这一结构有利。");
   assert.equal(byText(result.node, "h2", "书载结果").parentElement.textContent, "书载结果原书此处未记载具体结果。");
-  assert.equal(tags(result.node, "details").length, 2);
-  assert.ok(tags(result.node, "details").every(node => !node.open && node.getAttribute("open") === null));
+  assert.equal(all(result.node).filter(node => node.className === "book-case-context").length, 2);
+  assert.ok(all(result.node).filter(node => node.className === "book-case-context").every(node => !node.open && node.getAttribute("open") === null));
   assert.match(result.node.textContent, /所在段白话/);
   assert.match(result.node.textContent, /案例所在完整原段/);
   assert.match(result.node.textContent, /前一段原文/);
@@ -162,21 +238,163 @@ test("case detail separates book judgment and unreported outcome and folds sourc
 
 test("recorded results remain server text and missing neighboring context is omitted", async () => {
   const env = environment("", "recorded-case");
-  const data = { ...caseDetail(), outcome_status: "recorded", outcome: ["书中记载的结果。"], context_before: null, context_after: null };
-  const result = render(env.ctx, async () => data); await tick();
+  const data = { ...caseDetail(), id: "recorded-case", outcome_status: "recorded", outcome: ["书中记载的结果。"], context_before: null, context_after: null, modern_context: null };
+  const result = render(env.ctx, detailRequest(data)); await tick();
   assert.equal(byText(result.node, "h2", "书载结果").parentElement.textContent, "书载结果书中记载的结果。");
   assert.equal(byText(result.node, "h2", "前一段"), undefined);
   assert.equal(byText(result.node, "h2", "后一段"), undefined);
+  assert.equal(byText(result.node, "h2", "所在段白话"), undefined);
+  assert.ok(byText(result.node, "summary", "原文与说明"));
+  assert.equal(byText(result.node, "summary", "原文与白话"), undefined);
+  env.cleanup();
+});
+
+test("six-line cases use the actual shared paipan and immutable source links without a personal chart flow", async () => {
+  const env = environment("from=learning", "liuyao-example");
+  const data = { ...caseDetail(), id: "liuyao-example", book_id: "zengshan-buyi", book_title: "增删卜易", kind: "unnamed_case", modern_context: null, facts: ["原书未记占者姓名。"],
+    sources: [{ edition_label: "网络转录", chapter: "两现章第三十二", location: "升迁例",
+      reading_path: "/books/zengshan-buyi?text-version=reading-20261022-90dfe958&chapter=section-019-r-001" }] };
+  const paths = [];
+  const response = detailRequest(data, liuyaoCaseChart(data.id));
+  const result = render(env.ctx, (path, options) => { paths.push([path, options]); return response(path); });
+  await tick();
+  const panel = result.node.querySelector(".book-case-full-chart");
+  assert.ok(panel.querySelector(".is-liuyao"));
+  assert.equal(tags(panel.querySelector("tbody"), "tr").length, 6);
+  assert.match(panel.textContent, /师之涣/);
+  assert.match(panel.textContent, /月建未日辰甲午旬空辰巳/);
+  assert.match(panel.textContent, /玄武.*父母.*癸酉金/);
+  assert.match(panel.textContent, /子孙 辛卯木/);
+  assert.match(panel.textContent, /公历日期、占时/);
+  assert.match(result.node.textContent, /六爻 · 未具名案例/);
+  assert.doesNotMatch(result.node.textContent, /具名命例|未具名命例|公历生日|创建档案|付费解读|重新起卦/);
+  assert.equal(tags(result.node, "a").find(node => node.textContent.startsWith("回到原书章节")).getAttribute("href"),
+    "#/books/zengshan-buyi?text-version=reading-20261022-90dfe958&chapter=section-019-r-001&from=learning");
+  assert.deepEqual(paths.map(([path]) => path), ["/api/book-cases/liuyao-example", "/api/book-cases/liuyao-example/chart"]);
+  assert.ok(paths.every(([, options]) => options.signal instanceof AbortSignal && !options.method));
+  document.body.append(result.node);
+  result.node.querySelector(".book-case-chart-strip").emit("click");
+  const sheet = document.body.querySelector(".sheet-chart");
+  assert.equal(tags(sheet.querySelector("tbody"), "tr").length, 6);
+  assert.match(sheet.textContent, /书例卦盘.*师之涣/);
+  const row = sheet.querySelector("tbody").querySelector("tr");
+  row.emit("click");
+  const pop = document.body.querySelector(".sheet-pop");
+  assert.match(pop.textContent, /盘面释读供对照，原书判断见案例正文。/);
+  assert.doesNotMatch(pop.textContent, /回到断卦|回到断卦对话继续问/);
+  byText(pop, "button", "返回卦盘").emit("click");
+  await tick();
+  assert.ok(document.body.querySelector(".sheet-chart"));
+  env.cleanup();
+  assert.equal(document.body.querySelector(".overlay"), null);
+});
+
+test("the compact chart opens a full shared chart sheet and route cleanup closes it", async () => {
+  const env = environment("", "display-example");
+  const result = render(env.ctx, detailRequest()); document.body.append(result.node);
+  await tick();
+  const strip = result.node.querySelector(".book-case-chart-strip");
+  strip.focus(); strip.emit("click");
+  const sheet = document.body.querySelector(".sheet-chart");
+  assert.equal(sheet.getAttribute("role"), "dialog");
+  assert.match(sheet.textContent, /书例命盘/);
+  assert.equal(sheet.querySelectorAll(".cp-pillar").length, 4);
+  assert.ok(sheet.querySelector(".cp-facts"));
+  assert.ok(sheet.querySelector(".cp-case-relations"));
+  assert.ok(document.body.classList.contains("is-locked"));
+  env.cleanup();
+  assert.equal(document.body.querySelector(".overlay"), null);
+  assert.equal(document.body.classList.contains("is-locked"), false);
+  assert.equal(document.activeElement, strip);
+});
+
+test("source-declared missing sections never get filled with unrelated payload or made-up dates", async () => {
+  const env = environment("", "partial-case");
+  const chart = caseChart("partial-case"); chart.available_sections = ["pillars"];
+  chart.payload.chart.pillars.hour = ""; chart.missing.push("时柱");
+  const result = render(env.ctx, detailRequest({ ...caseDetail(), id: "partial-case" }, chart));
+  await tick();
+  const full = result.node.querySelector(".book-case-full-chart");
+  assert.equal(full.querySelector(".cp-facts"), null);
+  assert.equal(full.querySelector(".cp-case-relations"), null);
+  assert.match(full.textContent, /未载/);
+  assert.doesNotMatch(full.textContent, /甲己合|午午自刑|庚子|公历|近似锚点/);
+  env.cleanup();
+});
+
+test("a missing chart preserves the original case and never substitutes the old four-field summary", async () => {
+  const env = environment("", "display-example");
+  const result = render(env.ctx, async path => {
+    if (path.endsWith("/chart")) throw Object.assign(new Error("missing chart"), { status: 404 });
+    return caseDetail();
+  });
+  await tick();
+  assert.match(result.node.textContent, /此例盘面暂不可用/);
+  assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  assert.match(result.node.textContent, /案例所在完整原段/);
+  assert.doesNotMatch(result.node.textContent, /这个案例暂不可用/);
+  assert.equal(result.node.querySelector(".book-case-full-chart"), null);
+  assert.equal(result.node.querySelector(".book-case-chart-strip"), null);
+  assert.equal(result.node.querySelector(".book-case-chart"), null);
+  assert.equal(byText(result.node, "button", "重试"), undefined);
+  env.cleanup();
+});
+
+test("chart network errors retain the book analysis and retry explicitly or when reconnected", async () => {
+  const env = environment("", "display-example"); let attempts = 0;
+  const result = render(env.ctx, async path => {
+    if (!path.endsWith("/chart")) return caseDetail();
+    if (++attempts < 3) throw new Error("盘面连接中断");
+    return caseChart();
+  });
+  await tick();
+  assert.match(result.node.textContent, /盘面暂时没有打开/);
+  assert.match(result.node.textContent, /盘面连接中断/);
+  assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  byText(result.node, "button", "重试").emit("click"); await tick();
+  assert.equal(attempts, 2);
+  env.reconnect(); await tick();
+  assert.equal(attempts, 3); assert.ok(result.node.querySelector(".chart-panel"));
+  assert.equal(byText(result.node, "button", "重试"), undefined);
+  env.reconnect(); await tick(); assert.equal(attempts, 3);
+  env.cleanup();
+});
+
+test("parallel detail and chart loads wait for both and reject a different case's chart", async () => {
+  const env = environment("", "display-example"); const pending = [];
+  const result = render(env.ctx, (path, options) => new Promise(resolve => pending.push({ path, signal: options.signal, resolve })));
+  assert.equal(pending.length, 2);
+  pending[0].resolve(caseDetail()); await tick();
+  assert.match(result.node.textContent, /正在打开案例与盘面/);
+  pending[1].resolve(caseChart("other-case")); await tick();
+  assert.match(result.node.textContent, /案例与盘面未能对应/);
+  assert.match(result.node.textContent, /原书分析作者认为这一结构有利/);
+  assert.equal(result.node.querySelector(".chart-panel"), null);
+  assert.ok(byText(result.node, "button", "重试"));
+  env.refresh(); assert.ok(pending.slice(0, 2).every(item => item.signal.aborted));
+  env.cleanup(); assert.ok(pending.every(item => item.signal.aborted));
+});
+
+test("a refreshed case cannot be overwritten by a late detail and chart pair", async () => {
+  const env = environment("", "display-example"); const pending = [];
+  const result = render(env.ctx, (path, options) => new Promise(resolve => pending.push({ path, signal: options.signal, resolve })));
+  env.refresh(); assert.ok(pending.slice(0, 2).every(item => item.signal.aborted));
+  pending[2].resolve({ ...caseDetail(), title: "新案例标题" }); pending[3].resolve(caseChart()); await tick();
+  assert.match(result.node.textContent, /新案例标题/);
+  pending[0].resolve({ ...caseDetail(), title: "旧案例不应出现" }); pending[1].resolve(caseChart()); await tick();
+  assert.doesNotMatch(result.node.textContent, /旧案例不应出现/);
+  assert.deepEqual(env.titles, ["新案例标题 · 典籍案例"]);
   env.cleanup();
 });
 
 test("404 is a terminal unavailable state while network errors retry and recover on reconnect", async () => {
   const env = environment("", "missing-case");
   let attempt = 0;
-  const result = render(env.ctx, async () => {
+  const result = render(env.ctx, async path => {
+    if (path.endsWith("/chart")) return caseChart("missing-case");
     if (++attempt === 1) throw Object.assign(new Error("missing"), { status: 404 });
     if (attempt === 2) throw Object.assign(new Error("连接中断"), { status: 0 });
-    return caseDetail();
+    return { ...caseDetail(), id: "missing-case" };
   });
   await tick();
   assert.match(result.node.textContent, /这个案例暂不可用/);
@@ -212,11 +430,11 @@ test("list failure has a working retry and cancels superseded requests even if a
 
 test("leaving a case detail aborts it and suppresses both late content and title updates", async () => {
   const env = environment("", "display-example");
-  let resolve, signal;
-  const result = render(env.ctx, (_path, options) => { signal = options.signal; return new Promise(done => { resolve = done; }); });
+  const pending = [];
+  const result = render(env.ctx, (path, options) => new Promise(resolve => pending.push({ path, signal: options.signal, resolve })));
   const before = result.node.textContent;
-  env.cleanup(); assert.equal(signal.aborted, true);
-  resolve(caseDetail()); await tick();
+  env.cleanup(); assert.ok(pending.every(item => item.signal.aborted));
+  pending.forEach(item => item.resolve(item.path.endsWith("/chart") ? caseChart() : caseDetail())); await tick();
   assert.equal(result.node.textContent, before);
   assert.deepEqual(env.titles, []);
 });

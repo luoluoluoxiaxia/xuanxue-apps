@@ -1,11 +1,11 @@
 // 六爻卦盘面板。起卦接口的 yaos 自下而上（yaos[0] 为初爻），展示时自上而下。
 // 点一行（或行里的「几爻」按钮）看这一爻的排盘事实与古典释读（ui/popover.js）。
-import { h } from "../lib/dom.js?v=n34";
-import { icon } from "../lib/icons.js?v=n34";
-import { guaGlyph, elementClass } from "./gua.js?v=n34";
-import { LY_POS } from "../lib/copy.js?v=n34";
-import { openGlossary } from "./glossary.js?v=n34";
-import { yaoPop } from "./popover.js?v=n34";
+import { h } from "../lib/dom.js?v=n35";
+import { icon } from "../lib/icons.js?v=n35";
+import { guaGlyph, elementClass } from "./gua.js?v=n35";
+import { LY_POS } from "../lib/copy.js?v=n35";
+import { openGlossary } from "./glossary.js?v=n35";
+import { yaoPop } from "./popover.js?v=n35";
 
 // 转成社区卦象同样的「上爻在前」线条结构，复用卦形绘制。
 export function linesFromYaos(yaos) {
@@ -32,6 +32,7 @@ export function liuyaoTitle(payload) {
 
 const METHOD_LABEL = { client_coins: "本机摇钱", manual: "手动录入" };
 const str = value => (value === null || value === undefined ? "" : String(value));
+const caseHas = (context, section) => Array.isArray(context?.available_sections) && context.available_sections.includes(section);
 
 function palaceText(ben) {
   if (!ben?.palace) return "";
@@ -39,38 +40,44 @@ function palaceText(ben) {
 }
 
 // 解读页：起卦接口的排盘 payload（yaos 自下而上）。
-export function paipanFromPayload(payload, { method = "" } = {}) {
+export function paipanFromPayload(payload, { method = "", caseContext = null } = {}) {
   const yaos = Array.isArray(payload?.yaos) ? payload.yaos : [];
   const moving = Array.isArray(payload?.dong_yao) ? payload.dong_yao : [];
-  const changed = moving.length > 0;
+  const changed = caseContext && !Array.isArray(payload?.dong_yao) ? null : moving.length > 0;
   return {
-    benName: str(payload?.ben_gua?.name) || "本卦",
-    bianName: changed ? str(payload?.bian_gua?.name) : "",
+    benName: str(payload?.ben_gua?.name) || (caseContext ? "卦名未载" : "本卦"),
+    bianName: changed ? str(payload?.bian_gua?.name) || (caseContext ? "变卦未载" : "") : "",
     changed,
-    meta: [palaceText(payload?.ben_gua), changed ? `${moving.map(posLabel).join("、")}动` : "", METHOD_LABEL[payload?.method || method] || ""].filter(Boolean),
-    facts: [["月建", payload?.month_jian], ["日辰", payload?.day_chen], ["旬空", payload?.xun_kong]],
-    lines: yaos.slice().reverse().map(yao => {
-      const yin = yao.yin_yang === "阴";
+    caseMode: !!caseContext,
+    meta: [caseContext ? caseContext.source_label || "书载卦例复盘" : "", palaceText(payload?.ben_gua), changed ? `${moving.map(posLabel).join("、")}动` : "",
+      caseContext ? "" : METHOD_LABEL[payload?.method || method] || ""].filter(Boolean),
+    facts: [["月建", payload?.month_jian], ["日辰", payload?.day_chen], ["旬空", payload?.xun_kong]]
+      .map(([label, value]) => [label, caseContext ? str(value) || "未载" : value]),
+    lines: (caseContext && !caseHas(caseContext, "lines") ? [] : yaos).slice().reverse().map(yao => {
+      const yin = caseContext && !["阴", "阳"].includes(yao.yin_yang) ? null : yao.yin_yang === "阴";
+      const isMoving = caseContext && typeof yao.moving !== "boolean" ? null : !!yao.moving;
+      const knownPos = Number.isInteger(yao.pos) && yao.pos >= 1 && yao.pos <= 6;
       const bian = yao.moving && yao.bian ? yao.bian : null;
       const bianYin = bian?.yin_yang === "阴" || bian?.yin_yang === "阳" ? bian.yin_yang === "阴" : null;
       return {
-        pos: posLabel(yao.pos),
-        god: str(yao.liu_shen),
-        qin: str(yao.liu_qin),
-        ganzhi: `${str(yao.najia)}${str(yao.wuxing)}`,
+        pos: caseContext && !knownPos ? "爻位未载" : posLabel(yao.pos),
+        god: str(yao.liu_shen) || (caseContext ? "未载" : ""),
+        qin: str(yao.liu_qin) || (caseContext ? "未载" : ""),
+        ganzhi: `${str(yao.najia) || (caseContext ? "未载" : "")}${str(yao.wuxing)}`,
         element: str(yao.wuxing),
         yin,
-        moving: !!yao.moving,
-        mark: yao.moving ? (yao.old_young === "老阳" ? "○" : "×") : "",
+        moving: isMoving,
+        mark: isMoving ? (yao.old_young === "老阳" ? "○" : caseContext && yao.old_young !== "老阴" ? "动" : "×") : "",
         // 变爻阴阳以排盘结果为准；老数据没有这个字段时才按「动则阴阳互变」补上。
-        changedYin: bianYin ?? (yao.moving ? !yin : yin),
-        changedText: bian ? `${str(bian.liu_qin)} ${str(bian.najia)}${str(bian.wuxing)}`.trim() : "",
+        changedYin: caseContext ? isMoving === false ? yin : bianYin : bianYin ?? (yao.moving ? !yin : yin),
+        changedText: bian ? `${str(bian.liu_qin)} ${str(bian.najia)}${str(bian.wuxing)}`.trim() : caseContext && isMoving ? "未载" : "",
         changedElement: bian ? str(bian.wuxing) : "",
         shi: !!yao.shi,
         ying: !!yao.ying,
         kong: !!yao.kong,
         fu: yao.fu_shen ? `${str(yao.fu_shen.liu_qin)}${str(yao.fu_shen.najia)}${str(yao.fu_shen.wuxing)}` : "",
         raw: yao,
+        canOpen: !caseContext || (knownPos && yin !== null && isMoving !== null),
       };
     }),
   };
@@ -113,11 +120,13 @@ export function paipanFromOracle(oracle) {
 }
 
 function bar(yin, { moving = false, faded = false } = {}) {
+  if (yin === null) return h("span", { class: "pp-unknown" }, "未载");
   return h("span", { class: ["pp-bar", yin ? "is-yin" : "is-yang", moving && "is-moving", faded && "is-faded"], "aria-hidden": "true" }, h("i"), h("i"));
 }
 
 function paipanRow(line, { changed, onOpen }) {
-  const lineName = `${line.yin ? "阴爻" : "阳爻"}${line.moving ? "，发动" : ""}`;
+  if (line.canOpen === false) onOpen = null;
+  const lineName = `${line.yin === null ? "阴阳未载" : line.yin ? "阴爻" : "阳爻"}${line.moving === null ? "，动静未载" : line.moving ? "，发动" : ""}`;
   // 卦盘很窄时只留「上」「五」……，「爻」字交给样式隐藏。
   const posText = [line.pos.replace(/爻$/, ""), h("span", { class: "pp-pos-suffix" }, "爻")];
   const pos = onOpen
@@ -171,11 +180,11 @@ export function liuyaoPaipan(model, { heading = "h3", question = "", onOpen = nu
       heading ? h(heading, { class: "pp-title serif" },
         h("span", null, model.benName),
         changed ? h("span", { class: "pp-zhi" }, "之") : null,
-        changed ? h("span", null, model.bianName || "变卦") : h("span", { class: "pp-quiet" }, "六爻安静")) : null,
+        changed ? h("span", null, model.bianName || "变卦") : h("span", { class: "pp-quiet" }, model.changed === null ? "动静未载" : "六爻安静")) : null,
       model.meta.length ? h("p", { class: "pp-meta" }, model.meta.join(" · ")) : null) : null,
     question ? h("blockquote", { class: "cp-question" }, h("span", null, "所问"), question) : null,
     facts.length ? h("dl", { class: "pp-facts" }, facts.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, str(value))))) : null,
-    h("div", { class: "pp-scroll" },
+    model.caseMode && !model.lines.length ? h("p", { class: "cp-note" }, "爻象未载，暂不能复盘。") : h("div", { class: "pp-scroll" },
       h("table", { class: ["pp-table", changed && "has-bian"] },
         h("caption", { class: "sr-only" }, `六爻排盘，自上爻至初爻${onOpen ? "；每行可看这一爻的释读" : ""}`),
         h("thead", null, h("tr", null,
@@ -185,24 +194,30 @@ export function liuyaoPaipan(model, { heading = "h3", question = "", onOpen = nu
 }
 
 // beside：摆在解读页标题旁边（桌面右栏），卦名和所问页面上已经有了，盘里不再重复。
-export function liuyaoPanel(payload, { method = "", beside = false } = {}) {
-  const model = paipanFromPayload(payload, { method });
-  return h("section", { class: "chart-panel is-liuyao", "aria-label": "六爻卦盘" },
+export function liuyaoPanel(payload, { method = "", beside = false, caseContext = null } = {}) {
+  const model = paipanFromPayload(payload, { method, caseContext });
+  return h("section", { class: ["chart-panel is-liuyao", caseContext && "is-book-case"], "aria-label": caseContext ? "书例六爻盘" : "六爻卦盘" },
     liuyaoPaipan(model, {
       heading: beside ? null : "h2",
       question: beside ? "" : payload?.question || "",
-      onOpen: (line, trigger) => yaoPop(line.raw || {}, { returnFocus: trigger }),
+      onOpen: (line, trigger) => yaoPop(line.raw || {}, { returnFocus: trigger, caseContext }),
       footer: [
-        h("p", { class: "cp-note" }, "纳甲六亲依京房八宫 · 六神依日干起法 · 点一爻看释读"),
+        h("p", { class: "cp-note" }, caseContext ? "按书载条件复盘 · 点一爻看释读" : "纳甲六亲依京房八宫 · 六神依日干起法 · 点一爻看释读"),
+        caseContext && Array.isArray(caseContext.missing) && caseContext.missing.length
+          ? h("p", { class: "cp-note cp-case-missing" }, `未载：${caseContext.missing.join("、")}`) : null,
         h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("liuyao") }, icon("book"), "名词解释"),
       ],
     }));
 }
 
 // 解读页顶部的看盘条：卦名已经是页面标题，这里只放卦象与月建日辰。
-export function liuyaoStrip(payload) {
-  const lines = linesFromYaos(payload?.yaos);
+export function liuyaoStrip(payload, { caseContext = null } = {}) {
+  const known = !caseContext || (caseHas(caseContext, "lines") && payload?.yaos?.length === 6
+    && payload.yaos.every(yao => ["阴", "阳"].includes(yao.yin_yang) && typeof yao.moving === "boolean"));
+  // 书例速览只画接口给出的本卦与动爻，不经过个人盘旧数据的变爻补全。
+  const lines = caseContext ? known ? payload.yaos.slice().reverse().map(yao => ({ yin: yao.yin_yang === "阴", moving: yao.moving })) : []
+    : linesFromYaos(payload?.yaos);
   return h("div", { class: "chart-strip" },
-    guaGlyph(lines, { label: `本卦 ${payload?.ben_gua?.name || ""}` }),
-    h("span", { class: "strip-dm is-liuyao" }, `月建 ${payload?.month_jian || "—"} · 日辰 ${payload?.day_chen || "—"}`));
+    known ? guaGlyph(lines, { label: `本卦 ${payload?.ben_gua?.name || ""}` }) : h("span", { class: "pp-unknown" }, "爻象未载"),
+    h("span", { class: "strip-dm is-liuyao" }, `月建 ${payload?.month_jian || (caseContext ? "未载" : "—")} · 日辰 ${payload?.day_chen || (caseContext ? "未载" : "—")}`));
 }
