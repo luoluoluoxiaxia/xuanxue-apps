@@ -1,14 +1,14 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n35";
-import { icon } from "../lib/icons.js?v=n35";
-import { get, post, put } from "../lib/api.js?v=n35";
-import { session, refreshSession } from "../lib/store.js?v=n35";
-import { greeting } from "../lib/format.js?v=n35";
-import { stateView } from "../ui/bits.js?v=n35";
-import { openSheet } from "../ui/overlay.js?v=n35";
-import { toast } from "../ui/toast.js?v=n35";
+import { h } from "../lib/dom.js?v=n36";
+import { icon } from "../lib/icons.js?v=n36";
+import { get, post, put } from "../lib/api.js?v=n36";
+import { session, refreshSession } from "../lib/store.js?v=n36";
+import { greeting } from "../lib/format.js?v=n36";
+import { stateView } from "../ui/bits.js?v=n36";
+import { openSheet } from "../ui/overlay.js?v=n36";
+import { toast } from "../ui/toast.js?v=n36";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];

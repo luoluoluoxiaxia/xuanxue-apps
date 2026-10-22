@@ -8,6 +8,7 @@
 .book-edition-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin: -4px 0 12px; }
 .book-edition-shortcuts > a { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--brand-ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .book-cases-library { max-width: 960px; }
+.book-cases-filters { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px 24px; }
 .book-cases-filter { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .book-cases-filter label { flex-shrink: 0; color: var(--ink-3); font-size: 13px; }
 .book-cases-filter select { min-width: 0; width: min(100%, 340px); min-height: 44px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--r); background: var(--bg-elev); color: var(--ink); font: inherit; }
@@ -35,8 +36,11 @@
 .book-case-chart-strip:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; }
 .book-case-chart-status { margin: 16px 0; }
 .book-case-chart-status > .state { padding: 24px 16px; }
+.book-case-chart-note { margin: 8px 0 18px; color: var(--ink-3); font-size: 13px; line-height: 1.8; }
+.book-case-chart-area:empty, .book-case-full-chart:empty { display: none; }
 @media (min-width: 1100px) {
   .book-case-study.has-chart { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; margin-top: 20px; }
+  .book-case-study.has-chart > .book-case-analysis { grid-column: 2; grid-row: 1; }
   .book-case-full-chart { display: block; position: sticky; top: calc(var(--topbar-h, 64px) + 16px); max-height: calc(100dvh - var(--topbar-h, 64px) - 32px); overflow: auto; overscroll-behavior: contain; }
   .book-case-chart-strip { display: none; }
   .book-case-analysis > .book-case-section:first-child { margin-top: 0; }
@@ -46,6 +50,10 @@
 .book-case-section { margin: 22px 0; }
 .book-case-section h2, .book-case-context h2, .book-case-sources h2 { margin: 0 0 10px; font-size: 16px; line-height: 1.7; }
 .book-case-section p, .book-case-text, .book-case-uncertainties p { margin: 8px 0; color: var(--ink-2); font-size: 16px; line-height: 1.95; white-space: pre-wrap; overflow-wrap: anywhere; }
+.book-case-modern .book-case-text { font-size: 18px; line-height: 2; }
+.book-case-related { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; margin-top: 20px; }
+.book-case-related h2 { width: 100%; margin: 0; font-size: 14px; }
+.book-case-related a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--brand-ink); font-size: 13px; }
 .book-case-chart { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; margin: 0; border: 1px solid var(--line); border-radius: var(--r); background: var(--line); overflow: hidden; }
 .book-case-chart > div { min-width: 0; padding: 12px 8px 16px; text-align: center; background: var(--bg-elev); }
 .book-case-chart dt { color: var(--ink-3); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
@@ -64,6 +72,7 @@
 .book-case-source p { margin: 4px 0; color: var(--ink-3); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
 .book-cases-entry:focus-visible, .book-case-context > summary:focus-visible, .book-case-card a:focus-visible, .book-case-source a:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; border-radius: 3px; }
 @media (max-width: 560px) {
+  .book-cases-filters { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .book-cases-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .book-case-card { padding: 16px 18px; }
   .book-case-card h2 { font-size: 20px; }
@@ -72,6 +81,7 @@
   .book-case-chart dd { font-size: 22px; }
   .book-case-section { margin: 18px 0; }
   .book-case-section p, .book-case-text { font-size: 15px; }
+  .book-case-modern .book-case-text { font-size: 17px; }
   .book-reading .book-reading-header { flex-wrap: wrap; }
   .book-reading .book-reading-header > .book-cases-entry { margin-left: auto; }
 }
