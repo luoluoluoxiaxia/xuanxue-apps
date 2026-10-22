@@ -1,19 +1,19 @@
-import { h, fill } from "../lib/dom.js?v=n28";
-import { icon } from "../lib/icons.js?v=n28";
-import { get } from "../lib/api.js?v=n28";
-import { local, session } from "../lib/store.js?v=n28";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n28";
+import { h, fill } from "../lib/dom.js?v=n29";
+import { icon } from "../lib/icons.js?v=n29";
+import { get } from "../lib/api.js?v=n29";
+import { local, session } from "../lib/store.js?v=n29";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n29";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n28";
-import { errorView, stateView } from "../ui/bits.js?v=n28";
-import { openBookImage } from "../ui/book-image.js?v=n28";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n28";
-import { openSheet } from "../ui/overlay.js?v=n28";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n28";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n28";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n28";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n29";
+import { errorView, stateView } from "../ui/bits.js?v=n29";
+import { openBookImage } from "../ui/book-image.js?v=n29";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n29";
+import { openSheet } from "../ui/overlay.js?v=n29";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n29";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n29";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n29";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
