@@ -1,11 +1,11 @@
-import { h, fill } from "../lib/dom.js?v=n36";
-import { get, post, patch, del, query } from "../lib/api.js?v=n36";
-import { session } from "../lib/store.js?v=n36";
-import { ANNOTATION_COLORS, ANCHOR_STATUS_LABELS, annotationMatches, annotationRange, selectionAnchor } from "../lib/book-annotations.js?v=n36";
-import { createBookDecorator } from "../lib/book-decoration.js?v=n36";
-import { openSheet, confirmDialog } from "./overlay.js?v=n36";
-import { errorView, spinnerLine } from "./bits.js?v=n36";
-import { toast, toastError } from "./toast.js?v=n36";
+import { h, fill } from "../lib/dom.js?v=n37";
+import { get, post, patch, del, query } from "../lib/api.js?v=n37";
+import { session } from "../lib/store.js?v=n37";
+import { ANNOTATION_COLORS, ANCHOR_STATUS_LABELS, annotationMatches, annotationRange, selectionAnchor } from "../lib/book-annotations.js?v=n37";
+import { createBookDecorator } from "../lib/book-decoration.js?v=n37";
+import { openSheet, confirmDialog } from "./overlay.js?v=n37";
+import { errorView, spinnerLine } from "./bits.js?v=n37";
+import { toast, toastError } from "./toast.js?v=n37";
 
 const SELECTION_MESSAGES = {
   cross_block: "请一次选取同一段、同一栏的文字，再保存划线。跨段内容可分次标记。",
@@ -65,7 +65,7 @@ export function setupBookAnnotations({ content, book, getSection, getMode, onNav
   }
   function textElement(annotation) {
     const block = [...content.querySelectorAll(".book-block[data-block-id]")].find(node => node.dataset.blockId === annotation.block_id);
-    return block?.querySelector(annotation.layer === "modern" ? ".book-modern p, .book-modern h3, .book-modern pre" : ".book-original p, .book-original h3, .book-original pre");
+    return block?.querySelector(annotation.layer === "modern" ? ".book-modern p, .book-modern h2, .book-modern h3, .book-modern pre" : ".book-original p, .book-original h2, .book-original h3, .book-original pre");
   }
   function paintHighlights() {
     clearHighlights();

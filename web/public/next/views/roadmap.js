@@ -1,7 +1,7 @@
-import { h } from "../lib/dom.js?v=n36";
-import { icon } from "../lib/icons.js?v=n36";
-import { openFeedback } from "./feedback.js?v=n36";
-import { openSheet } from "../ui/overlay.js?v=n36";
+import { h } from "../lib/dom.js?v=n37";
+import { icon } from "../lib/icons.js?v=n37";
+import { openFeedback } from "./feedback.js?v=n37";
+import { openSheet } from "../ui/overlay.js?v=n37";
 
 // 公开交付清单：状态与数量从 milestones 计算，不代表整个方向的完成比例。
 const DIRECTIONS = [
@@ -204,7 +204,7 @@ export function render() {
     h("div", null, h("dt", null, "已有交付的方向"), h("dd", null, h("b", { class: "tnum" }, startedDirections), h("span", null, ` / ${DIRECTIONS.length} 个`)), h("small", null, "按下方公开交付项清单计算")));
   const node = h("div", { class: "roadmap-page" },
     h("header", { class: "roadmap-header" },
-      h("img", { class: "roadmap-landscape", src: new URL("../assets/roadmap-landscape.webp?v=n36", import.meta.url).href, alt: "", "aria-hidden": "true", decoding: "async" }),
+      h("img", { class: "roadmap-landscape", src: new URL("../assets/roadmap-landscape.webp?v=n37", import.meta.url).href, alt: "", "aria-hidden": "true", decoding: "async" }),
       h("div", { class: "roadmap-hero-copy" }, h("h1", null, "路线图"),
         h("p", { class: "roadmap-vision" }, "把经典、案例与实践，连成一条路。"),
         h("p", { class: "roadmap-updated" }, h("span", { class: "roadmap-update-dot", "aria-hidden": "true" }), "进度核对 · ", h("time", { datetime: "2026-10-07" }, "2026.10.07")))),

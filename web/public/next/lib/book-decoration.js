@@ -1,7 +1,7 @@
 // Readium renders marks; the account API and canonical source anchors remain
 // independent. The vendor file is a pinned, self-contained browser ES module.
 import { DirectCommsChannel, Decorator, DecorationController, DecorationStyleType,
-  Locator, LocatorLocations, LocatorText } from "../../vendor/readium-decorator-1.2.5.js?v=n36";
+  Locator, LocatorLocations, LocatorText } from "../../vendor/readium-decorator-1.2.5.js?v=n37";
 
 const TINTS = Object.freeze({ yellow: "#FFD54F", green: "#81C784", blue: "#90CAF9", pink: "#F48FB1" });
 let instanceSequence = 0;
@@ -33,7 +33,7 @@ export function createBookDecorator(content, { onActivate } = {}) {
     const start = point(range.startContainer, range.startOffset);
     const end = point(range.endContainer, range.endOffset);
     if (!start || !end) return null;
-    const element = range.startContainer.parentElement.closest("p, h3, pre");
+    const element = range.startContainer.parentElement.closest("p, h2, h3, pre");
     if (!element || !content.contains(element) || !element.contains(range.endContainer)) return null;
     // DOM Range offsets are UTF-16; the caller has already validated the API's
     // Unicode code-point offsets and text version before producing this range.

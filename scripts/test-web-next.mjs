@@ -10,6 +10,85 @@ globalThis.document = globalThis.document || { dispatchEvent() {} };
 const base = new URL('../web/public/next/', import.meta.url);
 const load = path => import(new URL(`${path}?v=n19`, base).href);
 
+test('fresh white-language books open their exact default and older books keep the electronic entry', async () => {
+  const { bookReadingEntry, bookDefaultSectionNumber } = await load('lib/books.js');
+  const book = { id: 'sample-book', has_modern: true, section_count: 85, default_section_number: 3 };
+  assert.deepEqual(bookReadingEntry(book), { path: '/books/sample-book?page=3', title: '', updatedAt: 0, continuing: false, kind: 'modern' });
+  assert.equal(bookReadingEntry({ ...book, has_modern: false }).path, '/books/sample-book?text-version=current');
+  assert.equal(bookDefaultSectionNumber({ ...book, default_section_number: undefined }), 1);
+  assert.equal(bookDefaultSectionNumber({ ...book, default_section_number: 86 }), 1);
+});
+
+test('library entries resume the newer white or immutable MD position without switching versions', async () => {
+  const { bookReadingEntry } = await load('lib/books.js');
+  const book = { id: 'sample-book', has_modern: true, section_count: 85, default_section_number: 3 };
+  const reading = { number: 82, anchor: 2, offset: .5, updatedAt: 200 };
+  const text = { versionId: 'frozen-md-one', sectionId: 'body-12', title: '原版篇十二', updatedAt: 100 };
+  const before = structuredClone({ book, reading, text });
+  assert.deepEqual(bookReadingEntry(book, { reading, text }), { path: '/books/sample-book?page=82', title: '第 82 篇',
+    updatedAt: 200, continuing: true, kind: 'modern' });
+  for (const updatedAt of [200, 300]) {
+    assert.deepEqual(bookReadingEntry(book, { reading, text: { ...text, updatedAt } }), {
+      path: '/books/sample-book?text-version=frozen-md-one&chapter=body-12&resume=1', title: '原版篇十二',
+      updatedAt, continuing: true, kind: 'electronic' });
+  }
+  assert.equal(bookReadingEntry(book, { reading: { ...reading, number: 86 }, text }).kind, 'electronic');
+  assert.equal(bookReadingEntry(book, { reading, text: { ...text, versionId: '../invalid' } }).kind, 'modern');
+  assert.equal(bookReadingEntry({ ...book, has_modern: false }, { reading }).kind, 'original');
+  assert.deepEqual({ book, reading, text }, before);
+});
+
+test('new chapter layouts ignore old numeric progress, resume their own position and preserve immutable MD history', async () => {
+  const { bookReadingKeys, bookReadingEntry, bookDefaultSectionNumber, readingNumber } = await load('lib/books.js');
+  const book = { id: 'huozhulin', has_modern: true, section_count: 85, default_section_number: 4, reading_layout_id: 'db1d3509b7ead1e8' };
+  const legacyBook = { id: book.id, has_modern: false, section_count: 33 };
+  const legacyKeys = bookReadingKeys(legacyBook);
+  assert.deepEqual(legacyKeys, { progress: 'xz-book-progress:huozhulin', position: 'xz-book-position:huozhulin' });
+  for (const reading_layout_id of ['', null, undefined]) assert.deepEqual(bookReadingKeys({ ...legacyBook, reading_layout_id }), legacyKeys);
+  const keys = bookReadingKeys(book);
+  assert.deepEqual(keys, { progress: 'xz-book-progress:huozhulin:db1d3509b7ead1e8', position: 'xz-book-position:huozhulin:db1d3509b7ead1e8' });
+  const oldPosition = { number: 29, anchor: 4, offset: .3, updatedAt: 500 };
+  const storage = new Map([[legacyKeys.progress, '29'], [legacyKeys.position, oldPosition]]);
+  const entry = target => bookReadingEntry(target, { reading: storage.get(bookReadingKeys(target).position), text: storage.get('xz-book-text-recent:huozhulin') });
+  const start = (target, page = '') => readingNumber(page || storage.get(bookReadingKeys(target).progress) || bookDefaultSectionNumber(target), target.section_count);
+  assert.equal(entry(book).path, '/books/huozhulin?page=4');
+  assert.equal(entry(book).continuing, false);
+  assert.equal(start(book), 4, 'old raw page 29 must not become the new chapter 29');
+  assert.equal(start(book, '29'), 29, 'an explicit case or contents page remains a destination');
+  assert.equal(entry(legacyBook).path, '/books/huozhulin?page=29');
+  assert.equal(start(legacyBook), 29);
+  const newPosition = { number: 82, anchor: 2, offset: .4, updatedAt: 600 };
+  storage.set(keys.progress, '82'); storage.set(keys.position, newPosition);
+  assert.equal(entry(book).path, '/books/huozhulin?page=82');
+  assert.equal(entry(book).continuing, true);
+  assert.equal(start(book), 82);
+  assert.equal(start(book, '4'), 4);
+  const revisedDefinitions = { ...book, glossary_revision: 'changed', modern_revision: 'changed' };
+  assert.deepEqual(bookReadingKeys(revisedDefinitions), keys);
+  assert.equal(entry(revisedDefinitions).path, '/books/huozhulin?page=82');
+  const text = { versionId: 'reading-20261022-026bfdd7', sectionId: 'huozhulin-body', title: '冻结MD原文', updatedAt: 700 };
+  storage.set('xz-book-text-recent:huozhulin', text);
+  assert.equal(entry(book).kind, 'electronic');
+  assert.equal(entry(book).path, '/books/huozhulin?text-version=reading-20261022-026bfdd7&chapter=huozhulin-body&resume=1');
+  storage.set(keys.position, { ...newPosition, updatedAt: 800 });
+  assert.equal(entry(book).kind, 'modern');
+  assert.deepEqual(storage.get(legacyKeys.position), oldPosition);
+  assert.equal(storage.get(legacyKeys.progress), '29');
+});
+
+test('an identical opening heading replaces only the visible outer heading and keeps every block identity', async () => {
+  const { hasOpeningSectionTitle } = await load('lib/books.js');
+  const section = { title: '占法卦數', blocks: [{ id: 'heading-1', role: 'heading', text: '占法卦數', notes: ['题名存疑'] },
+    { id: 'text-2', role: 'text', text: '原文仍在。' }] };
+  const before = structuredClone(section);
+  assert.equal(hasOpeningSectionTitle(section), true);
+  assert.equal(hasOpeningSectionTitle({ ...section, title: '占法卦数' }), false);
+  assert.equal(hasOpeningSectionTitle({ ...section, blocks: [{ ...section.blocks[0], text: '占法卦數\n' }] }), false);
+  assert.equal(hasOpeningSectionTitle({ ...section, blocks: [{ ...section.blocks[0], role: 'text' }] }), false);
+  assert.equal(hasOpeningSectionTitle({ ...section, blocks: [] }), false);
+  assert.deepEqual(section, before);
+});
+
 test('electronic text routes preserve edition and chapter identities in reading and downloads', async () => {
   const { textVersionPath, textExportPath, TEXT_ROLES } = await load('lib/books.js');
   const route = new URL(textVersionPath('book/one', 'siku-v1', 'juan-11'), 'https://example.test');

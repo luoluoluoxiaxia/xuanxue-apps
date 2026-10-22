@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n36";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n37";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -116,6 +116,37 @@ export function readingPath(id, number = 1) {
 export function readingNumber(value, count) {
   const number = Number(value);
   return Number.isSafeInteger(number) && number >= 1 && number <= count ? number : 1;
+}
+
+export function bookDefaultSectionNumber(book) {
+  return readingNumber(book.default_section_number ?? 1, book.section_count);
+}
+
+// Numeric positions belong to the exact chapter order. Older books retain their
+// original keys; a newly versioned layout never reads an unversioned position.
+export function bookReadingKeys(book) {
+  const identity = `${book.id}${book.reading_layout_id ? `:${book.reading_layout_id}` : ""}`;
+  return { progress: `xz-book-progress:${identity}`, position: `xz-book-position:${identity}` };
+}
+
+// The two readers retain separate, version-bound progress. Opening a library
+// card resumes whichever was saved last; only a fresh visit chooses white text.
+export function bookReadingEntry(book, { reading = null, text = null } = {}) {
+  const savedReading = readingPosition(reading, book.section_count);
+  const savedText = textReadingPosition(text);
+  if (savedText && savedText.updatedAt >= (savedReading?.updatedAt || 0)) {
+    return { path: textVersionPath(book.id, savedText.versionId, savedText.sectionId, { resume: true }),
+      title: savedText.title, updatedAt: savedText.updatedAt, continuing: true, kind: "electronic" };
+  }
+  if (savedReading) return { path: readingPath(book.id, savedReading.number),
+    title: `第 ${savedReading.number} ${book.has_modern ? "篇" : "页"}`,
+    updatedAt: savedReading.updatedAt, continuing: true, kind: book.has_modern ? "modern" : "original" };
+  return { path: book.has_modern ? readingPath(book.id, bookDefaultSectionNumber(book)) : textVersionPath(book.id, "current"),
+    title: "", updatedAt: 0, continuing: false, kind: book.has_modern ? "modern" : "electronic" };
+}
+
+export function hasOpeningSectionTitle(section) {
+  return section.blocks?.[0]?.role === "heading" && section.blocks[0].text === section.title;
 }
 
 export function filterBooks(books, query, system) {
