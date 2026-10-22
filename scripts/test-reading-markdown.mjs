@@ -567,5 +567,5 @@ test("library titles open catalogs and primary entries open current or saved ele
   assert.ok(library.includes('saved ? "继续" : "阅读"'));
   assert.ok(library.includes("继续历史阅读稿"));
   assert.ok(source.includes("收录说明与历史阅读稿"));
-  assert.match(source, /href: `#\$\{readingPath\(id\)\}` \}, "打开历史阅读稿"/);
+  assert.match(source, /href: `#\$\{links\.reading\(id\)\}` \}, "打开历史阅读稿"/);
 });

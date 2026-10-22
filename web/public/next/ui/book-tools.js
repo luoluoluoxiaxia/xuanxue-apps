@@ -1,9 +1,9 @@
-import { h, fill } from "../lib/dom.js?v=n32";
-import { filterContents, groupReadingSections } from "../lib/books.js?v=n32";
-import { local } from "../lib/store.js?v=n32";
-import { openSheet } from "./overlay.js?v=n32";
+import { h, fill } from "../lib/dom.js?v=n33";
+import { filterContents, groupReadingSections } from "../lib/books.js?v=n33";
+import { local } from "../lib/store.js?v=n33";
+import { openSheet } from "./overlay.js?v=n33";
 
-export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse }) {
+export function createBookSidebar({ book, contents, current, onSelect, onNotes, onCollapse, libraryPath = "#/books", libraryLabel = "返回书库" }) {
   let closed = false, scrollFrame;
   const search = h("input", { type: "search", maxLength: 160, placeholder: "搜索目录或页码", "aria-label": "搜索目录" });
   search.value = local.get(`xz-book-directory-query:${book.id}`, "").slice(0, 160);
@@ -20,7 +20,7 @@ export function createBookSidebar({ book, contents, current, onSelect, onNotes, 
     } },
     h("div", { class: "book-sidebar-head" }, h("b", null, book.title),
       h("button", { type: "button", class: "book-sidebar-collapse", "aria-label": "收起目录", onClick: onCollapse }, "‹")),
-    h("div", { class: "book-sidebar-links" }, h("a", { href: "#/books" }, "返回书库"),
+    h("div", { class: "book-sidebar-links" }, h("a", { href: libraryPath }, libraryLabel),
       h("button", { type: "button", onClick: event => onNotes(event.currentTarget) }, "我的笔记")),
     h("div", { class: "book-contents-search" }, search, go, count), rows);
   function showRow(row, center = false) {
@@ -69,7 +69,7 @@ export function createBookSidebar({ book, contents, current, onSelect, onNotes, 
   return { node, refresh, destroy() { closed = true; cancelAnimationFrame(scrollFrame); observer?.disconnect(); } };
 }
 
-export function openBookContents({ book, contents, current, onSelect, returnFocus }) {
+export function openBookContents({ book, contents, current, onSelect, returnFocus, libraryPath = "#/books", libraryLabel = "返回书库" }) {
   const readingY = window.scrollY;
   const search = h("input", { type: "search", placeholder: "搜索标题、来源页，或输入阅读页码", "aria-label": "搜索目录" });
   const count = h("p", { class: "books-count", role: "status" });
@@ -83,7 +83,7 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
     sheet.close(); onSelect(Number(jump.value));
   } }, h("label", null, `阅读页码（1–${book.section_count}）`, jump), h("button", { type: "submit", class: "btn btn-soft" }, "跳转"));
   const searchArea = h("div", { class: "book-contents-search" }, search, go, count,
-    h("a", { class: "book-contents-library", href: "#/books" }, "返回书库"));
+    h("a", { class: "book-contents-library", href: libraryPath }, libraryLabel));
   const sheet = openSheet({ title: `${book.title} · ${book.has_modern ? "目录" : "书页"}`, className: "sheet-book-contents", returnFocus,
     body: [searchArea, rows],
     onClose: reason => {

@@ -1608,6 +1608,86 @@
         "title": "ClientBookGlossarySense",
         "type": "object"
       },
+      "ClientBookLearningLink": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "path": {
+            "description": "站内书籍阅读路径，不含域名或片段前缀。",
+            "maxLength": 400,
+            "pattern": "^/books/[a-z0-9]+(?:-[a-z0-9]+)*(?:\\?[a-z0-9%&=_-]+)?$",
+            "title": "Path",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "path"
+        ],
+        "title": "ClientBookLearningLink",
+        "type": "object"
+      },
+      "ClientBookLearningNode": {
+        "additionalProperties": false,
+        "properties": {
+          "books": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookLearningLink"
+            },
+            "title": "Books",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "books"
+        ],
+        "title": "ClientBookLearningNode",
+        "type": "object"
+      },
+      "ClientBookLearningPath": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "enum": [
+              "bazi",
+              "liuyao"
+            ],
+            "title": "Id",
+            "type": "string"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookLearningNode"
+            },
+            "title": "Nodes",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "nodes"
+        ],
+        "title": "ClientBookLearningPath",
+        "type": "object"
+      },
       "ClientBookList": {
         "additionalProperties": false,
         "properties": {
@@ -1616,6 +1696,14 @@
               "$ref": "#/components/schemas/ClientBook"
             },
             "title": "Books",
+            "type": "array"
+          },
+          "learning_paths": {
+            "description": "书库的简短阅读路线；未提供时为空。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookLearningPath"
+            },
+            "title": "Learning Paths",
             "type": "array"
           }
         },
