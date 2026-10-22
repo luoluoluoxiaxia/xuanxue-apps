@@ -1,17 +1,17 @@
 // 讲解页 #/learn/:system：一页讲清这张盘（或随机练习盘）怎么看。
 // 讲解正文、盘面、小结和自查题都由后端 /api/chart/guide 给出，这里只负责排版和答题。
 // 宽屏左盘右文、盘面跟着滚动固定在左边；窄屏顶部固定一条看盘条，点开看完整盘面。
-import { h, fill } from "../lib/dom.js?v=n29";
-import { icon } from "../lib/icons.js?v=n29";
-import { post } from "../lib/api.js?v=n29";
-import { local } from "../lib/store.js?v=n29";
-import { readingPath } from "../lib/books.js?v=n29";
-import { loadLearnInput, sampleLearnInput } from "../lib/learn.js?v=n29";
-import { humanizeError } from "../lib/interpret.js?v=n29";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n29";
-import { openSheet } from "../ui/overlay.js?v=n29";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n29";
-import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n29";
+import { h, fill } from "../lib/dom.js?v=n30";
+import { icon } from "../lib/icons.js?v=n30";
+import { post } from "../lib/api.js?v=n30";
+import { local } from "../lib/store.js?v=n30";
+import { readingPath } from "../lib/books.js?v=n30";
+import { loadLearnInput, sampleLearnInput } from "../lib/learn.js?v=n30";
+import { humanizeError } from "../lib/interpret.js?v=n30";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n30";
+import { openSheet } from "../ui/overlay.js?v=n30";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n30";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n30";
 
 const sampleKey = system => `xz-learn-sample:${system}`;
 const guideCache = new Map();

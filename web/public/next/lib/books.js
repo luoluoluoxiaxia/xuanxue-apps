@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n29";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n30";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -73,11 +73,34 @@ export function textReadingPosition(value) {
     position.anchor = value.anchor; position.offset = value.offset;
   }
   if (["source", "punctuated"].includes(value.punctuation)) position.punctuation = value.punctuation;
+  if (identity(value.blockId) && Number.isSafeInteger(value.blockAnchor) && value.blockAnchor >= 0) {
+    position.blockId = value.blockId; position.blockAnchor = value.blockAnchor;
+  }
   return position;
 }
 
 export function textReadingTarget(reading, { requested = "", saved = null, resume = false, footnote = "" } = {}) {
-  let index = selectReadingSection(reading, requested || saved?.sectionId);
+  const originalSaved = saved;
+  // This frozen edition formerly put all 284 source paragraphs in section-002.
+  // Its new reading segments preserve those blocks; recover old DOM anchors
+  // only for the exact old layout, never for a guessed chapter or another book.
+  if (saved && !saved.blockId && saved.sectionId === "section-002" && Number.isSafeInteger(saved.anchor) &&
+      reading.book_id === "ziping-zhenquan" && reading.version_id === "reading-20261022-1a356195") {
+    const segments = reading.sections.filter(section => section.source_chapter_id === "section-002" &&
+      (section.id === "section-002" || section.id.startsWith("section-002-source-0002-")));
+    if (segments.length > 1) {
+      const blocks = segments.flatMap(section => section.blocks.map((block, anchor) => ({ section, block, anchor })));
+      const target = blocks.length === 284 && blocks[saved.anchor];
+      if (target) saved = { ...saved, sectionId: target.section.id, title: target.section.title, anchor: target.anchor,
+        blockId: target.block.id, blockAnchor: 0 };
+    }
+  }
+  if (saved?.blockId) {
+    const target = reading.sections.find(section => section.blocks?.some(block => block.id === saved.blockId));
+    if (target) saved = { ...saved, sectionId: target.id, title: target.title };
+  }
+  const destination = resume && !footnote && requested === originalSaved?.sectionId ? saved?.sectionId : requested;
+  let index = selectReadingSection(reading, destination || saved?.sectionId);
   if (!requested && index < 0) index = selectReadingSection(reading, null);
   const section = reading.sections[index];
   // Explicit contents, pagination and footnote links are destinations, while a

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createReadingMarkdownContext, focusReadingFootnote, readingMarkdownTokens, renderEditionText } from "../web/public/next/lib/reading-markdown.js";
+import { textReadingPosition, textReadingTarget } from "../web/public/next/lib/books.js";
 
 // Same minimal native-DOM approach as the glossary tests, without HTML parsing.
 class MockNode {
@@ -29,6 +30,76 @@ function environment() {
 }
 const version = "reading-20261022-synthetic";
 function render(text, context, doc = environment()) { return renderEditionText(version, text, context, doc); }
+
+// Actual 2026-10-22 Ziping reading segments, reduced to the fields used for
+// navigation. Source paragraph numbers and the fifteen boundaries are frozen
+// corpus data; no book text or temporary-file dependency is needed here.
+function zipingReadingSegments() {
+  const starts = [1, 10, 21, 31, 43, 65, 81, 102, 120, 148, 168, 199, 230, 254, 280];
+  const blockId = number => `source-0002-r-001-p-${String(number).padStart(3, "0")}`;
+  return { book_id: "ziping-zhenquan", version_id: "reading-20261022-1a356195", default_section_id: "section-002", source_sections: [],
+    sections: starts.map((start, index) => ({
+      id: index ? `section-002-${blockId(start)}` : "section-002",
+      title: `正文 · 阅读分段 ${index + 1}`, kind: "body", source_chapter_id: "section-002",
+      blocks: Array.from({ length: (starts[index + 1] || 285) - start }, (_, offset) => ({ id: blockId(start + offset) })),
+    })) };
+}
+
+test("Ziping legacy first, boundary, middle and final paragraph positions resume in the corresponding new segments", () => {
+  const reading = zipingReadingSegments();
+  const untouched = structuredClone(reading);
+  for (const [anchor, index, localAnchor, blockId] of [[0, 0, 0, "source-0002-r-001-p-001"],
+    [9, 1, 0, "source-0002-r-001-p-010"], [141, 8, 22, "source-0002-r-001-p-142"],
+    [283, 14, 4, "source-0002-r-001-p-284"]]) {
+    const saved = { versionId: reading.version_id, sectionId: "section-002", title: "正文", updatedAt: 100,
+      anchor, offset: .375, punctuation: "source" };
+    const stored = textReadingPosition(JSON.parse(JSON.stringify(saved)));
+    const expected = { index, position: { ...saved, sectionId: reading.sections[index].id,
+      title: reading.sections[index].title, anchor: localAnchor, blockId, blockAnchor: 0 } };
+    assert.deepEqual(textReadingTarget(reading, { saved: stored }), expected);
+    assert.deepEqual(textReadingTarget(reading, { requested: "section-002", saved: stored, resume: true }), expected);
+    assert.deepEqual(stored, saved);
+  }
+  assert.deepEqual(reading, untouched);
+});
+
+test("explicit Ziping contents and footnote destinations take priority over a migrated continue-reading anchor", () => {
+  const reading = zipingReadingSegments();
+  const saved = { versionId: reading.version_id, sectionId: "section-002", title: "正文", updatedAt: 100, anchor: 283, offset: .4 };
+  assert.deepEqual(textReadingTarget(reading, { requested: reading.sections[8].id, saved, resume: true }), { index: 8, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: "section-002", saved }), { index: 0, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: "section-002", saved, resume: true, footnote: "注一" }), { index: 0, position: null });
+  assert.deepEqual(textReadingTarget(reading, { requested: "unknown-chapter", saved, resume: true }), { index: -1, position: null });
+});
+
+test("persisted block identity and local paragraph survive segment changes without overriding explicit navigation", () => {
+  const reading = zipingReadingSegments();
+  const saved = { versionId: reading.version_id, sectionId: "section-002", title: "正文", updatedAt: 100,
+    anchor: 141, offset: .625, punctuation: "punctuated", blockId: "source-0002-r-001-p-142", blockAnchor: 2 };
+  const stored = textReadingPosition(JSON.parse(JSON.stringify(saved)));
+  assert.deepEqual(stored, saved);
+  const expected = { index: 8, position: { ...saved, sectionId: reading.sections[8].id, title: reading.sections[8].title } };
+  assert.deepEqual(textReadingTarget(reading, { saved: stored }), expected);
+  assert.deepEqual(textReadingTarget(reading, { requested: "section-002", saved: stored, resume: true }), expected);
+  assert.deepEqual(textReadingTarget(reading, { requested: reading.sections[14].id, saved: stored, resume: true }), { index: 14, position: null });
+  for (const fields of [{ blockId: "../unknown" }, { blockAnchor: -1 }, { blockAnchor: 1.5 }, { blockAnchor: undefined }]) {
+    const withoutBlock = { ...saved }; delete withoutBlock.blockId; delete withoutBlock.blockAnchor;
+    assert.deepEqual(textReadingPosition({ ...saved, ...fields }), withoutBlock);
+  }
+});
+
+test("legacy migration leaves other editions and ordinary books alone and handles unknown identities safely", () => {
+  const reading = zipingReadingSegments();
+  const saved = { versionId: reading.version_id, sectionId: "section-002", title: "正文", updatedAt: 100, anchor: 283, offset: .4 };
+  for (const changed of [{ ...reading, book_id: "ordinary-book" }, { ...reading, version_id: "reading-20261022-other" }]) {
+    assert.deepEqual(textReadingTarget(changed, { saved }), { index: 0, position: saved });
+  }
+  const ordinary = { default_section_id: "body", source_sections: [], sections: [{ id: "preface" }, { id: "body" }] };
+  const normalSaved = { ...saved, sectionId: "body", blockId: "unknown-block", blockAnchor: 0 };
+  assert.deepEqual(textReadingTarget(ordinary, { saved: normalSaved }), { index: 1, position: normalSaved });
+  assert.deepEqual(textReadingTarget(ordinary, { saved: { ...normalSaved, sectionId: "removed-section" } }), { index: 1, position: null });
+  assert.deepEqual(textReadingTarget(ordinary, { requested: "unknown-section", saved: normalSaved, resume: true }), { index: -1, position: null });
+});
 
 test("only the new reading collection enables formatting; old edition text stays identical", () => {
   const text = "# Sample\n<details>\n<summary>Extra</summary>\nbody\n</details>\n[^a]: note";
@@ -169,7 +240,7 @@ test("short metrical runs keep lineation without promoting scanned prose into ve
   const verse = "三才變化　四營成易\n六爻爲義　八卦爲體\n";
   const after = "此後回到正文，仍然繼續敘述取用的條件。";
   const tokens = readingMarkdownTokens(before + verse + after);
-  assert.deepEqual(tokens, [{ type: "paragraph", text: before }, { type: "code", text: verse }, { type: "paragraph", text: after }]);
+  assert.deepEqual(tokens, [{ type: "paragraph", text: before }, { type: "code", text: verse, verse: true }, { type: "paragraph", text: after }]);
   const node = render(before + verse + after);
   assert.equal(tags(node, "pre")[0].className, "book-reading-literal book-reading-literal-text");
   assert.equal(tags(node, "code")[0].textContent, verse);
@@ -187,6 +258,63 @@ test("Chinese soft line breaks stay in source text and receive a display-only ma
   assert.deepEqual(breaks.map(item => item.textContent), ["\n", "\n  "]);
   const literal = render("```text\n原來的行序\n仍然要保留\n```");
   assert.equal(all(literal).filter(item => item.className === "book-reading-soft-break").length, 0);
+});
+
+test("Huozhulin supplied two-space verse endings render as hard breaks after punctuation", () => {
+  const sources = [
+    { text: "吉凶只在面前決  \n禍福無勞口後知  \n從此敢開天地口  \n老夫非是愛吟詩",
+      punctuated: "吉凶只在面前決，  \n禍福無勞口後知。  \n從此敢開天地口，  \n老夫非是愛吟詩。", breaks: 3 },
+    { text: "休囚為鬼　旺相為神  \n本象家親　他宮外人",
+      punctuated: "休囚為鬼，　旺相為神；  \n本象家親，　他宮外人。", breaks: 1 },
+  ];
+  for (const source of sources) {
+    const original = structuredClone(source);
+    const raw = render(source.text);
+    assert.equal(tags(raw, "pre").length, 1);
+    assert.equal(raw.textContent, source.text);
+    const node = render(source.punctuated);
+    assert.equal(tags(node, "p").length, 1);
+    assert.equal(tags(node, "br").length, source.breaks);
+    assert.equal(node.textContent, source.punctuated);
+    assert.equal(all(node).filter(item => item.className === "book-reading-soft-break").length, 0);
+    assert.deepEqual(source, original);
+  }
+});
+
+test("explicit hard breaks differ from scan soft breaks and do not alter literal content", () => {
+  const source = "正文接著說明條件\n接續正文。  \n**明確換行**後面。   \r\n末行。  \n";
+  const node = render(source);
+  assert.equal(tags(node, "br").length, 2);
+  assert.equal(all(node).filter(item => item.className === "book-reading-soft-break").length, 1);
+  assert.equal(node.textContent, source.replace("**明確換行**", "明確換行"));
+  assert.equal(tags(node, "strong")[0].textContent, "明確換行");
+  assert.equal(tags(render("普通一個空格 \n接續正文。"), "br").length, 0);
+  const literal = render("```text\n  保留縮進。  \n  下一行。\n```\n\n`行末兩空格  `  \n接續正文。");
+  assert.equal(tags(literal, "br").length, 1);
+  assert.deepEqual(tags(literal, "code").map(item => item.textContent), ["  保留縮進。  \n  下一行。\n", "行末兩空格  "]);
+  assert.equal(all(literal).filter(item => item.className === "book-reading-verse-indent").length, 0);
+});
+
+test("only detected unfenced verse hides its common scan margin while retaining exact source", () => {
+  const margin = "　　　　";
+  const verse = `${margin}六乙日生時丙戌　鬼敗臨身有損傷\n${margin}若不氣通身旺月　孤貧勞碌苦難當\n`;
+  const prose = "乙日丙戌時，鬼敗臨身。\n　原注仍保留縮進。";
+  const node = render(verse + prose);
+  const indents = all(node).filter(item => item.className === "book-reading-verse-indent");
+  assert.deepEqual(indents.map(item => item.textContent), [margin, margin]);
+  assert.ok(indents.every(item => item.getAttribute("hidden") === ""));
+  assert.equal(tags(node, "code")[0].textContent, verse);
+  assert.deepEqual(tags(node, "p").map(item => item.textContent), [prose]);
+  assert.equal(node.textContent, verse + prose);
+  const relative = render(`${margin}六乙日生時丙戌　鬼敗臨身有損傷\n${margin}　若不氣通身旺月　孤貧勞碌苦難當`);
+  assert.ok(tags(relative, "code")[0].childNodes.some(item => !item.tagName && item.textContent.startsWith("　若不")));
+  for (const source of [`\`\`\`text\n${verse}\`\`\``,
+    `${margin}父母  戌土  ▅▅▅▅▅\n${margin}兄弟  申金  ▅▅ ▅▅`,
+    `${margin}旺　相　休　囚　死\n${margin}春　木　火　水　金　土`,
+    "```js\n    const value = 1;  \n    next();\n```", "    正文仍在同一段。\n    不是詩歌，也不應去掉縮進。"] ) {
+    const untouched = render(source);
+    assert.equal(all(untouched).filter(item => item.className === "book-reading-verse-indent").length, 0);
+  }
 });
 
 test("Chinese reading text and short verse in literal fences keep their exact lines without a code presentation", () => {
@@ -429,12 +557,15 @@ test("footnote display numbers stay stable when navigating to another chapter", 
   assert.equal(note.textContent, "3. third note"); assert.equal(note.getAttribute("id"), "reading-footnote-3");
 });
 
-test("library titles and primary entries open electronic catalogs; historical sources and routes stay labeled", () => {
+test("library titles open catalogs and primary entries open current or saved electronic reading", () => {
   const source = readFileSync(new URL("../web/public/next/views/books.js", import.meta.url), "utf8");
   const library = source.slice(source.indexOf("function library(ctx)"), source.indexOf("function reader(ctx)"));
   assert.ok(library.includes("const catalogPath = textVersionPath(book.id)"));
   assert.match(library, /h\("h2", null, h\("a", \{ href: `#\$\{catalogPath\}` \}/);
-  assert.match(library, /class: "btn btn-soft books-electronic-open", href: `#\$\{catalogPath\}`/);
-  assert.match(library, /class: "books-history-open", href: `#\$\{readingPath\(book.id, progress\)\}`/);
-  for (const marker of ["历史稿来源：", "历史稿说明：", "历史稿读到第", "打开历史阅读稿", "继续历史阅读稿"]) assert.ok(library.includes(marker));
+  assert.ok(library.includes('const openPath = saved ? textVersionPath(book.id, saved.versionId, saved.sectionId, { resume: true }) : textVersionPath(book.id, "current")'));
+  assert.match(library, /class: "btn btn-soft books-electronic-open", href: `#\$\{openPath\}`/);
+  assert.ok(library.includes('saved ? "继续" : "阅读"'));
+  assert.ok(library.includes("继续历史阅读稿"));
+  assert.ok(source.includes("收录说明与历史阅读稿"));
+  assert.match(source, /href: `#\$\{readingPath\(id\)\}` \}, "打开历史阅读稿"/);
 });
