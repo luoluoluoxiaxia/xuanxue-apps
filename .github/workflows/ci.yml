@@ -72,6 +72,9 @@ jobs:
           retention-days: 30
 
   android:
+    # Android investment and automatic builds are paused. Keep this job and
+    # existing sources/artifacts; scope checks and Web CI continue normally.
+    if: ${{ false }}
     needs: scope
     runs-on: ubuntu-latest
     steps:
