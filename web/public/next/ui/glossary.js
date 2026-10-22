@@ -1,7 +1,7 @@
 // 名词解释面板：命理与卜筮两组静态术语。
-import { h } from "../lib/dom.js?v=n24";
-import { GLOSSARY, GLOSSARY_BU } from "../lib/copy.js?v=n24";
-import { openSheet } from "./overlay.js?v=n24";
+import { h } from "../lib/dom.js?v=n25";
+import { GLOSSARY, GLOSSARY_BU } from "../lib/copy.js?v=n25";
+import { openSheet } from "./overlay.js?v=n25";
 
 // returnFocus：从古典解读浮层跳过来时，关闭后把焦点还给最初点开浮层的那一格。
 export function openGlossary(first = "bazi", { returnFocus = null } = {}) {

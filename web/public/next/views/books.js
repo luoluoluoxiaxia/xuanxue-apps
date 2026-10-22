@@ -1,16 +1,17 @@
-import { h, fill } from "../lib/dom.js?v=n24";
-import { icon } from "../lib/icons.js?v=n24";
-import { get } from "../lib/api.js?v=n24";
-import { local, session } from "../lib/store.js?v=n24";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n24";
+import { h, fill } from "../lib/dom.js?v=n25";
+import { icon } from "../lib/icons.js?v=n25";
+import { get } from "../lib/api.js?v=n25";
+import { local, session } from "../lib/store.js?v=n25";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n25";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
-  TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath } from "../lib/books.js?v=n24";
-import { errorView, stateView } from "../ui/bits.js?v=n24";
-import { openBookImage } from "../ui/book-image.js?v=n24";
-import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n24";
-import { openSheet } from "../ui/overlay.js?v=n24";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n24";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n24";
+  TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath } from "../lib/books.js?v=n25";
+import { errorView, stateView } from "../ui/bits.js?v=n25";
+import { openBookImage } from "../ui/book-image.js?v=n25";
+import { createBookSidebar, openBookContents, openBookSettings } from "../ui/book-tools.js?v=n25";
+import { openSheet } from "../ui/overlay.js?v=n25";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n25";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n25";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n25";
 
 const progressKey = id => `xz-book-progress:${id}`;
 const positionKey = id => `xz-book-position:${id}`;
@@ -48,7 +49,7 @@ function library(ctx) {
   const sorts = choices("book-sort", "排序", "书籍排序", [["recent", "最近阅读优先"], ["catalog", "书库顺序"]], sort, value => { sort = value; });
   const node = h("div", { class: "books-library" },
     h("header", { class: "books-hero" }, h("h1", null, "典籍书库"),
-      h("p", null, "命理古籍原文在线读，部分已配白话。整理还在逐本进行，看不清或有疑问的地方随页标出。")),
+      h("p", null, "按电子文字版本阅读与下载，来源、缺漏和未校勘说明随版本列出。历史阅读稿另列入口，保留原有进度与记录。")),
     recent, h("div", { class: "books-filters" }, search, systems, sorts), count, results);
   function paintBooks() {
     local.setJson("xz-book-filters", { query: search.value, system, sort });
@@ -60,24 +61,26 @@ function library(ctx) {
     rows.sort((a, b) => Number(b.section_count > 0) - Number(a.section_count > 0));
     const latest = books.filter(book => position(book)).sort((a, b) => position(b).updatedAt - position(a).updatedAt)[0];
     fill(recent, latest ? h("a", { class: "books-resume", href: `#${readingPath(latest.id, position(latest).number)}` },
-      icon("book"), h("span", null, h("small", null, "接着上次读"), h("b", null, latest.title)),
-      h("span", null, `第 ${position(latest).number} ${latest.has_modern ? "篇" : "页"} →`)) : null);
-    count.textContent = `共 ${rows.length} 本 · ${rows.filter(book => book.section_count > 0).length} 本可阅读`;
+      icon("book"), h("span", null, h("small", null, "继续历史阅读稿"), h("b", null, latest.title)),
+      h("span", null, `历史稿第 ${position(latest).number} ${latest.has_modern ? "篇" : "页"} →`)) : null);
+    count.textContent = `共 ${rows.length} 本 · 电子文字版本见各书目录`;
     fill(results, rows.length ? rows.map(book => {
       const available = book.section_count > 0;
       const saved = position(book);
       const progress = saved?.number || readingNumber(local.get(progressKey(book.id), "1"), book.section_count);
+      const catalogPath = textVersionPath(book.id);
       return h("article", { class: "books-card" },
         h("div", { class: "books-card-meta" }, h("span", null, BOOK_SYSTEM[book.system]),
-          h("span", { class: "books-status" }, BOOK_STATUS[book.status])),
-        h("h2", null, book.title), h("p", { class: "books-source" }, book.source_label),
-        h("p", { class: "books-notice" }, book.notice),
-        saved ? h("div", { class: "books-progress" }, h("small", null, `读到第 ${progress} / ${book.section_count} ${book.has_modern ? "篇" : "页"}`),
-          h("progress", { max: book.section_count, value: progress, "aria-label": `${book.title} 阅读进度` })) : null,
-        available ? h("a", { class: "btn btn-soft", href: `#${readingPath(book.id, progress)}` },
-          icon("book"), saved || progress > 1 ? "继续阅读" : "打开书籍", h("span", null, `${book.section_count} ${book.has_modern ? "篇" : "页"}`))
-          : h("p", { class: "books-unavailable" }, "整理中，暂时还不能阅读"),
-        h("a", { class: "btn btn-soft", href: `#${textVersionPath(book.id)}` }, "电子文字与下载"));
+          h("span", { class: "books-status" }, `历史稿 · ${BOOK_STATUS[book.status]}`)),
+        h("h2", null, h("a", { href: `#${catalogPath}` }, book.title)),
+        h("a", { class: "btn btn-soft books-electronic-open", href: `#${catalogPath}` }, icon("book"), "电子文字按章阅读与下载"),
+        h("p", { class: "books-source" }, `历史稿来源：${book.source_label}`),
+        h("p", { class: "books-notice" }, `历史稿说明：${book.notice}`),
+        saved ? h("div", { class: "books-progress" }, h("small", null, `历史稿读到第 ${progress} / ${book.section_count} ${book.has_modern ? "篇" : "页"}`),
+          h("progress", { max: book.section_count, value: progress, "aria-label": `${book.title} 历史阅读稿进度` })) : null,
+        available ? h("a", { class: "books-history-open", href: `#${readingPath(book.id, progress)}` },
+          saved || progress > 1 ? "继续历史阅读稿" : "打开历史阅读稿", h("span", null, ` · 历史稿 ${book.section_count} ${book.has_modern ? "篇" : "页"}`))
+          : h("p", { class: "books-unavailable" }, "历史阅读稿暂不可用，请查看电子文字版本"));
     }) : stateView({ glyph: "search", title: "没有匹配的书籍", text: "试试其他书名，或切换体系。" }));
   }
   search.addEventListener("input", paintBooks);
@@ -442,6 +445,11 @@ function electronicReader(ctx) {
     const requested = ctx.query.get("chapter");
     const index = requested ? chapters.findIndex(chapter => chapter.id === requested) : 0;
     const chapter = chapters[index];
+    const markdownContext = createReadingMarkdownContext(chapter?.blocks.map(block => block.text) || [], {
+      chapters: data.version_id.startsWith("reading-20261022-") ? chapters : [], chapterId: chapter?.id,
+      footnotePath: (chapterId, label) => `${textVersionPath(id, versionId, chapterId)}&footnote=${encodeURIComponent(label)}`,
+      navigate: path => ctx.navigate(path),
+    });
     ctx.setTitle(`${data.title} · 电子文字`);
     const quality = data.quality;
     const select = h("select", { "aria-label": "选择章节", onChange: event => ctx.navigate(textVersionPath(id, versionId, event.currentTarget.value)) },
@@ -471,12 +479,14 @@ function electronicReader(ctx) {
           { class: `book-block${block.role === "modern_editorial" ? " book-modern-editorial" : ""}`, dataset: { blockId: block.id } },
           block.role === "modern_editorial" ? h("summary", null, `现代整理说明 · ${block.source_locator}`) : null,
           h("p", { class: "book-layer" }, `${TEXT_ROLES[block.role]} · ${block.source_locator} · ${block.attribution}`),
-          h("div", { class: "book-original" }, h("p", null, block.text)))),
+          h("div", { class: "book-original" }, renderEditionText(data.version_id, block.text, markdownContext)))),
         h("nav", { class: "book-reading-pagination", "aria-label": "章节翻页" },
           index > 0 ? h("a", { href: `#${textVersionPath(id, versionId, chapters[index - 1].id)}` }, "上一章") : h("span"),
           h("span", null, `${index + 1} / ${chapters.length}`),
           index + 1 < chapters.length ? h("a", { href: `#${textVersionPath(id, versionId, chapters[index + 1].id)}` }, "下一章") : null))
         : stateView({ glyph: "book", title: "此版本没有该章节", text: "请选择目录中的章节；不会跳到其他版本的相似文字。" }));
+    const footnote = ctx.query.get("footnote");
+    if (footnote) requestAnimationFrame(() => { if (ctx.isCurrent()) focusReadingFootnote(markdownContext, footnote); });
   }
   const life = lifecycle(ctx, ({ phase, data, error }) => {
     body.setAttribute("aria-busy", String(phase === "loading"));

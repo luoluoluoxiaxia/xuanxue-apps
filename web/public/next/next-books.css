@@ -264,3 +264,11 @@
 .book-text-citation { user-select: text; }
 .book-text-downloads { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 1rem 0; }
 .book-modern-editorial summary { cursor: pointer; font-size: 13px; color: var(--ink-3); }
+.book-reading-markdown { min-width: 0; overflow-wrap: anywhere; }
+.book-reading-markdown :is(h1, h2, h3, h4, h5, h6) { line-height: 1.6; white-space: pre-wrap; margin: 1em 0 .5em; }
+.book-reading-markdown pre { max-width: 100%; overflow-x: auto; white-space: pre; padding: .75rem; font: .85em/1.8 var(--font-mono, monospace); }
+.book-reading-markdown details { margin: 1em 0; padding: .75rem; border: 1px solid var(--line); border-radius: 8px; }
+.book-reading-markdown summary { cursor: pointer; white-space: pre-wrap; }
+.book-reading-markdown .book-reading-footnote { font-size: .85em; }
+.book-reading-markdown .book-reading-footnote:focus { outline: 2px solid currentColor; outline-offset: 3px; }
+.book-footnote-unresolved { text-decoration: underline dotted; text-underline-offset: .2em; }
