@@ -1,21 +1,21 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n30";
-import { icon } from "../lib/icons.js?v=n30";
-import { get, post, put } from "../lib/api.js?v=n30";
-import { session, local, refreshSession } from "../lib/store.js?v=n30";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n30";
-import { readingDraftKey } from "../lib/sessions.js?v=n30";
-import { relativeTime, count } from "../lib/format.js?v=n30";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n30";
-import { handoff } from "../lib/handoff.js?v=n30";
-import { humanizeError } from "../lib/interpret.js?v=n30";
-import { stateView } from "../ui/bits.js?v=n30";
-import { toast } from "../ui/toast.js?v=n30";
-import { confirmDialog } from "../ui/overlay.js?v=n30";
-import { locationPicker } from "../ui/location.js?v=n30";
-import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n30";
-import { baziPanel } from "../ui/chart-bazi.js?v=n30";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n30";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n31";
+import { icon } from "../lib/icons.js?v=n31";
+import { get, post, put } from "../lib/api.js?v=n31";
+import { session, local, refreshSession } from "../lib/store.js?v=n31";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n31";
+import { readingDraftKey } from "../lib/sessions.js?v=n31";
+import { relativeTime, count } from "../lib/format.js?v=n31";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n31";
+import { handoff } from "../lib/handoff.js?v=n31";
+import { humanizeError } from "../lib/interpret.js?v=n31";
+import { stateView } from "../ui/bits.js?v=n31";
+import { toast } from "../ui/toast.js?v=n31";
+import { confirmDialog } from "../ui/overlay.js?v=n31";
+import { locationPicker } from "../ui/location.js?v=n31";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n31";
+import { baziPanel } from "../ui/chart-bazi.js?v=n31";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n31";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。

@@ -403,7 +403,7 @@
 .books-card-progress { margin: 6px 0 0; color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .book-other-versions > .book-version-card { margin: 12px; }
 .book-desktop-settings { display: none; }
-.book-electronic-controls { padding: 0; gap: 8px; border: 0; background: transparent; box-shadow: none; margin: 0 0 12px; }
+.book-electronic-controls { padding: 0; gap: 8px; border: 0; background: var(--bg); box-shadow: none; margin: 0 0 12px; }
 .book-electronic-controls .book-electronic-contents-open { display: flex; flex: 1; justify-content: flex-start; min-width: 0; color: var(--ink-2); background: var(--bg-elev); border: 1px solid var(--line); }
 .book-electronic-contents-open > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .book-electronic-contents-open > small { color: var(--ink-3); font-size: 12px; }
