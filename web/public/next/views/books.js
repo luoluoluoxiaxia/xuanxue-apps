@@ -1,21 +1,21 @@
-import { h, fill } from "../lib/dom.js?v=n37";
-import { icon } from "../lib/icons.js?v=n37";
-import { get } from "../lib/api.js?v=n37";
-import { local, session } from "../lib/store.js?v=n37";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n37";
+import { h, fill } from "../lib/dom.js?v=n38";
+import { icon } from "../lib/icons.js?v=n38";
+import { get } from "../lib/api.js?v=n38";
+import { local, session } from "../lib/store.js?v=n38";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n38";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
   bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n37";
-import { errorView, stateView } from "../ui/bits.js?v=n37";
-import { openBookImage } from "../ui/book-image.js?v=n37";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n37";
-import { openSheet } from "../ui/overlay.js?v=n37";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n37";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n37";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n37";
-import { bookCasesEntry } from "../lib/book-cases.js?v=n37";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n38";
+import { errorView, stateView } from "../ui/bits.js?v=n38";
+import { openBookImage } from "../ui/book-image.js?v=n38";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n38";
+import { openSheet } from "../ui/overlay.js?v=n38";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n38";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n38";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n38";
+import { bookCasesEntry } from "../lib/book-cases.js?v=n38";
 
 const textProgressKey = (id, version) => `xz-book-text-progress:${id}:${version}`;
 const textRecentKey = id => `xz-book-text-recent:${id}`;

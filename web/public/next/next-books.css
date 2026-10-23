@@ -8,6 +8,10 @@
 .book-edition-shortcuts { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; margin: -4px 0 12px; }
 .book-edition-shortcuts > a { display: inline-flex; align-items: center; min-height: 44px; max-width: 100%; color: var(--brand-ink); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
 .book-cases-library { max-width: 960px; }
+.book-cases-systems { display: flex; flex-wrap: wrap; gap: 4px; margin: -4px 0 12px; }
+.book-cases-systems a { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; min-height: 44px; padding: 0 14px; border-radius: var(--r-sm); color: var(--ink-3); font-size: 14px; }
+.book-cases-systems a:hover { background: var(--bg-hover); }
+.book-cases-systems a[aria-current="page"] { background: var(--brand-soft); color: var(--brand-ink); font-weight: 600; }
 .book-cases-filters { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 12px 24px; }
 .book-cases-filter { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .book-cases-filter label { flex-shrink: 0; color: var(--ink-3); font-size: 13px; }
@@ -38,6 +42,9 @@
 .book-case-chart-status > .state { padding: 24px 16px; }
 .book-case-chart-note { margin: 8px 0 18px; color: var(--ink-3); font-size: 13px; line-height: 1.8; }
 .book-case-chart-area:empty, .book-case-full-chart:empty { display: none; }
+.book-case-practice:empty { display: none; }
+.book-case-practice { margin: 20px 0 0; }
+.book-case-practice a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--brand-ink); font-size: 14px; }
 @media (min-width: 1100px) {
   .book-case-study.has-chart { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 32px; margin-top: 20px; }
   .book-case-study.has-chart > .book-case-analysis { grid-column: 2; grid-row: 1; }
@@ -70,7 +77,7 @@
 .book-case-sources { margin: 24px 0 0; padding-top: 22px; border-top: 1px solid var(--line); }
 .book-case-source + .book-case-source { margin-top: 12px; }
 .book-case-source p { margin: 4px 0; color: var(--ink-3); font-size: 13px; line-height: 1.8; overflow-wrap: anywhere; }
-.book-cases-entry:focus-visible, .book-case-context > summary:focus-visible, .book-case-card a:focus-visible, .book-case-source a:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; border-radius: 3px; }
+.book-cases-entry:focus-visible, .book-cases-systems a:focus-visible, .book-case-practice a:focus-visible, .book-case-context > summary:focus-visible, .book-case-card a:focus-visible, .book-case-source a:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; border-radius: 3px; }
 @media (max-width: 560px) {
   .book-cases-filters { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .book-cases-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
