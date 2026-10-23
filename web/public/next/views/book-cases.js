@@ -285,7 +285,8 @@ function detail(ctx, request) {
         onChange: () => {
           const cast = casts.find(item => item.id === selector.value);
           if (cast && cast !== selectedCast) selectCast(cast);
-        } }, casts.map(cast => h("option", { value: cast.id }, cast.label))) : null;
+        } }, casts.map(cast => h("option", { value: cast.id },
+          `${cast.label} · ${cast.chart_status === "available" ? "可复盘" : "资料不全"}`))) : null;
       if (selector) selector.value = selectedCast.id;
       fill(castSlot, selector ? h("div", { class: "book-case-cast-picker" },
         h("label", { for: "book-case-cast" }, "按原书卦次阅读"), selector) : null, castContent);

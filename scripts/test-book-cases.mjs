@@ -960,6 +960,8 @@ test("cast selection starts at the smallest book order even when it is incomplet
   const picker = tags(result.node, "select")[0];
   assert.equal(picker.value, "cast-one");
   assert.deepEqual(tags(picker, "option").map(option => option.value), ["cast-one", "cast-two", "cast-three"]);
+  assert.deepEqual(tags(picker, "option").map(option => option.textContent),
+    ["第一次占问 · 资料不全", "第二次占问 · 可复盘", "第三次占问 · 可复盘"]);
   assert.deepEqual(paths, ["/api/book-cases/multi-cast-example"]);
   assert.equal(byText(result.node, "a", "起一卦"), undefined);
   assert.match(result.node.textContent, /书载原题未载。.*书载月未载书载日未载书载卦名未载/);
