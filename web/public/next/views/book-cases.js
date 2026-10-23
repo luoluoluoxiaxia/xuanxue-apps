@@ -1,14 +1,14 @@
-import { h, fill } from "../lib/dom.js?v=n38";
-import { get } from "../lib/api.js?v=n38";
-import { icon } from "../lib/icons.js?v=n38";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n38";
+import { h, fill } from "../lib/dom.js?v=n39";
+import { get } from "../lib/api.js?v=n39";
+import { icon } from "../lib/icons.js?v=n39";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n39";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
-  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel,
-  BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n38";
-import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n38";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n38";
-import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n38";
-import { openSheet } from "../ui/overlay.js?v=n38";
+  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel, bookCaseCasts, bookCaseChartPath,
+  bookCaseChartMatches, bookCaseModernBlocks, BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n39";
+import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n39";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n39";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n39";
+import { openSheet } from "../ui/overlay.js?v=n39";
 
 function attach(ctx, path, paint, request, readyReconnect = () => {}) {
   let phase = "loading";
@@ -112,10 +112,11 @@ function detail(ctx, request) {
   let chartLoader = null;
   let chartPhase = "idle";
   let chartError = null;
+  let chartPath = null;
   let currentData = null;
   const closeChart = reason => { chartSheet?.close(reason); chartSheet = null; };
-  const stopChart = reason => { chartLoader?.destroy(); chartLoader = null; chartPhase = "idle"; chartError = null; closeChart(reason); };
-  const refreshChart = () => chartLoader?.load(`/api/book-cases/${encodeURIComponent(ctx.params.id)}/chart`);
+  const stopChart = reason => { chartLoader?.destroy(); chartLoader = null; chartPath = null; chartPhase = "idle"; chartError = null; closeChart(reason); };
+  const refreshChart = () => { if (chartPath) chartLoader?.load(chartPath); };
   ctx.cleanup(() => { currentData = null; stopChart("route"); });
   const life = attach(ctx, `/api/book-cases/${encodeURIComponent(ctx.params.id)}`, ({ phase, data, error }) => {
     body.setAttribute("aria-busy", String(phase === "loading"));
@@ -130,22 +131,30 @@ function detail(ctx, request) {
     const sourceMention = data.study_format === "source_mention";
     const exercise = data.kind === "hypothetical";
     const chartName = exercise ? "推演练习盘" : "书例盘面";
-    const chartStatus = data.chart_status;
-    const chartSlot = h("div", { class: "book-case-chart-area" });
+    const casts = bookCaseCasts(data);
+    const sourceTables = new Set(casts.map(cast => cast.original_table).filter(Boolean));
+    const sourceText = (text, original = false) => h(sourceTables.has(text) ? "pre" : "p",
+      { class: sourceTables.has(text) ? "book-case-original-table" : ["book-case-text", original && "book-case-original"] }, text);
+    let selectedCast = casts[0] || null;
+    const castSlot = h("section", { class: "book-case-cast", "aria-label": "书载卦次" });
+    const castContent = h("div", { id: "book-case-cast-content", "aria-live": "polite" });
+    const chartSlot = h("div", { class: "book-case-chart-area", id: "book-case-chart" });
     const fullChart = h("aside", { class: "book-case-full-chart", "aria-label": chartName });
     const practice = h("p", { class: "book-case-practice" });
     const article = h("article", { class: "book-case-analysis", "aria-label": "原书条目研读" });
-    const study = h("div", { class: ["book-case-study", chartStatus === "available" && "has-chart", sourceMention && "is-source-mention"] },
-      chartStatus === "available" ? fullChart : null, article);
+    const study = h("div", { class: ["book-case-study", sourceMention && "is-source-mention"] },
+      casts.length || data.chart_status === "available" ? fullChart : null, article);
     const metaText = system => [`《${data.book_title}》`, bookCaseSystemLabel(system), bookCaseKindLabel(data.kind)].filter(Boolean).join(" · ");
     const meta = h("p", { class: "book-case-meta" }, metaText(data.system));
     ctx.setTitle(`${data.title} · 典籍研读`);
     fill(body, h("header", { class: "book-case-heading" },
-      meta, h("h1", null, data.title)), chartSlot, study);
+      meta, h("h1", null, data.title)), casts.length ? castSlot : null, chartSlot, study);
     const uncertainties = data.uncertainties.length ? h("aside", { class: "book-case-uncertainties", "aria-label": "存疑说明" }, h("h3", null, "存疑说明"), paragraphs(data.uncertainties)) : null;
     fill(article, sourceMention ? [
       h("section", { class: "book-case-section book-case-modern" }, h("h2", null, "所在段白话"),
-        h("p", { class: "book-case-text" }, data.modern_context || "本条所在段白话暂未提供，可展开原文阅读。")),
+        typeof data.modern_context === "string" && data.modern_context.trim() ? null
+          : h("p", { class: "book-case-chart-note" }, "本条所在段白话暂未提供，可展开原文阅读。"),
+        bookCaseModernBlocks(data).map(text => sourceText(text))),
       data.judgment.length ? section("作者判断", data.judgment) : null,
       data.outcome_status === "recorded" && data.outcome.length ? section("书载结果", data.outcome) : null,
       h("details", { class: "book-case-context" }, h("summary", null, "原文摘句与书载信息"),
@@ -160,12 +169,12 @@ function detail(ctx, request) {
             const hasModern = typeof context.modern === "string" && context.modern.trim();
             return h("section", { class: "book-case-section" }, h("h3", null, context.title),
               hasModern ? [h("p", { class: "book-case-meta" }, "对应段白话"),
-                h("p", { class: "book-case-text" }, context.modern),
+                sourceText(context.modern),
                 h("details", { class: "book-case-context" }, h("summary", null, "查看对应原文"),
                   h("div", { class: "book-case-context-body" },
-                    h("p", { class: "book-case-text book-case-original" }, context.original)))]
+                    sourceText(context.original, true)))]
                 : [h("p", { class: "book-case-meta" }, "对应段原文"),
-                  h("p", { class: "book-case-text book-case-original" }, context.original)],
+                  sourceText(context.original, true)],
               h("p", { class: "book-case-meta" }, context.location),
               reading ? h("a", { href: `#${reading}` }, "回到原书章节", icon("arrowRight")) : null);
           }))) : null,
@@ -188,7 +197,7 @@ function detail(ctx, request) {
       ? h("nav", { class: "book-case-related", "aria-label": "互参条目" }, h("h2", null, "互参条目"),
         [...new Set(data.related_case_ids)].filter(id => typeof id === "string" && id !== data.id).map((id, index) =>
           h("a", { href: `#${bookCaseDetailPath(id, filter)}` }, `相关条目 ${index + 1}`, icon("arrowRight")))) : null,
-    chartStatus === "available" ? practice : null,
+    casts.length || data.chart_status === "available" ? practice : null,
     h("footer", { class: "book-case-sources" }, h("h2", null, "出处"),
       data.sources.map(source => {
         const reading = bookCaseReadingPath(source.reading_path, filter.from, data.book_id);
@@ -196,55 +205,93 @@ function detail(ctx, request) {
           h("p", null, [source.chapter, source.location].filter(Boolean).join(" · ")),
           reading ? h("a", { href: `#${reading}` }, "回到原书章节", icon("arrowRight")) : null);
       })));
-    if (chartStatus !== "available") {
-      fill(chartSlot, h("p", { class: "book-case-chart-note" }, chartStatus === "incomplete"
-        ? "原书未载完整排盘条件，暂不能复盘。"
-        : chartStatus === "not_applicable" ? data.kind === "hypothetical" ? "本条为假设推演，按原文条件阅读。" : "本条为规则说明，按原文条件阅读。"
-          : "排盘资料暂不可用，可先阅读原书内容。"));
-      return;
-    }
-    chartLoader = createKnowledgeLoader(state => {
-      if (!ctx.isCurrent() || currentData !== data) return;
-      chartPhase = state.phase;
-      chartError = state.error || null;
-      chartSlot.setAttribute("aria-busy", String(state.phase === "loading"));
-      closeChart("refresh");
-      fill(practice);
-      if (state.phase === "loading") { fill(chartSlot, spinnerLine("正在打开盘面…")); fill(fullChart); return; }
-      if (state.phase === "error") {
-        study.classList.remove("has-chart"); fill(fullChart);
-        fill(chartSlot, h("div", { class: "book-case-chart-status" }, state.error?.status === 404
-          ? stateView({ glyph: "book", title: "此例盘面暂不可用", text: "可以继续阅读原书内容。" })
-          : errorView(state.error, refreshChart, { title: "盘面暂时没有打开" })));
+    const selectCast = cast => {
+      stopChart("cast");
+      selectedCast = cast;
+      study.classList.remove("has-chart");
+      fill(fullChart); fill(chartSlot); fill(practice);
+      chartSlot.setAttribute("aria-busy", "false");
+      meta.textContent = metaText(cast ? "liuyao" : data.system);
+      const castNotes = () => cast ? [
+        cast.missing?.length ? h("p", { class: "book-case-chart-note" }, cast.missing.join("、")) : null,
+        cast.uncertainties?.length ? paragraphs(cast.uncertainties, "book-case-chart-note") : null,
+      ] : null;
+      if (cast) {
+        fill(castContent,
+          h("details", { class: "book-case-context book-case-cast-source" }, h("summary", null, "书载问事与原表"),
+            h("div", { class: "book-case-context-body" },
+              h("p", { class: "book-case-cast-heading" }, cast.source_heading || "书载原题未载。"),
+              h("dl", { class: "book-case-cast-facts" },
+                [["书载月", cast.source_month], ["书载日", cast.source_day],
+                  ["书载卦名", cast.source_hexagram_names?.join(" → ")]].map(([label, value]) =>
+                  h("div", null, h("dt", null, label), h("dd", null, value || "未载")))),
+              cast.original_table ? h("pre", { class: "book-case-original-table" }, cast.original_table) : null,
+              cast.chart_status === "available" ? castNotes() : null)));
+      }
+      const chartStatus = cast?.chart_status ?? data.chart_status;
+      if (chartStatus !== "available") {
+        fill(chartSlot, h("div", { class: "book-case-chart-status", role: "status" },
+          h("p", { class: "book-case-chart-note" }, chartStatus === "incomplete"
+          ? cast ? "本卦资料不全，暂不能复盘。" : "原书未载完整排盘条件，暂不能复盘。"
+          : chartStatus === "not_applicable" ? data.kind === "hypothetical" ? "本条为假设推演，按原文条件阅读。" : "本条为规则说明，按原文条件阅读。"
+            : "排盘资料暂不可用，可先阅读原书内容。"), castNotes()));
         return;
       }
-      const chart = state.data;
-      const caseContext = { available_sections: chart.available_sections, missing: chart.missing, source_label: chart.source_label };
-      const panel = () => chart.system === "liuyao" ? liuyaoPanel(chart.payload, { caseContext })
-        : baziPanel(chart.payload, { name: data.title, beside: true, caseContext });
-      const openChart = event => {
-        if (!ctx.isCurrent()) return;
-        closeChart("replace");
-        const sheet = openSheet({ title: exercise ? "推演练习盘" : chart.system === "liuyao" ? "书例卦盘" : "书例命盘", body: panel(),
-          wide: true, className: "sheet-chart", returnFocus: event.currentTarget,
-          onClose: () => { if (chartSheet === sheet) chartSheet = null; } });
-        chartSheet = sheet;
-      };
-      meta.textContent = metaText(chart.system);
-      study.classList.add("has-chart");
-      fill(fullChart, panel());
-      fill(practice, h("a", { href: `#/ask/${chart.system}` }, chart.system === "liuyao" ? "起一卦" : "排自己的八字", icon("arrowRight", "icon-sm")));
-      fill(chartSlot, h("button", { type: "button", class: "book-case-chart-strip", "aria-label": `查看完整${chartName}`, onClick: openChart },
-        chart.system === "liuyao" ? liuyaoStrip(chart.payload, { caseContext }) : baziStrip(chart.payload, { caseContext }),
-        h("span", { class: "book-case-chart-open" }, chart.system === "liuyao" ? "展开完整卦盘" : "展开完整命盘", icon("chevronDown", "icon-sm"))));
-    }, async (path, options) => {
-      const chart = await request(path, options);
-      if (chart?.case_id !== data.id || !["bazi", "liuyao"].includes(chart.system)
-        || !chart.payload || typeof chart.payload !== "object" || Array.isArray(chart.payload))
-        throw new Error("案例与盘面未能对应，请重试。");
-      return chart;
-    });
-    refreshChart();
+      chartLoader = createKnowledgeLoader(state => {
+        if (!ctx.isCurrent() || currentData !== data || selectedCast !== cast) return;
+        chartPhase = state.phase;
+        chartError = state.error || null;
+        chartSlot.setAttribute("aria-busy", String(state.phase === "loading"));
+        closeChart("refresh");
+        fill(practice);
+        if (state.phase === "loading") { fill(chartSlot, spinnerLine("正在打开盘面…")); fill(fullChart); return; }
+        if (state.phase === "error") {
+          study.classList.remove("has-chart"); fill(fullChart);
+          fill(chartSlot, h("div", { class: "book-case-chart-status" }, state.error?.status === 404
+            ? stateView({ glyph: "book", title: "此例盘面暂不可用", text: "可以继续阅读原书内容。" })
+            : errorView(state.error, refreshChart, { title: "盘面暂时没有打开" })));
+          return;
+        }
+        const chart = state.data;
+        const caseContext = { available_sections: chart.available_sections, missing: chart.missing, source_label: chart.source_label };
+        const panel = () => chart.system === "liuyao" ? liuyaoPanel(chart.payload, { caseContext })
+          : baziPanel(chart.payload, { name: data.title, beside: true, caseContext });
+        const openChart = event => {
+          if (!ctx.isCurrent() || currentData !== data || selectedCast !== cast) return;
+          closeChart("replace");
+          const sheet = openSheet({ title: cast ? "书例卦盘 · 复盘计算" : exercise ? "推演练习盘" : chart.system === "liuyao" ? "书例卦盘" : "书例命盘", body: panel(),
+            wide: true, className: "sheet-chart", returnFocus: event.currentTarget,
+            onClose: () => { if (chartSheet === sheet) chartSheet = null; } });
+          chartSheet = sheet;
+        };
+        meta.textContent = metaText(chart.system);
+        study.classList.add("has-chart");
+        fill(fullChart, cast ? h("p", { class: "book-case-chart-caption" }, "复盘计算") : null, panel());
+        fill(practice, h("a", { href: `#/ask/${chart.system}` }, chart.system === "liuyao" ? "起一卦" : "排自己的八字", icon("arrowRight", "icon-sm")));
+        fill(chartSlot, h("button", { type: "button", class: "book-case-chart-strip", "aria-label": `查看完整${chartName}`, onClick: openChart },
+          chart.system === "liuyao" ? liuyaoStrip(chart.payload, { caseContext }) : baziStrip(chart.payload, { caseContext }),
+          h("span", { class: "book-case-chart-open" }, `${cast ? "复盘计算 · " : ""}${chart.system === "liuyao" ? "展开完整卦盘" : "展开完整命盘"}`, icon("chevronDown", "icon-sm"))));
+      }, async (path, options) => {
+        const chart = await request(path, options);
+        if (!bookCaseChartMatches(chart, data.id, cast?.id ?? null))
+          throw new Error("案例与盘面未能对应，请重试。");
+        return chart;
+      });
+      chartPath = bookCaseChartPath(data.id, cast?.id ?? null);
+      refreshChart();
+    };
+    if (casts.length) {
+      const selector = casts.length > 1 ? h("select", { id: "book-case-cast", "aria-controls": "book-case-cast-content book-case-chart",
+        onChange: () => {
+          const cast = casts.find(item => item.id === selector.value);
+          if (cast && cast !== selectedCast) selectCast(cast);
+        } }, casts.map(cast => h("option", { value: cast.id },
+          `${cast.label} · ${cast.chart_status === "available" ? "可复盘" : "资料不全"}`))) : null;
+      if (selector) selector.value = selectedCast.id;
+      fill(castSlot, selector ? h("div", { class: "book-case-cast-picker" },
+        h("label", { for: "book-case-cast" }, "按原书卦次阅读"), selector) : null, castContent);
+    }
+    selectCast(selectedCast);
   }, async (path, options) => {
     const data = await request(path, options);
     if (data?.id !== ctx.params.id) throw new Error("条目未能对应，请重试。");

@@ -1,5 +1,5 @@
 // 案例仅展示公开契约返回的内容，阅读链接始终由服务端指定底本与章节。
-import { query } from "./api.js?v=n38";
+import { query } from "./api.js?v=n39";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = value => typeof value === "string" && value.length <= 120 && SLUG.test(value) ? value : "";
@@ -35,6 +35,26 @@ export function bookCaseDetailPath(id, filter = {}) {
 export function bookCaseApiPath(filter) {
   const next = readBookCaseQuery(new URLSearchParams(filter));
   return `/api/book-cases${query({ book_id: next.book_id, kind: next.kind, system: next.system, offset: next.offset, limit: next.limit })}`;
+}
+
+export function bookCaseCasts(detail) {
+  return Array.isArray(detail?.casts) ? detail.casts.slice().sort((a, b) => a.order - b.order) : [];
+}
+
+export function bookCaseModernBlocks(detail) {
+  const texts = [detail?.modern_context, ...(Array.isArray(detail?.supporting_contexts)
+    ? detail.supporting_contexts.map(context => context.modern) : [])];
+  return [...new Set(texts.filter(text => typeof text === "string" && text.trim()))];
+}
+
+export function bookCaseChartPath(id, castId = null) {
+  return `/api/book-cases/${encodeURIComponent(id)}/chart${query({ cast_id: castId || undefined })}`;
+}
+
+export function bookCaseChartMatches(chart, id, castId = null) {
+  return chart?.case_id === id && (chart.cast_id ?? null) === castId
+    && ["bazi", "liuyao"].includes(chart.system)
+    && !!chart.payload && typeof chart.payload === "object" && !Array.isArray(chart.payload);
 }
 
 export function bookCasesEntry(book, from = "") {

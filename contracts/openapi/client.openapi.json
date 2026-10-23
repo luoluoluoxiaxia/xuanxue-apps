@@ -1531,6 +1531,20 @@
             "title": "Case Id",
             "type": "string"
           },
+          "cast_id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "实际选中卦次的卡内稳定键；旧单盘为null。",
+            "title": "Cast Id"
+          },
           "missing": {
             "description": "原书未载且未推测补齐的条件。",
             "items": {
@@ -1646,6 +1660,118 @@
         "title": "ClientBookCaseBaziPayload",
         "type": "object"
       },
+      "ClientBookCaseCast": {
+        "additionalProperties": false,
+        "properties": {
+          "chart_status": {
+            "enum": [
+              "available",
+              "incomplete"
+            ],
+            "title": "Chart Status",
+            "type": "string"
+          },
+          "id": {
+            "description": "本卡内稳定卦次键；不代表人物身份。",
+            "maxLength": 120,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Label",
+            "type": "string"
+          },
+          "missing": {
+            "description": "该卦未载或不全的条件。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing",
+            "type": "array"
+          },
+          "order": {
+            "description": "书载卦次顺序。",
+            "minimum": 1.0,
+            "title": "Order",
+            "type": "integer"
+          },
+          "original_table": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "书载完整原表，保留各列、空格与换行；未载为null。",
+            "title": "Original Table"
+          },
+          "source_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "书载日名原字；未载为null，不据此自动推盘。",
+            "title": "Source Day"
+          },
+          "source_heading": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "书载完整原题原字；未载为null。",
+            "title": "Source Heading"
+          },
+          "source_hexagram_names": {
+            "description": "书载卦名原字；与程序计算卦名分别呈现。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Hexagram Names",
+            "type": "array"
+          },
+          "source_month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "书载月名原字；未载为null，不据此自动推盘。",
+            "title": "Source Month"
+          },
+          "uncertainties": {
+            "description": "该卦保留的具体疑点；不由程序消疑。",
+            "items": {
+              "type": "string"
+            },
+            "title": "Uncertainties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "order",
+          "label",
+          "chart_status"
+        ],
+        "title": "ClientBookCaseCast",
+        "type": "object"
+      },
       "ClientBookCaseChartItem": {
         "additionalProperties": false,
         "properties": {
@@ -1675,6 +1801,14 @@
           "book_title": {
             "title": "Book Title",
             "type": "string"
+          },
+          "casts": {
+            "description": "按书载次序保存的明确卦次；不含接盘规范输入。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookCaseCast"
+            },
+            "title": "Casts",
+            "type": "array"
           },
           "chart": {
             "items": {
@@ -1917,6 +2051,20 @@
           "case_id": {
             "title": "Case Id",
             "type": "string"
+          },
+          "cast_id": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "实际选中卦次的卡内稳定键；旧单盘为null。",
+            "title": "Cast Id"
           },
           "missing": {
             "description": "原书未载且未推测补齐的条件。",
@@ -2489,6 +2637,12 @@
             "title": "Glossary",
             "type": "array"
           },
+          "intro": {
+            "default": "",
+            "description": "章前导读，属于现代阅读辅助，与原文及正文块索引分开；未附时为空。",
+            "title": "Intro",
+            "type": "string"
+          },
           "location": {
             "title": "Location",
             "type": "string"
@@ -2512,6 +2666,14 @@
             "title": "Partial",
             "type": "boolean"
           },
+          "source_cues": {
+            "description": "原书题署组，与正文及白话块分开，不占正文块索引。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookSourceCue"
+            },
+            "title": "Source Cues",
+            "type": "array"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -2527,6 +2689,76 @@
           "blocks"
         ],
         "title": "ClientBookSection",
+        "type": "object"
+      },
+      "ClientBookSourceCue": {
+        "additionalProperties": false,
+        "properties": {
+          "blocks": {
+            "items": {
+              "$ref": "#/components/schemas/ClientBookSourceCueBlock"
+            },
+            "title": "Blocks",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "blocks"
+        ],
+        "title": "ClientBookSourceCue",
+        "type": "object"
+      },
+      "ClientBookSourceCueBlock": {
+        "additionalProperties": false,
+        "description": "Source title/attribution display, outside body IDs and glossary positions.",
+        "properties": {
+          "attribution": {
+            "default": "",
+            "title": "Attribution",
+            "type": "string"
+          },
+          "modern": {
+            "const": "",
+            "default": "",
+            "title": "Modern",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "presentation": {
+            "default": "prose",
+            "enum": [
+              "prose",
+              "table",
+              "diagram"
+            ],
+            "title": "Presentation",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "text"
+        ],
+        "title": "ClientBookSourceCueBlock",
         "type": "object"
       },
       "ClientBookTermSpan": {
@@ -8420,6 +8652,24 @@
               "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
               "title": "Case Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cast_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 120,
+                  "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cast Id"
             }
           }
         ],

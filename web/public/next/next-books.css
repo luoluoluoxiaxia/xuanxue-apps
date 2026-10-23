@@ -42,6 +42,20 @@
 .book-case-chart-status > .state { padding: 24px 16px; }
 .book-case-chart-note { margin: 8px 0 18px; color: var(--ink-3); font-size: 13px; line-height: 1.8; }
 .book-case-chart-area:empty, .book-case-full-chart:empty { display: none; }
+.book-case-cast { margin: 12px 0 0; min-width: 0; }
+.book-case-cast-picker { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+.book-case-cast-picker label { flex-shrink: 0; color: var(--ink-3); font-size: 13px; }
+.book-case-cast-picker select { min-width: 0; max-width: 360px; min-height: 44px; flex: 1; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r); background: var(--bg-elev); color: var(--ink); font: inherit; }
+.book-case-cast-picker select:focus-visible { outline: 2px solid var(--brand-ink); outline-offset: 3px; }
+.book-case-cast-heading { margin: 6px 0 12px; font-family: var(--font-serif); line-height: 1.9; white-space: pre-wrap; overflow-wrap: anywhere; }
+.book-case-cast-facts { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 0; }
+.book-case-cast-facts > div { min-width: 0; }
+.book-case-cast-facts dt { color: var(--ink-3); font-size: 12px; }
+.book-case-cast-facts dd { margin: 4px 0 10px; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
+.book-case-original-table { max-width: 100%; margin: 0 0 16px; overflow-x: auto; white-space: pre; font: 14px/1.9 var(--font-mono, monospace); }
+.book-case-chart-caption { margin: 0 0 8px; color: var(--ink-3); font-size: 12px; }
+.book-case-chart-status > .book-case-chart-note { margin: 4px 0; }
+.book-case-cast-source > summary { min-height: 44px; padding: 10px 0; }
 .book-case-practice:empty { display: none; }
 .book-case-practice { margin: 20px 0 0; }
 .book-case-practice a { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: var(--brand-ink); font-size: 14px; }
@@ -202,9 +216,16 @@
 .book-source-notice > summary { min-height: 44px; padding: 12px 16px; color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; }
 .book-source-notice[open] > summary { border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 .book-source-notice p { padding: 0 16px 14px; font-size: 13px; color: var(--ink-3); }
+.book-source-cue-content { padding: 0 16px 14px; }
+.book-source-cue-block { min-width: 0; margin: 12px 0; }
+.book-source-cue-block :is(p, h3) { margin: 6px 0; padding: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); font-family: var(--reading-font, var(--font-serif)); font-size: var(--reading-size, 20px); line-height: var(--reading-line, 2); }
+[data-mode="modern"] .book-source-cues { display: none; }
 .book-notes { margin-top: 10px; color: var(--ink-3); }
 .book-notes summary { cursor: pointer; font-size: 13px; }
 .book-notes p { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-sans); font-size: 14px; line-height: 1.8; }
+.book-chapter-intro { margin: 14px 0; }
+.book-chapter-intro > summary { padding: 10px 0; }
+[data-mode="original"] .book-chapter-intro { display: none; }
 .book-transcription { max-width: 100%; margin: 10px 0; padding: 14px; overflow-x: auto; white-space: pre; font-family: monospace; font-size: 16px; line-height: 1.7; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); tab-size: 4; }
 .book-diagram-transcription { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 16px; }
 .book-diagram-transcription > summary { cursor: pointer; color: var(--ink-3); font-size: 14px; }
@@ -217,6 +238,8 @@
 .book-figure figcaption { margin: 12px 0; color: var(--ink-3); font-size: 13px; line-height: 1.7; }
 .book-figure-link { font-size: 14px; }
 [data-mode="original"] .book-modern { display: none; }
+[data-mode="parallel"] .book-shared-table > .book-modern { display: none; }
+.book-reading-content[data-mode="parallel"] .book-shared-table { grid-template-columns: minmax(0, 1fr); }
 [data-mode="modern"] .book-block:has(.book-modern) .book-original { display: none; }
 .book-reading-pagination { display: flex; align-items: center; justify-content: space-between; margin: 24px 0; }
 .book-reading-pagination .btn { min-height: 44px; }

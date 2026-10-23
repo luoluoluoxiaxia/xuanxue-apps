@@ -1,5 +1,5 @@
-import { h, fill } from "../lib/dom.js?v=n38";
-import { indexBookGlossary, bookTermRanges, bookTextRuns } from "../lib/book-glossary.js?v=n38";
+import { h, fill } from "../lib/dom.js?v=n39";
+import { indexBookGlossary, bookTermRanges, bookTextRuns } from "../lib/book-glossary.js?v=n39";
 
 let glossarySequence = 0;
 
