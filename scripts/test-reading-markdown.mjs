@@ -790,7 +790,9 @@ test("the real reader interleaves covered figures without losing text, glossary,
   // not. This exposes both restoring by NodeList index and saving that index.
   MockNode.prototype.getBoundingClientRect = function () {
     for (let parent = this.parentElement; parent; parent = parent.parentElement) {
-      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null)
+      // Native details can retain stale, nonzero descendant geometry after a
+      // diagram was opened and then closed. Other disclosure mocks stay as-is.
+      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null && !parent.classList.contains("book-diagram-group"))
         return { top: 0, bottom: 0, height: 0, left: 0, width: 0 };
     }
     if (this.parentElement?.classList.contains("book-diagram-group")) {
@@ -1026,6 +1028,40 @@ test("the real reader interleaves covered figures without losing text, glossary,
     assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 21);
     assert.equal(JSON.parse(storage.get(view.keys.position)).offset, .25);
     assert.equal(all(restoredGroup).find(node => Number(node.dataset.readingAnchor) === 21).querySelector("pre").textContent, "子水坎");
+    view.cleanup();
+
+    const ending = { id: "after-closed-diagram", role: "text", text: "图式之后的完整正文。", modern: "图式之后的完整正文。", notes: [], terms: [] };
+    const withEnding = { ...diagramOptions, sectionBlocks: [...labels, ending] };
+    view = await mount([diagramFigure], undefined, withEnding);
+    const closedGroup = view.content.querySelector(".book-diagram-group");
+    closedGroup.open = true; closedGroup.listeners.get("toggle")();
+    closedGroup.querySelectorAll(".book-block")[12].getBoundingClientRect();
+    closedGroup.open = false; closedGroup.listeners.get("toggle")();
+    assert.equal(closedGroup.querySelectorAll(".book-block").every(block => block.getBoundingClientRect().height > 0), true,
+      "reproduce the browser's stale geometry for all 32 closed diagram anchors");
+    const endingNode = view.content.querySelector(`[data-block-id="${ending.id}"]`);
+    window.scrollY += endingNode.getBoundingClientRect().top - 84;
+    view.pagehide();
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 34, "pagehide saves visible text beyond a closed group");
+    for (const mode of ["original", "parallel", "modern"]) {
+      view.node.querySelector(`[data-book-mode="${mode}"]`).listeners.get("click")();
+      view.pagehide();
+      assert.equal(closedGroup.open, false, `${mode} must not restore a stale closed-group anchor`);
+      assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 34);
+      assert.equal(endingNode.getBoundingClientRect().top, 84);
+    }
+    const directory = view.node.querySelector(".book-directory");
+    for (let index = 0; index < 2; index++) {
+      directory.listeners.get("click")({ currentTarget: directory });
+      view.pagehide();
+      assert.equal(closedGroup.open, false, "directory changes keep the closed group closed");
+      assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 34);
+      assert.equal(endingNode.getBoundingClientRect().top, 84);
+    }
+    view.cleanup();
+    view = await mount([diagramFigure], 34, withEnding);
+    assert.equal(view.content.querySelector(".book-diagram-group").open, false, "reloading beyond the diagram does not reopen it");
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 34);
     view.cleanup();
 
     // A gap or later figure stays in its own DOM position, outside a closed

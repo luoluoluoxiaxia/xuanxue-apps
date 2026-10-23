@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n40";
-import { filterContents, groupReadingSections } from "../lib/books.js?v=n40";
-import { local } from "../lib/store.js?v=n40";
-import { openSheet } from "./overlay.js?v=n40";
+import { h, fill } from "../lib/dom.js?v=n41";
+import { filterContents, groupReadingSections } from "../lib/books.js?v=n41";
+import { local } from "../lib/store.js?v=n41";
+import { openSheet } from "./overlay.js?v=n41";
 
 export function createBookSidebar({ book, contents, current, onSelect, onCollapse, libraryPath = "#/books", libraryLabel = "返回书库", casePath = "" }) {
   let closed = false, scrollFrame;
