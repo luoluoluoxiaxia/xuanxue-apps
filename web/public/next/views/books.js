@@ -46,6 +46,10 @@ export function renderBookBlock(block, { hasModern, hasFigure, openingTitle = fa
   const diagram = block.presentation === "diagram" || block.role === "diagram_caption" || block.source_text === false;
   const table = block.presentation === "table" || block.role === "table";
   const transcribed = diagram || table;
+  const literalModernTable = table && !diagram && Boolean(block.modern) && block.modern === block.text;
+  const termKeys = layer => (block.terms || []).filter(term => term.layer === layer)
+    .map(term => JSON.stringify([term.start, term.end, term.sense_id])).sort();
+  const sharedTable = literalModernTable && JSON.stringify(termKeys("original")) === JSON.stringify(termKeys("modern"));
   const note = ["note", "original_note"].includes(block.role);
   const originalLabel = hasModern && !note && block.role !== "commentary" && !transcribed && !block.attribution;
   const label = block.attribution || (note ? "原注" : block.role === "commentary" ? "评注"
@@ -63,9 +67,37 @@ export function renderBookBlock(block, { hasModern, hasFigure, openingTitle = fa
       block.source_text === false ? h("p", { class: "books-notice" }, "此处是图形结构的文字转写，位置与连接请以书影为准。") : null,
       original, notes)
     : h("div", null, original, notes);
-  return h("section", { class: `book-block book-role-${block.role}`, dataset: { blockId: block.id } }, layer,
+  return h("section", { class: `book-block book-role-${block.role}${sharedTable ? " book-shared-table" : ""}`, dataset: { blockId: block.id } }, layer,
     block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"),
-      h(heading, null, renderText([{ text: block.modern, kind: null }], block.terms, "modern"))) : null);
+      h(literalModernTable ? "pre" : heading, literalModernTable
+        ? { class: "book-transcription", tabindex: "0", "aria-label": "白话表格，可横向滚动" } : null,
+        renderText([{ text: block.modern, kind: null }], block.terms, "modern"))) : null);
+}
+
+export function renderBookSourceCues(sourceCues = []) {
+  return sourceCues.map(cue => h("details", { class: "book-source-notice book-source-cues" },
+    h("summary", null, cue.label), h("div", { class: "book-source-cue-content", lang: "zh" },
+      cue.blocks.map(block => {
+        const table = ["table", "diagram"].includes(block.presentation) || block.role === "table";
+        return h("div", { class: "book-source-cue-block" },
+          block.attribution ? h("span", { class: "book-attribution" }, block.attribution) : null,
+          h(table ? "pre" : block.role === "heading" ? "h3" : "p",
+            table ? { class: "book-transcription", tabindex: "0", "aria-label": "题署表格，可横向滚动" } : null,
+            block.text));
+      }))));
+}
+
+export function renderBookSectionHeader(section, { hasModern }) {
+  return h("header", { class: "book-section-header" },
+    section.location !== "原书章节" ? h("p", { class: "books-source" }, section.location) : null,
+    section.title !== section.location && !hasOpeningSectionTitle(section) ? h("h2", null, section.title) : null,
+    hasModern && section.intro?.trim() ? h("details", { class: "book-notes book-chapter-intro" },
+      h("summary", null, "本章导读"), h("p", { lang: "zh-Hans" }, section.intro)) : null,
+    // Source cues stay inside the existing header, outside body/progress anchors.
+    renderBookSourceCues(section.source_cues),
+    hasModern ? h("div", { class: "book-comparison-heading", "aria-hidden": "true" },
+      h("span", null, "原文"), h("span", null, "白话")) : null,
+    section.glossary?.length ? h("p", { class: "book-glossary-help" }, "点状下划线的词可悬停或点按查看释义。") : null);
 }
 
 function library(ctx) {
@@ -340,11 +372,7 @@ function reader(ctx) {
     const figures = section.figures || [];
     content.dataset.mode = book.has_modern ? mode : "original";
     fill(content,
-      h("header", { class: "book-section-header" }, h("p", { class: "books-source" }, section.location),
-        section.title !== section.location && !hasOpeningSectionTitle(section) ? h("h2", null, section.title) : null,
-        book.has_modern ? h("div", { class: "book-comparison-heading", "aria-hidden": "true" },
-          h("span", null, "原文"), h("span", null, "白话")) : null,
-        section.glossary?.length ? h("p", { class: "book-glossary-help" }, "点状下划线的词可悬停或点按查看释义。") : null),
+      renderBookSectionHeader(section, { hasModern: book.has_modern }),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? section.partial

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { indexBookGlossary, bookTermRanges, bookTextRuns } from "../web/public/next/lib/book-glossary.js";
 import { sourceBreaks } from "../web/public/next/lib/books.js";
 import { selectionAnchor, annotationRange } from "../web/public/next/lib/book-annotations.js";
@@ -160,12 +161,137 @@ test("term wrappers retain canonical text, source breaks and annotation ranges a
   assert.equal(selected.anchor.start, 1); assert.equal(selected.anchor.end, 7); assert.equal(selected.anchor.quote, annotation.quote);
 });
 
-test("actual opening title h2 in both reader layers supports selection, saved highlights and note location", async () => {
+test("source cues are optional, closed, literal and outside body, glossary and reading anchors", async () => {
+  const { document } = mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookSourceCues, renderBookSectionHeader } = await import("../web/public/next/views/books.js");
+  assert.deepEqual(renderBookSourceCues(), []);
+  assert.deepEqual(renderBookSourceCues([]), []);
+  const section = { title: "正文章", location: "电子源第20行", blocks: [], glossary: [entry] };
+  const before = structuredClone(section);
+  const signature = node => [node.tagName || "#text", node.className || "", node.data || "",
+    [...(node.attributes || [])], { ...node.dataset }, node.childNodes.map(signature)];
+  const without = renderBookSectionHeader(section, { hasModern: true });
+  const empty = renderBookSectionHeader({ ...section, source_cues: [] }, { hasModern: true });
+  assert.deepEqual(signature(without), signature(empty));
+  assert.equal(without.querySelector(".book-source-cues"), null);
+  const heading = "卷一𠮷\n  <script>题署</script>";
+  const attribution = "野鹤 <img onerror=alert(1)>";
+  const table = "甲\t乙\n丙  丁\n";
+  const cues = [{ label: "原卷题署 <svg>", blocks: [
+    { role: "heading", text: heading, modern: "", notes: [], attribution },
+    { role: "text", presentation: "table", text: table, modern: "", notes: [] },
+  ] }];
+  const header = renderBookSectionHeader({ ...section, source_cues: cues }, { hasModern: true });
+  const details = header.querySelector(".book-source-cues");
+  assert.equal(details.tagName, "DETAILS"); assert.equal(details.getAttribute("open"), null);
+  assert.equal(details.querySelector("summary").textContent, cues[0].label);
+  assert.equal(details.querySelector("h3").textContent, heading);
+  assert.equal(details.querySelector(".book-attribution").textContent, attribution);
+  assert.equal(details.querySelector("pre").textContent, table);
+  assert.equal(details.querySelector("pre").getAttribute("tabindex"), "0");
+  assert.equal(details.closest(".book-section-header"), header);
+  for (const selector of [".book-block", ".book-original", ".book-modern", ".book-modern-empty", ".book-term", "script", "img", "svg"])
+    assert.equal(details.querySelector(selector), null, selector);
+  const descendants = node => [node, ...node.childNodes.flatMap(descendants)];
+  assert.ok(descendants(details).every(node => !node.dataset?.blockId && !node.dataset?.readingAnchor));
+  assert.deepEqual(section, before);
+  const css = await readFile(new URL("../web/public/next/next-books.css", import.meta.url), "utf8");
+  const hidingRules = [...css.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .filter(([, selector, declarations]) => selector.includes(".book-source-cues") && /display:\s*none/.test(declarations));
+  assert.equal(hidingRules.length, 1);
+  assert.equal(hidingRules[0][1].trim(), '[data-mode="modern"] .book-source-cues');
+});
+
+test("chapter guides retain complete literal text after the title, fold by default and stay outside original mode", async () => {
+  mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookSectionHeader } = await import("../web/public/next/views/books.js");
+  const intro = "  本章先说明通常条件。\n再分别讨论例外与原疑□𠮷，<script>仅是文字</script>。\n";
+  const section = { title: "正文章", location: "电子源第20行", intro, blocks: [], glossary: [] };
+  const before = structuredClone(section);
+  const header = renderBookSectionHeader(section, { hasModern: true });
+  const guide = header.querySelector(".book-chapter-intro");
+  assert.equal(guide.tagName, "DETAILS");
+  assert.equal(guide.getAttribute("open"), null);
+  assert.equal(guide.querySelector("summary").textContent, "本章导读");
+  assert.equal(guide.querySelector("p").textContent, intro);
+  assert.equal(guide.querySelector("p").getAttribute("lang"), "zh-Hans");
+  assert.ok(header.childNodes.indexOf(guide) > header.childNodes.indexOf(header.querySelector("h2")));
+  const descendants = node => [node, ...node.childNodes.flatMap(descendants)];
+  assert.ok(descendants(guide).every(node => !node.dataset?.blockId && !node.dataset?.readingAnchor));
+  for (const selector of [".book-block", ".book-original", ".book-modern", ".book-term", "script"])
+    assert.equal(guide.querySelector(selector), null, selector);
+  for (const empty of [undefined, "", " \n\t"])
+    assert.equal(renderBookSectionHeader({ ...section, intro: empty }, { hasModern: true }).querySelector(".book-chapter-intro"), null);
+  assert.equal(renderBookSectionHeader(section, { hasModern: false }).querySelector(".book-chapter-intro"), null);
+  assert.deepEqual(section, before);
+  const css = await readFile(new URL("../web/public/next/next-books.css", import.meta.url), "utf8");
+  const hidingRules = [...css.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .filter(([, selector, declarations]) => selector.includes(".book-chapter-intro") && /display:\s*none/.test(declarations));
+  assert.equal(hidingRules.length, 1);
+  assert.equal(hidingRules[0][1].trim(), '[data-mode="original"] .book-chapter-intro');
+});
+
+test("only identical literal tables with matching term ranges and senses share their parallel presentation", async () => {
+  mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const text = "用神\t日辰\n甲乙  丙丁𠮷\n";
+  const terms = [occurrence(0, 2), { ...occurrence(3, 5), sense_id: "day" },
+    { ...occurrence(3, 5, "modern"), sense_id: "day" }, occurrence(0, 2, "modern")];
+  const block = { id: "table-stable", role: "table", text, modern: text, notes: ["原校记保留。"], terms };
+  const before = structuredClone(block);
+  const render = value => renderBookBlock(value, { hasModern: true, hasFigure: false, renderText: parts => parts.map(part => part.text) });
+  const table = render(block);
+  assert.equal(table.classList.contains("book-shared-table"), true);
+  assert.equal(table.dataset.blockId, block.id);
+  for (const layer of ["original", "modern"]) {
+    const pre = table.querySelector(`.book-${layer} pre`);
+    assert.equal(pre.textContent, text);
+    assert.equal(pre.classList.contains("book-transcription"), true);
+    assert.equal(pre.getAttribute("tabindex"), "0");
+  }
+  assert.equal(table.querySelector(".book-notes p").textContent, block.notes[0]);
+  assert.equal(render({ ...block, terms: [] }).classList.contains("book-shared-table"), true);
+  for (const modified of [
+    { ...block, modern: "这段白话另行解释表意。" },
+    { ...block, terms: terms.filter(term => term.layer === "original") },
+    { ...block, terms: terms.map(term => term.layer === "modern" ? { ...term, sense_id: "different" } : term) },
+    { ...block, terms: terms.map(term => term.layer === "modern" ? { ...term, end: term.end - 1 } : term) },
+    { ...block, role: "text" }, { ...block, presentation: "diagram" }, { ...block, source_text: false },
+  ]) assert.equal(render(modified).classList.contains("book-shared-table"), false);
+  const explained = render({ ...block, modern: "这段白话另行解释表意。" });
+  assert.equal(explained.querySelector(".book-modern p").textContent, "这段白话另行解释表意。");
+  assert.equal(explained.querySelector(".book-modern pre"), null);
+  assert.deepEqual(block, before);
+  const css = await readFile(new URL("../web/public/next/next-books.css", import.meta.url), "utf8");
+  const hidingRules = [...css.matchAll(/([^{}]+)\{([^{}]+)\}/g)]
+    .filter(([, selector, declarations]) => selector.includes(".book-shared-table") && /display:\s*none/.test(declarations));
+  assert.equal(hidingRules.length, 1);
+  assert.equal(hidingRules[0][1].trim(), '[data-mode="parallel"] .book-shared-table > .book-modern');
+});
+
+test("section headers omit only the exact empty-location placeholder and retain real page locations", async () => {
+  mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookSectionHeader } = await import("../web/public/next/views/books.js");
+  const section = { title: "正文章", blocks: [] };
+  const placeholder = renderBookSectionHeader({ ...section, location: "原书章节" }, { hasModern: true });
+  assert.equal(placeholder.querySelector(".books-source"), null);
+  assert.equal(placeholder.querySelector("h2").textContent, section.title);
+  for (const location of ["来源页 3", "影像文件 1 · 来源页 9", "电子源第20行", "原书章节 附注"]) {
+    const header = renderBookSectionHeader({ ...section, location }, { hasModern: true });
+    assert.equal(header.querySelector(".books-source").textContent, location);
+  }
+});
+
+test("actual opening title h2 keeps term selection, saved highlights and note location after folded source cues", async () => {
   const { document, window } = mockEnvironment();
   globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
   window.document = document; window.ResizeObserver = class {};
   window.scrollY = 0; window.scrollTo = () => {};
-  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const { renderBookBlock, renderBookSectionHeader } = await import("../web/public/next/views/books.js");
   const { setupBookAnnotations } = await import("../web/public/next/ui/book-annotations.js?v=n37");
   const { session } = await import("../web/public/next/lib/store.js?v=n37");
   const { Decorator, DecorationController } = await import("../web/public/vendor/readium-decorator-1.2.5.js?v=n37");
@@ -186,7 +312,8 @@ test("actual opening title h2 in both reader layers supports selection, saved hi
   const block = { id: "opening-heading", role: "heading", text: "占𠮷用神", modern: "读𠮷用神", notes: [],
     terms: [occurrence(2, 4), occurrence(2, 4, "modern")] };
   const before = structuredClone(block);
-  const section = { number: 4, edition_sha256: "a".repeat(64), blocks: [block] };
+  const section = { number: 4, title: "正文题", location: "电子源第20行", edition_sha256: "a".repeat(64), blocks: [block],
+    source_cues: [{ label: "原卷题署", blocks: [{ role: "text", text: "原卷署名𠮷\n", modern: "", notes: [] }] }] };
   const items = ["original", "modern"].map(layer => ({ id: `heading-${layer}`, kind: "highlight", color: "yellow",
     anchor_status: "matched", section_number: 4, edition_sha256: section.edition_sha256,
     block_id: block.id, layer, start: 1, end: 4, quote: "𠮷用神" }));
@@ -198,8 +325,18 @@ test("actual opening title h2 in both reader layers supports selection, saved hi
   try {
     session.set({ authenticated: true, user: { id: "synthetic-reader" } });
     const content = document.createElement("div"); content.className = "book-reading-content"; document.body.append(content);
-    content.append(renderBookBlock(block, { hasModern: true, openingTitle: true,
-      renderText: (parts, terms, layer) => renderBookText(parts, terms, layer, senses()) }));
+    const header = renderBookSectionHeader(section, { hasModern: true });
+    const body = renderBookBlock(block, { hasModern: true, openingTitle: true,
+      renderText: (parts, terms, layer) => renderBookText(parts, terms, layer, senses()) });
+    content.append(header, body);
+    assert.deepEqual(content.childNodes, [header, body]); // Cues add no direct progress anchor.
+    assert.deepEqual(content.querySelectorAll(".book-block"), [body]);
+    assert.equal(body.dataset.blockId, block.id);
+    assert.equal(content.querySelectorAll(".book-term").length, 2);
+    const cueText = textNodes(header.querySelector(".book-source-cue-block p"))[0];
+    const cueRange = document.createRange(); cueRange.setStart(cueText, 0); cueRange.setEnd(cueText, 2);
+    const cueSelection = selectionAnchor(content, section, { rangeCount: 1, isCollapsed: false, getRangeAt: () => cueRange });
+    assert.equal(cueSelection.anchor, null); assert.equal(cueSelection.reason, "outside");
     for (const item of items) {
       const heading = content.querySelector(`.book-${item.layer} h2`);
       assert.ok(heading); assert.equal(heading.textContent, item.layer === "original" ? block.text : block.modern);

@@ -35,6 +35,26 @@ export function bookCaseApiPath(filter) {
   return `/api/book-cases${query({ book_id: next.book_id, kind: next.kind, offset: next.offset, limit: next.limit })}`;
 }
 
+export function bookCaseCasts(detail) {
+  return Array.isArray(detail?.casts) ? detail.casts.slice().sort((a, b) => a.order - b.order) : [];
+}
+
+export function bookCaseModernBlocks(detail) {
+  const texts = [detail?.modern_context, ...(Array.isArray(detail?.supporting_contexts)
+    ? detail.supporting_contexts.map(context => context.modern) : [])];
+  return [...new Set(texts.filter(text => typeof text === "string" && text.trim()))];
+}
+
+export function bookCaseChartPath(id, castId = null) {
+  return `/api/book-cases/${encodeURIComponent(id)}/chart${query({ cast_id: castId || undefined })}`;
+}
+
+export function bookCaseChartMatches(chart, id, castId = null) {
+  return chart?.case_id === id && (chart.cast_id ?? null) === castId
+    && ["bazi", "liuyao"].includes(chart.system)
+    && !!chart.payload && typeof chart.payload === "object" && !Array.isArray(chart.payload);
+}
+
 export function bookCasesEntry(book, from = "") {
   return Number.isInteger(book?.case_count) && book.case_count > 0 && slug(book.id)
     ? bookCaseListPath({ book_id: book.id, from }) : null;

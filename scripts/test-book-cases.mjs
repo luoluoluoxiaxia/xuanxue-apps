@@ -344,7 +344,7 @@ test("an incomplete source mention puts the exact full-paragraph modern text fir
   env.cleanup();
 });
 
-test("supporting contexts fold the shared setup, keep its exact translation first and preserve safe reading links", async () => {
+test("supporting contexts read continuously after the main modern text and retain exact source evidence and safe links", async () => {
   const env = environment("from=learning", "supported-mention"), paths = [];
   const data = { ...caseDetail(), id: "supported-mention", study_format: "source_mention", chart_status: "incomplete",
     supporting_contexts: [
@@ -358,6 +358,8 @@ test("supporting contexts fold the shared setup, keep its exact translation firs
   const article = result.node.querySelector(".book-case-analysis");
   assert.equal(article.childNodes[0].querySelector("h2").textContent, "所在段白话");
   assert.equal(article.childNodes[0].querySelector(".book-case-text").textContent, data.modern_context);
+  assert.deepEqual(tags(article.querySelector(".book-case-modern"), "p").map(node => node.textContent),
+    [data.modern_context, data.supporting_contexts[0].modern, data.supporting_contexts[2].modern]);
   const disclosure = byText(article, "summary", "题设与相关段落").parentElement;
   assert.equal(disclosure.tagName, "DETAILS");
   assert.ok(tags(disclosure, "details").every(node => !node.open && node.getAttribute("open") === null));
@@ -385,6 +387,45 @@ test("supporting contexts fold the shared setup, keep its exact translation firs
   assert.deepEqual(paths, ["/api/book-cases/supported-mention"]);
   assert.deepEqual(data, before);
   env.cleanup();
+});
+
+test("continuous modern reading deduplicates only exact full blocks, preserves known original tables and leaves missing translations unprovided", async () => {
+  const env = environment("", "continuous-modern"), table = "上爻  ′\n初爻  ″  \n";
+  const contexts = [
+    { title: "重复主段", original: "独立原段甲。", modern: "完整白话。" },
+    { title: "条件与结果", original: "判断及实录。", modern: "若有此条件，才如此断。\n实际结果未如原断。" },
+    { title: "重复支持段", original: "不同原段但白话相同。", modern: "若有此条件，才如此断。\n实际结果未如原断。" },
+    { title: "保留末尾空格", original: "独立原段乙。", modern: "完整白话。 " },
+    { title: "书载原表", original: table, modern: table },
+    { title: "未译原段", original: "该原段未提供白话。", modern: null },
+  ].map(context => ({ ...context, location: "合成底本", reading_path: "/books/ziping-zhenquan?page=2" }));
+  const data = { ...caseDetail(), id: "continuous-modern", study_format: "source_mention", chart_status: "incomplete",
+    modern_context: "完整白话。", supporting_contexts: contexts, casts: [
+      { id: "table-cast", order: 1, label: "第1卦", chart_status: "incomplete", source_hexagram_names: [], original_table: table, missing: [], uncertainties: [] },
+    ] };
+  const before = structuredClone(data);
+  const result = render(env.ctx, async () => data); await tick();
+  const main = result.node.querySelector(".book-case-modern");
+  assert.deepEqual(main.childNodes.slice(1).map(node => node.textContent),
+    [data.modern_context, contexts[1].modern, contexts[3].modern, table]);
+  assert.equal(main.querySelector("pre").textContent, table);
+  assert.equal(main.querySelector("pre").className, "book-case-original-table");
+  assert.doesNotMatch(main.textContent, /该原段未提供白话/);
+  const evidence = byText(result.node, "summary", "题设与相关段落").parentElement;
+  assert.equal(tags(evidence, "section").length, contexts.length);
+  assert.deepEqual(tags(evidence, "h3").map(node => node.textContent), contexts.map(context => context.title));
+  assert.equal(tags(evidence, "pre").length, 2);
+  assert.ok(tags(evidence, "pre").every(node => node.className === "book-case-original-table"));
+  assert.ok(byText(evidence, "p", contexts[5].original));
+  assert.deepEqual(data, before); env.cleanup();
+
+  const missingEnv = environment("", "missing-main-modern");
+  const missing = { ...data, id: "missing-main-modern", modern_context: null, supporting_contexts: [contexts[1]], casts: [] };
+  const missingResult = render(missingEnv.ctx, async () => missing); await tick();
+  const missingMain = missingResult.node.querySelector(".book-case-modern");
+  assert.equal(missingMain.childNodes[1].textContent, "本条所在段白话暂未提供，可展开原文阅读。");
+  assert.equal(missingMain.childNodes[2].textContent, contexts[1].modern);
+  missingEnv.cleanup();
 });
 
 test("absent or empty supporting contexts add no nodes to the existing source mention tree", async () => {
@@ -702,4 +743,167 @@ test("leaving while a permitted chart is loading aborts its request and never pu
   resolveChart(caseChart()); await tick();
   assert.equal(result.node.textContent, before);
   assert.equal(result.node.querySelector(".chart-panel"), null);
+});
+
+// Synthetic public cast records exercise selection without reconstructing a
+// hexagram, normalizing historical dates, or reading private book data.
+const multiCastDetail = () => ({ ...caseDetail(), id: "multi-cast-example", study_format: "source_mention", casts: [
+  { id: "cast-three", order: 3, label: "第三次占问", chart_status: "available", source_heading: "第三次书载原题。",
+    source_month: "书载月名丙", source_day: "书载日名丙", source_hexagram_names: ["第三次原名"],
+    original_table: "第三次原表\n", missing: [], uncertainties: [] },
+  { id: "cast-one", order: 1, label: "第一次占问", chart_status: "incomplete", source_heading: null,
+    source_month: null, source_day: null, source_hexagram_names: [], original_table: null,
+    missing: ["六行原表未载"], uncertainties: ["此占仅有局部爻辞，不能补盘。"] },
+  { id: "cast-two", order: 2, label: "第二次占问", chart_status: "available", source_heading: "第二次原题 <img onerror=alert(1)>\n原字不改。",
+    source_month: "书载月名乙", source_day: "同日（原字存疑）", source_hexagram_names: ["书载本名", "书载变名"],
+    original_table: "上爻  ′    动  变爻″\n五爻  ″\n四爻  ′\n三爻  ″\n二爻  ′\n初爻  ″  \n",
+    missing: ["日名有异记"], uncertainties: ["书载卦名与复盘计算名称分别保留。"] },
+] });
+const castChart = (castId, id = "multi-cast-example") => {
+  const chart = liuyaoCaseChart(id);
+  chart.cast_id = castId;
+  chart.payload.ben_gua.name = `计算本卦 ${castId}`;
+  chart.payload.bian_gua.name = `计算变卦 ${castId}`;
+  return chart;
+};
+const chooseCast = (node, id) => {
+  const picker = node.querySelector("#book-case-cast") || tags(node, "select")[0];
+  picker.value = id; picker.emit("change");
+  return picker;
+};
+
+test("cast selection starts at the smallest book order even when it is incomplete and preserves exact source text", async () => {
+  const env = environment("", "multi-cast-example"), paths = [];
+  const data = multiCastDetail(), before = structuredClone(data);
+  const result = render(env.ctx, async (path, options) => {
+    paths.push(path); assert.ok(options.signal instanceof AbortSignal);
+    return path.includes("/chart") ? castChart(new URL(path, "https://example.test").searchParams.get("cast_id")) : data;
+  });
+  document.body.append(result.node); await tick();
+  const picker = tags(result.node, "select")[0];
+  assert.equal(picker.value, "cast-one");
+  assert.deepEqual(tags(picker, "option").map(option => option.value), ["cast-one", "cast-two", "cast-three"]);
+  assert.deepEqual(paths, ["/api/book-cases/multi-cast-example"]);
+  assert.match(result.node.textContent, /书载原题未载。.*书载月未载书载日未载书载卦名未载/);
+  assert.match(result.node.textContent, /本卦资料不全，暂不能复盘。六行原表未载此占仅有局部爻辞，不能补盘。/);
+  assert.equal((result.node.textContent.match(/暂不能复盘/g) || []).length, 1);
+  assert.doesNotMatch(result.node.textContent, /本卦未载完整原表|本卦未载完整排盘条件|未载或不全/);
+  assert.equal(result.node.querySelector(".book-case-cast").querySelector("h2"), null);
+  assert.equal(result.node.querySelector(".chart-panel"), null);
+  const article = result.node.querySelector(".book-case-analysis"), primary = article.querySelector(".book-case-modern");
+  const disclosure = tags(article, "details")[0]; disclosure.open = true;
+  chooseCast(result.node, "cast-two"); await tick();
+  assert.deepEqual(paths, ["/api/book-cases/multi-cast-example", "/api/book-cases/multi-cast-example/chart?cast_id=cast-two"]);
+  assert.equal(result.node.querySelector(".book-case-cast-heading").textContent, data.casts[2].source_heading);
+  assert.equal(result.node.querySelector("pre").textContent, data.casts[2].original_table);
+  const source = byText(result.node, "summary", "书载问事与原表").parentElement;
+  assert.equal(source.open, false);
+  assert.equal(source.getAttribute("open"), null);
+  assert.equal(source.querySelector(".book-case-cast-heading").textContent, data.casts[2].source_heading);
+  assert.equal(source.querySelector("pre").textContent, data.casts[2].original_table);
+  assert.equal(tags(result.node.querySelector(".book-case-cast"), "details").length, 1);
+  assert.match(result.node.querySelector(".book-case-cast-facts").textContent, /书载月书载月名乙书载日同日（原字存疑）书载卦名书载本名 → 书载变名/);
+  assert.equal(result.node.querySelector(".book-case-chart-caption").textContent, "复盘计算");
+  assert.equal(result.node.querySelector(".book-case-chart-open").textContent, "复盘计算 · 完整盘面");
+  assert.equal(result.node.querySelector(".book-case-computed-name"), null);
+  assert.doesNotMatch(result.node.querySelector(".book-case-chart-area").textContent, /复盘计算卦名/);
+  assert.equal(tags(result.node.querySelector(".book-case-full-chart").querySelector("tbody"), "tr").length, 6);
+  assert.equal(result.node.querySelector(".book-case-modern"), primary); assert.equal(disclosure.open, true);
+  assert.equal(tags(result.node, "img").length, 0); assert.deepEqual(data, before);
+  env.cleanup();
+});
+
+test("a single cast shows its source without a redundant selector and requires the matching cast response", async () => {
+  const env = environment("", "multi-cast-example"), paths = [];
+  const data = multiCastDetail(); data.casts = [data.casts[2]];
+  const result = render(env.ctx, async path => { paths.push(path); return path.includes("/chart") ? castChart("cast-two") : data; });
+  await tick();
+  assert.equal(tags(result.node, "select").length, 0);
+  assert.equal(result.node.querySelector(".book-case-cast").querySelector("h2"), null);
+  assert.equal(byText(result.node, "summary", "书载问事与原表").parentElement.open, false);
+  assert.equal(result.node.querySelector(".book-case-cast-heading").textContent, data.casts[0].source_heading);
+  assert.ok(result.node.querySelector(".is-liuyao"));
+  assert.deepEqual(paths, ["/api/book-cases/multi-cast-example", "/api/book-cases/multi-cast-example/chart?cast_id=cast-two"]);
+  env.cleanup();
+});
+
+test("both case and cast identity must match before a chart is published, and retry keeps the selected cast", async () => {
+  for (const badChart of [castChart("other-cast"), castChart("cast-two", "other-case"), liuyaoCaseChart("multi-cast-example")]) {
+    const env = environment("", "multi-cast-example"), paths = []; let attempts = 0;
+    const data = multiCastDetail(); data.casts = [data.casts[2]];
+    const result = render(env.ctx, async path => {
+      paths.push(path);
+      return path.includes("/chart") ? ++attempts === 1 ? badChart : castChart("cast-two") : data;
+    }); await tick();
+    assert.match(result.node.textContent, /案例与盘面未能对应/);
+    assert.equal(result.node.querySelector(".chart-panel"), null);
+    assert.match(result.node.textContent, /所在完整段落的白话/);
+    byText(result.node, "button", "重试").emit("click"); await tick();
+    assert.ok(result.node.querySelector(".chart-panel"));
+    assert.deepEqual(paths.slice(1), Array(2).fill("/api/book-cases/multi-cast-example/chart?cast_id=cast-two"));
+    env.cleanup();
+  }
+});
+
+test("rapid cast switches abort older requests, ignore their late results and clear the chart when switching to incomplete", async () => {
+  const env = environment("", "multi-cast-example"), pending = [];
+  const data = multiCastDetail();
+  const result = render(env.ctx, (path, options) => path.includes("/chart")
+    ? new Promise((resolve, reject) => pending.push({ path, signal: options.signal, resolve, reject })) : Promise.resolve(data));
+  document.body.append(result.node); await tick();
+  chooseCast(result.node, "cast-two"); chooseCast(result.node, "cast-three"); chooseCast(result.node, "cast-two");
+  assert.equal(pending.length, 3); assert.ok(pending.slice(0, 2).every(request => request.signal.aborted));
+  pending[1].resolve(castChart("cast-three")); pending[0].reject(new Error("旧请求错误")); await tick();
+  assert.match(result.node.textContent, /正在打开盘面/); assert.doesNotMatch(result.node.textContent, /旧请求错误|计算本卦 cast-three/);
+  pending[2].resolve(castChart("cast-two")); await tick();
+  const strip = result.node.querySelector(".book-case-chart-strip"); strip.emit("click");
+  assert.ok(document.body.querySelector(".sheet-chart"));
+  chooseCast(result.node, "cast-one");
+  assert.equal(pending[2].signal.aborted, true);
+  assert.equal(result.node.querySelector(".chart-panel"), null); assert.equal(result.node.querySelector(".book-case-chart-strip"), null);
+  assert.equal(result.node.querySelector(".book-case-chart-caption"), null); assert.equal(document.body.querySelector(".sheet-chart"), null);
+  assert.equal(result.node.querySelector(".book-case-study").classList.contains("has-chart"), false);
+  assert.equal(result.node.querySelector(".book-case-chart-area").getAttribute("aria-busy"), "false");
+  env.reconnect(); await tick(); assert.equal(pending.length, 3);
+  chooseCast(result.node, "cast-three"); assert.equal(pending.length, 4);
+  env.cleanup(); assert.equal(pending[3].signal.aborted, true);
+  pending[3].resolve(castChart("cast-three")); await tick();
+  assert.equal(result.node.querySelector(".chart-panel"), null);
+});
+
+test("cast network errors retry and reconnect only the current selection, while incomplete clears the old error", async () => {
+  const env = environment("", "multi-cast-example"), paths = []; let attempts = 0;
+  const result = render(env.ctx, async path => {
+    paths.push(path);
+    if (!path.includes("/chart")) return multiCastDetail();
+    if (++attempts < 3) throw new Error("本卦网络中断");
+    return castChart("cast-three");
+  }); await tick();
+  chooseCast(result.node, "cast-three"); await tick();
+  assert.match(result.node.textContent, /本卦网络中断/);
+  byText(result.node, "button", "重试").emit("click"); await tick();
+  env.reconnect(); await tick();
+  assert.ok(result.node.querySelector(".chart-panel"));
+  assert.ok(paths.slice(1).every(path => path.endsWith("?cast_id=cast-three")));
+  // A new failed load must disappear immediately on selecting an incomplete item.
+  attempts = 0; chooseCast(result.node, "cast-two"); await tick();
+  assert.match(result.node.textContent, /本卦网络中断/);
+  chooseCast(result.node, "cast-one");
+  assert.doesNotMatch(result.node.textContent, /本卦网络中断|盘面暂时没有打开/);
+  assert.equal(byText(result.node, "button", "重试"), undefined);
+  const count = paths.length; env.reconnect(); await tick(); assert.equal(paths.length, count);
+  env.cleanup();
+});
+
+test("legacy empty casts retain the existing single bazi and liuyao chart paths and accept null cast identity", async () => {
+  for (const makeChart of [caseChart, liuyaoCaseChart]) {
+    const env = environment("", "display-example"), paths = [];
+    const data = { ...caseDetail(), casts: [] };
+    const chart = { ...makeChart(data.id), cast_id: null };
+    const result = render(env.ctx, async path => { paths.push(path); return path.endsWith("/chart") ? chart : data; }); await tick();
+    assert.equal(result.node.querySelector(".book-case-cast"), null);
+    assert.equal(tags(result.node, "select").length, 0); assert.ok(result.node.querySelector(".chart-panel"));
+    assert.deepEqual(paths, ["/api/book-cases/display-example", "/api/book-cases/display-example/chart"]);
+    env.cleanup();
+  }
 });
