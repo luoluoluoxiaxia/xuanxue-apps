@@ -1,26 +1,26 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n37";
-import { icon, brandMark } from "./lib/icons.js?v=n37";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n37";
-import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n37";
-import { get } from "./lib/api.js?v=n37";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n37";
-import { toast } from "./ui/toast.js?v=n37";
-import { openAuth } from "./views/auth.js?v=n37";
-import * as FeedView from "./views/feed.js?v=n37";
-import * as PostView from "./views/post.js?v=n37";
-import * as AskView from "./views/ask.js?v=n37";
-import * as ReadingView from "./views/reading.js?v=n37";
-import * as TodayView from "./views/today.js?v=n37";
-import * as InboxView from "./views/inbox.js?v=n37";
-import * as MeView from "./views/me.js?v=n37";
-import * as BooksView from "./views/books.js?v=n37";
-import * as BookCasesView from "./views/book-cases.js?v=n37";
-import * as RoadmapView from "./views/roadmap.js?v=n37";
-import * as LearnView from "./views/learn.js?v=n37";
-import { openFeedback } from "./views/feedback.js?v=n37";
-import { routeFromLegacy } from "./lib/legacy.js?v=n37";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n38";
+import { icon, brandMark } from "./lib/icons.js?v=n38";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n38";
+import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n38";
+import { get } from "./lib/api.js?v=n38";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n38";
+import { toast } from "./ui/toast.js?v=n38";
+import { openAuth } from "./views/auth.js?v=n38";
+import * as FeedView from "./views/feed.js?v=n38";
+import * as PostView from "./views/post.js?v=n38";
+import * as AskView from "./views/ask.js?v=n38";
+import * as ReadingView from "./views/reading.js?v=n38";
+import * as TodayView from "./views/today.js?v=n38";
+import * as InboxView from "./views/inbox.js?v=n38";
+import * as MeView from "./views/me.js?v=n38";
+import * as BooksView from "./views/books.js?v=n38";
+import * as BookCasesView from "./views/book-cases.js?v=n38";
+import * as RoadmapView from "./views/roadmap.js?v=n38";
+import * as LearnView from "./views/learn.js?v=n38";
+import { openFeedback } from "./views/feedback.js?v=n38";
+import { routeFromLegacy } from "./lib/legacy.js?v=n38";
 
 const THEME_KEY = "xz-next-theme";
 
