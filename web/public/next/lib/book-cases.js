@@ -1,5 +1,5 @@
 // 案例仅展示公开契约返回的内容，阅读链接始终由服务端指定底本与章节。
-import { query } from "./api.js?v=n39";
+import { query } from "./api.js?v=n40";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = value => typeof value === "string" && value.length <= 120 && SLUG.test(value) ? value : "";

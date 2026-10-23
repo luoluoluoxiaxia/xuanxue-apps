@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n39";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n40";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -147,6 +147,34 @@ export function bookReadingEntry(book, { reading = null, text = null } = {}) {
 
 export function hasOpeningSectionTitle(section) {
   return section.blocks?.[0]?.role === "heading" && section.blocks[0].text === section.title;
+}
+
+// Only the public block mapping locates a figure. Keep an invalid explicit
+// mapping at the chapter start without using any of it to hide a transcription.
+export function bookFigureLayout({ figures = [], blocks = [] }) {
+  const leadingFigureIndices = [];
+  const figuresBeforeBlocks = blocks.map(() => []);
+  const coveredBlockIndices = new Set();
+  let hasLegacyFigures = false;
+  let hasExplicitMappings = false;
+  figures.forEach((figure, figureIndex) => {
+    const indices = figure.block_indices;
+    if (indices === undefined || indices === null) {
+      hasLegacyFigures = true;
+      leadingFigureIndices.push(figureIndex);
+      return;
+    }
+    hasExplicitMappings = true;
+    const valid = Array.isArray(indices) && indices.length > 0 && indices.every((index, offset) =>
+      Number.isInteger(index) && index >= 0 && index < blocks.length && (offset === 0 || index > indices[offset - 1]));
+    if (!valid) {
+      leadingFigureIndices.push(figureIndex);
+      return;
+    }
+    figuresBeforeBlocks[indices[0]].push(figureIndex);
+    indices.forEach(index => coveredBlockIndices.add(index));
+  });
+  return { leadingFigureIndices, figuresBeforeBlocks, coveredBlockIndices, hasLegacyFigures, hasExplicitMappings };
 }
 
 export function filterBooks(books, query, system) {

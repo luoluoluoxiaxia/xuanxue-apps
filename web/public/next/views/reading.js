@@ -1,23 +1,23 @@
 // 解读工作台：同一张盘上的一段对话。桌面左对话右命盘；手机顶部命盘速览，点开看完整盘面。
-import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n39";
-import { icon } from "../lib/icons.js?v=n39";
-import { get, post } from "../lib/api.js?v=n39";
-import { session, local } from "../lib/store.js?v=n39";
-import { newSessionId, isSessionId } from "../lib/ids.js?v=n39";
-import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n39";
-import { Conversation, humanizeError } from "../lib/interpret.js?v=n39";
-import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n39";
-import { takeHandoff } from "../lib/handoff.js?v=n39";
-import { relativeTime, plainExcerpt } from "../lib/format.js?v=n39";
-import { errorView, stateView } from "../ui/bits.js?v=n39";
-import { openSheet, openMenu } from "../ui/overlay.js?v=n39";
-import { toast } from "../ui/toast.js?v=n39";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n39";
-import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n39";
-import { copyText, sharePost } from "../lib/share.js?v=n39";
-import { openShareSheet } from "../ui/share-sheet.js?v=n39";
-import { openFeedback } from "./feedback.js?v=n39";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n39";
+import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n40";
+import { icon } from "../lib/icons.js?v=n40";
+import { get, post } from "../lib/api.js?v=n40";
+import { session, local } from "../lib/store.js?v=n40";
+import { newSessionId, isSessionId } from "../lib/ids.js?v=n40";
+import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n40";
+import { Conversation, humanizeError } from "../lib/interpret.js?v=n40";
+import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n40";
+import { takeHandoff } from "../lib/handoff.js?v=n40";
+import { relativeTime, plainExcerpt } from "../lib/format.js?v=n40";
+import { errorView, stateView } from "../ui/bits.js?v=n40";
+import { openSheet, openMenu } from "../ui/overlay.js?v=n40";
+import { toast } from "../ui/toast.js?v=n40";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n40";
+import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n40";
+import { copyText, sharePost } from "../lib/share.js?v=n40";
+import { openShareSheet } from "../ui/share-sheet.js?v=n40";
+import { openFeedback } from "./feedback.js?v=n40";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n40";
 
 const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
 // 从解读页分享卦帖时记录的来源。
