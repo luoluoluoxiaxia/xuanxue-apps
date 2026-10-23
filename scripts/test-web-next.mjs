@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n39`, base).href);
+const load = path => import(new URL(`${path}?v=n40`, base).href);
 
 test('fresh white-language books open their exact default and older books keep the electronic entry', async () => {
   const { bookReadingEntry, bookDefaultSectionNumber } = await load('lib/books.js');
@@ -87,6 +87,42 @@ test('an identical opening heading replaces only the visible outer heading and k
   assert.equal(hasOpeningSectionTitle({ ...section, blocks: [{ ...section.blocks[0], role: 'text' }] }), false);
   assert.equal(hasOpeningSectionTitle({ ...section, blocks: [] }), false);
   assert.deepEqual(section, before);
+});
+
+test('figure layout uses only exact covered blocks, places each image once and keeps same-block figure order', async () => {
+  const { bookFigureLayout } = await load('lib/books.js');
+  const section = { blocks: [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }], figures: [
+    { id: 'first', block_indices: [2, 3] }, { id: 'second', block_indices: [2] }, { id: 'third', block_indices: [1, 3] },
+  ] };
+  const before = structuredClone(section);
+  const layout = bookFigureLayout(section);
+  assert.deepEqual(layout.leadingFigureIndices, []);
+  assert.deepEqual(layout.figuresBeforeBlocks, [[], [2], [0, 1], []]);
+  assert.deepEqual([...layout.coveredBlockIndices].sort(), [1, 2, 3]);
+  assert.equal(layout.hasLegacyFigures, false);
+  assert.equal(layout.hasExplicitMappings, true);
+  assert.deepEqual(section, before);
+});
+
+test('legacy figures stay at the start and malformed explicit mappings never hide partially valid blocks', async () => {
+  const { bookFigureLayout } = await load('lib/books.js');
+  const legacy = bookFigureLayout({ blocks: [{}, {}], figures: [{ id: 'omitted' }, { id: 'null', block_indices: null }] });
+  assert.deepEqual(legacy.leadingFigureIndices, [0, 1]);
+  assert.deepEqual(legacy.figuresBeforeBlocks, [[], []]);
+  assert.equal(legacy.hasLegacyFigures, true);
+  assert.equal(legacy.hasExplicitMappings, false);
+  assert.equal(legacy.coveredBlockIndices.size, 0);
+  for (const block_indices of [[], [-1], [2], [0, 2], [0, 0], [1, 0], ['1'], [1.5], false, {}, 0]) {
+    const layout = bookFigureLayout({ blocks: [{}, {}], figures: [{ id: 'invalid', block_indices }, { id: 'valid', block_indices: [1] }] });
+    assert.deepEqual(layout.leadingFigureIndices, [0]);
+    assert.deepEqual(layout.figuresBeforeBlocks, [[], [1]]);
+    assert.deepEqual([...layout.coveredBlockIndices], [1]);
+    assert.equal(layout.hasLegacyFigures, false);
+    assert.equal(layout.hasExplicitMappings, true);
+  }
+  const empty = bookFigureLayout({ figures: [{ block_indices: [0] }], blocks: [] });
+  assert.deepEqual(empty.leadingFigureIndices, [0]);
+  assert.equal(empty.coveredBlockIndices.size, 0);
 });
 
 test('electronic text routes preserve edition and chapter identities in reading and downloads', async () => {

@@ -96,6 +96,43 @@ test("the actual reader block renders one title in each language layer and prese
   assert.deepEqual(block, before);
 });
 
+test("mapped transcription folding is explicit while legacy diagrams and tables keep their previous behavior", async () => {
+  globalThis.Node = MockNode;
+  globalThis.document = { ...environment(), addEventListener() {}, removeEventListener() {} };
+  globalThis.location = { hash: "", search: "", origin: "https://example.test" };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const block = { id: "transcription-stable", role: "table", text: "甲 𠮷 □ ▅▅\n乙 丙", modern: "", notes: ["原校记。"], terms: [] };
+  const render = (value, options = {}) => renderBookBlock(value, { hasModern: false, renderText: parts => parts.map(part => part.text), ...options });
+  const folded = node => Boolean(node.querySelector(".book-diagram-transcription"));
+  assert.equal(folded(render(block)), false);
+  assert.equal(folded(render(block, { hasFigure: true })), true);
+  assert.equal(folded(render({ ...block, presentation: "diagram" })), true);
+  for (const presentation of ["table", "diagram"]) {
+    const value = { ...block, presentation };
+    assert.equal(folded(render(value, { collapseTranscription: true })), true);
+    const visible = render(value, { hasFigure: true, collapseTranscription: false });
+    assert.equal(folded(visible), false);
+    assert.equal(tags(visible, "pre")[0].textContent, block.text);
+    assert.ok(visible.textContent.includes(block.notes[0]));
+  }
+  assert.equal(folded(render({ ...block, role: "text" }, { collapseTranscription: true })), false);
+  const diagram = render({ ...block, role: "diagram_caption", source_text: false }, { collapseTranscription: false });
+  assert.equal(folded(diagram), false);
+  const notice = diagram.querySelector(".book-transcription-notice");
+  assert.ok(notice.textContent.includes("位置与连接请以书影为准"));
+  assert.equal(notice.parentElement.tagName, "DIV");
+  assert.equal(diagram.querySelector(".book-original").querySelector("pre").textContent, block.text,
+    "the copyable source layer contains the exact transcription, without the notice");
+  assert.ok(diagram.querySelector(".book-notes").textContent.includes(block.notes[0]));
+  const grouped = render({ ...block, role: "diagram_caption", source_text: false },
+    { collapseTranscription: false, groupedTranscription: true });
+  assert.equal(grouped.querySelector(".book-transcription-notice"), null);
+  assert.equal(grouped.querySelector(".book-layer"), null);
+  assert.equal(grouped.querySelector("pre").textContent, block.text);
+  assert.ok(grouped.querySelector(".book-notes").textContent.includes(block.notes[0]));
+});
+
 // Actual 2026-10-22 Ziping reading segments, reduced to the fields used for
 // navigation. Source paragraph numbers and the fifteen boundaries are frozen
 // corpus data; no book text or temporary-file dependency is needed here.
@@ -722,4 +759,290 @@ test("the real library, reader and version catalog isolate a new layout from an 
     assert.equal(storage.get(oldKeys.progress), "29");
     assert.equal(storage.get(oldKeys.position), oldPosition);
   } finally { globalThis.fetch = previousFetch; }
+});
+
+test("the real reader interleaves covered figures without losing text, glossary, notes or existing numeric positions", async () => {
+  const storage = new Map();
+  globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
+  globalThis.Node = MockNode; globalThis.Element = MockNode;
+  globalThis.location = { hash: "#/books", search: "", origin: "https://example.test" };
+  globalThis.document = { ...environment(), addEventListener() {}, removeEventListener() {} };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
+  const { render: renderBooks } = await import("../web/public/next/views/books.js");
+  const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
+  const blocks = [
+    { id: "figure-heading", role: "heading", text: "圖表試讀", modern: "", notes: ["题名原样。"], terms: [] },
+    { id: "figure-prose", role: "text", text: "用神原字𠮷。\n□保留。", modern: "", notes: ["正文原校记。"],
+      terms: [{ layer: "original", start: 0, end: 2, sense_id: "supplied-sense" }] },
+    { id: "figure-table", role: "table", text: "甲 𠮷 □ ▅▅\n乙 丙", modern: "", notes: ["表格原校记。"], terms: [] },
+    { id: "figure-diagram", role: "text", presentation: "diagram", source_text: false, text: "上 ▅▅\n下 ▅ ▅", modern: "", notes: [], terms: [] },
+    { id: "uncovered-table", role: "table", text: "未配圖之表\n子 丑", modern: "", notes: [], terms: [] },
+    { id: "uncovered-diagram", role: "diagram_caption", text: "未配圖之標注 □", modern: "", notes: [], terms: [] },
+  ];
+  const image = (id, mapping = {}) => ({ id, url: `/figures/${id}.png`, caption: id, width: 800, height: 1000, ...mapping });
+  const fixtures = new Map(); let sequence = 0;
+  const previousFetch = globalThis.fetch;
+  const previousRect = MockNode.prototype.getBoundingClientRect;
+  // Physical positions follow DOM order; their saved identities deliberately do
+  // not. This exposes both restoring by NodeList index and saving that index.
+  MockNode.prototype.getBoundingClientRect = function () {
+    for (let parent = this.parentElement; parent; parent = parent.parentElement) {
+      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null)
+        return { top: 0, bottom: 0, height: 0, left: 0, width: 0 };
+    }
+    if (this.parentElement?.classList.contains("book-diagram-group")) {
+      const groupRect = this.parentElement.getBoundingClientRect();
+      const top = groupRect.top + this.parentElement.children.indexOf(this) * 100;
+      return { top, bottom: top + 100, height: 100, left: 0, width: 400 };
+    }
+    if (this.parentElement?.classList.contains("book-reading-content")) {
+      const top = 200 + this.parentElement.children.indexOf(this) * 100 - window.scrollY;
+      return { top, bottom: top + 100, height: 100, left: 0, width: 400 };
+    }
+    return previousRect.call(this);
+  };
+  globalThis.fetch = async path => {
+    const id = path.split("/")[3]; const fixture = fixtures.get(id);
+    const data = path.endsWith("/sections/1") ? fixture.section : { book: fixture.book,
+      contents: [{ number: 1, title: fixture.section.title, location: fixture.section.location, partial: false }] };
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  async function mount(figures, savedAnchor, { sectionBlocks = blocks, hasModern = false, title = blocks[0].text,
+    glossary = [{ id: "supplied-sense", term: "用神", definition: "服务端已提供释义。" }] } = {}) {
+    const id = `figure-layout-test-${++sequence}`;
+    const book = { id, title: "图表位置测试书", system: "liuyao", source_label: "测试底本", status: "reading_edition",
+      has_modern: hasModern, section_count: 1, default_section_number: 1, case_count: 0 };
+    const section = { book_id: id, number: 1, title, location: "测试来源", partial: false, notice: "",
+      page_notes: ["页注不计入旧数字锚。"], figures, blocks: sectionBlocks, glossary };
+    const before = structuredClone(section); fixtures.set(id, { book, section });
+    const keys = bookReadingKeys(book);
+    if (savedAnchor !== undefined) storage.set(keys.position, JSON.stringify({ number: 1, anchor: savedAnchor, offset: .25, updatedAt: 500 }));
+    const listeners = new Map(); const scrolls = [];
+    globalThis.document = { ...environment(), documentElement: new MockNode("html"), addEventListener() {}, removeEventListener() {} };
+    globalThis.window = { scrollY: 0,
+      addEventListener(name, fn) { if (!listeners.has(name)) listeners.set(name, new Set()); listeners.get(name).add(fn); },
+      removeEventListener(name, fn) { listeners.get(name)?.delete(fn); }, getSelection: () => null,
+      scrollTo(x, y) { scrolls.push([x, y]); this.scrollY = y; },
+      matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }) };
+    const cleanups = []; let current = true;
+    const ctx = { params: { id }, query: new URLSearchParams(), cleanup: fn => cleanups.push(fn), onRefresh() {},
+      isCurrent: () => current, setTitle() {}, navigate() {} };
+    const view = renderBooks(ctx); document.body.append(view.node);
+    for (const node of all(view.node)) node.offsetHeight = 0;
+    for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
+    const content = view.node.querySelector(".book-reading-content");
+    assert.deepEqual(section, before);
+    return { node: view.node, content, keys, scrolls, pagehide() { listeners.get("pagehide")?.forEach(fn => fn()); },
+      cleanup() { cleanups.forEach(fn => fn()); current = false; } };
+  }
+  const caption = figure => figure.querySelector("figcaption, .book-figure-caption");
+  const figureOrder = content => tags(content, "figure").map(node => caption(node).textContent);
+  const folded = (content, id) => Boolean(content.querySelector(`[data-block-id="${id}"]`).querySelector(".book-diagram-transcription"));
+  const insideClosedDetails = node => {
+    for (let parent = node.parentElement; parent; parent = parent.parentElement)
+      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null) return true;
+    return false;
+  };
+  try {
+    let view = await mount([image("multi", { block_indices: [2, 3] }), image("same-block", { block_indices: [2] }),
+      image("invalid", { block_indices: [0, 99] }), image("later", { block_indices: [3] })], 6);
+    assert.deepEqual(all(view.content).filter(node => node.tagName === "FIGURE" || node.dataset.blockId).map(node =>
+      node.dataset.blockId || caption(node).textContent), ["invalid", "figure-heading", "figure-prose", "multi", "same-block",
+      "figure-table", "later", "figure-diagram", "uncovered-table", "uncovered-diagram"]);
+    assert.deepEqual(figureOrder(view.content), ["invalid", "multi", "same-block", "later"]);
+    assert.deepEqual(view.content.querySelectorAll("[data-reading-anchor]").map(node => Number(node.dataset.readingAnchor)), [0, 3, 5, 6, 1, 2, 7, 4, 8, 9, 10]);
+    assert.deepEqual(view.scrolls, [[0, 541]], "old anchor 6 still restores the original prose block, not the sixth DOM node");
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 6, "capture stores the block's old identity after moving figures");
+    assert.equal(JSON.parse(storage.get(view.keys.position)).offset, .25);
+    const target = view.content.querySelector('[data-block-id="uncovered-table"]');
+    window.scrollY += target.getBoundingClientRect().top - 84;
+    view.pagehide();
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 9);
+    assert.equal(JSON.parse(storage.get(view.keys.position)).offset, 0);
+    for (const [index, block] of blocks.entries()) {
+      const rendered = view.content.querySelector(`[data-block-id="${block.id}"]`);
+      assert.equal(Number(rendered.dataset.readingAnchor), index + 5);
+      assert.equal(rendered.querySelector(".book-original").querySelector("p, h2, h3, pre").textContent, block.text);
+      for (const note of block.notes) assert.ok(rendered.querySelector(".book-notes").textContent.includes(note));
+    }
+    assert.equal(view.content.querySelector(".book-term").textContent, "用神");
+    assert.equal(view.content.querySelector(".book-term").dataset.senseId, "supplied-sense");
+    assert.equal(folded(view.content, "figure-table"), false);
+    assert.equal(folded(view.content, "figure-diagram"), false);
+    assert.equal(insideClosedDetails(view.content.querySelector('[data-block-id="figure-table"]').querySelector("pre")), false);
+    assert.equal(insideClosedDetails(view.content.querySelector(".book-transcription-notice")), true);
+    const figureNodes = tags(view.content, "figure");
+    assert.equal(figureNodes[0].querySelector(".book-figure-source"), null, "invalid mappings keep their previous figure behavior");
+    for (const figure of figureNodes.slice(1, 3)) {
+      const source = figure.querySelector(".book-figure-source");
+      assert.equal(source.tagName, "DETAILS");
+      assert.equal(source.children[0].tagName, "SUMMARY");
+      assert.equal(source.children[0].textContent, "查看书影");
+      assert.equal(source.getAttribute("open"), null);
+      assert.equal(insideClosedDetails(figure.querySelector("img")), true);
+      assert.equal(insideClosedDetails(caption(figure)), true);
+      assert.equal(figure.querySelector(".book-figure-open").listeners.get("click"), figure.querySelector(".book-figure-link").listeners.get("click"),
+        "both image controls retain the existing magnifier handler");
+      const anchor = figure.dataset.readingAnchor;
+      source.open = true;
+      source.listeners.get("toggle")();
+      assert.equal(insideClosedDetails(figure.querySelector("img")), false);
+      source.open = false;
+      source.listeners.get("toggle")();
+      assert.equal(figure.dataset.readingAnchor, anchor, "native disclosure does not replace the figure or its saved identity");
+    }
+    assert.equal(figureNodes[3].querySelector(".book-figure-source"), null);
+    assert.equal(figureNodes[3].classList.contains("book-figure-diagram"), true);
+    assert.equal(insideClosedDetails(figureNodes[3].querySelector("img")), false);
+    assert.equal(folded(view.content, "uncovered-table"), false);
+    assert.equal(folded(view.content, "uncovered-diagram"), false);
+    assert.equal(view.content.querySelector(".book-page-notes").dataset.readingAnchor, undefined);
+    const failedImage = tags(view.content, "img")[0];
+    failedImage.listeners.get("error")({ target: failedImage });
+    assert.equal(failedImage.hidden, true);
+    assert.equal(failedImage.parentElement.parentElement.querySelector(".books-notice").hidden, false);
+    view.cleanup();
+
+    view = await mount([image("omitted"), image("null", { block_indices: null })], 4);
+    assert.deepEqual(figureOrder(view.content), ["omitted", "null"]);
+    assert.equal(view.content.children.indexOf(tags(view.content, "figure")[1]) < view.content.children.indexOf(view.content.querySelector(".book-block")), true);
+    assert.deepEqual(view.content.querySelectorAll("[data-reading-anchor]").map(node => Number(node.dataset.readingAnchor)), [0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 4);
+    assert.equal(view.content.querySelector(".book-figure-source"), null, "legacy images remain expanded");
+    for (const id of ["figure-table", "figure-diagram", "uncovered-table", "uncovered-diagram"]) assert.equal(folded(view.content, id), true);
+    view.cleanup();
+
+    view = await mount([image("mapped-mixed", { block_indices: [2] }), image("legacy-mixed", { block_indices: null })]);
+    assert.deepEqual(figureOrder(view.content), ["legacy-mixed", "mapped-mixed"]);
+    assert.equal(folded(view.content, "figure-table"), false);
+    assert.equal(tags(view.content, "figure")[0].querySelector(".book-figure-source"), null);
+    assert.ok(tags(view.content, "figure")[1].querySelector(".book-figure-source"));
+    for (const id of ["figure-diagram", "uncovered-table", "uncovered-diagram"])
+      assert.equal(folded(view.content, id), false, "a legacy image must not widen explicit coverage in a mixed response");
+    view.cleanup();
+
+    view = await mount([image("invalid-mixed", { block_indices: [2, 99] }), image("legacy-with-invalid")]);
+    assert.deepEqual(figureOrder(view.content), ["invalid-mixed", "legacy-with-invalid"]);
+    for (const id of ["figure-table", "figure-diagram", "uncovered-table", "uncovered-diagram"])
+      assert.equal(folded(view.content, id), false, "an invalid explicit mapping still selects exact coverage without covering any block");
+    view.cleanup();
+
+    view = await mount([image("invalid-only", { block_indices: [2, 99] })]);
+    assert.deepEqual(figureOrder(view.content), ["invalid-only"]);
+    for (const id of ["figure-table", "figure-diagram", "uncovered-table", "uncovered-diagram"]) assert.equal(folded(view.content, id), false);
+    view.cleanup();
+
+    view = await mount([]);
+    assert.equal(folded(view.content, "figure-table"), false);
+    assert.equal(folded(view.content, "figure-diagram"), true);
+    view.cleanup();
+
+    // The reported page contains only these five electronic table rows. A tall
+    // mapped scan and its long caption must not hide the whole chapter's text.
+    const rows = ["甲乙東方木", "丙丁南方火", "戊己中央土", "庚辛西方金", "壬癸北方水"].map((text, index) => ({
+      id: `bszz-proposal-v01-p0018-b002--paragraph-map-${String(index + 2).padStart(4, "0")}`,
+      role: "table", presentation: "table", text, modern: text, notes: [], terms: [],
+    }));
+    view = await mount([image("full-spread", { height: 2400, block_indices: [0, 1, 2, 3, 4], caption: "整张扫描书影供核对。".repeat(30) })], undefined,
+      { sectionBlocks: rows, hasModern: true, title: "十天干所屬" });
+    const scan = view.content.querySelector("figure");
+    const source = scan.querySelector("details");
+    const imageNode = scan.querySelector("img");
+    for (const mode of ["original", "parallel", "modern"]) {
+      view.node.querySelector(`[data-book-mode="${mode}"]`).listeners.get("click")();
+      assert.equal(view.content.dataset.mode, mode);
+      assert.equal(insideClosedDetails(imageNode), true);
+      assert.equal(insideClosedDetails(caption(scan)), true);
+      for (const block of rows) {
+        const rendered = view.content.querySelector(`[data-block-id="${block.id}"]`);
+        assert.equal(folded(view.content, block.id), false);
+        assert.equal(rendered.querySelector(`.book-${mode === "modern" ? "modern" : "original"}`).querySelector("pre").textContent, block.text);
+      }
+    }
+    source.open = true;
+    source.listeners.get("toggle")();
+    assert.equal(insideClosedDetails(imageNode), false);
+    imageNode.listeners.get("error")({ target: imageNode });
+    assert.equal(scan.querySelector(".books-notice").hidden, false);
+    for (const row of rows) assert.equal(folded(view.content, row.id), false, "image failure cannot fold or remove the electronic rows");
+    view.cleanup();
+
+    // Page 7's diagram has 32 short labels. They must not become 32 large
+    // cards with repeated warnings ahead of the actual diagram.
+    const labels = ["中", "央", "戊", "己", "南", "午火離", "丙", "丁", "坤", "未", "申", "西", "酉金兌", "庚", "辛", "乾", "戌", "亥",
+      "北", "子水坎", "壬", "癸", "艮", "丑", "寅", "東", "卯木震", "甲", "乙", "巽", "辰", "巳"].map((text, index) => ({
+      id: `bszz-proposal-v01-p0018-b021--paragraph-map-${String(index + 2).padStart(4, "0")}`,
+      role: "diagram_caption", presentation: "diagram", source_text: false, text, modern: "", notes: index === 0 ? ["图中文字原样保留。"] : [],
+      terms: index === 19 ? [{ layer: "original", start: 0, end: 3, sense_id: "diagram-test-sense" }] : [],
+    }));
+    const diagramOptions = { sectionBlocks: labels, hasModern: true, title: "天干地支八卦方位圖",
+      glossary: [{ id: "diagram-test-sense", term: "子水坎", definition: "测试数据中的图内标注。" }] };
+    const diagramFigure = image("direction-diagram", { block_indices: labels.map((_, index) => index) });
+    view = await mount([diagramFigure], undefined, diagramOptions);
+    const diagramScan = view.content.querySelector("figure");
+    const group = view.content.querySelector(".book-diagram-group");
+    assert.equal(diagramScan.classList.contains("book-figure-diagram"), true);
+    assert.equal(diagramScan.querySelector(".book-figure-source"), null);
+    assert.equal(insideClosedDetails(diagramScan.querySelector("img")), false);
+    assert.equal(diagramScan.querySelector(".book-figure-open").listeners.get("click"), diagramScan.querySelector(".book-figure-link").listeners.get("click"));
+    assert.equal(group.children[0].textContent, "图式标注与转写");
+    assert.equal(group.open, false);
+    assert.equal(group.querySelectorAll(".book-block").length, 32);
+    assert.equal(view.content.querySelectorAll(".book-diagram-group").length, 1);
+    assert.equal(view.content.querySelectorAll(".book-transcription-notice").length, 1);
+    assert.equal(group.querySelector(".book-layer"), null, "single glyphs do not repeat generated layer labels");
+    assert.equal(group.querySelector(".book-modern-empty"), null, "single glyphs do not repeat missing-modern notices");
+    for (const [index, block] of labels.entries()) {
+      const rendered = group.querySelector(`[data-block-id="${block.id}"]`);
+      assert.equal(rendered.querySelector("pre").textContent, block.text);
+      assert.equal(Number(rendered.dataset.readingAnchor), index + 2);
+      assert.equal(insideClosedDetails(rendered), true);
+      assert.equal(all(view.content).filter(node => node.dataset.blockId === block.id).length, 1);
+      for (const note of block.notes) assert.ok(rendered.querySelector(".book-notes").textContent.includes(note));
+    }
+    assert.equal(group.querySelector(".book-term").textContent, "子水坎");
+    assert.equal(group.querySelector(".book-term").dataset.senseId, "diagram-test-sense");
+    for (const mode of ["original", "parallel", "modern"]) {
+      view.node.querySelector(`[data-book-mode="${mode}"]`).listeners.get("click")();
+      assert.equal(view.content.dataset.mode, mode);
+      assert.equal(group.open, false);
+      assert.equal(insideClosedDetails(diagramScan.querySelector("img")), false);
+    }
+    window.scrollY = 10000; view.pagehide();
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 1, "hidden transcription anchors cannot replace the visible diagram position");
+    group.open = true; group.listeners.get("toggle")();
+    assert.equal(insideClosedDetails(group.querySelector(".book-block")), false);
+    group.open = false; group.listeners.get("toggle")();
+    assert.equal(group.querySelectorAll(".book-block").length, 32, "toggling retains every original block node");
+    view.cleanup();
+
+    view = await mount([diagramFigure], 21, diagramOptions);
+    const restoredGroup = view.content.querySelector(".book-diagram-group");
+    assert.equal(restoredGroup.open, true, "saved position inside a closed group opens its group before measuring");
+    assert.deepEqual(view.scrolls, [[0, 2541]]);
+    assert.equal(JSON.parse(storage.get(view.keys.position)).anchor, 21);
+    assert.equal(JSON.parse(storage.get(view.keys.position)).offset, .25);
+    assert.equal(all(restoredGroup).find(node => Number(node.dataset.readingAnchor) === 21).querySelector("pre").textContent, "子水坎");
+    view.cleanup();
+
+    // A gap or later figure stays in its own DOM position, outside a closed
+    // group. Caption roles without API diagram flags do not change behavior.
+    view = await mount([image("separated", { block_indices: [0, 2] }), image("next-diagram", { block_indices: [3] }),
+      image("role-only", { block_indices: [5] })]);
+    assert.deepEqual(view.content.querySelectorAll(".book-diagram-group").map(item => item.querySelectorAll(".book-block").map(block => block.dataset.blockId)),
+      [["figure-diagram"]]);
+    assert.ok(tags(view.content, "figure")[2].querySelector(".book-figure-source"), "role alone cannot promote an explicit mapping to a primary diagram");
+    view.cleanup();
+
+    view = await mount([image("disjoint-diagram", { block_indices: [0, 2, 3] }), image("later-diagram", { block_indices: [3] })], undefined,
+      { ...diagramOptions, sectionBlocks: labels.slice(0, 4) });
+    assert.deepEqual(view.content.querySelectorAll(".book-diagram-group").map(item => item.querySelectorAll(".book-block").map(block => block.dataset.blockId)),
+      [[labels[0].id], [labels[2].id], [labels[3].id]]);
+    for (const figure of tags(view.content, "figure")) assert.equal(insideClosedDetails(figure.querySelector("img")), false);
+    assert.equal(insideClosedDetails(view.content.querySelector(`[data-block-id="${labels[1].id}"]`)), false, "a non-covered label is not swept into the neighboring range");
+    view.cleanup();
+  } finally { globalThis.fetch = previousFetch; MockNode.prototype.getBoundingClientRect = previousRect; }
 });

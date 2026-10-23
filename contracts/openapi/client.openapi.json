@@ -2432,6 +2432,22 @@
       "ClientBookFigure": {
         "additionalProperties": false,
         "properties": {
+          "block_indices": {
+            "anyOf": [
+              {
+                "items": {
+                  "minimum": 0.0,
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "服务器核定的本图所覆盖原文转写块序号，从0计数，非空、唯一且按正文原序排列；在首项对应块前展示本图一次，覆盖块的转写折叠对照。未提供时省略并沿用章级书影位置；客户端不推断来源或覆盖范围。",
+            "title": "Block Indices"
+          },
           "caption": {
             "title": "Caption",
             "type": "string"

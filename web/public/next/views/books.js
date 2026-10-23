@@ -1,21 +1,21 @@
-import { h, fill } from "../lib/dom.js?v=n39";
-import { icon } from "../lib/icons.js?v=n39";
-import { get } from "../lib/api.js?v=n39";
-import { local, session } from "../lib/store.js?v=n39";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n39";
+import { h, fill } from "../lib/dom.js?v=n40";
+import { icon } from "../lib/icons.js?v=n40";
+import { get } from "../lib/api.js?v=n40";
+import { local, session } from "../lib/store.js?v=n40";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n40";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
-  bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle,
+  bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, bookFigureLayout,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n39";
-import { errorView, stateView } from "../ui/bits.js?v=n39";
-import { openBookImage } from "../ui/book-image.js?v=n39";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n39";
-import { openSheet } from "../ui/overlay.js?v=n39";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n39";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n39";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n39";
-import { bookCasesEntry } from "../lib/book-cases.js?v=n39";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n40";
+import { errorView, stateView } from "../ui/bits.js?v=n40";
+import { openBookImage } from "../ui/book-image.js?v=n40";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n40";
+import { openSheet } from "../ui/overlay.js?v=n40";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n40";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n40";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n40";
+import { bookCasesEntry } from "../lib/book-cases.js?v=n40";
 
 const textProgressKey = (id, version) => `xz-book-text-progress:${id}:${version}`;
 const textRecentKey = id => `xz-book-text-recent:${id}`;
@@ -42,7 +42,7 @@ function lifecycle(ctx, paint, request) {
 
 // Keep both language headings inside the content-bound block, so each reading
 // mode has its own accessible title without removing a block or annotation ID.
-export function renderBookBlock(block, { hasModern, hasFigure, openingTitle = false, renderText }) {
+export function renderBookBlock(block, { hasModern, hasFigure, collapseTranscription, groupedTranscription = false, openingTitle = false, renderText }) {
   const diagram = block.presentation === "diagram" || block.role === "diagram_caption" || block.source_text === false;
   const table = block.presentation === "table" || block.role === "table";
   const transcribed = diagram || table;
@@ -53,7 +53,7 @@ export function renderBookBlock(block, { hasModern, hasFigure, openingTitle = fa
   const note = ["note", "original_note"].includes(block.role);
   const originalLabel = hasModern && !note && block.role !== "commentary" && !transcribed && !block.attribution;
   const label = block.attribution || (note ? "原注" : block.role === "commentary" ? "评注"
-    : transcribed ? block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写" : hasModern ? "原文" : "");
+    : transcribed ? groupedTranscription ? "" : block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写" : hasModern ? "原文" : "");
   const heading = block.role === "heading" ? openingTitle ? "h2" : "h3" : "p";
   const original = h("div", { class: "book-original", lang: "zh-Hant" },
     label ? h("span", { class: originalLabel ? "book-layer book-original-label" : block.attribution ? "book-layer book-attribution" : "book-layer" }, label) : null,
@@ -62,13 +62,14 @@ export function renderBookBlock(block, { hasModern, hasFigure, openingTitle = fa
       renderText(sourceBreaks(block), block.terms, "original")));
   const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
     block.notes.map(note => h("p", null, note))) : null;
-  const layer = transcribed && (hasFigure || diagram)
+  const transcriptionNotice = block.source_text === false && !groupedTranscription
+    ? h("p", { class: "books-notice book-transcription-notice" }, "此处是图形结构的文字转写，位置与连接请以书影为准。") : null;
+  const layer = transcribed && (collapseTranscription ?? (hasFigure || diagram))
     ? h("details", { class: "book-diagram-transcription" }, h("summary", null, diagram ? "展开图式标注与转写" : "展开表格转写"),
-      block.source_text === false ? h("p", { class: "books-notice" }, "此处是图形结构的文字转写，位置与连接请以书影为准。") : null,
-      original, notes)
-    : h("div", null, original, notes);
-  return h("section", { class: `book-block book-role-${block.role}${sharedTable ? " book-shared-table" : ""}`, dataset: { blockId: block.id } }, layer,
-    block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, h("span", { class: "book-layer" }, "白话"),
+      transcriptionNotice, original, notes)
+    : h("div", null, transcriptionNotice, original, notes);
+  return h("section", { class: `book-block book-role-${block.role}${sharedTable ? " book-shared-table" : ""}${groupedTranscription ? " book-grouped-transcription" : ""}`, dataset: { blockId: block.id } }, layer,
+    block.modern ? h("div", { class: "book-modern", lang: "zh-Hans" }, groupedTranscription ? null : h("span", { class: "book-layer" }, "白话"),
       h(literalModernTable ? "pre" : heading, literalModernTable
         ? { class: "book-transcription", tabindex: "0", "aria-label": "白话表格，可横向滚动" } : null,
         renderText([{ text: block.modern, kind: null }], block.terms, "modern"))) : null);
@@ -292,12 +293,14 @@ function reader(ctx) {
   }
   function capturePosition() {
     if (!book || !activeSection) return null;
-    const anchors = [...content.querySelectorAll("[data-reading-anchor]")];
+    const anchors = [...content.querySelectorAll("[data-reading-anchor]")].filter(anchor => anchor.getBoundingClientRect().height > 0);
     const top = readingTop();
     let index = anchors.findIndex(anchor => anchor.getBoundingClientRect().bottom > top);
     if (index < 0) index = Math.max(0, anchors.length - 1);
-    const rect = anchors[index]?.getBoundingClientRect();
-    return { number: activeSection.number, anchor: index,
+    const anchor = anchors[index];
+    if (!anchor) return null;
+    const rect = anchor.getBoundingClientRect();
+    return { number: activeSection.number, anchor: Number(anchor.dataset.readingAnchor),
       offset: rect ? Math.max(0, Math.min(1, (top - rect.top) / Math.max(1, rect.height))) : 0, updatedAt: Date.now() };
   }
   function savePosition() {
@@ -306,9 +309,12 @@ function reader(ctx) {
     if (position) local.setJson(bookReadingKeys(book).position, position);
   }
   function restorePosition(position) {
-    const anchors = content.querySelectorAll("[data-reading-anchor]");
-    const anchor = anchors[position?.anchor];
+    const anchor = [...content.querySelectorAll("[data-reading-anchor]")]
+      .find(node => Number(node.dataset.readingAnchor) === position?.anchor);
     if (!anchor) return;
+    for (let parent = anchor.parentElement; parent && parent !== content; parent = parent.parentElement) {
+      if (parent.classList.contains("book-diagram-group")) parent.open = true;
+    }
     const rect = anchor.getBoundingClientRect();
     window.scrollTo(0, window.scrollY + rect.top + rect.height * position.offset - readingTop());
   }
@@ -353,16 +359,24 @@ function reader(ctx) {
   window.addEventListener("pagehide", savePosition);
   ctx.cleanup(() => { savePosition(); clearTimeout(saveTimer); window.removeEventListener("scroll", trackScroll); window.removeEventListener("pagehide", savePosition); });
 
-  function renderFigure(figure) {
-    const warning = h("p", { class: "books-notice", hidden: true }, "书影未能加载，可展开下方转写查看，或刷新重试。");
+  function onDisclosureLayout() {
+    requestAnimationFrame(() => { if (ctx.isCurrent()) { annotations.onLayout(); glossary.onLayout(); } });
+  }
+  function renderFigure(figure, collapsed = false, primaryDiagram = false) {
+    const warning = h("p", { class: "books-notice", hidden: true }, collapsed
+      ? "书影未能加载，可阅读下方转写，或刷新重试。" : "书影未能加载，可展开下方转写查看，或刷新重试。");
     const image = h("img", { src: figure.url, alt: `${book.title} · ${activeSection.location} · 图式书影`,
       width: figure.width, height: figure.height, loading: "lazy", decoding: "async",
       onError: event => { event.target.hidden = true; warning.hidden = false; } });
     const show = event => openBookImage(figure, `${book.title} · ${activeSection.location}`, event.currentTarget);
-    return h("figure", { class: "book-figure" },
+    const contents = [
       h("button", { type: "button", class: "book-figure-open", onClick: show, "aria-label": "放大图式书影" }, image),
-      warning, h("figcaption", null, figure.caption),
-      h("button", { type: "button", class: "book-figure-link btn btn-soft", onClick: show }, "放大查看"));
+      warning, h(collapsed ? "p" : "figcaption", { class: collapsed ? "book-figure-caption" : null }, figure.caption),
+      h("button", { type: "button", class: "book-figure-link btn btn-soft", onClick: show }, "放大查看")];
+    return h("figure", { class: `book-figure${collapsed ? " book-figure-collapsible" : ""}${primaryDiagram ? " book-figure-diagram" : ""}` }, collapsed
+      ? h("details", { class: "book-figure-source", onToggle: onDisclosureLayout },
+        h("summary", null, "查看书影"), h("div", { class: "book-figure-content" }, contents))
+      : contents);
   }
 
   function paintSection() {
@@ -370,8 +384,42 @@ function reader(ctx) {
     const section = activeSection;
     glossary.onSection(section);
     const figures = section.figures || [];
-    content.dataset.mode = book.has_modern ? mode : "original";
-    fill(content,
+    const layout = bookFigureLayout({ figures, blocks: section.blocks });
+    const mappedFigureIndices = new Set(layout.figuresBeforeBlocks.flat());
+    // Only an explicit, valid mapping can make the scan the primary diagram.
+    // A caption role alone does not establish that its text is graphical.
+    const diagramFigureIndices = new Set([...mappedFigureIndices].filter(index => figures[index].block_indices.every(blockIndex => {
+      const block = section.blocks[blockIndex];
+      return block.presentation === "diagram" || block.source_text === false;
+    })));
+    const diagramBlockIndices = new Set([...diagramFigureIndices].flatMap(index => figures[index].block_indices));
+    const figureNodes = figures.map((figure, index) => renderFigure(figure,
+      mappedFigureIndices.has(index) && !diagramFigureIndices.has(index), diagramFigureIndices.has(index)));
+    const blockNodes = section.blocks.map((block, index) => renderBookBlock(block, {
+      hasModern: book.has_modern, hasFigure: layout.hasLegacyFigures || layout.coveredBlockIndices.has(index),
+      collapseTranscription: layout.hasExplicitMappings ? false : undefined,
+      groupedTranscription: diagramBlockIndices.has(index),
+      openingTitle: index === 0 && hasOpeningSectionTitle(section), renderText: glossary.renderText }));
+    const bodyNodes = [];
+    let transcriptionGroup = null;
+    blockNodes.forEach((block, index) => {
+      const before = layout.figuresBeforeBlocks[index];
+      // Never move a later figure into a closed transcription group. Gaps in
+      // the explicit mapping likewise start a separate continuous range.
+      if (before.length || !diagramBlockIndices.has(index)) transcriptionGroup = null;
+      bodyNodes.push(...before.map(figureIndex => figureNodes[figureIndex]));
+      if (!diagramBlockIndices.has(index)) { bodyNodes.push(block); return; }
+      if (!transcriptionGroup) {
+        transcriptionGroup = h("details", { class: "book-diagram-transcription book-diagram-group", onToggle: onDisclosureLayout },
+          h("summary", null, "图式标注与转写"), h("p", { class: "books-notice book-transcription-notice" },
+            "此处是图形结构的文字转写，位置与连接请以书影为准。"));
+        bodyNodes.push(transcriptionGroup);
+      }
+      transcriptionGroup.append(block);
+    });
+    const empty = blockNodes.length ? null : h("p", null, figures.length
+      ? "本页为书影内容，未录连续正文。" : "保留此页的来源位置，页面情况见上方说明。");
+    const headingNodes = [
       renderBookSectionHeader(section, { hasModern: book.has_modern }),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
@@ -381,16 +429,17 @@ function reader(ctx) {
       section.page_notes?.length ? h("details", { class: "book-notes book-page-notes" },
         h("summary", null, `本页说明 · ${section.page_notes.length}`),
         section.page_notes.map(note => h("p", null, note))) : null,
-      figures.map(renderFigure),
-      section.blocks.length ? section.blocks.map((block, index) => renderBookBlock(block, {
-        hasModern: book.has_modern, hasFigure: figures.length > 0,
-        openingTitle: index === 0 && hasOpeningSectionTitle(section), renderText: glossary.renderText }))
-        : h("p", null, figures.length ? "本页为书影内容，未录连续正文。" : "保留此页的来源位置，页面情况见上方说明。"));
-    // Page notes were added after saved reading positions; keep existing content indices stable.
-    [...content.children].filter(child => !child.classList.contains("book-page-notes"))
+    ];
+    content.dataset.mode = book.has_modern ? mode : "original";
+    fill(content, headingNodes,
+      layout.leadingFigureIndices.map(index => figureNodes[index]),
+      bodyNodes, empty);
+    // Preserve the old header/figure/block anchor identities even when a mapped
+    // figure moves in the DOM. Page notes never belonged to saved positions.
+    [...headingNodes.filter(child => child && !child.classList.contains("book-page-notes")), ...figureNodes, ...blockNodes, empty].filter(Boolean)
       .forEach((child, index) => child.dataset.readingAnchor = index);
     for (const block of content.querySelectorAll(".book-block")) {
-      if (book.has_modern && !block.querySelector(".book-modern")) {
+      if (book.has_modern && !block.classList.contains("book-grouped-transcription") && !block.querySelector(".book-modern")) {
         block.append(h("span", { class: "book-modern-empty" }, "本段暂无白话，保留原文供阅读。"));
       }
     }
