@@ -1,17 +1,17 @@
 // 讲解页 #/learn/:system：一页讲清这张盘（或随机练习盘）怎么看。
 // 讲解正文、盘面、小结和自查题都由后端 /api/chart/guide 给出，这里只负责排版和答题。
 // 宽屏左盘右文、盘面跟着滚动固定在左边；窄屏顶部固定一条看盘条，点开看完整盘面。
-import { h, fill } from "../lib/dom.js?v=n37";
-import { icon } from "../lib/icons.js?v=n37";
-import { post } from "../lib/api.js?v=n37";
-import { local } from "../lib/store.js?v=n37";
-import { readingPath } from "../lib/books.js?v=n37";
-import { loadLearnInput, sampleLearnInput } from "../lib/learn.js?v=n37";
-import { humanizeError } from "../lib/interpret.js?v=n37";
-import { stateView, spinnerLine } from "../ui/bits.js?v=n37";
-import { openSheet } from "../ui/overlay.js?v=n37";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n37";
-import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n37";
+import { h, fill } from "../lib/dom.js?v=n39";
+import { icon } from "../lib/icons.js?v=n39";
+import { post } from "../lib/api.js?v=n39";
+import { local } from "../lib/store.js?v=n39";
+import { readingPath } from "../lib/books.js?v=n39";
+import { loadLearnInput, sampleLearnInput } from "../lib/learn.js?v=n39";
+import { humanizeError } from "../lib/interpret.js?v=n39";
+import { stateView, spinnerLine } from "../ui/bits.js?v=n39";
+import { openSheet } from "../ui/overlay.js?v=n39";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n39";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n39";
 
 const sampleKey = system => `xz-learn-sample:${system}`;
 const guideCache = new Map();
@@ -106,7 +106,7 @@ export function render(ctx) {
             h("span", null, `${ref.book_title} · ${ref.section_title}`)))))));
     }
     const next = h("nav", { class: "learn-pager", "aria-label": "下一步" },
-      h("span"),
+      h("a", { class: "btn btn-ghost", href: `#/book-cases?system=${system}` }, gua ? "看看古书里的卦例" : "看看古书里的命例"),
       h("a", { class: "btn btn-primary", href: `#/ask/${system}` }, "带着问题去问", icon("arrowRight", "icon-sm")));
     return [head, h("div", { class: "learn-layout" }, side, h("div", { class: "learn-main" }, strip, body, recap, ...tail, next))];
   }

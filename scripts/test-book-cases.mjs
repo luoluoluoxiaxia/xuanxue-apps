@@ -2,26 +2,41 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
-  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel } from "../web/public/next/lib/book-cases.js";
+  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel } from "../web/public/next/lib/book-cases.js";
 
 test("case queries preserve book, paging and learning context while API calls use only public parameters", () => {
   const filter = readBookCaseQuery(new URLSearchParams("book_id=ziping-zhenquan&offset=24&limit=12&from=learning"));
-  assert.deepEqual(filter, { book_id: "ziping-zhenquan", kind: "", offset: 24, limit: 12, from: "learning" });
+  assert.deepEqual(filter, { book_id: "ziping-zhenquan", kind: "", system: "", offset: 24, limit: 12, from: "learning" });
   assert.equal(bookCaseListPath(filter), "/book-cases?book_id=ziping-zhenquan&offset=24&limit=12&from=learning");
   assert.equal(bookCaseListPath(filter, { book_id: "ditian-sui", offset: 0 }), "/book-cases?book_id=ditian-sui&limit=12&from=learning");
   assert.equal(bookCaseDetailPath("display-example", filter), "/book-cases/display-example?book_id=ziping-zhenquan&offset=24&limit=12&from=learning");
   assert.equal(bookCaseApiPath(filter), "/api/book-cases?book_id=ziping-zhenquan&offset=24&limit=12");
   assert.deepEqual(readBookCaseQuery(new URLSearchParams("book_id=../private&offset=-1&limit=999&from=other")),
-    { book_id: "", kind: "", offset: 0, limit: 24, from: "" });
+    { book_id: "", kind: "", system: "", offset: 0, limit: 24, from: "" });
   assert.equal(bookCaseApiPath({}), "/api/book-cases?offset=0&limit=24");
   const contract = JSON.parse(readFileSync(new URL("../contracts/openapi/client.openapi.json", import.meta.url), "utf8"));
-  assert.deepEqual(contract.paths["/api/book-cases"].get.parameters.map(item => item.name), ["book_id", "kind", "offset", "limit"]);
+  assert.deepEqual(contract.paths["/api/book-cases"].get.parameters.map(item => item.name), ["book_id", "kind", "system", "offset", "limit"]);
   assert.ok(contract.paths["/api/book-cases/{case_id}"].get);
   assert.ok(contract.paths["/api/book-cases/{case_id}/chart"].get);
   const detail = contract.components.schemas.ClientBookCaseDetail.properties;
   assert.deepEqual(detail.study_format.enum, ["case", "source_mention"]);
   assert.deepEqual(detail.chart_status.enum, ["available", "incomplete", "not_applicable"]);
   assert.equal(detail.related_case_ids.items.type, "string");
+});
+
+test("system filters preserve book, kind and reading context across paging, detail and return", () => {
+  const filter = readBookCaseQuery(new URLSearchParams("book_id=huozhulin&kind=hypothetical&system=liuyao&offset=24&limit=12&from=learning"));
+  assert.equal(filter.system, "liuyao");
+  assert.equal(bookCaseApiPath(filter), "/api/book-cases?book_id=huozhulin&kind=hypothetical&system=liuyao&offset=24&limit=12");
+  assert.equal(bookCaseDetailPath("source-example", filter), "/book-cases/source-example?book_id=huozhulin&kind=hypothetical&system=liuyao&offset=24&limit=12&from=learning");
+  assert.equal(bookCaseListPath(filter, { offset: 36 }), "/book-cases?book_id=huozhulin&kind=hypothetical&system=liuyao&offset=36&limit=12&from=learning");
+  assert.equal(bookCaseSystemLabel("bazi"), "八字");
+  assert.equal(bookCaseSystemLabel("liuyao"), "六爻");
+  for (const system of ["__proto__", "constructor", "general", "all", "../private"]) {
+    assert.equal(readBookCaseQuery(new URLSearchParams({ system })).system, "");
+    assert.equal(bookCaseApiPath({ system }), "/api/book-cases?offset=0&limit=24");
+    assert.equal(bookCaseSystemLabel(system), "");
+  }
 });
 
 test("kind filters retain the source category through paging, detail and return while ignoring invalid values", () => {
@@ -154,6 +169,51 @@ test("reader directories keep case access beside existing links without adding a
   assert.equal(byText(document.body, "a", "本书案例"), undefined);
   noCase.close("route");
 });
+
+test("desktop and mobile directories hide only the exact source-location placeholder and preserve real locations", async () => {
+  environment();
+  globalThis.cancelAnimationFrame = () => {};
+  const schedule = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = () => 0;
+  try {
+    const { createBookSidebar, openBookContents, openElectronicBookContents } = await import("../web/public/next/ui/book-tools.js");
+    const contents = [
+      { number: 1, title: "首章", location: "原书章节" },
+      { number: 2, title: "次章", location: "影像文件 1 · 来源页 9" },
+      { number: 3, title: "第三章", location: "卷三 · 第 20 页" },
+      { number: 4, title: "附注章", location: "原书章节 附注" },
+      { number: 5, title: "同名位置", location: "同名位置" },
+    ];
+    const before = structuredClone(contents), selected = [];
+    const options = { book: { id: "directory-locations", title: "目录测试书", section_count: contents.length, has_modern: true },
+      contents, current: 1, onSelect: value => selected.push(value), onCollapse() {} };
+    const expected = [[], [contents[1].location], [contents[2].location], [contents[3].location], []];
+    const checkRows = root => {
+      const rows = root.querySelectorAll(".book-contents-item");
+      assert.deepEqual(rows.map(row => tags(row, "b")[0].textContent), contents.map(item => item.title));
+      assert.deepEqual(rows.map(row => tags(row.childNodes[1], "small").map(node => node.textContent)), expected);
+      assert.equal(rows[0].getAttribute("aria-current"), "page");
+      return rows;
+    };
+    const sidebar = createBookSidebar(options);
+    checkRows(sidebar.node)[1].emit("click");
+    assert.deepEqual(selected, [2]); sidebar.destroy();
+    const mobile = openBookContents(options);
+    checkRows(mobile.body)[2].emit("click");
+    assert.deepEqual(selected, [2, 3]);
+
+    const sections = contents.map(item => ({ id: `chapter-${item.number}`, kind: "body", title: item.title, source_location: item.location }));
+    const sourceBefore = structuredClone(sections);
+    const electronic = openElectronicBookContents({ bookTitle: options.book.title, sections, current: sections[0].id,
+      onSelect: value => selected.push(value) });
+    const electronicRows = electronic.body.querySelectorAll(".book-contents-item");
+    assert.deepEqual(electronicRows.map(row => tags(row.childNodes[0], "small").map(node => node.textContent)), expected);
+    assert.equal(electronicRows[0].getAttribute("aria-current"), "page");
+    electronicRows[3].emit("click"); assert.equal(selected.at(-1), sections[3].id);
+    assert.deepEqual(contents, before); assert.deepEqual(sections, sourceBefore);
+  } finally { globalThis.requestAnimationFrame = schedule; }
+});
+
 const book = { id: "ziping-zhenquan", title: "子平真诠", case_count: 1 };
 // Synthetic display data, not a transcription of a historical person's chart.
 const summary = { id: "display-example", book_id: book.id, book_title: book.title, title: "展示测试案例", kind: "named_case", summary: "原书分析与四柱。" };
@@ -242,6 +302,58 @@ test("single-page intake shows one count without a repeated heading, introductio
   env.cleanup();
 });
 
+test("compact system links retain all other filters and only known available charts advertise a chart", async () => {
+  const env = environment("book_id=ziping-zhenquan&kind=hypothetical&system=bazi&offset=24&limit=2&from=learning");
+  const rows = [
+    { ...summary, id: "bazi-chart", system: "bazi", chart_status: "available" },
+    { ...summary, id: "liuyao-chart", system: "liuyao", chart_status: "available" },
+    { ...summary, id: "unavailable-chart", system: "bazi", chart_status: "incomplete" },
+    { ...summary, id: "rule", system: "liuyao", kind: "rule_example", chart_status: "not_applicable" },
+    { ...summary, id: "legacy" },
+    { ...summary, id: "unknown-system", system: "other", chart_status: "available" },
+  ];
+  const paths = [];
+  const result = render(env.ctx, async path => {
+    paths.push(path);
+    return path === "/api/books" ? { books: [book] } : { items: rows, total: 40, offset: 24, limit: 2 };
+  }); await tick();
+  assert.equal(paths[0], "/api/book-cases?book_id=ziping-zhenquan&kind=hypothetical&system=bazi&offset=24&limit=2");
+  const systems = result.node.querySelector(".book-cases-systems");
+  assert.equal(systems.getAttribute("aria-label"), "案例体系");
+  assert.deepEqual(tags(systems, "a").map(node => node.textContent), ["全部", "八字", "六爻"]);
+  assert.equal(byText(systems, "a", "八字").getAttribute("aria-current"), "page");
+  assert.equal(byText(systems, "a", "六爻").getAttribute("aria-current"), null);
+  assert.equal(byText(systems, "a", "六爻").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&kind=hypothetical&system=liuyao&limit=2&from=learning");
+  assert.equal(byText(systems, "a", "全部").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&kind=hypothetical&limit=2&from=learning");
+  const cards = result.node.querySelectorAll(".book-case-card");
+  assert.match(cards[0].querySelector(".book-case-meta").textContent, /子平真诠.*八字.*具名案例/);
+  assert.match(cards[1].querySelector(".book-case-meta").textContent, /六爻/);
+  assert.deepEqual(cards.map(node => node.querySelector(".book-case-open").textContent),
+    ["看命盘研读", "看卦盘研读", "开始研读", "开始研读", "开始研读", "开始研读"]);
+  assert.equal(cards[4].querySelector(".book-case-meta").textContent, "《子平真诠》 · 具名案例");
+  assert.equal(cards[0].querySelector(".book-case-open").getAttribute("href"), "#/book-cases/bazi-chart?book_id=ziping-zhenquan&kind=hypothetical&system=bazi&offset=24&limit=2&from=learning");
+  assert.equal(cards[0].querySelector(".book-case-open").getAttribute("aria-label"), `看命盘研读：${summary.title}`);
+  assert.equal(cards[4].querySelector(".book-case-open").getAttribute("aria-label"), `开始研读：${summary.title}`);
+  assert.equal(byText(result.node, "a", "下一页").getAttribute("href"), "#/book-cases?book_id=ziping-zhenquan&kind=hypothetical&system=bazi&offset=26&limit=2&from=learning");
+  const [bookSelect, kindSelect] = tags(result.node, "select");
+  bookSelect.value = "huozhulin"; bookSelect.emit("change");
+  kindSelect.value = "rule_example"; kindSelect.emit("change");
+  assert.deepEqual(env.navigated, [
+    "/book-cases?book_id=huozhulin&kind=hypothetical&system=bazi&limit=2&from=learning",
+    "/book-cases?book_id=ziping-zhenquan&kind=rule_example&system=bazi&limit=2&from=learning",
+  ]);
+  env.cleanup();
+});
+
+test("an empty system scope offers a complete filter reset with its learning return context", async () => {
+  const env = environment("system=liuyao&from=learning");
+  const result = render(env.ctx, async path => path === "/api/books" ? { books: [book] }
+    : { items: [], total: 0, offset: 0, limit: 24 }); await tick();
+  assert.match(result.node.textContent, /暂未收录六爻学习条目/);
+  assert.equal(byText(result.node, "a", "查看全部条目").getAttribute("href"), "#/book-cases?from=learning");
+  env.cleanup();
+});
+
 test("source mention lists count learning entries and let book or kind change without losing the other filter", async () => {
   const env = environment("book_id=ziping-zhenquan&kind=hypothetical&offset=24&from=learning");
   const paths = [];
@@ -313,7 +425,7 @@ test("recorded results remain server text and missing neighboring context is omi
   env.cleanup();
 });
 
-test("an incomplete source mention puts the exact full-paragraph modern text first and folds all source quotes without a chart call", async () => {
+test("a source mention keeps modern text first and exposes judgment and result once while folding source quotes", async () => {
   const env = environment("book_id=ziping-zhenquan&kind=named_case&offset=24&from=learning", "source-mention");
   const data = { ...caseDetail(), id: "source-mention", study_format: "source_mention", chart_status: "incomplete",
     modern_context: "第一段白话𠀀。\n\n第二段保留条件与结论。", original_excerpt: "甲子原句。", original_context: "完整原段：甲子原句。另句。",
@@ -327,11 +439,17 @@ test("an incomplete source mention puts the exact full-paragraph modern text fir
   assert.equal(article.querySelector(".book-case-text").textContent, data.modern_context);
   assert.equal(article.querySelectorAll(".book-case-modern").length, 1);
   assert.equal(byText(article, "h2", "原书分析"), undefined);
-  assert.equal(article.childNodes.filter(node => node.tagName === "SECTION" && node.querySelector("h2")?.textContent === "书载结果").length, 0);
+  assert.equal(article.childNodes.filter(node => node.tagName === "SECTION" && node.querySelector("h2")?.textContent === "作者判断").length, 1);
+  assert.equal(article.childNodes.filter(node => node.tagName === "SECTION" && node.querySelector("h2")?.textContent === "书载结果").length, 1);
+  assert.equal(byText(article, "h2", "作者判断").closest("details"), null);
+  assert.equal(byText(article, "h2", "书载结果").closest("details"), null);
+  assert.equal(tags(article, "p").filter(node => node.textContent === "作者判断原句").length, 1);
+  assert.equal(tags(article, "p").filter(node => node.textContent === "结果逐字原句").length, 1);
   const disclosures = tags(article, "details");
   assert.equal(disclosures.length, 2);
   assert.ok(disclosures.every(details => !details.open && details.getAttribute("open") === null));
-  assert.match(disclosures[0].textContent, /原文摘句甲子原句。书载信息事实逐字原句作者判断作者判断原句书载结果结果逐字原句/);
+  assert.match(disclosures[0].textContent, /原文摘句甲子原句。书载信息事实逐字原句/);
+  assert.doesNotMatch(disclosures[0].textContent, /作者判断原句|结果逐字原句/);
   assert.match(result.node.textContent, /原书未载完整排盘条件，暂不能复盘。/);
   assert.doesNotMatch(result.node.textContent, /盘面暂时没有打开|逐句译文|独立人物|同一人物/);
   assert.equal(result.node.querySelector(".chart-panel"), null);
@@ -439,7 +557,7 @@ test("absent or empty supporting contexts add no nodes to the existing source me
     const result = render(env.ctx, async () => data); await tick();
     const article = result.node.querySelector(".book-case-analysis");
     assert.equal(byText(article, "summary", "题设与相关段落"), undefined);
-    assert.deepEqual(article.childNodes.map(node => node.tagName), ["SECTION", "DETAILS", "DETAILS", "FOOTER"]);
+    assert.deepEqual(article.childNodes.map(node => node.tagName), ["SECTION", "SECTION", "DETAILS", "DETAILS", "FOOTER"]);
     assert.equal(tags(article, "details").length, 2);
     if (!legacyShape) legacyShape = shape(result.node);
     else assert.deepEqual(shape(result.node), legacyShape);
@@ -483,6 +601,7 @@ test("an explicitly available hypothetical exercise retains its category and ope
   assert.match(panel.textContent, /假设推演练习/);
   const strip = result.node.querySelector(".book-case-chart-strip");
   assert.equal(strip.getAttribute("aria-label"), "查看完整推演练习盘");
+  assert.match(strip.querySelector(".book-case-chart-open").textContent, /展开完整卦盘/);
   strip.emit("click");
   assert.match(document.body.querySelector(".sheet-chart").textContent, /推演练习盘.*师之涣/);
   assert.deepEqual(paths, ["/api/book-cases/exercise-example", "/api/book-cases/exercise-example/chart"]);
@@ -504,6 +623,64 @@ test("a complete source mention keeps the primary paragraph readable while its r
   assert.equal(result.node.querySelector(".book-case-modern"), primary);
   assert.equal(result.node.querySelectorAll(".cp-pillar").length, 4);
   assert.deepEqual(paths, ["/api/book-cases/complete-mention", "/api/book-cases/complete-mention/chart"]);
+  env.cleanup();
+});
+
+test("a resolved case offers only a plain same-system personal chart link without copying book inputs or writing drafts", async () => {
+  const savedStorage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const privateDrafts = new Map([["xz-next-draft:birth", "private birth draft"], ["xz-next-draft:cast", "private cast draft"]]);
+  const writes = [];
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: key => privateDrafts.get(key) ?? null,
+    setItem: (...args) => writes.push(["set", ...args]),
+    removeItem: (...args) => writes.push(["remove", ...args]),
+  } });
+  try {
+    for (const system of ["bazi", "liuyao"]) {
+      const env = environment(`system=${system}&from=learning`, `${system}-study`), calls = [];
+      let resolveChart;
+      const data = { ...caseDetail(), id: `${system}-study`, system, study_format: "source_mention" };
+      const before = structuredClone(data);
+      const result = render(env.ctx, (path, options) => {
+        calls.push({ path, options });
+        return path.endsWith("/chart") ? new Promise(resolve => { resolveChart = resolve; }) : Promise.resolve(data);
+      }); await tick();
+      const actionLabel = system === "bazi" ? "排自己的八字" : "起一卦";
+      assert.equal(byText(result.node, "a", actionLabel), undefined);
+      resolveChart(system === "bazi" ? caseChart(data.id) : liuyaoCaseChart(data.id)); await tick();
+      const action = byText(result.node, "a", actionLabel);
+      assert.equal(action.getAttribute("href"), `#/ask/${system}`);
+      assert.equal(action.listeners.has("click"), false);
+      assert.equal(result.node.querySelector(".book-case-practice").querySelectorAll("a").length, 1);
+      assert.equal(byText(result.node, "a", "返回学习条目").getAttribute("href"), `#/book-cases?system=${system}&from=learning`);
+      assert.equal(result.node.querySelector(".book-case-chart-open").textContent, system === "bazi" ? "展开完整命盘" : "展开完整卦盘");
+      action.emit("click");
+      assert.deepEqual(calls.map(item => item.path), [`/api/book-cases/${data.id}`, `/api/book-cases/${data.id}/chart`]);
+      assert.ok(calls.every(item => item.options.signal instanceof AbortSignal && !item.options.method && !item.options.body));
+      assert.deepEqual(writes, []);
+      assert.deepEqual(data, before);
+      env.refresh();
+      assert.equal(byText(result.node, "a", actionLabel), undefined);
+      env.cleanup();
+    }
+    assert.deepEqual([...privateDrafts], [["xz-next-draft:birth", "private birth draft"], ["xz-next-draft:cast", "private cast draft"]]);
+  } finally {
+    if (savedStorage) Object.defineProperty(globalThis, "localStorage", savedStorage);
+    else delete globalThis.localStorage;
+  }
+});
+
+test("missing source judgments and unreported results add no empty default analysis sections or personal chart action", async () => {
+  const env = environment("system=liuyao", "rule-without-analysis");
+  const data = { ...caseDetail(), id: "rule-without-analysis", system: "liuyao", study_format: "source_mention",
+    kind: "rule_example", chart_status: "not_applicable", judgment: [], outcome_status: "not_reported", outcome: [] };
+  const calls = [];
+  const result = render(env.ctx, async path => { calls.push(path); return data; }); await tick();
+  assert.equal(byText(result.node, "h2", "作者判断"), undefined);
+  assert.equal(byText(result.node, "h2", "书载结果"), undefined);
+  assert.equal(result.node.querySelector(".book-case-practice"), null);
+  assert.equal(byText(result.node, "a", "起一卦"), undefined);
+  assert.deepEqual(calls, ["/api/book-cases/rule-without-analysis"]);
   env.cleanup();
 });
 
@@ -747,7 +924,7 @@ test("leaving while a permitted chart is loading aborts its request and never pu
 
 // Synthetic public cast records exercise selection without reconstructing a
 // hexagram, normalizing historical dates, or reading private book data.
-const multiCastDetail = () => ({ ...caseDetail(), id: "multi-cast-example", study_format: "source_mention", casts: [
+const multiCastDetail = () => ({ ...caseDetail(), id: "multi-cast-example", system: "liuyao", study_format: "source_mention", casts: [
   { id: "cast-three", order: 3, label: "第三次占问", chart_status: "available", source_heading: "第三次书载原题。",
     source_month: "书载月名丙", source_day: "书载日名丙", source_hexagram_names: ["第三次原名"],
     original_table: "第三次原表\n", missing: [], uncertainties: [] },
@@ -784,6 +961,7 @@ test("cast selection starts at the smallest book order even when it is incomplet
   assert.equal(picker.value, "cast-one");
   assert.deepEqual(tags(picker, "option").map(option => option.value), ["cast-one", "cast-two", "cast-three"]);
   assert.deepEqual(paths, ["/api/book-cases/multi-cast-example"]);
+  assert.equal(byText(result.node, "a", "起一卦"), undefined);
   assert.match(result.node.textContent, /书载原题未载。.*书载月未载书载日未载书载卦名未载/);
   assert.match(result.node.textContent, /本卦资料不全，暂不能复盘。六行原表未载此占仅有局部爻辞，不能补盘。/);
   assert.equal((result.node.textContent.match(/暂不能复盘/g) || []).length, 1);
@@ -804,7 +982,9 @@ test("cast selection starts at the smallest book order even when it is incomplet
   assert.equal(tags(result.node.querySelector(".book-case-cast"), "details").length, 1);
   assert.match(result.node.querySelector(".book-case-cast-facts").textContent, /书载月书载月名乙书载日同日（原字存疑）书载卦名书载本名 → 书载变名/);
   assert.equal(result.node.querySelector(".book-case-chart-caption").textContent, "复盘计算");
-  assert.equal(result.node.querySelector(".book-case-chart-open").textContent, "复盘计算 · 完整盘面");
+  assert.equal(result.node.querySelector(".book-case-chart-open").textContent, "复盘计算 · 展开完整卦盘");
+  assert.equal(byText(result.node, "a", "起一卦").getAttribute("href"), "#/ask/liuyao");
+  assert.equal(byText(result.node, "a", "起一卦").listeners.has("click"), false);
   assert.equal(result.node.querySelector(".book-case-computed-name"), null);
   assert.doesNotMatch(result.node.querySelector(".book-case-chart-area").textContent, /复盘计算卦名/);
   assert.equal(tags(result.node.querySelector(".book-case-full-chart").querySelector("tbody"), "tr").length, 6);
@@ -856,12 +1036,14 @@ test("rapid cast switches abort older requests, ignore their late results and cl
   pending[1].resolve(castChart("cast-three")); pending[0].reject(new Error("旧请求错误")); await tick();
   assert.match(result.node.textContent, /正在打开盘面/); assert.doesNotMatch(result.node.textContent, /旧请求错误|计算本卦 cast-three/);
   pending[2].resolve(castChart("cast-two")); await tick();
+  assert.equal(byText(result.node, "a", "起一卦").getAttribute("href"), "#/ask/liuyao");
   const strip = result.node.querySelector(".book-case-chart-strip"); strip.emit("click");
   assert.ok(document.body.querySelector(".sheet-chart"));
   chooseCast(result.node, "cast-one");
   assert.equal(pending[2].signal.aborted, true);
   assert.equal(result.node.querySelector(".chart-panel"), null); assert.equal(result.node.querySelector(".book-case-chart-strip"), null);
   assert.equal(result.node.querySelector(".book-case-chart-caption"), null); assert.equal(document.body.querySelector(".sheet-chart"), null);
+  assert.equal(byText(result.node, "a", "起一卦"), undefined);
   assert.equal(result.node.querySelector(".book-case-study").classList.contains("has-chart"), false);
   assert.equal(result.node.querySelector(".book-case-chart-area").getAttribute("aria-busy"), "false");
   env.reconnect(); await tick(); assert.equal(pending.length, 3);

@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n37";
-import { filterContents, groupReadingSections } from "../lib/books.js?v=n37";
-import { local } from "../lib/store.js?v=n37";
-import { openSheet } from "./overlay.js?v=n37";
+import { h, fill } from "../lib/dom.js?v=n39";
+import { filterContents, groupReadingSections } from "../lib/books.js?v=n39";
+import { local } from "../lib/store.js?v=n39";
+import { openSheet } from "./overlay.js?v=n39";
 
 export function createBookSidebar({ book, contents, current, onSelect, onCollapse, libraryPath = "#/books", libraryLabel = "返回书库", casePath = "" }) {
   let closed = false, scrollFrame;
@@ -49,7 +49,7 @@ export function createBookSidebar({ book, contents, current, onSelect, onCollaps
       onClick: () => onSelect(item.number), onFocus: event => {
         for (const button of rows.querySelectorAll("button")) button.tabIndex = button === event.currentTarget ? 0 : -1;
       } }, h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.title), item.title !== item.location ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.title), item.title !== item.location && item.location !== "原书章节" ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null))
       : h("p", { class: "books-notice" }, "没有匹配项，可按阅读页码跳转。"));
     refresh();
@@ -113,7 +113,7 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
       "aria-current": item.number === current ? "page" : null,
       onClick: () => { sheet.close(); onSelect(item.number); } },
       h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.title), item.title !== item.location ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.title), item.title !== item.location && item.location !== "原书章节" ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null)) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
     positionContents();
   }
@@ -160,7 +160,7 @@ export function openElectronicBookContents({ bookTitle, sections, current, onSel
       group.sections.map(item => h("button", { type: "button", class: "book-contents-item", "aria-current": item.id === current ? "page" : null,
         onClick: () => { selected = true; sheet.close(); onSelect(item.id); } },
         h("span", { class: "book-electronic-contents-label" }, h("b", null, item.title),
-          item.source_location && item.source_location !== item.title ? h("small", null, item.source_location) : null),
+          item.source_location && item.source_location !== item.title && item.source_location !== "原书章节" ? h("small", null, item.source_location) : null),
         item.id === current ? h("small", null, "正在阅读") : null))))
       : h("p", { class: "books-notice", role: "status" }, "没有匹配的章节，试试其他标题或清空搜索。"));
     positionContents();

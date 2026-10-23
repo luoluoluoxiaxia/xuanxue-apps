@@ -1954,6 +1954,22 @@
             "title": "Supporting Contexts",
             "type": "array"
           },
+          "system": {
+            "anyOf": [
+              {
+                "enum": [
+                  "bazi",
+                  "liuyao"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "已审盘面条件或书目明确归属的体系；未知时为空。",
+            "title": "System"
+          },
           "title": {
             "title": "Title",
             "type": "string"
@@ -2257,6 +2273,17 @@
             "title": "Book Title",
             "type": "string"
           },
+          "chart_status": {
+            "default": "incomplete",
+            "description": "available可按书载条件复盘或进行明确标注的假设练习；incomplete实叙条件不全；not_applicable为未选练习盘的假设或规则。",
+            "enum": [
+              "available",
+              "incomplete",
+              "not_applicable"
+            ],
+            "title": "Chart Status",
+            "type": "string"
+          },
           "id": {
             "title": "Id",
             "type": "string"
@@ -2274,6 +2301,22 @@
           "summary": {
             "title": "Summary",
             "type": "string"
+          },
+          "system": {
+            "anyOf": [
+              {
+                "enum": [
+                  "bazi",
+                  "liuyao"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "已审盘面条件或书目明确归属的体系；未知时为空。",
+            "title": "System"
           },
           "title": {
             "title": "Title",
@@ -8484,6 +8527,26 @@
                 }
               ],
               "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "bazi",
+                    "liuyao"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "System"
             }
           },
           {

@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n19`, base).href);
+const load = path => import(new URL(`${path}?v=n39`, base).href);
 
 test('fresh white-language books open their exact default and older books keep the electronic entry', async () => {
   const { bookReadingEntry, bookDefaultSectionNumber } = await load('lib/books.js');

@@ -1,10 +1,11 @@
 // 案例仅展示公开契约返回的内容，阅读链接始终由服务端指定底本与章节。
-import { query } from "./api.js?v=n37";
+import { query } from "./api.js?v=n39";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = value => typeof value === "string" && value.length <= 120 && SLUG.test(value) ? value : "";
 export const BOOK_CASE_KINDS = Object.freeze({ named_case: "具名案例", unnamed_case: "未具名案例",
   hypothetical: "假设推演", rule_example: "规则条目" });
+export const BOOK_CASE_SYSTEMS = Object.freeze({ bazi: "八字", liuyao: "六爻" });
 const integer = (value, fallback, max = Number.MAX_SAFE_INTEGER) => {
   const number = Number(value);
   return value !== null && value !== "" && Number.isSafeInteger(number) && number >= 0 && number <= max ? number : fallback;
@@ -14,6 +15,7 @@ export function readBookCaseQuery(params = new URLSearchParams()) {
   return {
     book_id: slug(params.get("book_id")),
     kind: Object.hasOwn(BOOK_CASE_KINDS, params.get("kind")) ? params.get("kind") : "",
+    system: Object.hasOwn(BOOK_CASE_SYSTEMS, params.get("system")) ? params.get("system") : "",
     offset: integer(params.get("offset"), 0),
     limit: Math.max(1, integer(params.get("limit"), 24, 60)),
     from: params.get("from") === "learning" ? "learning" : "",
@@ -22,7 +24,7 @@ export function readBookCaseQuery(params = new URLSearchParams()) {
 
 export function bookCaseListPath(filter = {}, changes = {}) {
   const next = readBookCaseQuery(new URLSearchParams({ ...filter, ...changes }));
-  return `/book-cases${query({ book_id: next.book_id, kind: next.kind, offset: next.offset || undefined,
+  return `/book-cases${query({ book_id: next.book_id, kind: next.kind, system: next.system, offset: next.offset || undefined,
     limit: next.limit === 24 ? undefined : next.limit, from: next.from })}`;
 }
 
@@ -32,7 +34,7 @@ export function bookCaseDetailPath(id, filter = {}) {
 
 export function bookCaseApiPath(filter) {
   const next = readBookCaseQuery(new URLSearchParams(filter));
-  return `/api/book-cases${query({ book_id: next.book_id, kind: next.kind, offset: next.offset, limit: next.limit })}`;
+  return `/api/book-cases${query({ book_id: next.book_id, kind: next.kind, system: next.system, offset: next.offset, limit: next.limit })}`;
 }
 
 export function bookCaseCasts(detail) {
@@ -69,3 +71,4 @@ export function bookCaseReadingPath(path, from = "", bookId = "") {
 }
 
 export const bookCaseKindLabel = kind => Object.hasOwn(BOOK_CASE_KINDS, kind) ? BOOK_CASE_KINDS[kind] : "学习条目";
+export const bookCaseSystemLabel = system => Object.hasOwn(BOOK_CASE_SYSTEMS, system) ? BOOK_CASE_SYSTEMS[system] : "";

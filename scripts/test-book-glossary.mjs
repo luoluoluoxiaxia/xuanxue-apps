@@ -292,9 +292,9 @@ test("actual opening title h2 keeps term selection, saved highlights and note lo
   window.document = document; window.ResizeObserver = class {};
   window.scrollY = 0; window.scrollTo = () => {};
   const { renderBookBlock, renderBookSectionHeader } = await import("../web/public/next/views/books.js");
-  const { setupBookAnnotations } = await import("../web/public/next/ui/book-annotations.js?v=n37");
-  const { session } = await import("../web/public/next/lib/store.js?v=n37");
-  const { Decorator, DecorationController } = await import("../web/public/vendor/readium-decorator-1.2.5.js?v=n37");
+  const { setupBookAnnotations } = await import("../web/public/next/ui/book-annotations.js?v=n39");
+  const { session } = await import("../web/public/next/lib/store.js?v=n39");
+  const { Decorator, DecorationController } = await import("../web/public/vendor/readium-decorator-1.2.5.js?v=n39");
   const original = { fetch: globalThis.fetch, MessageChannel: globalThis.MessageChannel,
     requestAnimationFrame: globalThis.requestAnimationFrame, cancelAnimationFrame: globalThis.cancelAnimationFrame,
     mount: Decorator.prototype.mount, unmount: Decorator.prototype.unmount,
