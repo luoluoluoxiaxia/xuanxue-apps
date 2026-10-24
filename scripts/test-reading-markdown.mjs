@@ -792,10 +792,25 @@ test("the real reader interleaves covered figures without losing text, glossary,
     for (let parent = this.parentElement; parent; parent = parent.parentElement) {
       // Native details can retain stale, nonzero descendant geometry after a
       // diagram was opened and then closed. Other disclosure mocks stay as-is.
-      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null && !parent.classList.contains("book-diagram-group"))
+      if (parent.tagName === "DETAILS" && !parent.open && parent.getAttribute("open") === null &&
+          !parent.classList.contains("book-diagram-group") && !parent.classList.contains("book-source-credits"))
         return { top: 0, bottom: 0, height: 0, left: 0, width: 0 };
     }
-    if (this.parentElement?.classList.contains("book-diagram-group")) {
+    if (this.dataset.blockId === "layer-position-long") {
+      const top = 200 + this.parentElement.children.indexOf(this) * 100 - window.scrollY;
+      const height = this.parentElement.dataset.mode === "parallel" ? 4200 : this.parentElement.dataset.mode === "modern" ? 3000 : 1200;
+      return { top, bottom: top + height, height, left: 0, width: 400 };
+    }
+    if (this.tagName === "P" && (this.parentElement?.classList.contains("book-original") || this.parentElement?.classList.contains("book-modern"))) {
+      let block = this.parentElement;
+      while (block && block.dataset.blockId !== "layer-position-long") block = block.parentElement;
+      if (block) {
+        const modern = this.parentElement.classList.contains("book-modern"), parallel = block.parentElement.dataset.mode === "parallel";
+        const top = block.getBoundingClientRect().top + (modern && parallel ? 1200 : 0), height = modern ? 3000 : 1200;
+        return { top, bottom: top + height, height, left: 0, width: 400 };
+      }
+    }
+    if (this.parentElement?.classList.contains("book-diagram-group") || this.parentElement?.classList.contains("book-source-credits")) {
       const groupRect = this.parentElement.getBoundingClientRect();
       const top = groupRect.top + this.parentElement.children.indexOf(this) * 100;
       return { top, bottom: top + 100, height: 100, left: 0, width: 400 };
@@ -813,15 +828,16 @@ test("the real reader interleaves covered figures without losing text, glossary,
     return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
   };
   async function mount(figures, savedAnchor, { sectionBlocks = blocks, hasModern = false, title = blocks[0].text,
+    bookTitle = "图表位置测试书", sectionLocation = "测试来源", savedLayer = null,
     glossary = [{ id: "supplied-sense", term: "用神", definition: "服务端已提供释义。" }] } = {}) {
     const id = `figure-layout-test-${++sequence}`;
-    const book = { id, title: "图表位置测试书", system: "liuyao", source_label: "测试底本", status: "reading_edition",
+    const book = { id, title: bookTitle, system: "liuyao", source_label: "测试底本", status: "reading_edition",
       has_modern: hasModern, section_count: 1, default_section_number: 1, case_count: 0 };
-    const section = { book_id: id, number: 1, title, location: "测试来源", partial: false, notice: "",
+    const section = { book_id: id, number: 1, title, location: sectionLocation, partial: false, notice: "",
       page_notes: ["页注不计入旧数字锚。"], figures, blocks: sectionBlocks, glossary };
     const before = structuredClone(section); fixtures.set(id, { book, section });
     const keys = bookReadingKeys(book);
-    if (savedAnchor !== undefined) storage.set(keys.position, JSON.stringify({ number: 1, anchor: savedAnchor, offset: .25, updatedAt: 500 }));
+    if (savedAnchor !== undefined) storage.set(keys.position, JSON.stringify({ number: 1, anchor: savedAnchor, offset: .25, updatedAt: 500, ...savedLayer }));
     const listeners = new Map(); const scrolls = [];
     globalThis.document = { ...environment(), documentElement: new MockNode("html"), addEventListener() {}, removeEventListener() {} };
     globalThis.window = { scrollY: 0,
@@ -849,6 +865,127 @@ test("the real reader interleaves covered figures without losing text, glossary,
     return false;
   };
   try {
+    const creditBlocks = [
+      { id: "credit-book-title", role: "heading", text: "《題署測試書》", modern: "题署测试书", notes: ["题名记录。"],
+        terms: [{ layer: "original", start: 1, end: 3, sense_id: "credit-sense" }] },
+      { id: "credit-author", role: "heading", text: "某地王氏輯", modern: "某地王氏辑订。", notes: [], terms: [] },
+      { id: "after-credit", role: "verse", text: "首句原文仍在。", modern: "首句白话仍在。", notes: [], terms: [] },
+    ];
+    const creditOptions = { sectionBlocks: creditBlocks, hasModern: true, bookTitle: "题署测试书", title: "开篇",
+      glossary: [{ id: "credit-sense", term: "题署", definition: "测试提供的题署释义。" }] };
+    let creditView = await mount([], undefined, creditOptions);
+    const credits = creditView.content.querySelector(".book-source-credits");
+    assert.equal(credits.children[0].textContent, "原书题署");
+    assert.equal(credits.open, false);
+    assert.equal(credits.dataset.readingAnchor, undefined);
+    assert.deepEqual(credits.querySelectorAll(".book-block").map(block => block.dataset.blockId), ["credit-book-title", "credit-author"]);
+    for (const [index, source] of creditBlocks.entries()) {
+      const block = creditView.content.querySelector(`[data-block-id="${source.id}"]`);
+      assert.equal(Number(block.dataset.readingAnchor), index + 1);
+      assert.equal(block.querySelector(".book-original").querySelector("p, h2, h3").textContent, source.text);
+      assert.equal(block.querySelector(".book-modern").querySelector("p, h2, h3").textContent, source.modern);
+    }
+    assert.equal(credits.querySelector(".book-term").textContent, "題署");
+    assert.ok(credits.querySelector(".book-notes").textContent.includes("题名记录。"));
+    credits.open = true; credits.listeners.get("toggle")();
+    credits.querySelector(".book-block").getBoundingClientRect();
+    credits.open = false; credits.listeners.get("toggle")();
+    assert.equal(credits.querySelectorAll(".book-block").every(block => block.getBoundingClientRect().height > 0), true,
+      "reproduce stale geometry after closing the source credits");
+    const body = creditView.content.querySelector('[data-block-id="after-credit"]');
+    window.scrollY += body.getBoundingClientRect().top - 84;
+    for (const mode of ["original", "parallel", "modern"]) {
+      creditView.node.querySelector(`[data-book-mode="${mode}"]`).listeners.get("click")();
+      creditView.pagehide();
+      assert.equal(credits.open, false);
+      assert.equal(JSON.parse(storage.get(creditView.keys.position)).anchor, 3);
+      assert.equal(body.getBoundingClientRect().top, 84);
+    }
+    creditView.cleanup();
+    creditView = await mount([], 1, creditOptions);
+    assert.equal(creditView.content.querySelector(".book-source-credits").open, true,
+      "a saved position within the title opens its exact disclosure before measuring");
+    assert.equal(JSON.parse(storage.get(creditView.keys.position)).anchor, 1);
+    creditView.cleanup();
+    creditView = await mount([], 3, creditOptions);
+    assert.equal(creditView.content.querySelector(".book-source-credits").open, false);
+    creditView.cleanup();
+
+    storage.set("xz-book-mode", "modern");
+    const appendixBlocks = [{ id: "appendix-lines", role: "text", text: "章甲\n章乙\n章丙", modern: "", notes: [], terms: [] }];
+    let appendixView = await mount([], undefined, { sectionBlocks: appendixBlocks, hasModern: true, sectionLocation: "附录", title: "原书目录" });
+    assert.equal(appendixView.content.dataset.mode, "original");
+    assert.equal(appendixView.node.dataset.mode, "original");
+    assert.equal(appendixView.content.dataset.originalAppendix, "true");
+    assert.equal(appendixView.node.querySelector(".book-mode-switch"), null);
+    assert.equal(appendixView.content.querySelector(".book-modern-empty"), null);
+    assert.equal(appendixView.content.querySelector(".book-comparison-heading"), null);
+    assert.equal(appendixView.content.querySelector(".book-original").querySelector("p").textContent, appendixBlocks[0].text);
+    assert.equal(storage.get("xz-book-mode"), "modern", "opening source-only appendices cannot replace the body reading preference");
+    appendixView.cleanup();
+    appendixView = await mount([], undefined, { sectionBlocks: [creditBlocks[2], ...appendixBlocks], hasModern: true, title: "正文" });
+    assert.equal(appendixView.content.dataset.mode, "modern");
+    assert.equal(appendixView.node.dataset.mode, "modern");
+    assert.equal(appendixView.content.querySelectorAll(".book-modern-empty").length, 1, "missing body translations still remain visible as missing");
+    assert.equal(storage.get("xz-book-mode"), "modern");
+    appendixView.cleanup();
+
+    const longBlock = { id: "layer-position-long", role: "commentary", text: "原注首段。\n\n原注后段。",
+      modern: "白话首段。\n\n白话中间段。\n\n白话末段。", notes: [], terms: [] };
+    const longOptions = { sectionBlocks: [longBlock], hasModern: true, title: "长注" };
+    storage.set("xz-book-mode", "modern");
+    let longView = await mount([], undefined, longOptions);
+    const longModern = () => longView.content.querySelector(".book-modern").querySelector("p");
+    window.scrollY += longModern().getBoundingClientRect().top + 1500 - 84;
+    longView.pagehide();
+    const beforeLayered = JSON.parse(storage.get(longView.keys.position));
+    assert.equal(beforeLayered.layer, "modern");
+    assert.equal(beforeLayered.layerOffset, .5);
+    const beforeTop = longModern().getBoundingClientRect().top;
+    longView.node.querySelector('[data-book-mode="parallel"]').listeners.get("click")();
+    longView.pagehide();
+    const compared = JSON.parse(storage.get(longView.keys.position));
+    assert.equal(compared.anchor, beforeLayered.anchor);
+    assert.equal(compared.layer, "modern");
+    assert.equal(compared.layerOffset, .5);
+    assert.notEqual(compared.offset, beforeLayered.offset, "the two-layer block proportion must change while the same language position stays put");
+    assert.equal(longModern().getBoundingClientRect().top, beforeTop);
+    longView.node.querySelector('[data-book-mode="modern"]').listeners.get("click")();
+    longView.pagehide();
+    assert.equal(longModern().getBoundingClientRect().top, beforeTop);
+    assert.equal(JSON.parse(storage.get(longView.keys.position)).layerOffset, .5);
+    longView.cleanup();
+    longView = await mount([], 1, { ...longOptions, savedLayer: { layer: "modern", layerOffset: .5 } });
+    assert.equal(longModern().getBoundingClientRect().top, beforeTop, "refresh restores the independently saved language paragraph position");
+    longView.node.querySelector('[data-book-mode="original"]').listeners.get("click")();
+    longView.pagehide();
+    assert.equal(longView.content.dataset.mode, "original");
+    assert.equal(JSON.parse(storage.get(longView.keys.position)).layer, "original", "a hidden modern layer falls back to the original block position");
+    longView.cleanup();
+
+    storage.set("xz-book-mode", "original");
+    const hiddenLayerView = await mount([], undefined, { ...longOptions,
+      sectionBlocks: [{ ...longBlock, presentation: "diagram" }] });
+    hiddenLayerView.node.querySelector('[data-book-mode="parallel"]').listeners.get("click")();
+    const visibleModern = hiddenLayerView.content.querySelector(".book-modern").querySelector("p");
+    const hiddenOriginal = hiddenLayerView.content.querySelector(".book-original").querySelector("pre");
+    assert.equal(hiddenLayerView.content.querySelector(".book-diagram-transcription").open, false);
+    // Chromium can retain nonzero geometry inside a closed native details. The
+    // actual visible modern paragraph overlaps that stale original rectangle.
+    hiddenOriginal.getBoundingClientRect = () => {
+      const rect = visibleModern.getBoundingClientRect();
+      return { ...rect, height: 1200, bottom: rect.top + 1200 };
+    };
+    window.scrollY += visibleModern.getBoundingClientRect().top + 600 - 84;
+    hiddenLayerView.pagehide();
+    const visiblePosition = JSON.parse(storage.get(hiddenLayerView.keys.position));
+    assert.equal(visiblePosition.layer, "modern", "closed original transcription must not win over the visible modern paragraph");
+    assert.equal(visiblePosition.layerOffset, .2);
+    const visibleTop = visibleModern.getBoundingClientRect().top;
+    hiddenLayerView.node.querySelector('[data-book-mode="modern"]').listeners.get("click")();
+    assert.equal(visibleModern.getBoundingClientRect().top, visibleTop);
+    hiddenLayerView.cleanup();
+
     let view = await mount([image("multi", { block_indices: [2, 3] }), image("same-block", { block_indices: [2] }),
       image("invalid", { block_indices: [0, 99] }), image("later", { block_indices: [3] })], 6);
     assert.deepEqual(all(view.content).filter(node => node.tagName === "FIGURE" || node.dataset.blockId).map(node =>

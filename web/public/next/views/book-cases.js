@@ -1,14 +1,14 @@
-import { h, fill } from "../lib/dom.js?v=n41";
-import { get } from "../lib/api.js?v=n41";
-import { icon } from "../lib/icons.js?v=n41";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n41";
+import { h, fill } from "../lib/dom.js?v=n42";
+import { get } from "../lib/api.js?v=n42";
+import { icon } from "../lib/icons.js?v=n42";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n42";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
   bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel, bookCaseCasts, bookCaseChartPath,
-  bookCaseChartMatches, bookCaseModernBlocks, BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n41";
-import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n41";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n41";
-import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n41";
-import { openSheet } from "../ui/overlay.js?v=n41";
+  bookCaseChartMatches, bookCaseModernBlocks, bookCaseSourceLocation, BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n42";
+import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n42";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n42";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n42";
+import { openSheet } from "../ui/overlay.js?v=n42";
 
 function attach(ctx, path, paint, request, readyReconnect = () => {}) {
   let phase = "loading";
@@ -202,7 +202,7 @@ function detail(ctx, request) {
       data.sources.map(source => {
         const reading = bookCaseReadingPath(source.reading_path, filter.from, data.book_id);
         return h("div", { class: "book-case-source" }, h("p", null, source.edition_label),
-          h("p", null, [source.chapter, source.location].filter(Boolean).join(" · ")),
+          h("p", null, bookCaseSourceLocation(source)),
           reading ? h("a", { href: `#${reading}` }, "回到原书章节", icon("arrowRight")) : null);
       })));
     const selectCast = cast => {

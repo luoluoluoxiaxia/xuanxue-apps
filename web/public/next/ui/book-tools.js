@@ -1,7 +1,25 @@
-import { h, fill } from "../lib/dom.js?v=n41";
-import { filterContents, groupReadingSections } from "../lib/books.js?v=n41";
-import { local } from "../lib/store.js?v=n41";
-import { openSheet } from "./overlay.js?v=n41";
+import { h, fill } from "../lib/dom.js?v=n42";
+import { groupBookContents, groupReadingSections } from "../lib/books.js?v=n42";
+import { local } from "../lib/store.js?v=n42";
+import { openSheet } from "./overlay.js?v=n42";
+
+export function renderBookContentsGroups(groups, renderItem, onToggle) {
+  return groups.flatMap(group => group.kind === "appendix"
+    ? h("details", { class: "book-contents-appendices", open: group.open, onToggle },
+      h("summary", null, "版本附录", h("small", null, ` · ${group.items.length}`)), group.items.map(renderItem))
+    : group.items.map(renderItem));
+}
+
+// Native closed details can retain stale geometry. Check their ancestry rather
+// than measuring hidden rows when choosing a keyboard destination.
+export function bookContentsControls(rows) {
+  return [...rows.querySelectorAll("button, summary")].filter(node => {
+    for (let parent = node.parentElement; parent && parent !== rows; parent = parent.parentElement) {
+      if (parent.tagName === "DETAILS" && !parent.open && !(node.tagName === "SUMMARY" && node.parentElement === parent)) return false;
+    }
+    return true;
+  });
+}
 
 export function createBookSidebar({ book, contents, current, onSelect, onCollapse, libraryPath = "#/books", libraryLabel = "返回书库", casePath = "" }) {
   let closed = false, scrollFrame;
@@ -36,27 +54,40 @@ export function createBookSidebar({ book, contents, current, onSelect, onCollaps
     scrollFrame = requestAnimationFrame(() => {
       if (closed) return;
       if (search.value.trim()) rows.scrollTop = 0;
-      else showRow(rows.querySelector('[aria-current="page"]'), true);
+      else {
+        const row = rows.querySelector('[aria-current="page"]');
+        if (bookContentsControls(rows).includes(row)) showRow(row, true);
+      }
     });
   }
   function paint() {
     local.set(`xz-book-directory-query:${book.id}`, search.value);
-    const matches = filterContents(contents, search.value);
+    const groups = groupBookContents(contents, search.value, current);
+    const matches = groups.flatMap(group => group.items);
     count.textContent = `${matches.length} / ${contents.length} 项 · 当前 ${current}`;
-    const tabNumber = matches.some(item => item.number === current) ? current : matches[0]?.number;
-    fill(rows, matches.length ? matches.map(item => h("button", { type: "button", class: "book-contents-item",
-      tabindex: item.number === tabNumber ? 0 : -1, "aria-current": item.number === current ? "page" : null,
+    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: "book-contents-item",
+      tabindex: -1, "aria-current": item.number === current ? "page" : null,
       onClick: () => onSelect(item.number), onFocus: event => {
         for (const button of rows.querySelectorAll("button")) button.tabIndex = button === event.currentTarget ? 0 : -1;
       } }, h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.title), item.title !== item.location && item.location !== "原书章节" ? h("small", null, item.location) : null),
-      item.partial ? h("small", { class: "books-status" }, "有疑缺") : null))
+      h("span", null, h("b", null, item.display_title), item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), event => {
+        const group = event.currentTarget;
+        if (!group.open && group.contains(document.activeElement)) group.querySelector("summary")?.focus({ preventScroll: true });
+        syncTabStop();
+      })
       : h("p", { class: "books-notice" }, "没有匹配项，可按阅读页码跳转。"));
+    syncTabStop();
     refresh();
+  }
+  function syncTabStop() {
+    const visible = bookContentsControls(rows).filter(node => node.tagName === "BUTTON");
+    const target = visible.find(node => node === document.activeElement) || visible.find(node => node.getAttribute("aria-current") === "page") || visible[0];
+    for (const button of rows.querySelectorAll("button")) button.tabIndex = button === target ? 0 : -1;
   }
   rows.addEventListener("keydown", event => {
     if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
-    const buttons = [...rows.querySelectorAll("button")], index = buttons.indexOf(document.activeElement);
+    const buttons = bookContentsControls(rows), index = buttons.indexOf(document.activeElement);
     if (index < 0) return;
     event.preventDefault();
     const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
@@ -98,7 +129,7 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
     scrollFrame = requestAnimationFrame(() => {
       if (closed) return;
       const row = rows.querySelector('[aria-current="page"]');
-      if (search.value.trim() || !row) { rows.scrollTop = 0; return; }
+      if (search.value.trim() || !row || !bookContentsControls(rows).includes(row)) { rows.scrollTop = 0; return; }
       // 只滚动目录容器，避免 scrollIntoView 把其下的阅读正文一起移走。
       const rect = rows.getBoundingClientRect();
       const scale = rows.offsetHeight ? rect.height / rows.offsetHeight : 1;
@@ -107,15 +138,21 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
     });
   }
   function paint() {
-    const matches = filterContents(contents, search.value);
+    const groups = groupBookContents(contents, search.value, current);
+    const matches = groups.flatMap(group => group.items);
     count.textContent = `${matches.length} / ${contents.length} 项 · 当前第 ${current} ${book.has_modern ? "篇" : "页"}`;
-    fill(rows, matches.length ? matches.map(item => h("button", { type: "button", class: "book-contents-item",
+    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: "book-contents-item",
       "aria-current": item.number === current ? "page" : null,
       onClick: () => { sheet.close(); onSelect(item.number); } },
       h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.title), item.title !== item.location && item.location !== "原书章节" ? h("small", null, item.location) : null),
-      item.partial ? h("small", { class: "books-status" }, "有疑缺") : null)) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
+      h("span", null, h("b", null, item.display_title), item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), syncHiddenButtons) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
+    syncHiddenButtons();
     positionContents();
+  }
+  function syncHiddenButtons() {
+    const visible = new Set(bookContentsControls(rows));
+    for (const button of rows.querySelectorAll("button")) button.tabIndex = visible.has(button) ? 0 : -1;
   }
   // 手机搜索框唤起键盘后，目录可视高度会改变；空搜索仍保持当前页可见。
   if (typeof ResizeObserver === "function") {

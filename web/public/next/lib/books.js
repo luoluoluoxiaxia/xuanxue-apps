@@ -1,5 +1,5 @@
 // 页码来自服务端目录；只保存本机阅读进度，不修改书籍文字。
-import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n41";
+import traditionalCharacters from "../../vendor/opencc-ts-characters-1.4.2.js?v=n42";
 
 // OpenCC 的字形词典只用于搜索比较；不转换底本文字或构造新正文。
 const searchCharacters = new Map(traditionalCharacters.split("|").map(row => row.split(" ").slice(0, 2)));
@@ -149,6 +149,34 @@ export function hasOpeningSectionTitle(section) {
   return section.blocks?.[0]?.role === "heading" && section.blocks[0].text === section.title;
 }
 
+function sourceBookTitle(value) {
+  let text = String(value || "").normalize("NFKC").trim();
+  if ((text.startsWith("《") && text.endsWith("》")) || (text.startsWith("〈") && text.endsWith("〉"))) text = text.slice(1, -1);
+  return searchText(text).replace(/\s+/gu, "");
+}
+
+export function isOriginalOnlyAppendix(section) {
+  return section?.location === "附录" && Array.isArray(section.blocks) &&
+    !section.blocks.some(block => typeof block.modern === "string" && block.modern.trim());
+}
+
+// Fold only an explicit repeated book title followed by an author credit. A
+// short second heading or a trailing editorial verb alone is not a credit.
+export function hasOpeningSourceCredits(book, section) {
+  const [title, credit] = section.blocks || [];
+  if (title?.role !== "heading" || credit?.role !== "heading" || !sourceBookTitle(book.title) ||
+      sourceBookTitle(title.text) !== sourceBookTitle(book.title)) return false;
+  if ([title, credit].some(block => block.source_text === false || ![undefined, "prose"].includes(block.presentation)) ||
+      section.figures?.some(figure => Array.isArray(figure.block_indices) && figure.block_indices.some(index => index === 0 || index === 1))) return false;
+  const raw = String(credit.text || "").normalize("NFKC").trim();
+  if (/[\r\n\v\f\u0085\u2028\u2029]/u.test(raw)) return false;
+  const signature = searchText(raw).replace(/\s+/gu, "");
+  const length = Array.from(signature).length;
+  const name = String.raw`[\p{Script=Han}〇](?:[\p{Script=Han}〇·・]*[\p{Script=Han}〇])?`;
+  const match = new RegExp(`^(?:(${name})氏[辑撰著编校订]|(?:作者|撰者|编者|辑者|校者|订者|译者):(${name})[辑撰著编校订])$`, "u").exec(signature);
+  return length >= 4 && length <= 40 && Boolean(match && /[^氏·・]/u.test(match[1] || match[2]));
+}
+
 // Only the public block mapping locates a figure. Keep an invalid explicit
 // mapping at the chapter start without using any of it to hide a transcription.
 export function bookFigureLayout({ figures = [], blocks = [] }) {
@@ -188,6 +216,28 @@ export function filterContents(contents, query) {
   if (/^\d+$/.test(needle)) return contents.filter(item => item.number === Number(needle));
   return contents.filter(item => !needle ||
     searchText(`${item.title} ${item.location}`).includes(needle));
+}
+
+// Keep source numbers/titles intact. Only consecutive source appendices share
+// a disclosure, and duplicate labels keep their original order when searching.
+export function groupBookContents(contents, query = "", current = 0) {
+  const matches = new Set(filterContents(contents, query));
+  const runs = [];
+  for (const item of contents) {
+    const kind = item.location === "附录" ? "appendix" : "body";
+    if (runs.at(-1)?.kind !== kind) runs.push({ kind, items: [] });
+    runs.at(-1).items.push(item);
+  }
+  return runs.map(run => {
+    const totals = new Map(), seen = new Map();
+    for (const item of run.items) totals.set(item.title, (totals.get(item.title) || 0) + 1);
+    const items = run.items.flatMap(item => {
+      const ordinal = (seen.get(item.title) || 0) + 1; seen.set(item.title, ordinal);
+      return matches.has(item) ? [{ ...item, display_title: run.kind === "appendix" && totals.get(item.title) > 1
+        ? `${item.title} · ${ordinal}` : item.title }] : [];
+    });
+    return { kind: run.kind, items, open: run.kind === "body" || Boolean(query.trim()) || run.items.some(item => item.number === current) };
+  }).filter(group => group.items.length);
 }
 
 export function readingPreferences(value = {}) {
@@ -230,7 +280,12 @@ export function readingPosition(value, count) {
   if (!value || typeof value !== "object" || readingNumber(value.number, count) !== value.number ||
       !Number.isSafeInteger(value.anchor) || value.anchor < 0 || !Number.isFinite(value.offset) ||
       value.offset < 0 || value.offset > 1 || !Number.isFinite(value.updatedAt) || value.updatedAt <= 0) return null;
-  return { number: value.number, anchor: value.anchor, offset: value.offset, updatedAt: value.updatedAt };
+  const position = { number: value.number, anchor: value.anchor, offset: value.offset, updatedAt: value.updatedAt };
+  if (["original", "modern"].includes(value.layer) && Number.isFinite(value.layerOffset) && value.layerOffset >= 0 && value.layerOffset <= 1) {
+    position.layer = value.layer;
+    position.layerOffset = value.layerOffset;
+  }
+  return position;
 }
 
 // 坐标以看图区域中心为原点；缩放保持指针下的图像位置，拖动不允许把图完全移出视野。

@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n41`, base).href);
+const load = path => import(new URL(`${path}?v=n42`, base).href);
 
 test('fresh white-language books open their exact default and older books keep the electronic entry', async () => {
   const { bookReadingEntry, bookDefaultSectionNumber } = await load('lib/books.js');
@@ -87,6 +87,51 @@ test('an identical opening heading replaces only the visible outer heading and k
   assert.equal(hasOpeningSectionTitle({ ...section, blocks: [{ ...section.blocks[0], role: 'text' }] }), false);
   assert.equal(hasOpeningSectionTitle({ ...section, blocks: [] }), false);
   assert.deepEqual(section, before);
+});
+
+test('only a repeated whole-book title followed by an explicit short author credit can be folded', async () => {
+  const { hasOpeningSourceCredits } = await load('lib/books.js');
+  const book = { title: '玄机要义' };
+  const section = { title: '开篇', blocks: [{ role: 'heading', text: '《玄機　要義》' },
+    { role: 'heading', text: '南城王氏輯' }, { role: 'verse', text: '正文保留。' }] };
+  const before = structuredClone({ book, section });
+  assert.equal(hasOpeningSourceCredits(book, section), true);
+  assert.equal(hasOpeningSourceCredits({ title: '〈玄机要义〉' }, section), true);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0], { role: 'heading', text: '撰者：王甲著' }] }), true);
+  for (const text of ['古籍整理与校', '另一书名', '王甲著', '某氏辑', '南城王氏辑。', '南城王氏\n辑', '王'.repeat(40) + '氏辑',
+    '作者王甲著', '··氏辑', '氏氏氏辑', '作者：··著', '·王氏辑', '王·氏辑']) {
+    assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0], { role: 'heading', text }] }), false, text);
+  }
+  assert.equal(hasOpeningSourceCredits({ title: '其他书' }, section), false);
+  assert.equal(hasOpeningSourceCredits({ title: '' }, section), false);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [{ ...section.blocks[0], text: '《玄《机》要义》' }, section.blocks[1]] }), false);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [{ ...section.blocks[0], role: 'text' }, section.blocks[1]] }), false);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0], { ...section.blocks[1], role: 'text' }] }), false);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0]] }), false);
+  for (const separator of ['\r', '\n', '\v', '\f', '\u0085', '\u2028', '\u2029']) {
+    assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0], { role: 'heading', text: `南城王${separator}氏輯` }] }), false);
+  }
+  for (const blockIndex of [0, 1]) {
+    for (const metadata of [{ source_text: false }, { presentation: 'table' }, { presentation: 'diagram' }, { presentation: null }]) {
+      const blocks = section.blocks.map((block, index) => index === blockIndex ? { ...block, ...metadata } : block);
+      assert.equal(hasOpeningSourceCredits(book, { ...section, blocks }), false);
+    }
+    assert.equal(hasOpeningSourceCredits(book, { ...section, figures: [{ block_indices: [blockIndex] }] }), false);
+  }
+  assert.equal(hasOpeningSourceCredits(book, { ...section, figures: [{ block_indices: [2] }] }), true);
+  assert.equal(hasOpeningSourceCredits(book, { ...section, blocks: [section.blocks[0], { role: 'heading', text: '作者：王·甲著' }] }), true);
+  assert.deepEqual({ book, section }, before);
+});
+
+test('only an appendix with no actual modern paragraph uses an original-only view', async () => {
+  const { isOriginalOnlyAppendix } = await load('lib/books.js');
+  const appendix = { location: '附录', blocks: [{ role: 'text', text: '目录甲\n目录乙', modern: '' }, { modern: '  ' }] };
+  const before = structuredClone(appendix);
+  assert.equal(isOriginalOnlyAppendix(appendix), true);
+  assert.equal(isOriginalOnlyAppendix({ ...appendix, location: '原书章节' }), false);
+  assert.equal(isOriginalOnlyAppendix({ ...appendix, blocks: [...appendix.blocks, { modern: '已有白话。' }] }), false);
+  assert.equal(isOriginalOnlyAppendix(null), false);
+  assert.deepEqual(appendix, before);
 });
 
 test('figure layout uses only exact covered blocks, places each image once and keeps same-block figure order', async () => {
@@ -267,6 +312,13 @@ test('reading settings and bookmarks recover safely from corrupt or stale local 
   for (const layout of [null, 1, [], 'SOURCE', 'normal']) assert.equal(readingPreferences({ layout }).layout, 'continuous');
   const bookmark = { number: 7, anchor: 3, offset: .35, updatedAt: 1000 };
   assert.deepEqual(readingPosition(bookmark, 20), bookmark);
+  const layered = { ...bookmark, layer: 'modern', layerOffset: .62 };
+  assert.deepEqual(readingPosition(layered, 20), layered);
+  assert.deepEqual(readingPosition({ ...layered, layer: 'original', layerOffset: 0 }, 20), { ...layered, layer: 'original', layerOffset: 0 });
+  for (const extra of [{ layer: 'other', layerOffset: .5 }, { layer: 'modern', layerOffset: '0.5' }, { layer: 'modern', layerOffset: NaN },
+    { layer: 'modern', layerOffset: -1 }, { layer: 'original', layerOffset: 1.01 }, { layer: 'modern' }, { layerOffset: .2 }]) {
+    assert.deepEqual(readingPosition({ ...bookmark, ...extra }, 20), bookmark, 'invalid optional layer data cannot replace a valid legacy position');
+  }
   for (const value of [null, '7', { ...bookmark, number: 21 }, { ...bookmark, number: '7' },
     { ...bookmark, anchor: -1 }, { ...bookmark, anchor: 1.5 }, { ...bookmark, offset: Infinity },
     { ...bookmark, offset: 1.1 }, { ...bookmark, updatedAt: 0 }]) assert.equal(readingPosition(value, 20), null);
