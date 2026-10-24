@@ -1,5 +1,5 @@
 // 案例仅展示公开契约返回的内容，阅读链接始终由服务端指定底本与章节。
-import { query } from "./api.js?v=n41";
+import { query } from "./api.js?v=n42";
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const slug = value => typeof value === "string" && value.length <= 120 && SLUG.test(value) ? value : "";
@@ -45,6 +45,14 @@ export function bookCaseModernBlocks(detail) {
   const texts = [detail?.modern_context, ...(Array.isArray(detail?.supporting_contexts)
     ? detail.supporting_contexts.map(context => context.modern) : [])];
   return [...new Set(texts.filter(text => typeof text === "string" && text.trim()))];
+}
+
+export function bookCaseSourceLocation(source) {
+  const chapter = typeof source?.chapter === "string" ? source.chapter.trim() : "";
+  const location = typeof source?.location === "string" ? source.location.trim() : "";
+  if (!chapter || !location || location === chapter) return location || chapter;
+  if (location.startsWith(chapter) && /^\s*[·・:：—–－-]/u.test(location.slice(chapter.length))) return location;
+  return `${chapter} · ${location}`;
 }
 
 export function bookCaseChartPath(id, castId = null) {

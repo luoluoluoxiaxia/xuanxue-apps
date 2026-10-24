@@ -1,21 +1,21 @@
-import { h, fill } from "../lib/dom.js?v=n41";
-import { icon } from "../lib/icons.js?v=n41";
-import { get } from "../lib/api.js?v=n41";
-import { local, session } from "../lib/store.js?v=n41";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n41";
+import { h, fill } from "../lib/dom.js?v=n42";
+import { icon } from "../lib/icons.js?v=n42";
+import { get } from "../lib/api.js?v=n42";
+import { local, session } from "../lib/store.js?v=n42";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n42";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
-  bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, bookFigureLayout,
+  bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, hasOpeningSourceCredits, isOriginalOnlyAppendix, bookFigureLayout,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
-  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n41";
-import { errorView, stateView } from "../ui/bits.js?v=n41";
-import { openBookImage } from "../ui/book-image.js?v=n41";
-import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n41";
-import { openSheet } from "../ui/overlay.js?v=n41";
-import { setupBookAnnotations } from "../ui/book-annotations.js?v=n41";
-import { setupBookGlossary } from "../ui/book-glossary.js?v=n41";
-import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n41";
-import { bookCasesEntry } from "../lib/book-cases.js?v=n41";
+  readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n42";
+import { errorView, stateView } from "../ui/bits.js?v=n42";
+import { openBookImage } from "../ui/book-image.js?v=n42";
+import { createBookSidebar, openBookContents, openElectronicBookContents, openBookSettings } from "../ui/book-tools.js?v=n42";
+import { openSheet } from "../ui/overlay.js?v=n42";
+import { setupBookAnnotations } from "../ui/book-annotations.js?v=n42";
+import { setupBookGlossary } from "../ui/book-glossary.js?v=n42";
+import { createReadingMarkdownContext, focusReadingFootnote, renderEditionText } from "../lib/reading-markdown.js?v=n42";
+import { bookCasesEntry } from "../lib/book-cases.js?v=n42";
 
 const textProgressKey = (id, version) => `xz-book-text-progress:${id}:${version}`;
 const textRecentKey = id => `xz-book-text-recent:${id}`;
@@ -223,6 +223,7 @@ function reader(ctx) {
   let activeSection = null;
   let mode = local.get("xz-book-mode", "parallel");
   if (!["original", "modern", "parallel"].includes(mode)) mode = "parallel";
+  let readingLayer = mode === "original" ? "original" : "modern";
   let preferences = readingPreferences(local.json("xz-book-preferences"));
   let routeRestore = null;
   let saving = false;
@@ -253,7 +254,7 @@ function reader(ctx) {
     h("div", { class: "book-reader-layout" }, sidebarSlot, readerBody));
   const glossary = setupBookGlossary({ content, ctx });
   const annotations = setupBookAnnotations({ content, book: () => book, getSection: () => activeSection,
-    getMode: () => book?.has_modern ? mode : "original", ctx,
+    getMode: () => book?.has_modern && !isOriginalOnlyAppendix(activeSection) ? mode : "original", ctx,
     onNavigate: annotation => {
       if (annotation.anchor_status !== "matched") {
         ctx.toast("底本或来源位置已变化，已打开来源页；原标记的位置仍待核对。");
@@ -279,7 +280,8 @@ function reader(ctx) {
     content.style.setProperty("--reading-font", `var(--font-${preferences.font})`);
     content.dataset.paper = preferences.paper;
     content.dataset.layout = preferences.layout;
-    content.dataset.mode = book?.has_modern ? mode : "original";
+    content.dataset.mode = book?.has_modern && !isOriginalOnlyAppendix(activeSection) ? mode : "original";
+    content.dataset.originalAppendix = String(isOriginalOnlyAppendix(activeSection));
     node.dataset.mode = content.dataset.mode;
     node.dataset.hasModern = String(!!book?.has_modern);
     for (const button of controls.querySelectorAll("[data-book-mode]")) {
@@ -291,11 +293,19 @@ function reader(ctx) {
     const top = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--topbar-h")) || 64;
     return top + controls.offsetHeight + 20;
   }
+  function layerText(anchor, layer) {
+    if (content.dataset.mode === (layer === "original" ? "modern" : "original")) return null;
+    const text = anchor.querySelector(`.book-${layer}`)?.querySelector("p, h2, h3, pre");
+    for (let parent = text?.parentElement; parent && parent !== content; parent = parent.parentElement) {
+      if (parent.tagName === "DETAILS" && !parent.open) return null;
+    }
+    return text || null;
+  }
   function capturePosition() {
     if (!book || !activeSection) return null;
     const anchors = [...content.querySelectorAll("[data-reading-anchor]")].filter(anchor => {
       for (let parent = anchor.parentElement; parent && parent !== content; parent = parent.parentElement) {
-        if (parent.classList.contains("book-diagram-group") && !parent.open) return false;
+        if ((parent.classList.contains("book-diagram-group") || parent.classList.contains("book-source-credits")) && !parent.open) return false;
       }
       return anchor.getBoundingClientRect().height > 0;
     });
@@ -305,8 +315,18 @@ function reader(ctx) {
     const anchor = anchors[index];
     if (!anchor) return null;
     const rect = anchor.getBoundingClientRect();
-    return { number: activeSection.number, anchor: Number(anchor.dataset.readingAnchor),
+    const position = { number: activeSection.number, anchor: Number(anchor.dataset.readingAnchor),
       offset: rect ? Math.max(0, Math.min(1, (top - rect.top) / Math.max(1, rect.height))) : 0, updatedAt: Date.now() };
+    // On a narrow screen the two language paragraphs sit one above the other.
+    // Keep the actual paragraph at the reading line when it remains visible.
+    const layers = ["original", "modern"].map(layer => ({ layer, rect: layerText(anchor, layer)?.getBoundingClientRect() }))
+      .filter(item => item.rect?.height > 0 && item.rect.top <= top && item.rect.bottom > top);
+    const visible = layers.find(item => item.layer === readingLayer) || layers[0];
+    if (visible) {
+      readingLayer = position.layer = visible.layer;
+      position.layerOffset = Math.max(0, Math.min(1, (top - visible.rect.top) / visible.rect.height));
+    }
+    return position;
   }
   function savePosition() {
     if (!saving || document.body.classList.contains("is-locked")) return;
@@ -318,13 +338,21 @@ function reader(ctx) {
       .find(node => Number(node.dataset.readingAnchor) === position?.anchor);
     if (!anchor) return;
     for (let parent = anchor.parentElement; parent && parent !== content; parent = parent.parentElement) {
-      if (parent.classList.contains("book-diagram-group")) parent.open = true;
+      if (parent.classList.contains("book-diagram-group") || parent.classList.contains("book-source-credits")) parent.open = true;
+    }
+    if (["original", "modern"].includes(position.layer) && Number.isFinite(position.layerOffset)) {
+      const rect = layerText(anchor, position.layer)?.getBoundingClientRect();
+      if (rect?.height > 0) {
+        readingLayer = position.layer;
+        window.scrollTo(0, window.scrollY + rect.top + rect.height * position.layerOffset - readingTop());
+        return;
+      }
     }
     const rect = anchor.getBoundingClientRect();
     window.scrollTo(0, window.scrollY + rect.top + rect.height * position.offset - readingTop());
   }
   function setMode(nextMode) {
-    if (!["original", "parallel", "modern"].includes(nextMode) || !book?.has_modern) return;
+    if (!["original", "parallel", "modern"].includes(nextMode) || !book?.has_modern || isOriginalOnlyAppendix(activeSection)) return;
     const position = capturePosition();
     mode = nextMode;
     local.set("xz-book-mode", mode);
@@ -387,6 +415,7 @@ function reader(ctx) {
   function paintSection() {
     if (!activeSection) return;
     const section = activeSection;
+    const hasModern = book.has_modern && !isOriginalOnlyAppendix(section);
     glossary.onSection(section);
     const figures = section.figures || [];
     const layout = bookFigureLayout({ figures, blocks: section.blocks });
@@ -401,18 +430,28 @@ function reader(ctx) {
     const figureNodes = figures.map((figure, index) => renderFigure(figure,
       mappedFigureIndices.has(index) && !diagramFigureIndices.has(index), diagramFigureIndices.has(index)));
     const blockNodes = section.blocks.map((block, index) => renderBookBlock(block, {
-      hasModern: book.has_modern, hasFigure: layout.hasLegacyFigures || layout.coveredBlockIndices.has(index),
+      hasModern, hasFigure: layout.hasLegacyFigures || layout.coveredBlockIndices.has(index),
       collapseTranscription: layout.hasExplicitMappings ? false : undefined,
       groupedTranscription: diagramBlockIndices.has(index),
       openingTitle: index === 0 && hasOpeningSectionTitle(section), renderText: glossary.renderText }));
     const bodyNodes = [];
     let transcriptionGroup = null;
+    const sourceCreditCount = hasOpeningSourceCredits(book, section) ? 2 : 0;
+    let sourceCredits = null;
     blockNodes.forEach((block, index) => {
       const before = layout.figuresBeforeBlocks[index];
       // Never move a later figure into a closed transcription group. Gaps in
       // the explicit mapping likewise start a separate continuous range.
       if (before.length || !diagramBlockIndices.has(index)) transcriptionGroup = null;
       bodyNodes.push(...before.map(figureIndex => figureNodes[figureIndex]));
+      if (index < sourceCreditCount) {
+        if (!sourceCredits) {
+          sourceCredits = h("details", { class: "book-source-credits", onToggle: onDisclosureLayout }, h("summary", null, "原书题署"));
+          bodyNodes.push(sourceCredits);
+        }
+        sourceCredits.append(block);
+        return;
+      }
       if (!diagramBlockIndices.has(index)) { bodyNodes.push(block); return; }
       if (!transcriptionGroup) {
         transcriptionGroup = h("details", { class: "book-diagram-transcription book-diagram-group", onToggle: onDisclosureLayout },
@@ -425,7 +464,7 @@ function reader(ctx) {
     const empty = blockNodes.length ? null : h("p", null, figures.length
       ? "本页为书影内容，未录连续正文。" : "保留此页的来源位置，页面情况见上方说明。");
     const headingNodes = [
-      renderBookSectionHeader(section, { hasModern: book.has_modern }),
+      renderBookSectionHeader(section, { hasModern }),
       section.partial || section.notice ? h("aside", { class: "book-page-notice" },
         section.partial ? h("strong", null, "本页有疑缺或顺序待核。") : null,
         section.notice ? section.partial
@@ -435,7 +474,9 @@ function reader(ctx) {
         h("summary", null, `本页说明 · ${section.page_notes.length}`),
         section.page_notes.map(note => h("p", null, note))) : null,
     ];
-    content.dataset.mode = book.has_modern ? mode : "original";
+    content.dataset.mode = hasModern ? mode : "original";
+    content.dataset.originalAppendix = String(isOriginalOnlyAppendix(section));
+    node.dataset.mode = content.dataset.mode;
     fill(content, headingNodes,
       layout.leadingFigureIndices.map(index => figureNodes[index]),
       bodyNodes, empty);
@@ -444,7 +485,7 @@ function reader(ctx) {
     [...headingNodes.filter(child => child && !child.classList.contains("book-page-notes")), ...figureNodes, ...blockNodes, empty].filter(Boolean)
       .forEach((child, index) => child.dataset.readingAnchor = index);
     for (const block of content.querySelectorAll(".book-block")) {
-      if (book.has_modern && !block.classList.contains("book-grouped-transcription") && !block.querySelector(".book-modern")) {
+      if (hasModern && !block.classList.contains("book-grouped-transcription") && !block.querySelector(".book-modern")) {
         block.append(h("span", { class: "book-modern-empty" }, "本段暂无白话，保留原文供阅读。"));
       }
     }
@@ -477,7 +518,7 @@ function reader(ctx) {
         } }) }, "Aa", h("span", null, "设置")),
       h("button", { type: "button", class: "btn btn-ghost book-notes-open", "aria-label": "打开笔记与书签", onClick: event => annotations.openNotes(event.currentTarget) }, "笔记"),
       h("button", { type: "button", class: "btn btn-ghost book-page-next", disabled: number >= book.section_count, "aria-label": "下一页", onClick: () => go(number + 1) }, "→")),
-      book.has_modern ? h("div", { class: "book-mode-switch", role: "group", "aria-label": "阅读模式" },
+      book.has_modern && !isOriginalOnlyAppendix(activeSection) ? h("div", { class: "book-mode-switch", role: "group", "aria-label": "阅读模式" },
         [["original", "原文"], ["parallel", "对照"], ["modern", "白话"]].map(([value, label]) =>
           h("button", { type: "button", class: "book-mode-option", dataset: { bookMode: value },
             "aria-pressed": String(mode === value), onClick: () => setMode(value) }, label))) : null);

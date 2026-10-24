@@ -2,7 +2,21 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
-  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel } from "../web/public/next/lib/book-cases.js";
+  bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel, bookCaseSourceLocation } from "../web/public/next/lib/book-cases.js";
+
+test("case source locations omit only an already complete chapter prefix", () => {
+  const source = { chapter: "卷一", location: "卷一 · 章内第2段" };
+  const before = structuredClone(source);
+  assert.equal(bookCaseSourceLocation(source), "卷一 · 章内第2段");
+  assert.equal(bookCaseSourceLocation({ chapter: "卷一", location: " 卷一：第2段 " }), "卷一：第2段");
+  assert.equal(bookCaseSourceLocation({ chapter: "卷一", location: "卷一" }), "卷一");
+  assert.equal(bookCaseSourceLocation({ chapter: "卷一", location: "卷一后记" }), "卷一 · 卷一后记");
+  assert.equal(bookCaseSourceLocation({ chapter: "卷一", location: "章内第2段" }), "卷一 · 章内第2段");
+  assert.equal(bookCaseSourceLocation({ chapter: "卷一" }), "卷一");
+  assert.equal(bookCaseSourceLocation({ location: "第2段" }), "第2段");
+  assert.equal(bookCaseSourceLocation({}), "");
+  assert.deepEqual(source, before);
+});
 
 test("case queries preserve book, paging and learning context while API calls use only public parameters", () => {
   const filter = readBookCaseQuery(new URLSearchParams("book_id=ziping-zhenquan&offset=24&limit=12&from=learning"));
