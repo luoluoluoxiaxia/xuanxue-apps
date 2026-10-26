@@ -275,6 +275,29 @@ export function sourceBreaks(block) {
   return parts;
 }
 
+// Optional presentation ranges refer to the one complete source string. Keep
+// malformed ranges on the ordinary whole-block path instead of guessing cuts.
+export function bookBlockParts(block) {
+  if (!["text", "prose"].includes(block?.role) || typeof block.text !== "string" ||
+      block.source_text === false || block.presentation && block.presentation !== "prose" ||
+      !Array.isArray(block.parts) || !block.parts.length) return null;
+  const characters = Array.from(block.text), parts = [];
+  let cursor = 0;
+  for (const part of block.parts) {
+    if (!part || typeof part !== "object" || Array.isArray(part) ||
+        Object.keys(part).some(key => !["role", "start", "end", "heading_level"].includes(key)) ||
+        !["heading", "text", "verse", "note", "commentary"].includes(part.role) ||
+        !Number.isSafeInteger(part.start) || !Number.isSafeInteger(part.end) ||
+        part.start !== cursor || part.end <= part.start || part.end > characters.length ||
+        Object.hasOwn(part, "heading_level") && (part.role !== "heading" || ![1, 2, 3].includes(part.heading_level))) return null;
+    parts.push({ role: part.role, start: part.start, end: part.end,
+      heading_level: part.role === "heading" ? part.heading_level ?? 3 : null,
+      text: characters.slice(part.start, part.end).join("") });
+    cursor = part.end;
+  }
+  return cursor === characters.length ? parts : null;
+}
+
 // 以段落及段内比例保存位置，换字号或屏幕宽度后仍可找到同一段。
 export function readingPosition(value, count) {
   if (!value || typeof value !== "object" || readingNumber(value.number, count) !== value.number ||

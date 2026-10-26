@@ -3,7 +3,7 @@ import { icon } from "../lib/icons.js?v=n42";
 import { get } from "../lib/api.js?v=n42";
 import { local, session } from "../lib/store.js?v=n42";
 import { createKnowledgeLoader } from "../lib/knowledge.js?v=n42";
-import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks,
+import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks, bookBlockParts,
   bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, hasOpeningSourceCredits, isOriginalOnlyAppendix, bookFigureLayout,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
@@ -55,11 +55,18 @@ export function renderBookBlock(block, { hasModern, hasFigure, collapseTranscrip
   const label = block.attribution || (note ? "原注" : block.role === "commentary" ? "评注"
     : transcribed ? groupedTranscription ? "" : block.role === "diagram_caption" ? "图中标注" : diagram ? "图式转写" : "表格转写" : hasModern ? "原文" : "");
   const heading = block.role === "heading" ? openingTitle ? "h2" : "h3" : "p";
+  const parts = bookBlockParts(block);
+  const originalText = parts ? parts.map(part => h("span", {
+    class: `book-part book-part-${part.role}`,
+    ...(part.role === "heading" ? { role: "heading", "aria-level": String(part.heading_level),
+      dataset: { headingLevel: part.heading_level } } : {}),
+  }, renderText([{ text: part.text, kind: null }], block.terms, "original",
+    { text: block.text, start: part.start, end: part.end }))) : renderText(sourceBreaks(block), block.terms, "original");
   const original = h("div", { class: "book-original", lang: "zh-Hant" },
     label ? h("span", { class: originalLabel ? "book-layer book-original-label" : block.attribution ? "book-layer book-attribution" : "book-layer" }, label) : null,
-    h(transcribed ? "pre" : heading, { class: transcribed ? "book-transcription" : null,
+    h(transcribed ? "pre" : heading, { class: transcribed ? "book-transcription" : parts ? "book-mixed-text" : null,
       ...(transcribed ? { tabindex: "0", "aria-label": `${diagram ? "图式" : "表格"}转写，可横向滚动` } : {}) },
-      renderText(sourceBreaks(block), block.terms, "original")));
+      originalText));
   const notes = block.notes.length ? h("details", { class: "book-notes" }, h("summary", null, `校记与说明 · ${block.notes.length}`),
     block.notes.map(note => h("p", null, note))) : null;
   const transcriptionNotice = block.source_text === false && !groupedTranscription

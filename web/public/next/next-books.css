@@ -186,6 +186,14 @@
 .book-reading-content[data-layout="continuous"] :is(.book-role-prose, .book-role-text, .book-role-note, .book-role-commentary) .book-original > p .book-source-break[data-kind="space"] { display: inline; }
 .book-reading-content[data-original-appendix="true"][data-layout="continuous"] :is(.book-role-prose, .book-role-text, .book-role-note, .book-role-commentary) .book-original > p { white-space: pre-wrap; }
 .book-reading-content[data-original-appendix="true"][data-layout="continuous"] :is(.book-role-prose, .book-role-text, .book-role-note, .book-role-commentary) .book-original > p .book-source-break { display: inline; height: auto; }
+.book-reading-content[data-layout="continuous"] :is(.book-role-prose, .book-role-text) .book-original > .book-mixed-text { white-space: pre-wrap; }
+.book-mixed-text > .book-part { display: inline; margin: 0; padding-block: 0; border-block: 0; }
+.book-part-heading { font-weight: 700; }
+.book-part-heading[data-heading-level="1"] { font-size: 1.12em; }
+.book-part-heading[data-heading-level="2"] { font-size: 1.06em; }
+.book-part-heading[data-heading-level="3"] { font-size: 1em; }
+.book-part-verse { white-space: pre-wrap; }
+.book-part-note, .book-part-commentary { padding-left: .4em; border-left: 2px solid var(--line-strong); color: var(--ink-2); font-size: .9em; }
 .book-block :is(h2, h3) { white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-serif); }
 .book-attribution { display: block; font: 12px/1.8 var(--font-sans); color: var(--ink-3); white-space: pre-wrap; }
 .book-layer { color: var(--ink-3); font-size: 12px; }

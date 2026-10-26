@@ -3,16 +3,30 @@ import { indexBookGlossary, bookTermRanges, bookTextRuns } from "../lib/book-glo
 
 let glossarySequence = 0;
 
-export function renderBookText(parts, terms, layer, senses) {
+export function renderBookText(parts, terms, layer, senses, source = null) {
   const text = parts.map(part => part.text).join("");
-  const ranges = bookTermRanges(text, terms, layer, senses);
-  const source = part => part.kind
+  let ranges;
+  if (source) {
+    // Validate against the complete published layer before using local cuts.
+    // Crossing or malformed boundaries remain plain; never rebind a term by
+    // matching its spelling or resolve overlaps differently in each part.
+    const characters = typeof source.text === "string" ? Array.from(source.text) : [];
+    const valid = Number.isSafeInteger(source.start) && Number.isSafeInteger(source.end) &&
+      source.start >= 0 && source.end > source.start && source.end <= characters.length &&
+      characters.slice(source.start, source.end).join("") === text;
+    const unitStart = valid ? characters.slice(0, source.start).join("").length : 0;
+    ranges = valid ? bookTermRanges(source.text, terms, layer, senses)
+      .filter(range => range.start >= source.start && range.end <= source.end)
+      .map(range => ({ ...range, start: range.start - source.start, end: range.end - source.start,
+        unitStart: range.unitStart - unitStart, unitEnd: range.unitEnd - unitStart })) : [];
+  } else ranges = bookTermRanges(text, terms, layer, senses);
+  const sourcePart = part => part.kind
     ? h("span", { class: "book-source-break", dataset: { kind: part.kind } }, part.text) : part.text;
   return bookTextRuns(parts, ranges).map(run => run.sense_id
     ? h("span", { class: "book-term", role: "button", tabindex: "0", "aria-haspopup": "dialog",
       "aria-expanded": "false", "aria-label": `${run.parts.map(part => part.text).join("")}，查看释义`,
-      dataset: { senseId: run.sense_id } }, run.parts.map(source))
-    : run.parts.map(source));
+      dataset: { senseId: run.sense_id } }, run.parts.map(sourcePart))
+    : run.parts.map(sourcePart));
 }
 
 export function setupBookGlossary({ content, ctx }) {
@@ -188,6 +202,6 @@ export function setupBookGlossary({ content, ctx }) {
     close,
     onLayout: position,
     onSection(section) { close(); clearPointer(); senses = indexBookGlossary(section?.glossary); },
-    renderText(parts, terms, layer) { return renderBookText(parts, terms, layer, senses); },
+    renderText(parts, terms, layer, source) { return renderBookText(parts, terms, layer, senses, source); },
   };
 }

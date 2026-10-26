@@ -353,6 +353,44 @@ test('continuous prose never marks verse, heading, diagram or table structure fo
   }
 });
 
+test('optional block parts use complete Unicode code-point coverage without changing source data', async () => {
+  const { bookBlockParts } = await load('lib/books.js');
+  const texts = [' \r\n標題𠮷\n', '甲乙。\n', '短評。\n', '詩甲\n詩乙\n', '小注。  '];
+  let cursor = 0;
+  const parts = texts.map((text, index) => {
+    const start = cursor; cursor += Array.from(text).length;
+    return { role: ['heading', 'text', 'text', 'verse', 'note'][index], start, end: cursor,
+      ...(index === 0 ? { heading_level: 2 } : {}) };
+  });
+  const block = { role: 'text', text: texts.join(''), modern: '完整白话。', parts };
+  const before = structuredClone(block);
+  const result = bookBlockParts(block);
+  assert.deepEqual(result.map(part => part.text), texts);
+  assert.equal(result.map(part => part.text).join(''), block.text);
+  assert.equal(result[0].heading_level, 2);
+  assert.equal(bookBlockParts({ ...block, role: 'prose', presentation: 'prose' }).length, parts.length);
+  assert.equal(bookBlockParts({ ...block, parts: [{ role: 'heading', start: 0, end: cursor }] })[0].heading_level, 3);
+  assert.deepEqual(block, before);
+  for (const fields of [{ parts: undefined }, { parts: [] }, { parts: {} }, { parts: [null] },
+    { role: 'verse' }, { role: 'heading' }, { presentation: 'table' }, { presentation: 'diagram' }, { source_text: false },
+    { parts: [{ role: 'text', start: 1, end: cursor }] },
+    { parts: [{ role: 'text', start: 0, end: cursor - 1 }] },
+    { parts: [{ role: 'text', start: 0, end: cursor + 1 }] },
+    { parts: [{ role: 'text', start: 0, end: block.text.length }] },
+    { parts: [{ role: 'text', start: 0, end: 0 }] },
+    { parts: [{ role: 'text', start: 0, end: 1.5 }] },
+    { parts: [{ role: 'text', start: 0, end: '2' }] },
+    { parts: [{ role: 'text', start: 0, end: cursor, heading_level: 2 }] },
+    { parts: [{ role: 'heading', start: 0, end: cursor, heading_level: 4 }] },
+    { parts: [{ role: 'heading', start: 0, end: cursor, heading_level: null }] },
+    { parts: [{ role: 'body', start: 0, end: cursor }] },
+    { parts: [{ role: 'text', start: 0, end: cursor, text: block.text }] },
+    { parts: [{ role: 'text', start: 0, end: 2 }, { role: 'note', start: 1, end: cursor }] },
+    { parts: [{ role: 'text', start: 0, end: 2 }, { role: 'note', start: 3, end: cursor }] }]) {
+    assert.equal(bookBlockParts({ ...block, ...fields }), null, JSON.stringify(fields));
+  }
+});
+
 test('contents search matches the supplied title, provenance and exact reading page', async () => {
   const { filterContents } = await load('lib/books.js');
   const contents = [{ number: 7, title: '河图', location: '影像文件 1 · 来源页 9' },

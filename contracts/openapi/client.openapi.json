@@ -1475,6 +1475,14 @@
             "title": "Notes",
             "type": "array"
           },
+          "parts": {
+            "description": "可选原文子段；外层 role 为 text，非空时按原序连续覆盖完整 text。白话仍对应整个外层块；未提供或为空时省略。",
+            "items": {
+              "$ref": "#/components/schemas/ClientBookTextPart"
+            },
+            "title": "Parts",
+            "type": "array"
+          },
           "presentation": {
             "default": "prose",
             "enum": [
@@ -2844,6 +2852,54 @@
           "versions"
         ],
         "title": "ClientBookTextInventory",
+        "type": "object"
+      },
+      "ClientBookTextPart": {
+        "additionalProperties": false,
+        "properties": {
+          "end": {
+            "description": "完整 text 中的 Unicode 码点终点，不含该位置；不使用 UTF-16 位移。",
+            "exclusiveMinimum": 0.0,
+            "title": "End",
+            "type": "integer"
+          },
+          "heading_level": {
+            "anyOf": [
+              {
+                "maximum": 3.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heading Level"
+          },
+          "role": {
+            "enum": [
+              "heading",
+              "text",
+              "verse",
+              "note",
+              "commentary"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "start": {
+            "description": "完整 text 中的 Unicode 码点起点，从 0 计数；换行计入。",
+            "minimum": 0.0,
+            "title": "Start",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "role",
+          "start",
+          "end"
+        ],
+        "title": "ClientBookTextPart",
         "type": "object"
       },
       "ClientBookTextReading": {
