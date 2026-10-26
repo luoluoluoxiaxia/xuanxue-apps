@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { indexBookGlossary, bookTermRanges, bookTextRuns } from "../web/public/next/lib/book-glossary.js";
-import { sourceBreaks } from "../web/public/next/lib/books.js";
+import { sourceBreaks, bookBlockParts } from "../web/public/next/lib/books.js";
 import { selectionAnchor, annotationRange } from "../web/public/next/lib/book-annotations.js";
 import { renderBookText, setupBookGlossary } from "../web/public/next/ui/book-glossary.js";
 
@@ -159,6 +159,103 @@ test("term wrappers retain canonical text, source breaks and annotation ranges a
   const section = { number: 1, edition_sha256: "a".repeat(64), blocks: [{ id: "block-1", text, modern: "" }] };
   const selected = selectionAnchor(content, section, { rangeCount: 1, isCollapsed: false, getRangeAt: () => range });
   assert.equal(selected.anchor.start, 1); assert.equal(selected.anchor.end, 7); assert.equal(selected.anchor.quote, annotation.quote);
+});
+
+test("mixed roles keep one canonical paragraph, modern pair and copy/annotation offsets", async () => {
+  const { document } = mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const texts = [" \r\n標題𠮷\n", "甲乙。\n", "短評。\n", "詩甲\n詩乙\n", "小注甲乙。\n", "評語。  "];
+  const roles = ["heading", "text", "text", "verse", "note", "commentary"];
+  let cursor = 0;
+  const parts = texts.map((text, index) => {
+    const start = cursor; cursor += Array.from(text).length;
+    return { role: roles[index], start, end: cursor, ...(index === 0 ? { heading_level: 2 } : {}) };
+  });
+  const text = texts.join("");
+  const originalStart = Array.from(text.slice(0, text.lastIndexOf("甲乙"))).length;
+  const sample = { id: "sample-term", term: "甲乙", definition: "合成测试词义" };
+  const glossary = indexBookGlossary([sample]);
+  const block = { id: "block-mixed", role: "text", text, modern: "完整白话𠮷甲乙。", notes: [], parts,
+    terms: [{ layer: "original", start: originalStart, end: originalStart + 2, sense_id: sample.id },
+      { layer: "modern", start: 5, end: 7, sense_id: sample.id }] };
+  const before = structuredClone(block);
+  const content = document.createElement("div"); document.body.append(content);
+  const body = renderBookBlock(block, { hasModern: true,
+    renderText: (runs, terms, layer, source) => renderBookText(runs, terms, layer, glossary, source) });
+  content.append(body);
+  const canonical = body.querySelector(".book-original p");
+  assert.equal(body.dataset.blockId, block.id);
+  assert.deepEqual(content.querySelectorAll(".book-block"), [body]);
+  assert.equal(body.querySelectorAll(".book-original").length, 1);
+  assert.equal(body.querySelectorAll(".book-modern").length, 1);
+  assert.equal(body.querySelectorAll("p").length, 2);
+  assert.equal(canonical.textContent, text);
+  assert.equal(canonical.className, "book-mixed-text");
+  assert.deepEqual(canonical.childNodes.map(node => node.className), roles.map(role => `book-part book-part-${role}`));
+  assert.deepEqual(canonical.childNodes.map(node => node.textContent), texts);
+  assert.equal(canonical.childNodes[0].getAttribute("role"), "heading");
+  assert.equal(canonical.childNodes[0].getAttribute("aria-level"), "2");
+  assert.equal(canonical.querySelector(".book-part-note").querySelector(".book-term").textContent, sample.term);
+  assert.equal(body.querySelector(".book-modern p").textContent, block.modern);
+  assert.equal(body.querySelector(".book-modern .book-term").textContent, sample.term);
+  const quote = { start: parts[0].end - 2, end: parts[4].end - 1 };
+  quote.quote = Array.from(text).slice(quote.start, quote.end).join("");
+  const range = annotationRange(canonical, quote);
+  assert.equal(range.toString(), quote.quote);
+  const selected = selectionAnchor(content, { number: 1, edition_sha256: "a".repeat(64), blocks: [block] },
+    { rangeCount: 1, isCollapsed: false, getRangeAt: () => range });
+  assert.deepEqual([selected.anchor.start, selected.anchor.end, selected.anchor.quote], [quote.start, quote.end, quote.quote]);
+  for (const mode of ["original", "modern", "parallel"]) {
+    content.dataset.mode = mode;
+    assert.equal(canonical.textContent, block.text);
+    assert.equal(body.querySelector(".book-modern p").textContent, block.modern);
+    assert.equal(content.querySelectorAll(".book-block").length, 1);
+  }
+  assert.deepEqual(block, before);
+});
+
+test("part-local glossary display validates the complete string and fails closed across boundaries", () => {
+  const { document } = mockEnvironment();
+  const text = "𠮷甲乙\n丙丁";
+  const sample = { id: "sample-term", term: "合成词", definition: "合成测试词义" };
+  const glossary = indexBookGlossary([sample]);
+  const occurrence = (start, end) => ({ layer: "original", start, end, sense_id: sample.id });
+  const render = (value, terms, source) => {
+    const node = document.createElement("p");
+    node.append(...renderBookText([{ text: value, kind: null }], terms, "original", glossary, source).flat(Infinity));
+    assert.equal(node.textContent, value);
+    return node;
+  };
+  const source = { text, start: 1, end: 4 };
+  const terms = [occurrence(1, 3), occurrence(4, 6)];
+  const before = structuredClone(terms);
+  assert.equal(render("甲乙\n", terms, source).querySelector(".book-term").textContent, "甲乙");
+  // A crossing term cannot become a shorter clickable term at either edge.
+  for (const range of [[0, 2], [2, 5]]) assert.equal(render("甲乙\n", [occurrence(...range)], source).querySelector(".book-term"), null);
+  // Global ambiguity stays plain even when only one range fits this part.
+  assert.equal(render("甲乙\n", [occurrence(1, 3), occurrence(2, 5)], source).querySelector(".book-term"), null);
+  for (const invalid of [{ ...source, start: -1 }, { ...source, end: 7 }, { ...source, end: "4" },
+    { ...source, start: 1.5 }, { ...source, text: "另一完整串" }])
+    assert.equal(render("甲乙\n", terms, invalid).querySelector(".book-term"), null);
+  assert.deepEqual(terms, before);
+});
+
+test("absent and malformed parts retain the legacy complete-block rendering", async () => {
+  mockEnvironment();
+  globalThis.location ||= { hash: "", search: "", origin: "https://example.test" };
+  const { renderBookBlock } = await import("../web/public/next/views/books.js");
+  const render = block => renderBookBlock(block, { hasModern: true, renderText: runs => runs.map(run => run.text) });
+  const block = { id: "block-plain", role: "text", text: "甲𠮷\n乙  ", modern: "完整白话。", notes: [] };
+  const signature = node => [node.tagName || "#text", node.className || "", node.data || "",
+    [...(node.attributes || [])], { ...node.dataset }, node.childNodes.map(signature)];
+  const legacy = signature(render(block));
+  for (const parts of [undefined, null, [], [{ role: "text", start: 0, end: 2 }],
+    [{ role: "text", start: 0, end: Array.from(block.text).length, heading_level: 2 }]]) {
+    const value = { ...block, parts };
+    assert.equal(bookBlockParts(value), null);
+    assert.deepEqual(signature(render(value)), legacy);
+  }
 });
 
 test("source cues are optional, closed, literal and outside body, glossary and reading anchors", async () => {
