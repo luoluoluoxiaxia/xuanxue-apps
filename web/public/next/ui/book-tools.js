@@ -6,7 +6,7 @@ import { openSheet } from "./overlay.js?v=n42";
 export function renderBookContentsGroups(groups, renderItem, onToggle) {
   return groups.flatMap(group => group.kind === "appendix"
     ? h("details", { class: "book-contents-appendices", open: group.open, onToggle },
-      h("summary", null, "版本附录", h("small", null, ` · ${group.items.length}`)), group.items.map(renderItem))
+      h("summary", null, group.label || "版本附录", h("small", null, ` · ${group.items.length}`)), group.items.map(renderItem))
     : group.kind === "volume"
       ? h("details", { class: "book-contents-volume", open: group.open, onToggle },
         h("summary", null, group.label), group.items.map(renderItem))
@@ -73,7 +73,7 @@ export function createBookSidebar({ book, contents, current, onSelect, onCollaps
       onClick: () => onSelect(item.number), onFocus: event => {
         for (const button of rows.querySelectorAll("button")) button.tabIndex = button === event.currentTarget ? 0 : -1;
       } }, h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录", "版本资料"].includes(item.location) ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), event => {
         const group = event.currentTarget;
         if (!group.open && group.contains(document.activeElement)) group.querySelector("summary")?.focus({ preventScroll: true });
@@ -148,7 +148,7 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
       "aria-current": item.number === current ? "page" : null,
       onClick: () => { sheet.close(); onSelect(item.number); } },
       h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录", "版本资料"].includes(item.location) ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), syncHiddenButtons) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
     syncHiddenButtons();
     positionContents();

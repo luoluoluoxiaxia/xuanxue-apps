@@ -122,16 +122,17 @@ export function bookDefaultSectionNumber(book) {
   return readingNumber(book.default_section_number ?? 1, book.section_count);
 }
 
-// Only the supplied appendix location separates optional version material.
+// Only the explicit version-material label opts into separate paging. Legacy
+// appendices can also contain translated prefaces and afterwords.
 // Group positions are display-only; every destination keeps its raw number.
 export function bookSectionNavigation(contents, number, sectionCount) {
   const legacy = { kind: "body", separated: false, position: number, total: sectionCount,
     previous: number > 1 ? number - 1 : null, next: number < sectionCount ? number + 1 : null };
-  if (!contents.some(item => item.location === "附录")) return legacy;
+  if (!contents.some(item => item.location === "版本资料")) return legacy;
   const current = contents.find(item => item.number === number);
   if (!current) return legacy;
-  const appendix = current.location === "附录";
-  const rows = contents.filter(item => (item.location === "附录") === appendix);
+  const appendix = current.location === "版本资料";
+  const rows = contents.filter(item => (item.location === "版本资料") === appendix);
   const index = rows.findIndex(item => item.number === number);
   return { kind: appendix ? "appendix" : "body", separated: true, position: index + 1, total: rows.length,
     previous: rows[index - 1]?.number ?? null, next: rows[index + 1]?.number ?? null };
@@ -171,7 +172,7 @@ function sourceBookTitle(value) {
 }
 
 export function isOriginalOnlyAppendix(section) {
-  return section?.location === "附录" && Array.isArray(section.blocks) &&
+  return ["附录", "版本资料"].includes(section?.location) && Array.isArray(section.blocks) &&
     !section.blocks.some(block => typeof block.modern === "string" && block.modern.trim());
 }
 
@@ -254,10 +255,10 @@ export function groupBookContents(contents, query = "", current = 0) {
     // A two-part path explicitly refers to the nearest preceding parent in
     // this volume. Ordinary locations such as "卷三 · 第 20 页" stay visible.
     if (path?.length === 2 && (previous?.kind !== "volume" || previous.label !== path[0] || previous.parentTitle !== path[1])) path = null;
-    const kind = path ? "volume" : item.location === "附录" ? "appendix" : "body";
-    const label = path?.[0];
+    const kind = path ? "volume" : ["附录", "版本资料"].includes(item.location) ? "appendix" : "body";
+    const label = path?.[0] ?? (item.location === "版本资料" ? "版本资料" : undefined);
     if (runs.at(-1)?.kind !== kind || runs.at(-1)?.label !== label) {
-      runs.push({ kind, ...(path ? { label } : {}), items: [] });
+      runs.push({ kind, ...(label !== undefined ? { label } : {}), items: [] });
     }
     runs.at(-1).items.push({ item, path });
     if (path?.length === 1) runs.at(-1).parentTitle = item.title;
@@ -270,7 +271,7 @@ export function groupBookContents(contents, query = "", current = 0) {
       return matches.has(item) ? [{ ...item, display_title: run.kind === "appendix" && totals.get(item.title) > 1
         ? `${item.title} · ${ordinal}` : item.title, ...(path ? { contents_depth: path.length - 1 } : {}) }] : [];
     });
-    return { kind: run.kind, ...(run.kind === "volume" ? { label: run.label } : {}), items,
+    return { kind: run.kind, ...(run.label !== undefined ? { label: run.label } : {}), items,
       open: run.kind === "body" || Boolean(query.trim()) || run.items.some(({ item }) => item.number === current) };
   }).filter(group => group.items.length);
 }

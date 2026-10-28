@@ -38,6 +38,28 @@ test("current appendix and matching searches open while duplicate numbering surv
   assert.deepEqual(groupBookContents(contents, "不存在", 1), []);
 });
 
+const mixedSourceContents = [
+  { number: 1, title: "正文", location: "原书章节", partial: false },
+  { number: 2, title: "旧附录", location: "附录", partial: false },
+  { number: 3, title: "来源", location: "版本资料", partial: false },
+  { number: 4, title: "来源", location: "版本资料", partial: false },
+  { number: 5, title: "旧后跋", location: "附录", partial: false },
+  { number: 6, title: "来源", location: "版本资料", partial: false },
+];
+
+test("explicit version material groups do not relabel or merge neighboring legacy appendices", () => {
+  const before = structuredClone(mixedSourceContents);
+  const groups = groupBookContents(mixedSourceContents, "", 4);
+  assert.deepEqual(groups.map(group => [group.kind, group.label, group.items.map(item => item.number), group.open]), [
+    ["body", undefined, [1], true], ["appendix", undefined, [2], false],
+    ["appendix", "版本资料", [3, 4], true], ["appendix", undefined, [5], false],
+    ["appendix", "版本资料", [6], false],
+  ]);
+  assert.deepEqual(groupBookContents(mixedSourceContents, "版本资料", 1).map(group => group.items.map(item => item.number)), [[3, 4], [6]]);
+  assert.deepEqual(groups.flatMap(group => group.items).map(({ display_title, ...item }) => item), mixedSourceContents);
+  assert.deepEqual(mixedSourceContents, before);
+});
+
 const volumeLabels = ["卷一", "卷二", "卷三", "卷四", "卷五", "卷六"];
 const volumeCounts = [19, 15, 12, 11, 11, 2];
 const volumeContents = Array.from({ length: 3 }, (_, index) =>
@@ -168,6 +190,15 @@ globalThis.localStorage = { getItem() { return null; }, setItem() {}, removeItem
 globalThis.requestAnimationFrame = () => 1;
 globalThis.cancelAnimationFrame = () => {};
 const { renderBookContentsGroups, bookContentsControls, createBookSidebar } = await import("../web/public/next/ui/book-tools.js");
+
+test("the shared directory shows the new material label while legacy appendix summaries keep their original wording", () => {
+  const rows = new TestNode("nav");
+  rows.append(...renderBookContentsGroups(groupBookContents(mixedSourceContents, "", 4), item => {
+    const button = new TestNode("button"); button.textContent = item.display_title; return button;
+  }, () => {}));
+  assert.deepEqual(rows.querySelectorAll("summary").map(node => node.textContent), ["版本附录 · 1", "版本资料 · 2", "版本附录 · 1", "版本资料 · 1"]);
+  assert.equal(rows.querySelectorAll("button").length, mixedSourceContents.length);
+});
 
 test("the shared desktop/mobile group preserves every button and excludes closed descendants from keyboard destinations", () => {
   const groups = groupBookContents(contents, "", 1);
