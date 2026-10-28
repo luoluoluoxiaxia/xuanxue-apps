@@ -218,25 +218,45 @@ export function filterContents(contents, query) {
     searchText(`${item.title} ${item.location}`).includes(needle));
 }
 
-// Keep source numbers/titles intact. Only consecutive source appendices share
-// a disclosure, and duplicate labels keep their original order when searching.
+// The service may explicitly provide a volume and one parent title in the
+// existing location field. Do not infer that path from titles or page numbers.
+function contentsVolumePath(location) {
+  if (typeof location !== "string") return null;
+  const path = location.split(" · ");
+  if (![1, 2].includes(path.length) || path.some(part => !part || part !== part.trim() || /[\r\n]/u.test(part)) ||
+      !/^卷[一二三四五六七八九十百千〇零两兩廿卅卌壹貳贰參叁肆伍陸陆柒捌玖拾佰仟0-9]+$/u.test(path[0])) return null;
+  return path;
+}
+
+// Keep source numbers/titles intact. Build consecutive disclosure runs before
+// searching, so filtering cannot merge separated volumes or lose child depth.
 export function groupBookContents(contents, query = "", current = 0) {
   const matches = new Set(filterContents(contents, query));
   const runs = [];
   for (const item of contents) {
-    const kind = item.location === "附录" ? "appendix" : "body";
-    if (runs.at(-1)?.kind !== kind) runs.push({ kind, items: [] });
-    runs.at(-1).items.push(item);
+    let path = contentsVolumePath(item.location);
+    const previous = runs.at(-1);
+    // A two-part path explicitly refers to the nearest preceding parent in
+    // this volume. Ordinary locations such as "卷三 · 第 20 页" stay visible.
+    if (path?.length === 2 && (previous?.kind !== "volume" || previous.label !== path[0] || previous.parentTitle !== path[1])) path = null;
+    const kind = path ? "volume" : item.location === "附录" ? "appendix" : "body";
+    const label = path?.[0];
+    if (runs.at(-1)?.kind !== kind || runs.at(-1)?.label !== label) {
+      runs.push({ kind, ...(path ? { label } : {}), items: [] });
+    }
+    runs.at(-1).items.push({ item, path });
+    if (path?.length === 1) runs.at(-1).parentTitle = item.title;
   }
   return runs.map(run => {
     const totals = new Map(), seen = new Map();
-    for (const item of run.items) totals.set(item.title, (totals.get(item.title) || 0) + 1);
-    const items = run.items.flatMap(item => {
+    for (const { item } of run.items) totals.set(item.title, (totals.get(item.title) || 0) + 1);
+    const items = run.items.flatMap(({ item, path }) => {
       const ordinal = (seen.get(item.title) || 0) + 1; seen.set(item.title, ordinal);
       return matches.has(item) ? [{ ...item, display_title: run.kind === "appendix" && totals.get(item.title) > 1
-        ? `${item.title} · ${ordinal}` : item.title }] : [];
+        ? `${item.title} · ${ordinal}` : item.title, ...(path ? { contents_depth: path.length - 1 } : {}) }] : [];
     });
-    return { kind: run.kind, items, open: run.kind === "body" || Boolean(query.trim()) || run.items.some(item => item.number === current) };
+    return { kind: run.kind, ...(run.kind === "volume" ? { label: run.label } : {}), items,
+      open: run.kind === "body" || Boolean(query.trim()) || run.items.some(({ item }) => item.number === current) };
   }).filter(group => group.items.length);
 }
 

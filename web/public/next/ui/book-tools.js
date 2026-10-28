@@ -7,7 +7,10 @@ export function renderBookContentsGroups(groups, renderItem, onToggle) {
   return groups.flatMap(group => group.kind === "appendix"
     ? h("details", { class: "book-contents-appendices", open: group.open, onToggle },
       h("summary", null, "版本附录", h("small", null, ` · ${group.items.length}`)), group.items.map(renderItem))
-    : group.items.map(renderItem));
+    : group.kind === "volume"
+      ? h("details", { class: "book-contents-volume", open: group.open, onToggle },
+        h("summary", null, group.label), group.items.map(renderItem))
+      : group.items.map(renderItem));
 }
 
 // Native closed details can retain stale geometry. Check their ancestry rather
@@ -65,12 +68,12 @@ export function createBookSidebar({ book, contents, current, onSelect, onCollaps
     const groups = groupBookContents(contents, search.value, current);
     const matches = groups.flatMap(group => group.items);
     count.textContent = `${matches.length} / ${contents.length} 项 · 当前 ${current}`;
-    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: "book-contents-item",
+    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: `book-contents-item${item.contents_depth === 1 ? " book-contents-subchapter" : ""}`,
       tabindex: -1, "aria-current": item.number === current ? "page" : null,
       onClick: () => onSelect(item.number), onFocus: event => {
         for (const button of rows.querySelectorAll("button")) button.tabIndex = button === event.currentTarget ? 0 : -1;
       } }, h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.display_title), item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), event => {
         const group = event.currentTarget;
         if (!group.open && group.contains(document.activeElement)) group.querySelector("summary")?.focus({ preventScroll: true });
@@ -141,11 +144,11 @@ export function openBookContents({ book, contents, current, onSelect, returnFocu
     const groups = groupBookContents(contents, search.value, current);
     const matches = groups.flatMap(group => group.items);
     count.textContent = `${matches.length} / ${contents.length} 项 · 当前第 ${current} ${book.has_modern ? "篇" : "页"}`;
-    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: "book-contents-item",
+    fill(rows, matches.length ? renderBookContentsGroups(groups, item => h("button", { type: "button", class: `book-contents-item${item.contents_depth === 1 ? " book-contents-subchapter" : ""}`,
       "aria-current": item.number === current ? "page" : null,
       onClick: () => { sheet.close(); onSelect(item.number); } },
       h("span", { class: "book-contents-number" }, item.number),
-      h("span", null, h("b", null, item.display_title), item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
+      h("span", null, h("b", null, item.display_title), item.contents_depth === undefined && item.title !== item.location && !["原书章节", "附录"].includes(item.location) ? h("small", null, item.location) : null),
       item.partial ? h("small", { class: "books-status" }, "有疑缺") : null), syncHiddenButtons) : h("p", { class: "books-notice" }, "没有匹配项，可直接按阅读页码跳转。"));
     syncHiddenButtons();
     positionContents();
