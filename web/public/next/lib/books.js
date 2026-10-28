@@ -122,6 +122,21 @@ export function bookDefaultSectionNumber(book) {
   return readingNumber(book.default_section_number ?? 1, book.section_count);
 }
 
+// Only the supplied appendix location separates optional version material.
+// Group positions are display-only; every destination keeps its raw number.
+export function bookSectionNavigation(contents, number, sectionCount) {
+  const legacy = { kind: "body", separated: false, position: number, total: sectionCount,
+    previous: number > 1 ? number - 1 : null, next: number < sectionCount ? number + 1 : null };
+  if (!contents.some(item => item.location === "附录")) return legacy;
+  const current = contents.find(item => item.number === number);
+  if (!current) return legacy;
+  const appendix = current.location === "附录";
+  const rows = contents.filter(item => (item.location === "附录") === appendix);
+  const index = rows.findIndex(item => item.number === number);
+  return { kind: appendix ? "appendix" : "body", separated: true, position: index + 1, total: rows.length,
+    previous: rows[index - 1]?.number ?? null, next: rows[index + 1]?.number ?? null };
+}
+
 // Numeric positions belong to the exact chapter order. Older books retain their
 // original keys; a newly versioned layout never reads an unversioned position.
 export function bookReadingKeys(book) {

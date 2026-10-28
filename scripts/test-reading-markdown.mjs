@@ -761,6 +761,107 @@ test("the real library, reader and version catalog isolate a new layout from an 
   } finally { globalThis.fetch = previousFetch; }
 });
 
+test("the real reader keeps body and optional source paging separate on wide and narrow layouts without renumbering stored destinations", async () => {
+  const storage = new Map();
+  globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
+  globalThis.Node = MockNode; globalThis.Element = MockNode;
+  globalThis.location = { hash: "#/books", search: "", origin: "https://example.test" };
+  globalThis.document = { ...environment(), addEventListener() {}, removeEventListener() {} };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
+  const { render: renderBooks } = await import("../web/public/next/views/books.js");
+  const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
+  const contents = [
+    { number: 1, title: "序", location: "原书章节", partial: false },
+    { number: 2, title: "版本题署", location: "附录", partial: false },
+    { number: 3, title: "古文附篇", location: "卷六", partial: false },
+    { number: 4, title: "版本刊记", location: "附录", partial: false },
+    { number: 5, title: "正文末篇", location: "卷六", partial: false },
+  ];
+  const before = structuredClone(contents), fixtures = new Map(), previousFetch = globalThis.fetch;
+  let sequence = 0;
+  globalThis.fetch = async path => {
+    const fixture = fixtures.get(path.split("/")[3]);
+    const match = path.match(/\/sections\/(\d+)$/);
+    const row = match && contents.find(item => item.number === Number(match[1]));
+    const data = row ? { ...row, book_id: fixture.id, notice: "", page_notes: [], figures: [], glossary: [],
+      blocks: [{ id: `raw-block-${row.number}`, role: "text", text: `原文${row.number}。`,
+        modern: fixture.has_modern && row.location !== "附录" ? `白话${row.number}。` : "", notes: [] }] }
+      : { book: fixture, contents };
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  async function mount(book, number, wide) {
+    const events = new Map(), navigated = [], cleanups = [];
+    globalThis.document = { ...environment(), documentElement: new MockNode("html"),
+      addEventListener(name, fn) { if (!events.has(name)) events.set(name, new Set()); events.get(name).add(fn); },
+      removeEventListener(name, fn) { events.get(name)?.delete(fn); } };
+    globalThis.window = { scrollY: 0, addEventListener() {}, removeEventListener() {}, getSelection: () => null, scrollTo() {},
+      matchMedia: () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }) };
+    let current = true;
+    const ctx = { params: { id: book.id }, query: new URLSearchParams(`page=${number}&from=learning`), cleanup: fn => cleanups.push(fn),
+      onRefresh() {}, isCurrent: () => current, setTitle() {}, navigate: path => navigated.push(path) };
+    const view = renderBooks(ctx); document.body.append(view.node);
+    for (const node of all(view.node)) node.offsetHeight = 0;
+    for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
+    return { node: view.node, navigated,
+      key(key) { const event = { key, target: document.body, preventDefault() {} }; events.get("keydown")?.forEach(fn => fn(event)); },
+      cleanup() { cleanups.forEach(fn => fn()); current = false; } };
+  }
+  const click = node => node.listeners.get("click")({ currentTarget: node, target: node, preventDefault() {} });
+  const progress = view => [view.node.querySelector(".book-directory").querySelector("small").textContent,
+    view.node.querySelector(".book-reading-pagination").children[1].textContent];
+  const link = (view, rel) => tags(view.node.querySelector(".book-reading-pagination"), "a").find(node => node.getAttribute("rel") === rel)?.getAttribute("href");
+  try {
+    for (const hasModern of [false, true]) for (const wide of [false, true]) {
+      const book = { id: `separate-paging-${++sequence}`, title: "分组翻页测试书", system: "bazi", source_label: "测试来源",
+        status: "reading_edition", has_modern: hasModern, section_count: 5, default_section_number: 1, reading_layout_id: "unchanged-layout", case_count: 0 };
+      fixtures.set(book.id, book);
+      const path = number => `/books/${book.id}?page=${number}&from=learning`;
+      let view = await mount(book, 3, wide);
+      assert.deepEqual(progress(view), ["2 / 3", "2 / 3"]);
+      assert.equal(link(view, "prev"), `#${path(1)}`);
+      assert.equal(link(view, "next"), `#${path(5)}`);
+      click(view.node.querySelector(".book-page-prev")); click(view.node.querySelector(".book-page-next"));
+      view.key("ArrowLeft"); view.key("ArrowRight");
+      assert.deepEqual(view.navigated, [path(1), path(5), path(1), path(5)]);
+      assert.equal(storage.get(bookReadingKeys(book).progress), "3", "progress keeps the raw source section number");
+      assert.equal(JSON.parse(storage.get(bookReadingKeys(book).position)).number, 3);
+      assert.equal(view.node.querySelector(".book-sidebar").querySelectorAll("button").filter(node => node.classList.contains("book-contents-item")).length, 5);
+      const jump = view.node.querySelector(".book-sidebar").querySelectorAll("input").find(node => node.getAttribute("type") === "number");
+      assert.equal(jump.getAttribute("max"), "5");
+      assert.ok(view.node.querySelector(".books-count").textContent.startsWith("5 / 5 项"));
+      const sourceButton = view.node.querySelector(".book-sidebar").querySelectorAll(".book-contents-item").find(node => node.querySelector("b").textContent === "版本刊记");
+      click(sourceButton); assert.equal(view.navigated.at(-1), path(4), "optional material remains an explicit TOC destination");
+      view.cleanup();
+      view = await mount(book, 5, wide);
+      assert.deepEqual(progress(view), ["3 / 3", "3 / 3"]);
+      assert.equal(view.node.querySelector(".book-page-next").getAttribute("disabled"), "");
+      assert.equal(link(view, "next"), undefined);
+      view.key("ArrowRight"); assert.deepEqual(view.navigated, [], "the final body chapter never enters source material automatically");
+      view.cleanup();
+      view = await mount(book, 2, wide);
+      assert.deepEqual(progress(view), ["版本资料 1 / 2", "版本资料 1 / 2"]);
+      assert.equal(view.node.querySelector(".book-reading-pagination").getAttribute("aria-label"), "版本资料翻页");
+      assert.equal(view.node.querySelector(".book-page-prev").getAttribute("disabled"), "");
+      assert.equal(link(view, "prev"), undefined); assert.equal(link(view, "next"), `#${path(4)}`);
+      view.key("ArrowLeft"); assert.deepEqual(view.navigated, []);
+      click(view.node.querySelector(".book-page-next")); view.key("ArrowRight");
+      assert.deepEqual(view.navigated, [path(4), path(4)]);
+      view.cleanup();
+      view = await mount(book, 4, wide);
+      assert.deepEqual(progress(view), ["版本资料 2 / 2", "版本资料 2 / 2"]);
+      assert.equal(link(view, "prev"), `#${path(2)}`); assert.equal(link(view, "next"), undefined);
+      view.key("ArrowLeft"); view.key("ArrowRight");
+      assert.deepEqual(view.navigated, [path(2)]);
+      assert.equal(storage.get(bookReadingKeys(book).progress), "4");
+      view.cleanup();
+    }
+    assert.deepEqual(contents, before);
+  } finally { globalThis.fetch = previousFetch; }
+});
+
 test("the real reader interleaves covered figures without losing text, glossary, notes or existing numeric positions", async () => {
   const storage = new Map();
   globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };

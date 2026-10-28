@@ -4,7 +4,7 @@ import { get } from "../lib/api.js?v=n42";
 import { local, session } from "../lib/store.js?v=n42";
 import { createKnowledgeLoader } from "../lib/knowledge.js?v=n42";
 import { BOOK_STATUS, BOOK_SYSTEM, readingPath, readingNumber, filterBooks, readingPreferences, readingPosition, sourceBreaks, bookBlockParts,
-  bookDefaultSectionNumber, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, hasOpeningSourceCredits, isOriginalOnlyAppendix, bookFigureLayout,
+  bookDefaultSectionNumber, bookSectionNavigation, bookReadingKeys, bookReadingEntry, hasOpeningSectionTitle, hasOpeningSourceCredits, isOriginalOnlyAppendix, bookFigureLayout,
   TEXT_ROLES, TEXT_COMPLETENESS, TEXT_COLLATION, textVersionPath, textExportPath,
   READING_KINDS, textReadingTarget, groupReadingSections, textReadingPosition, readingBlockText,
   readingCharacterLength, readingCharacterAnchor } from "../lib/books.js?v=n42";
@@ -367,6 +367,9 @@ function reader(ctx) {
     requestAnimationFrame(() => annotations.onLayout());
     if (position) restorePosition(position);
   }
+  function progressLabel(navigation) {
+    return `${navigation.kind === "appendix" ? "版本资料 " : ""}${navigation.position} / ${navigation.total}`;
+  }
   function syncDirectory() {
     node.dataset.directory = directoryOpen ? "open" : "collapsed";
     const button = controls.querySelector(".book-directory");
@@ -379,7 +382,12 @@ function reader(ctx) {
         button.removeAttribute("aria-expanded"); button.removeAttribute("aria-controls");
         button.setAttribute("aria-haspopup", "dialog");
       }
-      button.setAttribute("aria-label", `${wideDirectory.matches ? directoryOpen ? "收起" : "展开" : "打开"}${book.title}目录，当前第 ${activeSection?.number || 1} 页`);
+      const number = activeSection?.number || 1;
+      const navigation = bookSectionNavigation(contents, number, book.section_count);
+      const positionLabel = navigation.separated
+        ? `${navigation.kind === "appendix" ? "当前版本资料" : "当前正文"} ${navigation.position} / ${navigation.total}`
+        : `当前第 ${number} 页`;
+      button.setAttribute("aria-label", `${wideDirectory.matches ? directoryOpen ? "收起" : "展开" : "打开"}${book.title}目录，${positionLabel}`);
       button.querySelector("span").textContent = wideDirectory.matches
         ? directoryOpen ? "收起目录" : `${book.title} · 展开目录` : `${book.title} · ${book.has_modern ? "目录" : "书页"}`;
     }
@@ -496,10 +504,12 @@ function reader(ctx) {
         block.append(h("span", { class: "book-modern-empty" }, "本段暂无白话，保留原文供阅读。"));
       }
     }
+    const navigation = bookSectionNavigation(contents, section.number, book.section_count);
+    pagination.setAttribute("aria-label", navigation.kind === "appendix" ? "版本资料翻页" : "正文翻页");
     fill(pagination,
-      section.number > 1 ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${links.reading(id, section.number - 1)}` }, "上一页") : h("span"),
-      h("span", null, `${section.number} / ${book.section_count}`),
-      section.number < book.section_count ? h("a", { class: "btn btn-soft", rel: "next", href: `#${links.reading(id, section.number + 1)}` }, "下一页") : h("span"));
+      navigation.previous !== null ? h("a", { class: "btn btn-soft", rel: "prev", href: `#${links.reading(id, navigation.previous)}` }, "上一页") : h("span"),
+      h("span", null, progressLabel(navigation)),
+      navigation.next !== null ? h("a", { class: "btn btn-soft", rel: "next", href: `#${links.reading(id, navigation.next)}` }, "下一页") : h("span"));
     local.set(bookReadingKeys(book).progress, String(section.number));
   }
   function go(number) {
@@ -507,15 +517,16 @@ function reader(ctx) {
     savePosition(); ctx.navigate(links.reading(id, number));
   }
   function paintControls(number) {
+    const navigation = bookSectionNavigation(contents, number, book.section_count);
     fill(controls,
       h("div", { class: "book-toolbar-main" },
-      h("button", { type: "button", class: "btn btn-ghost book-page-prev", disabled: number <= 1, "aria-label": "上一页", onClick: () => go(number - 1) }, "←"),
+      h("button", { type: "button", class: "btn btn-ghost book-page-prev", disabled: navigation.previous === null, "aria-label": "上一页", onClick: () => go(navigation.previous) }, "←"),
       h("button", { type: "button", class: "btn btn-ghost book-directory",
         "aria-label": `打开${book.title}目录，当前第 ${number} ${book.has_modern ? "篇" : "页"}，共 ${book.section_count} ${book.has_modern ? "篇" : "页"}`,
         onClick: event => wideDirectory.matches ? setDirectory(!directoryOpen)
           : openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget,
             libraryPath: links.libraryPath, libraryLabel: links.libraryLabel, casePath: bookCasesEntry(book, ctx.query.get("from")) }) },
-        icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, `${number} / ${book.section_count}`)),
+        icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, progressLabel(navigation))),
       h("button", { type: "button", class: "btn btn-ghost book-settings-open", "aria-label": "字号与排版设置", onClick: event => openBookSettings({ preferences, mode, hasModern: false, returnFocus: event.currentTarget,
         onChange: (prefs, nextMode) => {
           const position = capturePosition(); preferences = readingPreferences(prefs); mode = nextMode;
@@ -524,7 +535,7 @@ function reader(ctx) {
           if (position) restorePosition(position);
         } }) }, "Aa", h("span", null, "设置")),
       h("button", { type: "button", class: "btn btn-ghost book-notes-open", "aria-label": "打开笔记与书签", onClick: event => annotations.openNotes(event.currentTarget) }, "笔记"),
-      h("button", { type: "button", class: "btn btn-ghost book-page-next", disabled: number >= book.section_count, "aria-label": "下一页", onClick: () => go(number + 1) }, "→")),
+      h("button", { type: "button", class: "btn btn-ghost book-page-next", disabled: navigation.next === null, "aria-label": "下一页", onClick: () => go(navigation.next) }, "→")),
       book.has_modern && !isOriginalOnlyAppendix(activeSection) ? h("div", { class: "book-mode-switch", role: "group", "aria-label": "阅读模式" },
         [["original", "原文"], ["parallel", "对照"], ["modern", "白话"]].map(([value, label]) =>
           h("button", { type: "button", class: "book-mode-option", dataset: { bookMode: value },
@@ -572,8 +583,9 @@ function reader(ctx) {
     if (!activeSection || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
         document.body.classList.contains("is-locked") || event.target.closest?.("input, textarea, select, button, a, [role=button], [contenteditable=true], pre")) return;
     if (window.getSelection()?.toString()) return;
-    if (event.key === "ArrowLeft") { event.preventDefault(); go(activeSection.number - 1); }
-    if (event.key === "ArrowRight") { event.preventDefault(); go(activeSection.number + 1); }
+    const navigation = bookSectionNavigation(contents, activeSection.number, book.section_count);
+    if (event.key === "ArrowLeft") { event.preventDefault(); go(navigation.previous); }
+    if (event.key === "ArrowRight") { event.preventDefault(); go(navigation.next); }
   };
   document.addEventListener("keydown", keyboard);
   ctx.cleanup(() => document.removeEventListener("keydown", keyboard));
