@@ -288,6 +288,47 @@ test('book navigation rejects invalid saved pages and encodes book identities', 
   assert.equal(readingPath('book/one', 3), '/books/book%2Fone?page=3');
 });
 
+test('optional version material has its own paging while raw book destinations and source order stay intact', async () => {
+  const { bookSectionNavigation } = await load('lib/books.js');
+  const contents = [
+    { number: 1, title: '序', location: '原书章节' },
+    { number: 2, title: '版本题署', location: '附录' },
+    { number: 3, title: '古文附篇', location: '卷六' },
+    { number: 4, title: '版本刊记', location: '附录' },
+    { number: 5, title: '正文末篇', location: '卷六' },
+  ];
+  const before = structuredClone(contents);
+  assert.deepEqual(bookSectionNavigation(contents, 1, 5), { kind: 'body', separated: true, position: 1, total: 3, previous: null, next: 3 });
+  assert.deepEqual(bookSectionNavigation(contents, 3, 5), { kind: 'body', separated: true, position: 2, total: 3, previous: 1, next: 5 });
+  assert.deepEqual(bookSectionNavigation(contents, 5, 5), { kind: 'body', separated: true, position: 3, total: 3, previous: 3, next: null });
+  assert.deepEqual(bookSectionNavigation(contents, 2, 5), { kind: 'appendix', separated: true, position: 1, total: 2, previous: null, next: 4 });
+  assert.deepEqual(bookSectionNavigation(contents, 4, 5), { kind: 'appendix', separated: true, position: 2, total: 2, previous: 2, next: null });
+  assert.deepEqual(contents, before);
+  const reordered = [contents[2], contents[4], contents[1], contents[0], contents[3]];
+  assert.deepEqual(bookSectionNavigation(reordered, 5, 5), { kind: 'body', separated: true, position: 2, total: 3, previous: 3, next: 1 },
+    'paging follows the supplied contents order rather than sorting or renumbering');
+});
+
+test('73 chapters stop before 84 optional source entries without changing the raw 157-item range', async () => {
+  const { bookSectionNavigation, readingNumber, readingPath } = await load('lib/books.js');
+  const contents = Array.from({ length: 157 }, (_, index) => ({ number: index + 1,
+    title: `项目${index + 1}`, location: index < 73 ? '卷六' : '附录' }));
+  assert.deepEqual(bookSectionNavigation(contents, 73, 157), { kind: 'body', separated: true, position: 73, total: 73, previous: 72, next: null });
+  assert.deepEqual(bookSectionNavigation(contents, 74, 157), { kind: 'appendix', separated: true, position: 1, total: 84, previous: null, next: 75 });
+  assert.deepEqual(bookSectionNavigation(contents, 157, 157), { kind: 'appendix', separated: true, position: 84, total: 84, previous: 156, next: null });
+  assert.equal(readingNumber('157', 157), 157);
+  assert.equal(readingPath('source-test', 157), '/books/source-test?page=157');
+});
+
+test('books without the exact appendix marker retain their existing raw paging and progress', async () => {
+  const { bookSectionNavigation } = await load('lib/books.js');
+  const contents = [{ number: 1, title: '附录', location: '原书章节' },
+    { number: 2, title: '末篇', location: '卷六' }, { number: 3, title: '版本资料', location: '附录 附注' }];
+  assert.deepEqual(bookSectionNavigation(contents, 1, 3), { kind: 'body', separated: false, position: 1, total: 3, previous: null, next: 2 });
+  assert.deepEqual(bookSectionNavigation(contents, 2, 3), { kind: 'body', separated: false, position: 2, total: 3, previous: 1, next: 3 });
+  assert.deepEqual(bookSectionNavigation(contents, 3, 3), { kind: 'body', separated: false, position: 3, total: 3, previous: 2, next: null });
+});
+
 test('book filters keep working drafts and unavailable records visible with their own states', async () => {
   const { filterBooks, BOOK_STATUS } = await load('lib/books.js');
   const books = [
