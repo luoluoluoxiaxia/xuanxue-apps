@@ -775,9 +775,9 @@ test("the real reader keeps body and optional source paging separate on wide and
   const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
   const contents = [
     { number: 1, title: "序", location: "原书章节", partial: false },
-    { number: 2, title: "版本题署", location: "附录", partial: false },
+    { number: 2, title: "版本题署", location: "版本资料", partial: false },
     { number: 3, title: "古文附篇", location: "卷六", partial: false },
-    { number: 4, title: "版本刊记", location: "附录", partial: false },
+    { number: 4, title: "版本刊记", location: "版本资料", partial: false },
     { number: 5, title: "正文末篇", location: "卷六", partial: false },
   ];
   const before = structuredClone(contents), fixtures = new Map(), previousFetch = globalThis.fetch;
@@ -788,7 +788,7 @@ test("the real reader keeps body and optional source paging separate on wide and
     const row = match && contents.find(item => item.number === Number(match[1]));
     const data = row ? { ...row, book_id: fixture.id, notice: "", page_notes: [], figures: [], glossary: [],
       blocks: [{ id: `raw-block-${row.number}`, role: "text", text: `原文${row.number}。`,
-        modern: fixture.has_modern && row.location !== "附录" ? `白话${row.number}。` : "", notes: [] }] }
+        modern: fixture.has_modern && row.location !== "版本资料" ? `白话${row.number}。` : "", notes: [] }] }
       : { book: fixture, contents };
     return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
   };
@@ -857,6 +857,58 @@ test("the real reader keeps body and optional source paging separate on wide and
       assert.deepEqual(view.navigated, [path(2)]);
       assert.equal(storage.get(bookReadingKeys(book).progress), "4");
       view.cleanup();
+    }
+    assert.deepEqual(contents, before);
+  } finally { globalThis.fetch = previousFetch; }
+});
+
+test("the real reader retains translated legacy prefaces and afterwords in raw paging even when source-only entries share the appendix location", async () => {
+  const storage = new Map();
+  globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
+  globalThis.Node = MockNode; globalThis.Element = MockNode;
+  globalThis.location = { hash: "#/books", search: "", origin: "https://example.test" };
+  globalThis.document = { ...environment(), addEventListener() {}, removeEventListener() {} };
+  globalThis.window = { addEventListener() {}, removeEventListener() {} };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
+  const { render: renderBooks } = await import("../web/public/next/views/books.js");
+  const book = { id: "legacy-appendix-paging-compat", title: "旧书序跋测试", system: "bazi", source_label: "旧投影",
+    status: "reading_edition", has_modern: true, section_count: 4, case_count: 0 };
+  const contents = [{ number: 1, title: "前序", location: "附录", partial: false },
+    { number: 2, title: "末篇", location: "原书章节", partial: false },
+    { number: 3, title: "后跋", location: "附录", partial: false },
+    { number: 4, title: "原书目录", location: "附录", partial: false }];
+  const before = structuredClone(contents), previousFetch = globalThis.fetch;
+  globalThis.fetch = async path => {
+    const match = path.match(/\/sections\/(\d+)$/), number = match && Number(match[1]);
+    const data = match ? { ...contents[number - 1], book_id: book.id, notice: "", page_notes: [], figures: [], glossary: [],
+      blocks: [{ id: `legacy-block-${number}`, role: "text", text: `原文${number}。`, modern: number < 4 ? `译文${number}。` : "", notes: [] }] }
+      : { book, contents };
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  try {
+    for (const wide of [false, true]) for (const number of [1, 2, 3, 4]) {
+      const cleanups = [], navigated = [], events = new Map(); let current = true;
+      globalThis.document = { ...environment(), documentElement: new MockNode("html"),
+        addEventListener(name, fn) { if (!events.has(name)) events.set(name, new Set()); events.get(name).add(fn); },
+        removeEventListener(name, fn) { events.get(name)?.delete(fn); } };
+      globalThis.window = { scrollY: 0, addEventListener() {}, removeEventListener() {}, getSelection: () => null, scrollTo() {},
+        matchMedia: () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }) };
+      const view = renderBooks({ params: { id: book.id }, query: new URLSearchParams(`page=${number}`), cleanup: fn => cleanups.push(fn),
+        onRefresh() {}, isCurrent: () => current, setTitle() {}, navigate: path => navigated.push(path) });
+      document.body.append(view.node); for (const node of all(view.node)) node.offsetHeight = 0;
+      for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
+      const footer = view.node.querySelector(".book-reading-pagination");
+      assert.equal(view.node.querySelector(".book-directory").querySelector("small").textContent, `${number} / 4`);
+      assert.equal(footer.children[1].textContent, `${number} / 4`);
+      const links = tags(footer, "a");
+      assert.equal(links.find(node => node.getAttribute("rel") === "prev")?.getAttribute("href"), number > 1 ? `#/books/${book.id}?page=${number - 1}` : undefined);
+      assert.equal(links.find(node => node.getAttribute("rel") === "next")?.getAttribute("href"), number < 4 ? `#/books/${book.id}?page=${number + 1}` : undefined);
+      events.get("keydown")?.forEach(fn => fn({ key: "ArrowRight", target: document.body, preventDefault() {} }));
+      assert.deepEqual(navigated, number < 4 ? [`/books/${book.id}?page=${number + 1}`] : []);
+      assert.equal(Boolean(view.node.querySelector(".book-modern")), number < 4, "translated legacy preface/afterword still display their actual modern blocks");
+      cleanups.forEach(fn => fn()); current = false;
     }
     assert.deepEqual(contents, before);
   } finally { globalThis.fetch = previousFetch; }

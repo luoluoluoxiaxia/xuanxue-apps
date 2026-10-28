@@ -128,8 +128,10 @@ test('only an appendix with no actual modern paragraph uses an original-only vie
   const appendix = { location: '附录', blocks: [{ role: 'text', text: '目录甲\n目录乙', modern: '' }, { modern: '  ' }] };
   const before = structuredClone(appendix);
   assert.equal(isOriginalOnlyAppendix(appendix), true);
+  assert.equal(isOriginalOnlyAppendix({ ...appendix, location: '版本资料' }), true);
   assert.equal(isOriginalOnlyAppendix({ ...appendix, location: '原书章节' }), false);
   assert.equal(isOriginalOnlyAppendix({ ...appendix, blocks: [...appendix.blocks, { modern: '已有白话。' }] }), false);
+  assert.equal(isOriginalOnlyAppendix({ ...appendix, location: '版本资料', blocks: [{ modern: '已提供白话。' }] }), false);
   assert.equal(isOriginalOnlyAppendix(null), false);
   assert.deepEqual(appendix, before);
 });
@@ -292,9 +294,9 @@ test('optional version material has its own paging while raw book destinations a
   const { bookSectionNavigation } = await load('lib/books.js');
   const contents = [
     { number: 1, title: '序', location: '原书章节' },
-    { number: 2, title: '版本题署', location: '附录' },
+    { number: 2, title: '版本题署', location: '版本资料' },
     { number: 3, title: '古文附篇', location: '卷六' },
-    { number: 4, title: '版本刊记', location: '附录' },
+    { number: 4, title: '版本刊记', location: '版本资料' },
     { number: 5, title: '正文末篇', location: '卷六' },
   ];
   const before = structuredClone(contents);
@@ -312,7 +314,7 @@ test('optional version material has its own paging while raw book destinations a
 test('73 chapters stop before 84 optional source entries without changing the raw 157-item range', async () => {
   const { bookSectionNavigation, readingNumber, readingPath } = await load('lib/books.js');
   const contents = Array.from({ length: 157 }, (_, index) => ({ number: index + 1,
-    title: `项目${index + 1}`, location: index < 73 ? '卷六' : '附录' }));
+    title: `项目${index + 1}`, location: index < 73 ? '卷六' : '版本资料' }));
   assert.deepEqual(bookSectionNavigation(contents, 73, 157), { kind: 'body', separated: true, position: 73, total: 73, previous: 72, next: null });
   assert.deepEqual(bookSectionNavigation(contents, 74, 157), { kind: 'appendix', separated: true, position: 1, total: 84, previous: null, next: 75 });
   assert.deepEqual(bookSectionNavigation(contents, 157, 157), { kind: 'appendix', separated: true, position: 84, total: 84, previous: 156, next: null });
@@ -320,13 +322,18 @@ test('73 chapters stop before 84 optional source entries without changing the ra
   assert.equal(readingPath('source-test', 157), '/books/source-test?page=157');
 });
 
-test('books without the exact appendix marker retain their existing raw paging and progress', async () => {
+test('legacy appendix locations with translated prefaces, afterwords and source material retain raw paging and progress', async () => {
   const { bookSectionNavigation } = await load('lib/books.js');
-  const contents = [{ number: 1, title: '附录', location: '原书章节' },
-    { number: 2, title: '末篇', location: '卷六' }, { number: 3, title: '版本资料', location: '附录 附注' }];
-  assert.deepEqual(bookSectionNavigation(contents, 1, 3), { kind: 'body', separated: false, position: 1, total: 3, previous: null, next: 2 });
-  assert.deepEqual(bookSectionNavigation(contents, 2, 3), { kind: 'body', separated: false, position: 2, total: 3, previous: 1, next: 3 });
-  assert.deepEqual(bookSectionNavigation(contents, 3, 3), { kind: 'body', separated: false, position: 3, total: 3, previous: 2, next: null });
+  const contents = [{ number: 1, title: '前序', location: '附录' },
+    { number: 2, title: '末篇', location: '卷六' }, { number: 3, title: '后跋', location: '附录' },
+    { number: 4, title: '版本来源', location: '附录' }];
+  const before = structuredClone(contents);
+  for (let number = 1; number <= 4; number++) assert.deepEqual(bookSectionNavigation(contents, number, 4), {
+    kind: 'body', separated: false, position: number, total: 4, previous: number > 1 ? number - 1 : null, next: number < 4 ? number + 1 : null,
+  });
+  assert.deepEqual(contents, before);
+  const nearMatches = [' 版本资料', '版本资料 ', '版本资料 附注', '版本資料'];
+  for (const location of nearMatches) assert.equal(bookSectionNavigation([{ number: 1, location }], 1, 1).separated, false);
 });
 
 test('book filters keep working drafts and unavailable records visible with their own states', async () => {
