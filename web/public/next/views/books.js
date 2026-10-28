@@ -523,9 +523,14 @@ function reader(ctx) {
       h("button", { type: "button", class: "btn btn-ghost book-page-prev", disabled: navigation.previous === null, "aria-label": "上一页", onClick: () => go(navigation.previous) }, "←"),
       h("button", { type: "button", class: "btn btn-ghost book-directory",
         "aria-label": `打开${book.title}目录，当前第 ${number} ${book.has_modern ? "篇" : "页"}，共 ${book.section_count} ${book.has_modern ? "篇" : "页"}`,
-        onClick: event => wideDirectory.matches ? setDirectory(!directoryOpen)
-          : openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget,
-            libraryPath: links.libraryPath, libraryLabel: links.libraryLabel, casePath: bookCasesEntry(book, ctx.query.get("from")) }) },
+        onClick: event => {
+          if (wideDirectory.matches) setDirectory(!directoryOpen);
+          else {
+            savePosition();
+            openBookContents({ book, contents, current: number, onSelect: go, returnFocus: event.currentTarget,
+              libraryPath: links.libraryPath, libraryLabel: links.libraryLabel, casePath: bookCasesEntry(book, ctx.query.get("from")) });
+          }
+        } },
         icon("book"), h("span", null, `${book.title} · ${book.has_modern ? "目录" : "书页"}`), h("small", null, progressLabel(navigation))),
       h("button", { type: "button", class: "btn btn-ghost book-settings-open", "aria-label": "字号与排版设置", onClick: event => openBookSettings({ preferences, mode, hasModern: false, returnFocus: event.currentTarget,
         onChange: (prefs, nextMode) => {

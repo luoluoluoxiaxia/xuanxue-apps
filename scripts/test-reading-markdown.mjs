@@ -862,6 +862,99 @@ test("the real reader keeps body and optional source paging separate on wide and
   } finally { globalThis.fetch = previousFetch; }
 });
 
+test("the real mobile reader keeps the current paragraph when its directory opens before the scroll save and continue beats the closing animation", async () => {
+  const storage = new Map(), timers = new Map(); let timerSequence = 0;
+  const previous = { fetch: globalThis.fetch, setTimeout: globalThis.setTimeout, clearTimeout: globalThis.clearTimeout,
+    rect: MockNode.prototype.getBoundingClientRect, history: globalThis.history };
+  globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
+  globalThis.Node = MockNode; globalThis.Element = MockNode;
+  globalThis.location = { hash: "#/books", search: "", origin: "https://example.test" };
+  globalThis.document = { ...environment(), documentElement: new MockNode("html"), addEventListener() {}, removeEventListener() {},
+    createElement: tag => Object.assign(new MockNode(tag), tag === "input" ? { value: "" } : {}),
+    contains: node => document.body.contains(node) };
+  const events = new Map();
+  globalThis.window = { scrollY: 0,
+    addEventListener(name, fn) { if (!events.has(name)) events.set(name, new Set()); events.get(name).add(fn); },
+    removeEventListener(name, fn) { events.get(name)?.delete(fn); }, getSelection: () => null,
+    scrollTo(x, y) { this.scrollY = Math.max(0, y); },
+    matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) };
+  globalThis.history = { state: {}, pushState(state) { this.state = state; }, back() {} };
+  globalThis.cancelAnimationFrame = () => {};
+  globalThis.requestAnimationFrame = callback => { callback(); return 1; };
+  globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
+  const { render: renderBooks } = await import("../web/public/next/views/books.js");
+  const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n42");
+  const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
+  globalThis.setTimeout = (fn, delay) => { const id = ++timerSequence; timers.set(id, { fn, delay }); return id; };
+  globalThis.clearTimeout = id => timers.delete(id);
+  const runDelay = delay => {
+    for (const [id, task] of [...timers]) if (task.delay === delay) { timers.delete(id); task.fn(); }
+  };
+  MockNode.prototype.getBoundingClientRect = function () {
+    if (this.parentElement?.classList.contains("book-reading-content")) {
+      const top = 200 + this.parentElement.children.indexOf(this) * 500 - window.scrollY;
+      return { top, bottom: top + 500, height: 500, left: 0, width: 390 };
+    }
+    for (let parent = this.parentElement; parent; parent = parent.parentElement) {
+      if (parent.dataset.blockId) return parent.getBoundingClientRect();
+    }
+    return previous.rect.call(this);
+  };
+  const book = { id: "directory-fast-resume", title: "目录续读测试书", system: "bazi", source_label: "测试来源", status: "working_draft",
+    has_modern: false, section_count: 2, default_section_number: 1, reading_layout_id: "stable-layout", case_count: 0 };
+  const keys = bookReadingKeys(book);
+  const contents = [1, 2].map(number => ({ number, title: `篇${number}`, location: "卷一", partial: false }));
+  globalThis.fetch = async path => {
+    const match = path.match(/\/sections\/(\d+)$/);
+    const data = match ? { ...contents[Number(match[1]) - 1], book_id: book.id, notice: "", page_notes: [], figures: [], glossary: [],
+      blocks: Array.from({ length: 6 }, (_, index) => ({ id: `stable-block-${index}`, role: "text", text: `原文段落${index}。`, modern: "", notes: [] })) }
+      : { book, contents };
+    return new Response(JSON.stringify(data), { status: 200, headers: { "Content-Type": "application/json" } });
+  };
+  let currentView;
+  async function mount() {
+    const cleanups = []; let current = true;
+    const ctx = { params: { id: book.id }, query: new URLSearchParams("page=2"), cleanup: fn => cleanups.push(fn), onRefresh() {},
+      isCurrent: () => current, setTitle() {}, navigate() {} };
+    const view = renderBooks(ctx); document.body.append(view.node);
+    for (const node of all(view.node)) node.offsetHeight = 0;
+    for (let i = 0; i < 5; i++) await new Promise(resolve => setImmediate(resolve));
+    currentView = { node: view.node, cleanup() { cleanups.forEach(fn => fn()); current = false; view.node.remove(); } };
+    return currentView;
+  }
+  try {
+    for (const flushScrollFirst of [false, true]) {
+      storage.clear(); window.scrollY = 0;
+      let view = await mount();
+      const beforeScroll = JSON.parse(storage.get(keys.position));
+      window.scrollY = 1400;
+      events.get("scroll")?.forEach(fn => fn());
+      if (flushScrollFirst) runDelay(300);
+      else assert.deepEqual(JSON.parse(storage.get(keys.position)), beforeScroll, "the 300ms scroll save is still pending");
+      const directory = view.node.querySelector(".book-directory");
+      directory.listeners.get("click")({ currentTarget: directory, target: directory });
+      assert.equal(document.body.classList.contains("is-locked"), true, "the actual sheet locks background saving");
+      const saved = JSON.parse(storage.get(keys.position));
+      assert.equal(saved.anchor, 2, "opening the directory preserves the visible source paragraph before its lock");
+      closeAllSheets(); view.cleanup();
+      window.scrollTo(0, 0);
+      assert.equal(document.body.classList.contains("is-locked"), true, "continue happens before the actual 190ms sheet removal");
+      view = await mount();
+      assert.equal(window.scrollY, 1400, "the raw saved paragraph restores while the old sheet is closing");
+      runDelay(190);
+      assert.equal(document.body.classList.contains("is-locked"), false);
+      assert.equal(window.scrollY, 1400, "finishing the old sheet does not overwrite the new reader restore");
+      assert.equal(JSON.parse(storage.get(keys.position)).anchor, 2);
+      view.cleanup(); currentView = null;
+    }
+  } finally {
+    closeAllSheets(); currentView?.cleanup(); runDelay(190);
+    MockNode.prototype.getBoundingClientRect = previous.rect;
+    globalThis.fetch = previous.fetch; globalThis.setTimeout = previous.setTimeout; globalThis.clearTimeout = previous.clearTimeout;
+    globalThis.history = previous.history;
+  }
+});
+
 test("the real reader interleaves covered figures without losing text, glossary, notes or existing numeric positions", async () => {
   const storage = new Map();
   globalThis.localStorage = { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, String(value)), removeItem: key => storage.delete(key) };
