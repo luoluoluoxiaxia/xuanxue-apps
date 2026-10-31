@@ -1,23 +1,24 @@
 // 解读工作台：同一张盘上的一段对话。桌面左对话右命盘；手机顶部命盘速览，点开看完整盘面。
-import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n42";
-import { icon } from "../lib/icons.js?v=n42";
-import { get, post } from "../lib/api.js?v=n42";
-import { session, local } from "../lib/store.js?v=n42";
-import { newSessionId, isSessionId } from "../lib/ids.js?v=n42";
-import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n42";
-import { Conversation, humanizeError } from "../lib/interpret.js?v=n42";
-import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n42";
-import { takeHandoff } from "../lib/handoff.js?v=n42";
-import { relativeTime, plainExcerpt } from "../lib/format.js?v=n42";
-import { errorView, stateView } from "../ui/bits.js?v=n42";
-import { openSheet, openMenu } from "../ui/overlay.js?v=n42";
-import { toast } from "../ui/toast.js?v=n42";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n42";
-import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n42";
-import { copyText, sharePost } from "../lib/share.js?v=n42";
-import { openShareSheet } from "../ui/share-sheet.js?v=n42";
-import { openFeedback } from "./feedback.js?v=n42";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n42";
+import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n43";
+import { icon } from "../lib/icons.js?v=n43";
+import { get, post } from "../lib/api.js?v=n43";
+import { session, local } from "../lib/store.js?v=n43";
+import { newSessionId, isSessionId } from "../lib/ids.js?v=n43";
+import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n43";
+import { Conversation, humanizeError } from "../lib/interpret.js?v=n43";
+import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n43";
+import { takeHandoff } from "../lib/handoff.js?v=n43";
+import { baziChartRefreshAt } from "../lib/chart-refresh.js?v=n43";
+import { relativeTime, plainExcerpt } from "../lib/format.js?v=n43";
+import { errorView, stateView } from "../ui/bits.js?v=n43";
+import { openSheet, openMenu } from "../ui/overlay.js?v=n43";
+import { toast } from "../ui/toast.js?v=n43";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n43";
+import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n43";
+import { copyText, sharePost } from "../lib/share.js?v=n43";
+import { openShareSheet } from "../ui/share-sheet.js?v=n43";
+import { openFeedback } from "./feedback.js?v=n43";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n43";
 
 const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
 // 从解读页分享卦帖时记录的来源。
@@ -91,6 +92,9 @@ export function render(ctx) {
   let nodes = {};
   let ticker = 0;
   let tick = 0;
+  let chartRefreshAt = Infinity;
+  let chartRefreshing = false;
+  let chartSheetPanel = null;
 
   // 断线恢复：网络恢复后重新打开没载入的档案，或立即接上仍在进行的解读。
   let loadFailed = false;
@@ -112,14 +116,50 @@ export function render(ctx) {
       load();
     } else {
       state.conversation?.reconnect();
+      checkChartTime();
     }
   };
+  const onVisible = () => { if (document.visibilityState !== "hidden") checkChartTime(); };
   window.addEventListener("online", onOnline);
+  document.addEventListener("visibilitychange", onVisible);
   ctx.cleanup(() => {
     clearInterval(ticker);
     window.removeEventListener("online", onOnline);
+    document.removeEventListener("visibilitychange", onVisible);
+    chartSheetPanel = null;
     state.conversation?.destroy();
   });
+
+  function checkChartTime() {
+    if (state.system === "bazi" && state.payload) chartRefreshAt = Math.min(chartRefreshAt, baziChartRefreshAt(state.payload));
+    refreshChart();
+  }
+
+  // 仅刷新盘面，不重建对话、输入框或正在进行的解读。失败后低频重试。
+  async function refreshChart() {
+    if (!ctx.isCurrent() || state.system !== "bazi" || !state.profileId || !nodes.panel || chartRefreshing
+      || document.visibilityState === "hidden" || navigator.onLine === false || Date.now() < chartRefreshAt) return;
+    chartRefreshing = true;
+    chartRefreshAt = Date.now() + 60 * 1000;
+    try {
+      const detail = await get(`/api/profiles/${encodeURIComponent(state.profileId)}`, { cache: "no-store" });
+      if (!ctx.isCurrent() || !detail?.payload || detail.chart_id !== state.chartId) return;
+      state.payload = detail.payload;
+      if (detail.input) {
+        state.input = detail.input;
+        if (state.conversation) state.conversation.input = detail.input;
+      }
+      nodes.panel.updatePayload(state.payload);
+      if (chartSheetPanel?.isConnected) chartSheetPanel.updatePayload(state.payload);
+      nodes.strip.querySelector(".chart-strip")?.replaceWith(baziStrip(state.payload));
+      const next = baziChartRefreshAt(state.payload);
+      chartRefreshAt = next > Date.now() ? next : Date.now() + 60 * 1000;
+    } catch (_) {
+      // 保留现有盘面和聊天，网络恢复或下次到期检查时再试。
+    } finally {
+      chartRefreshing = false;
+    }
+  }
 
   /* ---------- 载入 ---------- */
   async function load() {
@@ -268,6 +308,7 @@ export function render(ctx) {
     renderThread();
     activeTasks.forEach(task => conversation.attachTask(task));
     syncComposer();
+    chartRefreshAt = state.system === "bazi" ? baziChartRefreshAt(state.payload) : Infinity;
     ticker = setInterval(onTick, 1000);
     // 起卦页的开始按钮下已写明参考声明，点了就算知晓，这里直接开始，不再要求勾选。
     if (state.autoStart && state.system === "liuyao") startFirst();
@@ -379,7 +420,7 @@ export function render(ctx) {
       composer.node);
     const side = h("aside", { class: "rd-side", "aria-label": liuyao ? "卦盘" : "命盘" }, panel, chartLearnEntry());
     root.replaceChildren(h("div", { class: ["rd-layout", liuyao ? "is-liuyao" : "is-bazi"] }, conversationCol, side));
-    nodes = { thread, composer, jump, panel, side, live, restart, helpSlot, question: questionLine };
+    nodes = { thread, composer, jump, panel, strip, side, live, restart, helpSlot, question: questionLine };
     syncHelpAction();
     window.addEventListener("scroll", syncJump, { passive: true });
     ctx.cleanup(() => window.removeEventListener("scroll", syncJump));
@@ -429,11 +470,14 @@ export function render(ctx) {
 
   function openChartSheet() {
     const liuyao = state.system === "liuyao";
+    const panel = liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input });
+    if (!liuyao) chartSheetPanel = panel;
     openSheet({
       title: liuyao ? "卦盘" : "命盘",
-      body: [liuyao ? liuyaoPanel(state.payload, { method: state.input?.method }) : baziPanel(state.payload, { name: state.name, input: state.input }), chartLearnEntry()],
+      body: [panel, chartLearnEntry()],
       wide: true,
       className: "sheet-chart",
+      onClose: () => { if (chartSheetPanel === panel) chartSheetPanel = null; },
     });
   }
 
@@ -776,6 +820,7 @@ export function render(ctx) {
 
   function onTick() {
     tick += 1;
+    refreshChart();
     const conversation = state.conversation;
     if (!conversation || !nodes.thread) return;
     conversation.messages.forEach(message => {

@@ -1,9 +1,9 @@
 // 解读任务引擎：发起、流式接收（SSE 事件为完整任务快照）、断线轮询、停止、恢复。
 // 只维护消息数据并通过 onChange 通知视图局部更新，不直接操作页面。
-import { api, get, post, ApiError } from "./api.js?v=n42";
-import { newRequestId, isSessionId } from "./ids.js?v=n42";
-import { followupsFor, scenarioLabel } from "./copy.js?v=n42";
-import { refreshSession } from "./store.js?v=n42";
+import { api, get, post, ApiError } from "./api.js?v=n43";
+import { newRequestId, isSessionId } from "./ids.js?v=n43";
+import { followupsFor, scenarioLabel } from "./copy.js?v=n43";
+import { refreshSession } from "./store.js?v=n43";
 
 const TERMINAL = new Set(["done", "failed", "cancelled"]);
 const INPUT_KEYS = [
@@ -137,6 +137,8 @@ export class Conversation {
   buildBody(question, { topic = "", branch = null, clientRequestId }) {
     const body = {};
     INPUT_KEYS.forEach(key => {
+      // 八字每次提问都按当前时间；六爻仍沿用这一次起卦的时刻。
+      if (key === "as_of" && !this.liuyao) return;
       if (this.input && this.input[key] !== undefined && this.input[key] !== null && this.input[key] !== "") body[key] = this.input[key];
     });
     body.system = this.system;

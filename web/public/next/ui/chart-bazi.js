@@ -1,13 +1,13 @@
 // 八字命盘面板：四柱、命局速览、五行分布、大运流年与走势；进阶里另有所选大运的机械事实、当前流月引动与十二流月。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n42";
-import { icon } from "../lib/icons.js?v=n42";
-import { local } from "../lib/store.js?v=n42";
-import { TREND_NOTE } from "../lib/copy.js?v=n42";
-import { elementClass } from "./gua.js?v=n42";
-import { openGlossary } from "./glossary.js?v=n42";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n42";
+import { h, svg, esc } from "../lib/dom.js?v=n43";
+import { icon } from "../lib/icons.js?v=n43";
+import { local } from "../lib/store.js?v=n43";
+import { TREND_NOTE } from "../lib/copy.js?v=n43";
+import { elementClass } from "./gua.js?v=n43";
+import { openGlossary } from "./glossary.js?v=n43";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n43";
 
 const MODE_KEY = "xz-next-bazi-mode";
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
@@ -40,11 +40,11 @@ function snapshot(container) {
   return { focus: active && container.contains(active) ? active.dataset.key || "" : "", strips };
 }
 
-function restore(container, keep) {
+function restore(container, keep, reveal = true) {
   container.querySelectorAll("[data-strip]").forEach(strip => {
     const left = keep?.strips[strip.dataset.strip];
     if (left !== undefined && strip.isConnected) strip.scrollLeft = left;
-    revealSelected(strip);
+    if (reveal) revealSelected(strip);
   });
   if (keep?.focus) container.querySelector(`[data-key="${keep.focus}"]`)?.focus({ preventScroll: true });
 }
@@ -371,7 +371,6 @@ function dayunBlock(payload, state, rerender) {
     selected = steps.findIndex(step => step.ganzhi === dy.current);
     if (selected < 0) selected = steps.findIndex(step => step.ganzhi === dy.next);
     if (selected < 0) selected = 0;
-    state.dayun = selected;
   }
   const step = steps[selected];
   const isCurrentStep = !!step.ganzhi && step.ganzhi === dy.current;
@@ -550,7 +549,7 @@ export function baziPanel(payload, { name = "", input = {}, beside = false, case
     if (keep) restore(next, keep);
     return next;
   };
-  const render = () => {
+  const render = (preserveScroll = false) => {
     const keep = snapshot(root);
     const setMode = advanced => { state.advanced = advanced; if (!caseContext) local.set(MODE_KEY, advanced ? "advanced" : "basic"); render(); };
     const modeSeg = h("div", { class: "seg cp-mode", role: "group", "aria-label": "显示层级" },
@@ -577,8 +576,10 @@ export function baziPanel(payload, { name = "", input = {}, beside = false, case
       caseContext && caseMissing(caseContext).length ? h("p", { class: "cp-note cp-case-missing" }, `未载：${caseMissing(caseContext).join("、")}`) : null,
       h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("bazi") }, icon("book"), "名词解释"),
     ].filter(Boolean));
-    restore(root, keep);
+    restore(root, keep, !preserveScroll);
   };
+  // 更新动态行运时沿用进阶层级、大运/流年选择以及焦点和滑动位置。
+  root.updatePayload = next => { payload = next; render(true); };
   render();
   return root;
 }
