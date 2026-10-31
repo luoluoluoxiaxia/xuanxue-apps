@@ -142,6 +142,7 @@ const tags = (node, name) => all(node).filter(child => child.tagName === name.to
 const byText = (node, name, text) => tags(node, name).find(child => child.textContent === text);
 function environment(query = "", id = "") {
   const listeners = new Map();
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: true } });
   globalThis.Node = MockNode;
   globalThis.Element = MockNode;
   globalThis.document = { body: new MockNode("body"), activeElement: null,
@@ -219,15 +220,16 @@ const learnGuide = (day, pillar = "戊戌", end = "2026-11-07 17:51:46") => ({
     liu_yue: [{ pillar, month_name: `${pillar[1]}月`, is_current: true, relations: {} }] },
 });
 
-async function learnEnvironment(start, birthDay, request, overrides = {}) {
+async function learnEnvironment(start, birthDay, request, overrides = {}, practice = false) {
   const env = timedEnvironment(start);
   const storage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   const input = { system: "bazi", year: 1990, month: 1, day: birthDay, hour: 12, ...overrides };
-  const values = new Map([["xz-next-draft:learn:bazi", JSON.stringify(input)]]);
+  const values = new Map([[practice ? "xz-learn-sample:bazi" : "xz-next-draft:learn:bazi", JSON.stringify(input)]]);
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
     getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
   } });
   env.ctx.params.system = "bazi";
+  if (practice) env.ctx.query.set("src", "sample");
   const { render: renderLearn } = await import("../web/public/next/views/learn.js");
   env.result = renderLearn(env.ctx, request);
   document.body.append(env.result.node);
@@ -306,6 +308,42 @@ test("an old manual-pillar learning draft pins its first returned birth year for
     assert.ok(!("as_of" in requests[1]));
     assert.match(env.result.node.textContent, /1966-02-04/);
   } finally { env.restore(); }
+});
+
+test("a matched manual-pillar year is saved to its own draft and survives leaving, cache reuse and a future-year return", async () => {
+  for (const practice of [false, true]) {
+    const requests = [];
+    const request = async input => {
+      requests.push(structuredClone(input));
+      const day = requests.length === 1 ? "2026-10-30" : "2027-01-01";
+      const guide = learnGuide(day);
+      guide.chart.liu_nian.year = Number(day.slice(0, 4));
+      guide.chart.profile = { input_mode: "manual_pillars", solar: "1966-02-04 12:00:00" };
+      return guide;
+    };
+    const birthDay = practice ? 11 : 10;
+    const original = { input_mode: "manual_pillars", as_of: "2025-10-31", year_pillar: "丙午", month_pillar: "庚寅", day_pillar: "甲子", hour_pillar: "甲子" };
+    let saved;
+    const first = await learnEnvironment("2026-10-30T12:00:00+08:00", birthDay, request, original, practice);
+    try {
+      await tick();
+      saved = JSON.parse(localStorage.getItem(practice ? "xz-learn-sample:bazi" : "xz-next-draft:learn:bazi"));
+      assert.equal(saved.manual_birth_year, 1966);
+      assert.ok(!("as_of" in saved));
+      assert.equal(requests.length, 1);
+    } finally { first.restore(); }
+    const cached = await learnEnvironment("2026-10-30T18:00:00+08:00", birthDay, request, saved, practice);
+    try { await tick(); assert.equal(requests.length, 1, "the persisted normalized key reuses its current guide"); }
+    finally { cached.restore(); }
+    const future = await learnEnvironment("2027-01-01T12:00:00+08:00", birthDay, request, saved, practice);
+    try {
+      await tick();
+      assert.equal(requests.length, 2);
+      assert.equal(requests[1].manual_birth_year, 1966);
+      assert.ok(!("as_of" in requests[1]));
+      assert.match(future.result.node.textContent, /1966-02-04/);
+    } finally { future.restore(); }
+  }
 });
 
 test("a complete Today page refreshes at Beijing midnight while keeping the selected color and an open city sheet", async () => {

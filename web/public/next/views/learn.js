@@ -6,7 +6,7 @@ import { icon } from "../lib/icons.js?v=n44";
 import { post } from "../lib/api.js?v=n44";
 import { local } from "../lib/store.js?v=n44";
 import { readingPath } from "../lib/books.js?v=n44";
-import { loadLearnInput, sampleLearnInput, baziLearnInput } from "../lib/learn.js?v=n44";
+import { loadLearnInput, saveLearnInput, sampleLearnInput, baziLearnInput } from "../lib/learn.js?v=n44";
 import { baziChartRefreshAt } from "../lib/chart-refresh.js?v=n44";
 import { humanizeError } from "../lib/interpret.js?v=n44";
 import { stateView, spinnerLine } from "../ui/bits.js?v=n44";
@@ -88,7 +88,12 @@ export function render(ctx, request = input => post("/api/chart/guide", input)) 
       const next = saved || await request(input);
       if (!ctx.isCurrent()) return;
       if (!gua) {
+        const previousYear = input.manual_birth_year;
         input = baziLearnInput(input, next.chart);
+        if (input.manual_birth_year && input.manual_birth_year !== previousYear) {
+          if (practice) local.setJson(sampleKey(system), input);
+          else saveLearnInput(system, input);
+        }
         cacheKey = JSON.stringify(input);
       }
       guideCache.set(cacheKey, next);
