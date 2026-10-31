@@ -1,21 +1,21 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n43";
-import { icon } from "../lib/icons.js?v=n43";
-import { get, post, put } from "../lib/api.js?v=n43";
-import { session, local, refreshSession } from "../lib/store.js?v=n43";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n43";
-import { readingDraftKey } from "../lib/sessions.js?v=n43";
-import { relativeTime, count } from "../lib/format.js?v=n43";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n43";
-import { handoff } from "../lib/handoff.js?v=n43";
-import { humanizeError } from "../lib/interpret.js?v=n43";
-import { stateView } from "../ui/bits.js?v=n43";
-import { toast } from "../ui/toast.js?v=n43";
-import { confirmDialog } from "../ui/overlay.js?v=n43";
-import { locationPicker } from "../ui/location.js?v=n43";
-import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n43";
-import { baziPanel } from "../ui/chart-bazi.js?v=n43";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n43";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n44";
+import { icon } from "../lib/icons.js?v=n44";
+import { get, post, put } from "../lib/api.js?v=n44";
+import { session, local, refreshSession } from "../lib/store.js?v=n44";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n44";
+import { readingDraftKey } from "../lib/sessions.js?v=n44";
+import { relativeTime, count } from "../lib/format.js?v=n44";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n44";
+import { handoff } from "../lib/handoff.js?v=n44";
+import { humanizeError } from "../lib/interpret.js?v=n44";
+import { stateView } from "../ui/bits.js?v=n44";
+import { toast } from "../ui/toast.js?v=n44";
+import { confirmDialog } from "../ui/overlay.js?v=n44";
+import { locationPicker } from "../ui/location.js?v=n44";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n44";
+import { baziPanel } from "../ui/chart-bazi.js?v=n44";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n44";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
@@ -1415,7 +1415,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       previewSlot.replaceChildren(
         h("div", { class: "flow-step-head" }, h("h2", null, "你的命盘"), h("span", { class: "flow-hint" }, "还没保存 · 注册后保存并开始解读")),
         baziPanel(payload, { name: bodyPayload.name || "", input: bodyPayload }),
-        learnEntry("bazi", () => baziLearnInput(bodyPayload)),
+        learnEntry("bazi", () => baziLearnInput(bodyPayload, payload)),
         h("div", { class: "flow-submit" }, save, h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), "保存后命盘只对你本人可见，换设备也能接着问。")));
       previewSlot.hidden = false;
       submit.hidden = true;

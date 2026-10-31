@@ -8,18 +8,37 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n43`, base).href);
+const load = path => import(new URL(`${path}?v=n44`, base).href);
 
 test('an open BaZi chart refreshes at Beijing midnight or the supplied solar-term instant, whichever comes first', async () => {
   const { baziChartRefreshAt } = await load('lib/chart-refresh.js');
   const now = Date.parse('2026-10-31T23:30:00+08:00');
   const payload = { analysis_date: '2026-10-31', current_liu_yue: { solar_term_end: { datetime: '2026-11-07 17:51:46' } } };
   assert.equal(baziChartRefreshAt(payload, now), Date.parse('2026-11-01T00:00:00+08:00'));
-  assert.equal(baziChartRefreshAt({ ...payload, analysis_date: '2026-11-07' }, now), Date.parse('2026-11-07T17:51:46+08:00'));
+  assert.equal(baziChartRefreshAt({ ...payload, analysis_date: '2026-11-07' }, now), Date.parse('2026-11-07T17:51:47+08:00'));
   assert.ok(baziChartRefreshAt({ ...payload, analysis_date: '2026-08-06' }, now) < now, 'an old archive is immediately stale');
   assert.equal(baziChartRefreshAt({ analysis_date: '2026-12-31' }, now), Date.parse('2027-01-01T00:00:00+08:00'));
   assert.equal(baziChartRefreshAt({ analysis_date: '2026-10-31', current_liu_yue: null }, now), Date.parse('2026-11-01T00:00:00+08:00'));
   assert.equal(baziChartRefreshAt({}, now), now + 60 * 60 * 1000, 'incomplete records use a bounded retry rather than a hot loop');
+});
+
+test('personal-home freshness follows Beijing day and calendar month even when a previous response was complete', async () => {
+  const { personalHomeRefreshAt } = await load('lib/chart-refresh.js');
+  const ready = { today: '2026-10-31', daily: { status: 'done', day_key: '2026-10-31' }, month: { status: 'done', month_key: '2026-10' } };
+  const before = Date.parse('2026-10-31T15:59:59Z');
+  const midnight = Date.parse('2026-10-31T16:00:00Z');
+  assert.equal(personalHomeRefreshAt(ready, before), midnight);
+  assert.equal(personalHomeRefreshAt(ready, midnight), midnight, 'completed cards expire at Beijing midnight, before the UTC date changes');
+  const current = { ...ready, today: '2026-11-01', daily: { status: 'done', day_key: '2026-11-01' } };
+  assert.equal(personalHomeRefreshAt(current, midnight), midnight, 'an old calendar-month card remains stale even with a new day label');
+  assert.equal(personalHomeRefreshAt({ ...current, month: { status: 'done', month_key: '2026-11' } }, midnight), Date.parse('2026-11-02T00:00:00+08:00'));
+  assert.equal(personalHomeRefreshAt({ ...current, daily: ready.daily, month: { month_key: '2026-11' } }, midnight), midnight);
+  assert.equal(personalHomeRefreshAt({}, Date.parse('2026-12-31T12:00:00+08:00')), Date.parse('2027-01-01T00:00:00+08:00'));
+  const termDay = { today: '2026-11-07', daily: { day_key: '2026-11-07' }, month: { month_key: '2026-11', display: { solar_terms: [
+    { datetime: '2026-10-23 17:00:00' }, { datetime: '2026-11-07 17:51:46' }, { datetime: '2026-11-22 15:23:00' },
+  ] } } };
+  assert.equal(personalHomeRefreshAt(termDay, Date.parse('2026-11-07T12:00:00+08:00')), Date.parse('2026-11-07T17:51:47+08:00'));
+  assert.equal(personalHomeRefreshAt(termDay, Date.parse('2026-11-07T18:00:00+08:00')), Date.parse('2026-11-08T00:00:00+08:00'));
 });
 
 test('new BaZi questions use current time while Liuyao keeps the original cast time and neither mutates archived input', async () => {
@@ -35,6 +54,24 @@ test('new BaZi questions use current time while Liuyao keeps the original cast t
   assert.equal(bazi.profile_id, 9);
   const liuyao = new Conversation({ ...options, system: 'liuyao' }).buildBody('继续看原卦', { clientRequestId: 'r_0123456789abcdef' });
   assert.equal(liuyao.as_of, input.as_of);
+  assert.deepEqual(input, before);
+});
+
+test('manual-pillar learning keeps the server birth anchor and explicit birth-year choice without pinning analysis time', async () => {
+  const { baziLearnInput } = await load('lib/learn.js');
+  const input = { input_mode: 'manual_pillars', year_pillar: '丙午', month_pillar: '庚寅', day_pillar: '甲子', hour_pillar: '甲子',
+    pillars: { year: '丙午', month: '庚寅', day: '甲子', hour: '甲子' }, as_of: '2025-10-31', name: '不复制称呼' };
+  const before = structuredClone(input);
+  const payload = { profile: { input_mode: 'manual_pillars', solar: '1966-02-04 12:00:00' } };
+  const anchored = baziLearnInput(input, payload);
+  assert.equal(anchored.manual_birth_year, 1966);
+  assert.deepEqual(anchored.pillars, input.pillars);
+  assert.ok(!('as_of' in anchored));
+  assert.ok(!('name' in anchored));
+  assert.equal(baziLearnInput({ ...input, manual_birth_year: 2026 }, payload).manual_birth_year, 2026);
+  assert.ok(!('manual_birth_year' in baziLearnInput(input)), 'an old draft without returned facts must not guess an original birth year');
+  assert.ok(!('manual_birth_year' in baziLearnInput({ year: 1990, month: 1, day: 1 }, { profile: { solar: payload.profile.solar } })));
+  assert.equal(JSON.stringify(baziLearnInput(anchored)), JSON.stringify(anchored), 'the anchored cache key remains stable');
   assert.deepEqual(input, before);
 });
 

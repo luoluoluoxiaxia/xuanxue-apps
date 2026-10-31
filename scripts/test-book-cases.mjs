@@ -97,9 +97,10 @@ class MockNode {
       add: (...names) => { this.className = [...new Set([...this.className.split(" "), ...names])].filter(Boolean).join(" "); },
       remove: (...names) => { this.className = this.className.split(" ").filter(name => !names.includes(name)).join(" "); },
       contains: name => this.className.split(" ").includes(name),
+      toggle: (name, force) => { const on = force ?? !this.classList.contains(name); this.classList[on ? "add" : "remove"](name); return on; },
     };
   }
-  append(...children) { children.forEach(child => { child.parentElement = this; this.childNodes.push(child); }); }
+  append(...children) { children.forEach(child => { const node = child instanceof MockNode ? child : new MockNode("", String(child)); node.parentElement = this; this.childNodes.push(node); }); }
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
   replaceWith(node) { const siblings = this.parentElement.childNodes; node.parentElement = this.parentElement; siblings.splice(siblings.indexOf(this), 1, node); }
   set textContent(value) { this.childNodes = [new MockNode("", String(value))]; }
@@ -114,6 +115,10 @@ class MockNode {
     if (name.startsWith("data-")) this.dataset[name.slice(5).replace(/-([a-z])/g, (_, char) => char.toUpperCase())] = String(value);
   }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
+  removeAttribute(name) { this.attributes.delete(name); }
+  get firstElementChild() { return this.childNodes.find(node => node.tagName) || null; }
+  getClientRects() { return this.isConnected ? [{}] : []; }
+  select() {}
   addEventListener(name, callback) { this.listeners.set(name, callback); }
   removeEventListener(name, callback) { if (this.listeners.get(name) === callback) this.listeners.delete(name); }
   emit(name) { this.listeners.get(name)?.({ currentTarget: this, target: this, preventDefault() {} }); }
@@ -137,6 +142,7 @@ const tags = (node, name) => all(node).filter(child => child.tagName === name.to
 const byText = (node, name, text) => tags(node, name).find(child => child.textContent === text);
 function environment(query = "", id = "") {
   const listeners = new Map();
+  Object.defineProperty(globalThis, "navigator", { configurable: true, value: { onLine: true } });
   globalThis.Node = MockNode;
   globalThis.Element = MockNode;
   globalThis.document = { body: new MockNode("body"), activeElement: null,
@@ -165,6 +171,329 @@ function environment(query = "", id = "") {
 environment();
 const { render } = await import("../web/public/next/views/book-cases.js");
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
+const todayPayload = day => ({ authenticated: true, today: day, profile_state: "ready", current_city: "杭州",
+  default_profile: { id: 1, name: "测试命盘", pillars: {} }, profiles: [], generation: { state: "ready" },
+  daily: { status: "done", day_key: day, content: { suitable: [`${day}宜事`], avoid: [] } },
+  month: { status: "done", month_key: day.slice(0, 7), month_label: `${day.slice(0, 7)}本月`, content: {
+    suitable: [], avoid: [], outfit: { colors: [{ name: "藏青", hex: "#123456" }, { name: "浅灰", hex: "#eeeeee" }], bracelet_materials: [] },
+  } },
+});
+
+function timedEnvironment(start) {
+  const env = environment();
+  const documentListeners = new Map();
+  document.hidden = false;
+  document.addEventListener = (name, callback) => documentListeners.set(name, callback);
+  document.removeEventListener = (name, callback) => { if (documentListeners.get(name) === callback) documentListeners.delete(name); };
+  env.ctx.subscribe = (store, callback) => env.ctx.cleanup(store.subscribe(callback));
+  const original = { now: Date.now, timeout: globalThis.setTimeout, clear: globalThis.clearTimeout };
+  let now = Date.parse(start), nextId = 0;
+  const timers = new Map();
+  Date.now = () => now;
+  globalThis.setTimeout = (callback, delay) => { const id = ++nextId; timers.set(id, { callback, delay, at: now + delay }); return id; };
+  globalThis.clearTimeout = id => timers.delete(id);
+  return { ...env, timers, documentListeners,
+    moveTo: value => { now = Date.parse(value); },
+    runNext() { const [id, timer] = [...timers].sort((a, b) => a[1].at - b[1].at)[0]; timers.delete(id); now = Math.max(now, timer.at); timer.callback(); },
+    visible: () => documentListeners.get("visibilitychange")?.(),
+    restore() { env.cleanup(); Date.now = original.now; globalThis.setTimeout = original.timeout; globalThis.clearTimeout = original.clear; },
+  };
+}
+
+async function todayEnvironment(start, userId, request) {
+  const env = timedEnvironment(start);
+  const { session } = await import("../web/public/next/lib/store.js?v=n44");
+  session.set({ ready: true, authenticated: true, user: { id: userId } });
+  const { render: renderToday } = await import("../web/public/next/views/today.js");
+  env.result = renderToday(env.ctx, request);
+  document.body.append(env.result.node);
+  return env;
+}
+
+const learnGuide = (day, pillar = "戊戌", end = "2026-11-07 17:51:46") => ({
+  title: "测试命盘导读", subtitle: "合成测试", sections: [{ title: "四柱", paragraphs: ["保留正在读的段落"] },
+    { title: "当前流月", paragraphs: [`${pillar}对应的动态导读`] }], recap: [`${pillar}对应的动态小结`], reading: [],
+  quiz: [{ prompt: "请选择甲", options: ["甲", "乙"], answer: 0, explain: "已答内容保留" }],
+  chart: { analysis_date: day, chart: { pillars: {} }, liu_nian: { year: 2026, pillar: "丙午" },
+    current_liu_yue: { pillar, solar_term_end: { datetime: end }, relations: {} },
+    liu_yue: [{ pillar, month_name: `${pillar[1]}月`, is_current: true, relations: {} }] },
+});
+
+async function learnEnvironment(start, birthDay, request, overrides = {}, practice = false) {
+  const env = timedEnvironment(start);
+  const storage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  const input = { system: "bazi", year: 1990, month: 1, day: birthDay, hour: 12, ...overrides };
+  const values = new Map([[practice ? "xz-learn-sample:bazi" : "xz-next-draft:learn:bazi", JSON.stringify(input)]]);
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value), removeItem: key => values.delete(key),
+  } });
+  env.ctx.params.system = "bazi";
+  if (practice) env.ctx.query.set("src", "sample");
+  const { render: renderLearn } = await import("../web/public/next/views/learn.js");
+  env.result = renderLearn(env.ctx, request);
+  document.body.append(env.result.node);
+  const restore = env.restore;
+  env.restore = () => { restore(); if (storage) Object.defineProperty(globalThis, "localStorage", storage); else delete globalThis.localStorage; };
+  return env;
+}
+
+test("a BaZi guide reuses only current cached facts and requests the same input again after Beijing midnight", async () => {
+  let calls = 0;
+  const request = async () => { calls += 1; return learnGuide(calls === 1 ? "2026-10-30" : "2026-10-31"); };
+  for (const [start, expected] of [["2026-10-30T12:00:00+08:00", 1], ["2026-10-30T18:00:00+08:00", 1], ["2026-10-31T00:01:00+08:00", 2]]) {
+    const env = await learnEnvironment(start, 1, request);
+    try {
+      await tick();
+      assert.equal(calls, expected);
+      assert.match(env.result.node.textContent, /测试命盘导读/);
+    } finally { env.restore(); }
+  }
+});
+
+test("a BaZi guide crosses a solar term without replacing answered quizzes or the open mobile chart", async () => {
+  let calls = 0;
+  const env = await learnEnvironment("2026-11-07T17:51:45+08:00", 2, async () => {
+    calls += 1;
+    return calls === 1 ? learnGuide("2026-11-07") : learnGuide("2026-11-07", "己亥", "2026-12-07 10:00:00");
+  });
+  try {
+    await tick();
+    const quiz = env.result.node.querySelector(".learn-option");
+    quiz.emit("click");
+    assert.equal(quiz.disabled, true);
+    const side = env.result.node.querySelector(".learn-side").querySelector(".chart-panel");
+    byText(side, "button", "进阶").emit("click");
+    env.result.node.querySelector(".learn-strip").emit("click");
+    const mobile = document.body.querySelector(".overlay");
+    byText(mobile, "button", "进阶").emit("click");
+    assert.match(side.textContent, /戊戌/);
+    assert.equal([...env.timers.values()][0].delay, 2000, "the published solar-term second must finish before requesting new facts");
+    env.runNext();
+    await tick();
+    assert.equal(calls, 2);
+    assert.equal(env.result.node.querySelector(".learn-option"), quiz);
+    assert.equal(quiz.disabled, true);
+    assert.match(env.result.node.textContent, /已答内容保留/);
+    assert.equal(byText(side, "button", "进阶").getAttribute("aria-pressed"), "true");
+    assert.match(side.textContent, /己亥/);
+    assert.equal(document.body.querySelector(".overlay"), mobile);
+    assert.match(mobile.textContent, /己亥/);
+    assert.match(env.result.node.querySelector(".learn-article").textContent, /己亥对应的动态导读/);
+    assert.ok(!env.result.node.querySelector(".learn-article").textContent.includes("戊戌对应的动态导读"));
+    assert.match(env.result.node.querySelector(".learn-recap").textContent, /己亥对应的动态小结/);
+    assert.ok(!env.result.node.querySelector(".learn-recap").textContent.includes("戊戌对应的动态小结"));
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n44");
+    closeAllSheets();
+  } finally { env.restore(); }
+});
+
+test("an old manual-pillar learning draft pins its first returned birth year for later current-time refreshes", async () => {
+  const requests = [];
+  const env = await learnEnvironment("2026-10-30T23:59:58+08:00", 3, async input => {
+    requests.push(structuredClone(input));
+    const guide = learnGuide(requests.length === 1 ? "2026-10-30" : "2026-10-31");
+    guide.chart.profile = { input_mode: "manual_pillars", solar: "1966-02-04 12:00:00" };
+    return guide;
+  }, { input_mode: "manual_pillars", as_of: "2025-10-31", year_pillar: "丙午", month_pillar: "庚寅", day_pillar: "甲子", hour_pillar: "甲子" });
+  try {
+    await tick();
+    assert.equal(requests.length, 1);
+    assert.ok(!("manual_birth_year" in requests[0]));
+    assert.ok(!("as_of" in requests[0]));
+    env.runNext();
+    await tick();
+    assert.equal(requests.length, 2);
+    assert.equal(requests[1].manual_birth_year, 1966);
+    assert.ok(!("as_of" in requests[1]));
+    assert.match(env.result.node.textContent, /1966-02-04/);
+  } finally { env.restore(); }
+});
+
+test("a matched manual-pillar year is saved to its own draft and survives leaving, cache reuse and a future-year return", async () => {
+  for (const practice of [false, true]) {
+    const requests = [];
+    const request = async input => {
+      requests.push(structuredClone(input));
+      const day = requests.length === 1 ? "2026-10-30" : "2027-01-01";
+      const guide = learnGuide(day);
+      guide.chart.liu_nian.year = Number(day.slice(0, 4));
+      guide.chart.profile = { input_mode: "manual_pillars", solar: "1966-02-04 12:00:00" };
+      return guide;
+    };
+    const birthDay = practice ? 11 : 10;
+    const original = { input_mode: "manual_pillars", as_of: "2025-10-31", year_pillar: "丙午", month_pillar: "庚寅", day_pillar: "甲子", hour_pillar: "甲子" };
+    let saved;
+    const first = await learnEnvironment("2026-10-30T12:00:00+08:00", birthDay, request, original, practice);
+    try {
+      await tick();
+      saved = JSON.parse(localStorage.getItem(practice ? "xz-learn-sample:bazi" : "xz-next-draft:learn:bazi"));
+      assert.equal(saved.manual_birth_year, 1966);
+      assert.ok(!("as_of" in saved));
+      assert.equal(requests.length, 1);
+    } finally { first.restore(); }
+    const cached = await learnEnvironment("2026-10-30T18:00:00+08:00", birthDay, request, saved, practice);
+    try { await tick(); assert.equal(requests.length, 1, "the persisted normalized key reuses its current guide"); }
+    finally { cached.restore(); }
+    const future = await learnEnvironment("2027-01-01T12:00:00+08:00", birthDay, request, saved, practice);
+    try {
+      await tick();
+      assert.equal(requests.length, 2);
+      assert.equal(requests[1].manual_birth_year, 1966);
+      assert.ok(!("as_of" in requests[1]));
+      assert.match(future.result.node.textContent, /1966-02-04/);
+    } finally { future.restore(); }
+  }
+});
+
+test("a complete Today page refreshes at Beijing midnight while keeping the selected color and an open city sheet", async () => {
+  let calls = 0;
+  const env = await todayEnvironment("2026-10-30T23:59:58+08:00", "today-midnight", async () => {
+    calls += 1;
+    return todayPayload(calls === 1 ? "2026-10-30" : "2026-10-31");
+  });
+  try {
+    await tick();
+    assert.equal(calls, 1);
+    assert.equal([...env.timers.values()][0].delay, 2000);
+    env.result.node.querySelectorAll(".td-swatch")[1].emit("click");
+    env.result.node.querySelector(".td-chip").emit("click");
+    const sheet = document.body.querySelector(".overlay");
+    assert.ok(sheet);
+    env.runNext();
+    await tick();
+    assert.equal(calls, 2);
+    assert.match(env.result.node.textContent, /2026-10-31宜事/);
+    assert.equal(env.result.node.querySelectorAll(".td-swatch")[1].getAttribute("aria-expanded"), "true");
+    assert.equal(document.body.querySelector(".overlay"), sheet);
+    assert.ok([...env.timers.values()][0].delay > 60 * 60 * 1000, "ready content must not keep polling");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n44");
+    closeAllSheets();
+  } finally { env.restore(); }
+});
+
+test("a complete Today page notices a solar term passed in the background without needing a new date", async () => {
+  let calls = 0;
+  const env = await todayEnvironment("2026-11-07T17:51:45+08:00", "today-term", async () => {
+    calls += 1;
+    const payload = todayPayload("2026-11-07");
+    payload.month.display = { solar_terms: [{ datetime: "2026-11-07 17:51:46" }] };
+    payload.daily.content.suitable = [calls === 1 ? "节气前内容" : "节气后内容"];
+    return payload;
+  });
+  try {
+    await tick();
+    assert.equal([...env.timers.values()][0].delay, 2000);
+    document.hidden = true;
+    env.moveTo("2026-11-07T17:52:00+08:00");
+    document.hidden = false;
+    env.visible();
+    await tick();
+    assert.equal(calls, 2);
+    assert.match(env.result.node.textContent, /节气后内容/);
+    assert.ok([...env.timers.values()][0].delay > 60 * 60 * 1000);
+  } finally { env.restore(); }
+});
+
+test("a late Today background GET cannot undo a successful city update", async () => {
+  let calls = 0, finishOldGet;
+  const env = await todayEnvironment("2026-10-30T23:59:58+08:00", "today-city-race", async () => {
+    calls += 1;
+    if (calls === 1) return todayPayload("2026-10-30");
+    return new Promise(resolve => { finishOldGet = resolve; });
+  });
+  const originalFetch = globalThis.fetch;
+  let cityWrites = 0;
+  globalThis.fetch = async (path, options) => {
+    assert.equal(path, "/api/personal-home/city");
+    assert.equal(options.method, "PUT");
+    assert.deepEqual(JSON.parse(options.body), { city: "苏州" });
+    cityWrites += 1;
+    const saved = todayPayload("2026-10-31");
+    saved.current_city = "苏州";
+    saved.daily.content.suitable = ["新城市已应用"];
+    return { ok: true, status: 200, text: async () => JSON.stringify(saved) };
+  };
+  try {
+    await tick();
+    env.runNext();
+    assert.equal(calls, 2);
+    env.result.node.querySelector(".td-chip").emit("click");
+    const sheet = document.body.querySelector(".sheet-city");
+    sheet.querySelector("input").value = "苏州";
+    // This test exercises data ordering, so keep the mock history out of the
+    // sheet's unrelated asynchronous browser-back handling.
+    history.state = {};
+    sheet.querySelector("form").emit("submit");
+    await tick();
+    assert.equal(cityWrites, 1);
+    assert.match(env.result.node.querySelector(".td-chip").textContent, /苏州/);
+    assert.match(env.result.node.textContent, /新城市已应用/);
+    const old = todayPayload("2026-10-30");
+    old.daily.content.suitable = ["过期GET内容"];
+    finishOldGet(old);
+    await tick();
+    assert.match(env.result.node.querySelector(".td-chip").textContent, /苏州/);
+    assert.match(env.result.node.textContent, /新城市已应用/);
+    assert.ok(!env.result.node.textContent.includes("过期GET内容"));
+  } finally { globalThis.fetch = originalFetch; env.restore(); }
+});
+
+test("returning to a complete Today page refreshes an old calendar month once and leaves current content alone", async () => {
+  let calls = 0;
+  const env = await todayEnvironment("2026-10-31T23:59:58+08:00", "today-foreground", async () => {
+    calls += 1;
+    return todayPayload(calls === 1 ? "2026-10-31" : "2026-11-01");
+  });
+  try {
+    await tick();
+    env.visible(); env.reconnect();
+    assert.equal(calls, 1, "foreground and online events do not fetch already current content");
+    document.hidden = true;
+    env.moveTo("2026-11-01T00:01:00+08:00");
+    env.visible();
+    assert.equal(calls, 1, "hidden pages wait for their return");
+    document.hidden = false;
+    env.visible();
+    await tick();
+    assert.equal(calls, 2);
+    assert.match(env.result.node.textContent, /2026-11本月/);
+    assert.match(env.result.node.textContent, /2026-11-01宜事/);
+    env.reconnect();
+    assert.equal(calls, 2);
+  } finally { env.restore(); }
+});
+
+test("Today pending polls still recover online and cleanup rejects a late new-day response", async () => {
+  let calls = 0, finish;
+  const env = await todayEnvironment("2026-10-30T12:00:00+08:00", "today-recovery", async () => {
+    calls += 1;
+    if (calls === 1) { const pending = todayPayload("2026-10-30"); pending.daily.status = "running"; return pending; }
+    if (calls === 2) throw new Error("网络中断");
+    if (calls === 3) return todayPayload("2026-10-30");
+    return new Promise(resolve => { finish = resolve; });
+  });
+  try {
+    await tick();
+    assert.equal([...env.timers.values()][0].delay, 1800);
+    env.runNext();
+    await tick();
+    assert.match(env.result.node.textContent, /网络中断/);
+    env.reconnect();
+    await tick();
+    assert.equal(calls, 3);
+    assert.match(env.result.node.textContent, /2026-10-30宜事/);
+    env.moveTo("2026-10-31T00:01:00+08:00"); env.visible();
+    const before = env.result.node.textContent;
+    env.cleanup();
+    finish(todayPayload("2026-10-31"));
+    await tick();
+    assert.equal(env.result.node.textContent, before);
+    assert.equal(env.timers.size, 0);
+    assert.equal(env.documentListeners.has("visibilitychange"), false);
+    assert.equal(env.listeners.has("online"), false);
+  } finally { env.restore(); }
+});
 
 test("a live BaZi panel replaces current-month facts while keeping its advanced mode and focused cell", async () => {
   environment();

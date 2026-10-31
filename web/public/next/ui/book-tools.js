@@ -1,7 +1,7 @@
-import { h, fill } from "../lib/dom.js?v=n43";
-import { groupBookContents, groupReadingSections } from "../lib/books.js?v=n43";
-import { local } from "../lib/store.js?v=n43";
-import { openSheet } from "./overlay.js?v=n43";
+import { h, fill } from "../lib/dom.js?v=n44";
+import { groupBookContents, groupReadingSections } from "../lib/books.js?v=n44";
+import { local } from "../lib/store.js?v=n44";
+import { openSheet } from "./overlay.js?v=n44";
 
 export function renderBookContentsGroups(groups, renderItem, onToggle) {
   return groups.flatMap(group => group.kind === "appendix"

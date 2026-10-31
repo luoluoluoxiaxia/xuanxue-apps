@@ -1,16 +1,16 @@
 // 「看懂这张盘」：把排盘输入放进本机草稿，讲解页拿它向后端要一页讲解。
 // 出生信息不进 URL；键名沿用 xz-next-draft: 前缀，退出登录时随私人草稿一起清掉。
-import { h } from "./dom.js?v=n43";
-import { icon } from "./icons.js?v=n43";
-import { local } from "./store.js?v=n43";
-import { localDateTimeISO } from "./ids.js?v=n43";
+import { h } from "./dom.js?v=n44";
+import { icon } from "./icons.js?v=n44";
+import { local } from "./store.js?v=n44";
+import { localDateTimeISO } from "./ids.js?v=n44";
 
 const inputKey = system => `xz-next-draft:learn:${system}`;
 
 const BAZI_FIELDS = [
   "system", "input_mode", "year", "month", "day", "hour", "minute", "calendar", "is_leap_month", "gender",
   "location", "longitude", "tz_offset", "timezone", "use_true_solar", "day_boundary",
-  "manual_birth_year", "year_pillar", "month_pillar", "day_pillar", "hour_pillar",
+  "manual_birth_year", "year_pillar", "month_pillar", "day_pillar", "hour_pillar", "pillars",
 ];
 
 export function learnHref(system) {
@@ -35,9 +35,15 @@ export function learnEntry(system, getInput) {
 }
 
 // 八字只带排盘需要的字段，称呼、可见性等与学习无关的不存。
-export function baziLearnInput(input = {}) {
+export function baziLearnInput(input = {}, payload = null) {
+  const values = { ...input };
+  const manual = input.input_mode === "manual_pillars" || payload?.profile?.input_mode === "manual_pillars";
+  const matchedYear = /^(\d{4})-/.exec(String(payload?.profile?.solar || ""));
+  // 沿用后端已经匹配的出生年份；分析日期仍按每次请求的当前时间计算。
+  if (manual && (values.manual_birth_year === undefined || values.manual_birth_year === null || values.manual_birth_year === "")
+    && matchedYear && Number(matchedYear[1]) > 0) values.manual_birth_year = Number(matchedYear[1]);
   const out = { system: "bazi" };
-  BAZI_FIELDS.forEach(key => { if (input[key] !== undefined && input[key] !== null && input[key] !== "") out[key] = input[key]; });
+  BAZI_FIELDS.forEach(key => { if (values[key] !== undefined && values[key] !== null && values[key] !== "") out[key] = values[key]; });
   return out;
 }
 

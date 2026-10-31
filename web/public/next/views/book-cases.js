@@ -1,14 +1,14 @@
-import { h, fill } from "../lib/dom.js?v=n43";
-import { get } from "../lib/api.js?v=n43";
-import { icon } from "../lib/icons.js?v=n43";
-import { createKnowledgeLoader } from "../lib/knowledge.js?v=n43";
+import { h, fill } from "../lib/dom.js?v=n44";
+import { get } from "../lib/api.js?v=n44";
+import { icon } from "../lib/icons.js?v=n44";
+import { createKnowledgeLoader } from "../lib/knowledge.js?v=n44";
 import { readBookCaseQuery, bookCaseListPath, bookCaseDetailPath, bookCaseApiPath,
   bookCasesEntry, bookCaseReadingPath, bookCaseKindLabel, bookCaseSystemLabel, bookCaseCasts, bookCaseChartPath,
-  bookCaseChartMatches, bookCaseModernBlocks, bookCaseSourceLocation, BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n43";
-import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n43";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n43";
-import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n43";
-import { openSheet } from "../ui/overlay.js?v=n43";
+  bookCaseChartMatches, bookCaseModernBlocks, bookCaseSourceLocation, BOOK_CASE_KINDS, BOOK_CASE_SYSTEMS } from "../lib/book-cases.js?v=n44";
+import { errorView, stateView, spinnerLine } from "../ui/bits.js?v=n44";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n44";
+import { liuyaoPanel, liuyaoStrip } from "../ui/chart-liuyao.js?v=n44";
+import { openSheet } from "../ui/overlay.js?v=n44";
 
 function attach(ctx, path, paint, request, readyReconnect = () => {}) {
   let phase = "loading";
