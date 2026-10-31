@@ -935,7 +935,7 @@ test("the real mobile reader keeps the current paragraph when its directory open
   globalThis.requestAnimationFrame = callback => { callback(); return 1; };
   globalThis.getComputedStyle = () => ({ getPropertyValue: () => "64" });
   const { render: renderBooks } = await import("../web/public/next/views/books.js");
-  const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n43");
+  const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n44");
   const { bookReadingKeys } = await import("../web/public/next/lib/books.js");
   globalThis.setTimeout = (fn, delay) => { const id = ++timerSequence; timers.set(id, { fn, delay }); return id; };
   globalThis.clearTimeout = id => timers.delete(id);

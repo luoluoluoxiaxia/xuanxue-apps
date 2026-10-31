@@ -1,14 +1,15 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n43";
-import { icon } from "../lib/icons.js?v=n43";
-import { get, post, put } from "../lib/api.js?v=n43";
-import { session, refreshSession } from "../lib/store.js?v=n43";
-import { greeting } from "../lib/format.js?v=n43";
-import { stateView } from "../ui/bits.js?v=n43";
-import { openSheet } from "../ui/overlay.js?v=n43";
-import { toast } from "../ui/toast.js?v=n43";
+import { h } from "../lib/dom.js?v=n44";
+import { icon } from "../lib/icons.js?v=n44";
+import { get, post, put } from "../lib/api.js?v=n44";
+import { session, refreshSession } from "../lib/store.js?v=n44";
+import { greeting } from "../lib/format.js?v=n44";
+import { personalHomeRefreshAt } from "../lib/chart-refresh.js?v=n44";
+import { stateView } from "../ui/bits.js?v=n44";
+import { openSheet } from "../ui/overlay.js?v=n44";
+import { toast } from "../ui/toast.js?v=n44";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
@@ -460,10 +461,11 @@ function openCitySheet(current, save) {
 }
 
 /* ---------- 页面 ---------- */
-export function render(ctx) {
+export function render(ctx, request = () => get("/api/personal-home", { cache: "no-store" })) {
   const root = h("div", { class: "td-page" });
   const view = { color: 0 };
   let payload = null;
+  let loadedAt = Date.now();
   let requestId = 0;
   let timer = 0;
   let lastAuth = null;
@@ -573,9 +575,10 @@ export function render(ctx) {
     clearTimeout(timer);
     if (!payload || stalled || !ctx.isCurrent() || !session.get().authenticated) return;
     const gate = gateOf(payload);
-    if (gate && gate !== "preparing") return;
-    if (!anyPending(payload)) return;
-    timer = setTimeout(tick, POLL_MS);
+    const pending = (!gate || gate === "preparing") && anyPending(payload);
+    const now = Date.now();
+    const next = personalHomeRefreshAt(payload, loadedAt);
+    timer = setTimeout(tick, pending ? POLL_MS : next > now ? next - now : 60 * 1000);
   }
 
   function tick() {
@@ -594,9 +597,10 @@ export function render(ctx) {
     const before = announce ? visible() : "";
     if (announce) root.classList.add("is-refreshing");
     try {
-      const data = await get("/api/personal-home", { cache: "no-store" });
+      const data = await request();
       if (!ctx.isCurrent() || id !== requestId) return;
       payload = data || {};
+      loadedAt = Date.now();
       stalled = null;
       failed = false;
       remember();
@@ -625,6 +629,13 @@ export function render(ctx) {
     toast(error?.message || fallback, { type: "error" });
   };
 
+  function updateFromAction(next) {
+    requestId += 1; // 用户操作已成功，先前发出的 GET 不能再覆盖它。
+    payload = next;
+    loadedAt = Date.now();
+    root.classList.remove("is-refreshing");
+  }
+
   const actions = {
     // 从提示条点「重试」：按钮先转圈，提示条等结果回来再收起。
     reload({ button = null } = {}) {
@@ -639,7 +650,7 @@ export function render(ctx) {
       openCitySheet(payload?.current_city || "", async city => {
         const data = await put("/api/personal-home/city", { city });
         if (!ctx.isCurrent()) return;
-        payload = data || payload;
+        updateFromAction(data || payload);
         remember();
         paint();
         // 城市标签被重绘：焦点交给新的标签，而不是丢在页面顶端。
@@ -657,7 +668,7 @@ export function render(ctx) {
       try {
         const data = await put("/api/personal-home/default-profile", { profile_id: Number(profileId) });
         if (!ctx.isCurrent()) return;
-        payload = data || payload;
+        updateFromAction(data || payload);
         remember();
         signatures.delete(gateSlot);
         paint();
@@ -676,7 +687,7 @@ export function render(ctx) {
       try {
         const data = await post("/api/personal-home/refresh");
         if (!ctx.isCurrent()) return;
-        payload = data || payload;
+        updateFromAction(data || payload);
         remember();
         signatures.delete(gateSlot);
         paint();
@@ -692,7 +703,7 @@ export function render(ctx) {
       try {
         const data = await post(kind === "day" ? "/api/personal-home/day" : "/api/personal-home/month");
         if (!ctx.isCurrent()) return;
-        payload = { ...payload, [kind === "day" ? "daily" : "month"]: data || {} };
+        updateFromAction({ ...payload, [kind === "day" ? "daily" : "month"]: data || {} });
         stalled = null;
         remember();
         paint();
@@ -726,6 +737,7 @@ export function render(ctx) {
       if (saved && saved.user === current.user?.id && Date.now() - saved.at < CACHE_TTL) {
         // 几分钟内回来：先显示上次的内容，再静默更新。
         payload = saved.payload;
+        loadedAt = saved.at;
         paint();
         load({ quiet: true });
         return;
@@ -746,6 +758,8 @@ export function render(ctx) {
       failed = false;
       root.replaceChildren(skeletonView());
       load();
+    } else if (payload && personalHomeRefreshAt(payload, loadedAt) <= Date.now()) {
+      load({ quiet: true });
     }
   };
   window.addEventListener("online", recover);
