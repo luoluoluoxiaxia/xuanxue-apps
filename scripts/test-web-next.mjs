@@ -8,7 +8,35 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n42`, base).href);
+const load = path => import(new URL(`${path}?v=n43`, base).href);
+
+test('an open BaZi chart refreshes at Beijing midnight or the supplied solar-term instant, whichever comes first', async () => {
+  const { baziChartRefreshAt } = await load('lib/chart-refresh.js');
+  const now = Date.parse('2026-10-31T23:30:00+08:00');
+  const payload = { analysis_date: '2026-10-31', current_liu_yue: { solar_term_end: { datetime: '2026-11-07 17:51:46' } } };
+  assert.equal(baziChartRefreshAt(payload, now), Date.parse('2026-11-01T00:00:00+08:00'));
+  assert.equal(baziChartRefreshAt({ ...payload, analysis_date: '2026-11-07' }, now), Date.parse('2026-11-07T17:51:46+08:00'));
+  assert.ok(baziChartRefreshAt({ ...payload, analysis_date: '2026-08-06' }, now) < now, 'an old archive is immediately stale');
+  assert.equal(baziChartRefreshAt({ analysis_date: '2026-12-31' }, now), Date.parse('2027-01-01T00:00:00+08:00'));
+  assert.equal(baziChartRefreshAt({ analysis_date: '2026-10-31', current_liu_yue: null }, now), Date.parse('2026-11-01T00:00:00+08:00'));
+  assert.equal(baziChartRefreshAt({}, now), now + 60 * 60 * 1000, 'incomplete records use a bounded retry rather than a hot loop');
+});
+
+test('new BaZi questions use current time while Liuyao keeps the original cast time and neither mutates archived input', async () => {
+  const { Conversation } = await load('lib/interpret.js');
+  const input = { year: 1990, month: 1, day: 1, hour: 12, minute: 0, as_of: '2026-08-06', manual_birth_year: 1990 };
+  const before = structuredClone(input);
+  const options = { input, sessionId: 's_0123456789abcdef', chartId: 7, profileId: 9 };
+  const bazi = new Conversation({ ...options, system: 'bazi' }).buildBody('本月情况如何？', { clientRequestId: 'r_0123456789abcdef' });
+  assert.ok(!('as_of' in bazi));
+  assert.equal(bazi.year, 1990);
+  assert.equal(bazi.manual_birth_year, 1990);
+  assert.equal(bazi.chart_id, 7);
+  assert.equal(bazi.profile_id, 9);
+  const liuyao = new Conversation({ ...options, system: 'liuyao' }).buildBody('继续看原卦', { clientRequestId: 'r_0123456789abcdef' });
+  assert.equal(liuyao.as_of, input.as_of);
+  assert.deepEqual(input, before);
+});
 
 test('fresh white-language books open their exact default and older books keep the electronic entry', async () => {
   const { bookReadingEntry, bookDefaultSectionNumber } = await load('lib/books.js');

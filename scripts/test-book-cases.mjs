@@ -101,6 +101,7 @@ class MockNode {
   }
   append(...children) { children.forEach(child => { child.parentElement = this; this.childNodes.push(child); }); }
   replaceChildren(...children) { this.childNodes = []; this.append(...children); }
+  replaceWith(node) { const siblings = this.parentElement.childNodes; node.parentElement = this.parentElement; siblings.splice(siblings.indexOf(this), 1, node); }
   set textContent(value) { this.childNodes = [new MockNode("", String(value))]; }
   get textContent() { return this.tagName ? this.childNodes.map(child => child.textContent).join("") : this.data; }
   set innerHTML(value) {
@@ -108,7 +109,10 @@ class MockNode {
     assert.match(value, /^<svg\b/);
     this.content = { firstElementChild: new MockNode("svg") };
   }
-  setAttribute(name, value) { this.attributes.set(name, String(value)); }
+  setAttribute(name, value) {
+    this.attributes.set(name, String(value));
+    if (name.startsWith("data-")) this.dataset[name.slice(5).replace(/-([a-z])/g, (_, char) => char.toUpperCase())] = String(value);
+  }
   getAttribute(name) { return this.attributes.get(name) ?? null; }
   addEventListener(name, callback) { this.listeners.set(name, callback); }
   removeEventListener(name, callback) { if (this.listeners.get(name) === callback) this.listeners.delete(name); }
@@ -161,6 +165,60 @@ function environment(query = "", id = "") {
 environment();
 const { render } = await import("../web/public/next/views/book-cases.js");
 const tick = () => new Promise(resolve => setImmediate(resolve));
+
+test("a live BaZi panel replaces current-month facts while keeping its advanced mode and focused cell", async () => {
+  environment();
+  const { baziPanel } = await import("../web/public/next/ui/chart-bazi.js");
+  const month = (pillar, is_current) => ({ pillar, is_current, month_name: `${pillar[1]}月`, relations: {} });
+  const old = { analysis_date: "2026-08-06", chart: { pillars: {} }, liu_nian: { year: 2026, pillar: "丙午" },
+    current_liu_yue: month("乙未", true), liu_yue: [month("乙未", true), month("戊戌", false)] };
+  const before = structuredClone(old);
+  const panel = baziPanel(old);
+  document.body.append(panel);
+  byText(panel, "button", "进阶").emit("click");
+  const oldCell = panel.querySelectorAll(".lm-cell")[0];
+  oldCell.dataset.key = "lm-0";
+  oldCell.focus();
+  assert.match(oldCell.textContent, /乙未.*本月/);
+  panel.updatePayload({ ...old, analysis_date: "2026-10-31", current_liu_yue: month("戊戌", true),
+    liu_yue: [month("乙未", false), month("戊戌", true)] });
+  const cells = panel.querySelectorAll(".lm-cell");
+  assert.equal(panel.parentElement, document.body);
+  assert.equal(byText(panel, "button", "进阶").getAttribute("aria-pressed"), "true");
+  assert.ok(!cells[0].textContent.includes("本月"));
+  assert.match(cells[1].textContent, /戊戌.*本月/);
+  assert.equal(document.activeElement, cells[0]);
+  assert.deepEqual(old, before);
+});
+
+test("live BaZi defaults follow the new year and luck cycle while explicit selections and strip positions survive", async () => {
+  environment();
+  const { baziPanel } = await import("../web/public/next/ui/chart-bazi.js");
+  const payload = (year, current) => ({ chart: { pillars: {} }, liu_nian: { year, pillar: "丙午" },
+    da_yun: { current, list: [
+      { ganzhi: "甲申", display_years: [{ year: 2026, pillar: "丙午", current: year === 2026 }, { year: 2027, pillar: "丁未", current: year === 2027 }] },
+      { ganzhi: "癸未", display_years: [{ year: 2027, pillar: "丁未", current: year === 2027 }, { year: 2028, pillar: "戊申", current: year === 2028 }] },
+    ] } });
+  const selected = (panel, css) => panel.querySelectorAll(css).find(node => node.classList.contains("is-selected")).dataset.key;
+  const automatic = baziPanel(payload(2026, "甲申"));
+  document.body.append(automatic);
+  assert.equal(selected(automatic, ".dayun-card"), "dy-0");
+  assert.equal(selected(automatic, ".liunian"), "ln-0-0");
+  automatic.updatePayload(payload(2027, "甲申"));
+  assert.equal(selected(automatic, ".liunian"), "ln-0-1");
+  automatic.updatePayload(payload(2027, "癸未"));
+  assert.equal(selected(automatic, ".dayun-card"), "dy-1");
+  const chosen = baziPanel(payload(2026, "甲申"));
+  document.body.append(chosen);
+  chosen.querySelectorAll(".dayun-card")[1].emit("click");
+  chosen.querySelectorAll(".liunian")[1].emit("click");
+  chosen.querySelectorAll("[data-strip]").forEach((strip, index) => { strip.scrollLeft = 70 + index; });
+  chosen.updatePayload(payload(2027, "甲申"));
+  assert.equal(selected(chosen, ".dayun-card"), "dy-1");
+  assert.equal(selected(chosen, ".liunian"), "ln-1-1");
+  assert.deepEqual(chosen.querySelectorAll("[data-strip]").map(strip => strip.scrollLeft), [70, 71]);
+});
+
 test("reader directories keep case access beside existing links without adding a header row", async () => {
   environment();
   globalThis.cancelAnimationFrame = () => {};

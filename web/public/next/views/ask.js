@@ -1,21 +1,21 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n42";
-import { icon } from "../lib/icons.js?v=n42";
-import { get, post, put } from "../lib/api.js?v=n42";
-import { session, local, refreshSession } from "../lib/store.js?v=n42";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n42";
-import { readingDraftKey } from "../lib/sessions.js?v=n42";
-import { relativeTime, count } from "../lib/format.js?v=n42";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n42";
-import { handoff } from "../lib/handoff.js?v=n42";
-import { humanizeError } from "../lib/interpret.js?v=n42";
-import { stateView } from "../ui/bits.js?v=n42";
-import { toast } from "../ui/toast.js?v=n42";
-import { confirmDialog } from "../ui/overlay.js?v=n42";
-import { locationPicker } from "../ui/location.js?v=n42";
-import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n42";
-import { baziPanel } from "../ui/chart-bazi.js?v=n42";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n42";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n43";
+import { icon } from "../lib/icons.js?v=n43";
+import { get, post, put } from "../lib/api.js?v=n43";
+import { session, local, refreshSession } from "../lib/store.js?v=n43";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n43";
+import { readingDraftKey } from "../lib/sessions.js?v=n43";
+import { relativeTime, count } from "../lib/format.js?v=n43";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n43";
+import { handoff } from "../lib/handoff.js?v=n43";
+import { humanizeError } from "../lib/interpret.js?v=n43";
+import { stateView } from "../ui/bits.js?v=n43";
+import { toast } from "../ui/toast.js?v=n43";
+import { confirmDialog } from "../ui/overlay.js?v=n43";
+import { locationPicker } from "../ui/location.js?v=n43";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n43";
+import { baziPanel } from "../ui/chart-bazi.js?v=n43";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n43";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
@@ -1363,8 +1363,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
 
   function buildBody() {
     const sessionId = newSessionId();
-    const asOf = new Date().toISOString().slice(0, 10);
-    const base = { system: "bazi", name: name.value.trim() || null, gender: state.gender || null, as_of: asOf, session_id: sessionId };
+    const base = { system: "bazi", name: name.value.trim() || null, gender: state.gender || null, session_id: sessionId };
     if (state.mode === "manual_pillars") {
       const [yp, mp, dp, hp] = pillarInputs.map(entry => entry[2].value.replace(/\s/g, ""));
       return { ...base, input_mode: "manual_pillars", manual_birth_year: manualBirthYear, year_pillar: yp, month_pillar: mp, day_pillar: dp, hour_pillar: hp, pillars: { year: yp, month: mp, day: dp, hour: hp } };
