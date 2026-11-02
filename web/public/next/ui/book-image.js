@@ -1,6 +1,6 @@
-import { h } from "../lib/dom.js?v=n44";
-import { imageTransform } from "../lib/books.js?v=n44";
-import { openSheet } from "./overlay.js?v=n44";
+import { h } from "../lib/dom.js?v=n45";
+import { imageTransform } from "../lib/books.js?v=n45";
+import { openSheet } from "./overlay.js?v=n45";
 
 export function openBookImage(figure, title, returnFocus) {
   const readingY = window.scrollY;
