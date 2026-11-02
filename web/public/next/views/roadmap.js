@@ -1,7 +1,7 @@
-import { h } from "../lib/dom.js?v=n44";
-import { icon } from "../lib/icons.js?v=n44";
-import { openFeedback } from "./feedback.js?v=n44";
-import { openSheet } from "../ui/overlay.js?v=n44";
+import { h } from "../lib/dom.js?v=n45";
+import { icon } from "../lib/icons.js?v=n45";
+import { openFeedback } from "./feedback.js?v=n45";
+import { openSheet } from "../ui/overlay.js?v=n45";
 
 // 公开交付清单：状态与数量从 milestones 计算，不代表整个方向的完成比例。
 const DIRECTIONS = [
@@ -17,7 +17,7 @@ const DIRECTIONS = [
       { title: "大运、流年与流月查看", status: "done", detail: "可查看大运、流年和流月。" },
       { title: "私人档案与命盘释义", status: "done", detail: "已有个人档案和静态命盘释读。" },
       { title: "释义直达典籍原文", status: "planned", detail: "将释义连接到可核对的典籍原文。" },
-      { title: "初学者命盘阅读指引", status: "planned", detail: "在已有基础与进阶切换之上，整理初学者的阅读顺序。" },
+      { title: "初学者命盘阅读指引", status: "planned", detail: "沿统一盘面整理初学者的阅读顺序。" },
     ],
   },
   {
@@ -204,7 +204,7 @@ export function render() {
     h("div", null, h("dt", null, "已有交付的方向"), h("dd", null, h("b", { class: "tnum" }, startedDirections), h("span", null, ` / ${DIRECTIONS.length} 个`)), h("small", null, "按下方公开交付项清单计算")));
   const node = h("div", { class: "roadmap-page" },
     h("header", { class: "roadmap-header" },
-      h("img", { class: "roadmap-landscape", src: new URL("../assets/roadmap-landscape.webp?v=n44", import.meta.url).href, alt: "", "aria-hidden": "true", decoding: "async" }),
+      h("img", { class: "roadmap-landscape", src: new URL("../assets/roadmap-landscape.webp?v=n45", import.meta.url).href, alt: "", "aria-hidden": "true", decoding: "async" }),
       h("div", { class: "roadmap-hero-copy" }, h("h1", null, "路线图"),
         h("p", { class: "roadmap-vision" }, "把经典、案例与实践，连成一条路。"),
         h("p", { class: "roadmap-updated" }, h("span", { class: "roadmap-update-dot", "aria-hidden": "true" }), "进度核对 · ", h("time", { datetime: "2026-10-07" }, "2026.10.07")))),

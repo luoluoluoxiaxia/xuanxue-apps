@@ -86,7 +86,8 @@ test("book case entries require a positive public count and source links keep th
 });
 
 // Native DOM replacement, with no source-data HTML parsing. Only the existing
-// static icon template may create an SVG; all API strings must stay text nodes.
+// static icon and mechanics-disclosure templates may create nodes; all API
+// strings must stay text nodes.
 class MockNode {
   constructor(tag = "", data = "") {
     this.tagName = tag.toUpperCase(); this.data = data; this.childNodes = [];
@@ -107,6 +108,16 @@ class MockNode {
   get textContent() { return this.tagName ? this.childNodes.map(child => child.textContent).join("") : this.data; }
   set innerHTML(value) {
     assert.equal(this.tagName, "TEMPLATE", "API text must never be assigned to innerHTML");
+    const disclosure = value.match(/^<details class="dym-level" data-dayun-mechanics-level="(relations|endpoints)"( open)?><\/details>$/);
+    if (disclosure) {
+      const node = new MockNode("details");
+      node.className = "dym-level";
+      node.setAttribute("data-dayun-mechanics-level", disclosure[1]);
+      node.open = !!disclosure[2];
+      if (node.open) node.setAttribute("open", "");
+      this.content = { firstElementChild: node };
+      return;
+    }
     assert.match(value, /^<svg\b/);
     this.content = { firstElementChild: new MockNode("svg") };
   }
@@ -203,7 +214,7 @@ function timedEnvironment(start) {
 
 async function todayEnvironment(start, userId, request) {
   const env = timedEnvironment(start);
-  const { session } = await import("../web/public/next/lib/store.js?v=n44");
+  const { session } = await import("../web/public/next/lib/store.js?v=n45");
   session.set({ ready: true, authenticated: true, user: { id: userId } });
   const { render: renderToday } = await import("../web/public/next/views/today.js");
   env.result = renderToday(env.ctx, request);
@@ -263,10 +274,8 @@ test("a BaZi guide crosses a solar term without replacing answered quizzes or th
     quiz.emit("click");
     assert.equal(quiz.disabled, true);
     const side = env.result.node.querySelector(".learn-side").querySelector(".chart-panel");
-    byText(side, "button", "进阶").emit("click");
     env.result.node.querySelector(".learn-strip").emit("click");
     const mobile = document.body.querySelector(".overlay");
-    byText(mobile, "button", "进阶").emit("click");
     assert.match(side.textContent, /戊戌/);
     assert.equal([...env.timers.values()][0].delay, 2000, "the published solar-term second must finish before requesting new facts");
     env.runNext();
@@ -275,7 +284,7 @@ test("a BaZi guide crosses a solar term without replacing answered quizzes or th
     assert.equal(env.result.node.querySelector(".learn-option"), quiz);
     assert.equal(quiz.disabled, true);
     assert.match(env.result.node.textContent, /已答内容保留/);
-    assert.equal(byText(side, "button", "进阶").getAttribute("aria-pressed"), "true");
+    assert.equal(byText(side, "button", "进阶"), undefined);
     assert.match(side.textContent, /己亥/);
     assert.equal(document.body.querySelector(".overlay"), mobile);
     assert.match(mobile.textContent, /己亥/);
@@ -283,7 +292,7 @@ test("a BaZi guide crosses a solar term without replacing answered quizzes or th
     assert.ok(!env.result.node.querySelector(".learn-article").textContent.includes("戊戌对应的动态导读"));
     assert.match(env.result.node.querySelector(".learn-recap").textContent, /己亥对应的动态小结/);
     assert.ok(!env.result.node.querySelector(".learn-recap").textContent.includes("戊戌对应的动态小结"));
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n44");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n45");
     closeAllSheets();
   } finally { env.restore(); }
 });
@@ -367,7 +376,7 @@ test("a complete Today page refreshes at Beijing midnight while keeping the sele
     assert.equal(env.result.node.querySelectorAll(".td-swatch")[1].getAttribute("aria-expanded"), "true");
     assert.equal(document.body.querySelector(".overlay"), sheet);
     assert.ok([...env.timers.values()][0].delay > 60 * 60 * 1000, "ready content must not keep polling");
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n44");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n45");
     closeAllSheets();
   } finally { env.restore(); }
 });
@@ -495,29 +504,41 @@ test("Today pending polls still recover online and cleanup rejects a late new-da
   } finally { env.restore(); }
 });
 
-test("a live BaZi panel replaces current-month facts while keeping its advanced mode and focused cell", async () => {
+test("a live BaZi panel shows all facts despite an old basic preference and keeps its focused cell on refresh", async () => {
   environment();
-  const { baziPanel } = await import("../web/public/next/ui/chart-bazi.js");
-  const month = (pillar, is_current) => ({ pillar, is_current, month_name: `${pillar[1]}月`, relations: {} });
-  const old = { analysis_date: "2026-08-06", chart: { pillars: {} }, liu_nian: { year: 2026, pillar: "丙午" },
-    current_liu_yue: month("乙未", true), liu_yue: [month("乙未", true), month("戊戌", false)] };
-  const before = structuredClone(old);
-  const panel = baziPanel(old);
-  document.body.append(panel);
-  byText(panel, "button", "进阶").emit("click");
-  const oldCell = panel.querySelectorAll(".lm-cell")[0];
-  oldCell.dataset.key = "lm-0";
-  oldCell.focus();
-  assert.match(oldCell.textContent, /乙未.*本月/);
-  panel.updatePayload({ ...old, analysis_date: "2026-10-31", current_liu_yue: month("戊戌", true),
-    liu_yue: [month("乙未", false), month("戊戌", true)] });
-  const cells = panel.querySelectorAll(".lm-cell");
-  assert.equal(panel.parentElement, document.body);
-  assert.equal(byText(panel, "button", "进阶").getAttribute("aria-pressed"), "true");
-  assert.ok(!cells[0].textContent.includes("本月"));
-  assert.match(cells[1].textContent, /戊戌.*本月/);
-  assert.equal(document.activeElement, cells[0]);
-  assert.deepEqual(old, before);
+  const storage = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
+  Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
+    getItem: key => key === "xz-next-bazi-mode" ? "basic" : null,
+  } });
+  try {
+    const { baziPanel } = await import("../web/public/next/ui/chart-bazi.js");
+    const month = (pillar, is_current) => ({ pillar, is_current, month_name: `${pillar[1]}月`, relations: {} });
+    const old = { analysis_date: "2026-08-06", chart: { pillars: {} }, liu_nian: { year: 2026, pillar: "丙午" },
+      pillars_detail: { year: { hidden: [{ stem: "癸", ten_god: "正官", element: "水" }], di_shi: "沐浴", na_yin: "海中金" } },
+      shensha: { 文昌贵人: ["日"] },
+      current_liu_yue: month("乙未", true), liu_yue: [month("乙未", true), month("戊戌", false)] };
+    const before = structuredClone(old);
+    const panel = baziPanel(old);
+    document.body.append(panel);
+    assert.equal(byText(panel, "button", "基础"), undefined);
+    assert.equal(byText(panel, "button", "进阶"), undefined);
+    assert.match(panel.textContent, /癸正官/);
+    assert.match(panel.textContent, /沐浴 · 海中金/);
+    assert.match(panel.textContent, /文昌贵人 · 日/);
+    const oldCell = panel.querySelectorAll(".lm-cell")[0];
+    oldCell.dataset.key = "lm-0";
+    oldCell.focus();
+    assert.match(oldCell.textContent, /乙未.*本月/);
+    panel.updatePayload({ ...old, analysis_date: "2026-10-31", current_liu_yue: month("戊戌", true),
+      liu_yue: [month("乙未", false), month("戊戌", true)] });
+    const cells = panel.querySelectorAll(".lm-cell");
+    assert.equal(panel.parentElement, document.body);
+    assert.equal(byText(panel, "button", "进阶"), undefined);
+    assert.ok(!cells[0].textContent.includes("本月"));
+    assert.match(cells[1].textContent, /戊戌.*本月/);
+    assert.equal(document.activeElement, cells[0]);
+    assert.deepEqual(old, before);
+  } finally { if (storage) Object.defineProperty(globalThis, "localStorage", storage); else delete globalThis.localStorage; }
 });
 
 test("live BaZi defaults follow the new year and luck cycle while explicit selections and strip positions survive", async () => {
@@ -541,10 +562,18 @@ test("live BaZi defaults follow the new year and luck cycle while explicit selec
   document.body.append(chosen);
   chosen.querySelectorAll(".dayun-card")[1].emit("click");
   chosen.querySelectorAll(".liunian")[1].emit("click");
+  const relationDetails = chosen.querySelector('[data-dayun-mechanics-level="relations"]');
+  const endpointDetails = chosen.querySelector('[data-dayun-mechanics-level="endpoints"]');
+  assert.equal(relationDetails.open, true);
+  assert.equal(endpointDetails.open, false);
+  relationDetails.open = false; relationDetails.emit("toggle");
+  endpointDetails.open = true; endpointDetails.emit("toggle");
   chosen.querySelectorAll("[data-strip]").forEach((strip, index) => { strip.scrollLeft = 70 + index; });
   chosen.updatePayload(payload(2027, "甲申"));
   assert.equal(selected(chosen, ".dayun-card"), "dy-1");
   assert.equal(selected(chosen, ".liunian"), "ln-1-1");
+  assert.equal(chosen.querySelector('[data-dayun-mechanics-level="relations"]').open, false);
+  assert.equal(chosen.querySelector('[data-dayun-mechanics-level="endpoints"]').open, true);
   assert.deepEqual(chosen.querySelectorAll("[data-strip]").map(strip => strip.scrollLeft), [70, 71]);
 });
 

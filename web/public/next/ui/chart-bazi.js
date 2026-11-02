@@ -1,15 +1,13 @@
-// 八字命盘面板：四柱、命局速览、五行分布、大运流年与走势；进阶里另有所选大运的机械事实、当前流月引动与十二流月。
+// 八字命盘面板：统一展示四柱、命局速览、五行分布、大运流年、当前流月与神煞。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n44";
-import { icon } from "../lib/icons.js?v=n44";
-import { local } from "../lib/store.js?v=n44";
-import { TREND_NOTE } from "../lib/copy.js?v=n44";
-import { elementClass } from "./gua.js?v=n44";
-import { openGlossary } from "./glossary.js?v=n44";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n44";
+import { h, svg, esc } from "../lib/dom.js?v=n45";
+import { icon } from "../lib/icons.js?v=n45";
+import { TREND_NOTE } from "../lib/copy.js?v=n45";
+import { elementClass } from "./gua.js?v=n45";
+import { openGlossary } from "./glossary.js?v=n45";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n45";
 
-const MODE_KEY = "xz-next-bazi-mode";
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
 const WUXING = ["木", "火", "土", "金", "水"];
 const list = value => (Array.isArray(value) ? value : []);
@@ -67,7 +65,7 @@ function infoButton(text, label, key, open) {
   }, icon("info", "icon-sm"), text);
 }
 
-function pillarsBlock(payload, advanced, caseContext = null) {
+function pillarsBlock(payload, caseContext = null) {
   const pillars = payload?.chart?.pillars || {};
   const detail = payload?.pillars_detail || {};
   return h("div", { class: "cp-pillars", role: "group", "aria-label": "四柱（点一柱看古典解读）" },
@@ -89,10 +87,10 @@ function pillarsBlock(payload, advanced, caseContext = null) {
       h("b", { class: ["cp-pillar-char", !known && "cp-case-unknown", elementClass(item.stem_element)] }, known ? chars[0] || "—" : "未载"),
       known ? h("b", { class: ["cp-pillar-char", elementClass(item.branch_element)] }, chars[1] || "—") : null,
       h("span", { class: "cp-pillar-el" }, [item.stem_element, item.branch_element].filter(Boolean).join(" · ")),
-      advanced && Array.isArray(item.hidden) && item.hidden.length
+      Array.isArray(item.hidden) && item.hidden.length
         ? h("span", { class: "cp-hidden" }, item.hidden.map(hidden => h("span", { class: elementClass(hidden.element) }, `${hidden.stem || ""}`, h("small", null, hidden.ten_god || ""))))
         : null,
-      advanced && (item.di_shi || item.na_yin)
+      (item.di_shi || item.na_yin)
         ? h("span", { class: "cp-pillar-extra" }, [item.di_shi, item.na_yin].filter(Boolean).join(" · "))
         : null,
       known ? h("span", { class: "sr-only" }, "，查看古典解读") : null);
@@ -249,7 +247,7 @@ const YEAR_VIEW = (step, count) => ({
   cells: (item, score) => [item.year, item.pillar, item.stem_ten_god, score],
 });
 
-/* ---------- 进阶：所选大运 · 机械事实 ---------- */
+/* ---------- 所选大运 · 机械事实 ---------- */
 // 逐柱落点：接口给出的干/支关系里，以「无固定」开头的占位说明不展示。
 function endpointDetail(endpoint) {
   const relations = [endpoint?.stem_relation, endpoint?.branch_relation, endpoint?.compound]
@@ -262,7 +260,7 @@ function endpointDetail(endpoint) {
   };
 }
 
-// 两层折叠用固定标记（data-dayun-mechanics-level），展开状态记在面板状态里，切换大运、切换基础 / 进阶后保持。
+// 长明细局部展开；状态记在面板里，切换大运和刷新行运后保持。
 function mechanicsLevel(key, open, onToggle) {
   const template = document.createElement("template");
   template.innerHTML = key === "relations"
@@ -304,7 +302,6 @@ function mechanicsBlock(step, state) {
       h("span", { class: "dym-kicker" }, "所选大运 · 机械事实"),
       h("span", { class: "dym-title" }, ganzhi(step.ganzhi, step.stem_element, step.branch_element), range ? h("span", { class: "muted tnum" }, range) : null),
       h("span", { class: "dym-badge" }, "排盘确定性结果 · 非 AI 判断")),
-    h("div", { class: "dym-tier" }, h("span", null, "运柱基础"), h("span", null, "直接查看")),
     h("dl", { class: "dym-grid" },
       h("div", { class: "dym-cell is-wide" }, h("dt", null, "地支藏干"),
         h("dd", { class: "dym-stems" }, hidden.length
@@ -360,7 +357,7 @@ function stageWithoutDayun(payload) {
       "点顶部", h("span", { class: "cp-inline-icon" }, icon("edit", "icon-sm")), "「修改信息」补全。"));
 }
 
-/* ---------- 大运走势、运内流年，以及（进阶）所选大运的机械事实 ---------- */
+/* ---------- 大运走势、运内流年，以及所选大运的机械事实 ---------- */
 function dayunBlock(payload, state, rerender) {
   const dy = payload?.da_yun;
   if (!dy || !Array.isArray(dy.list) || !dy.list.length) return stageWithoutDayun(payload);
@@ -399,7 +396,7 @@ function dayunBlock(payload, state, rerender) {
       })),
     ...yearView(payload, step, selected, isCurrentStep, state, rerender),
     h("p", { class: "cp-note cp-trend-note" }, h("b", null, "〔按〕"), TREND_NOTE),
-    state.advanced ? mechanicsBlock(step, state) : null,
+    mechanicsBlock(step, state),
   ].filter(Boolean));
   return section;
 }
@@ -450,7 +447,7 @@ function yearView(payload, step, selected, isCurrentStep, state, rerender) {
   ];
 }
 
-/* ---------- 进阶：当前流月引动与十二流月 ---------- */
+/* ---------- 当前流月引动与十二流月 ---------- */
 function liuyueBlock(payload) {
   const months = list(payload?.liu_yue);
   const clm = payload?.current_liu_yue;
@@ -527,13 +524,12 @@ export function baziMeta(payload, input = {}) {
   ].filter(Boolean).join(" · ");
 }
 
-// beside：摆在解读页标题旁边（桌面右栏），命盘名页面上已经有了，盘头只留出生信息和层级切换。
+// beside：摆在解读页标题旁边（桌面右栏），命盘名页面上已经有了，盘头只留出生信息。
 export function baziPanel(payload, { name = "", input = {}, beside = false, caseContext = null } = {}) {
-  // relationsOpen / endpointsOpen：进阶里「作用关系」默认展开、「逐柱落点」默认收起，重绘时沿用用户的选择。
+  // 「作用关系」默认展开、「逐柱落点」默认收起，重绘时沿用用户的选择。
   const state = {
     dayun: null,
     year: null,
-    advanced: caseContext ? true : local.get(MODE_KEY, "basic") === "advanced",
     relationsOpen: true,
     endpointsOpen: false,
   };
@@ -551,34 +547,27 @@ export function baziPanel(payload, { name = "", input = {}, beside = false, case
   };
   const render = (preserveScroll = false) => {
     const keep = snapshot(root);
-    const setMode = advanced => { state.advanced = advanced; if (!caseContext) local.set(MODE_KEY, advanced ? "advanced" : "basic"); render(); };
-    const modeSeg = h("div", { class: "seg cp-mode", role: "group", "aria-label": "显示层级" },
-      h("button", { type: "button", "aria-pressed": String(!state.advanced), "data-key": "mode-basic", onClick: () => setMode(false) }, "基础"),
-      h("button", { type: "button", "aria-pressed": String(state.advanced), "data-key": "mode-advanced", onClick: () => setMode(true) }, "进阶"));
     dayun = null;
     root.replaceChildren(...[
       h("header", { class: "cp-head" },
         h("div", { class: "cp-title" },
           beside ? null : h("p", { class: "kicker" }, "八字命盘"),
           beside ? null : h("h2", null, name || (caseContext ? "书例复盘" : payload?.profile_name || "我的命盘")),
-          h("p", { class: "cp-meta" }, caseContext ? caseContext.source_label || "书载四柱复盘" : baziMeta(payload, input))),
-        modeSeg),
+          h("p", { class: "cp-meta" }, caseContext ? caseContext.source_label || "书载四柱复盘" : baziMeta(payload, input)))),
       caveat ? h("p", { class: "cp-caveat" }, icon("info", "icon-sm"), h("span", null, caveat)) : null,
-      !caseContext || caseHas(caseContext, "pillars") ? pillarsBlock(payload, state.advanced, caseContext) : caseSectionMissing("四柱"),
-      state.advanced ? null : h("p", { class: "cp-hint" }, icon("info", "icon-sm"), caseContext
-        ? "点一柱看古典解读；藏干、纳音与神煞在「进阶」里。" : "点任意一柱看古典解读；藏干、神煞与十二流月在「进阶」里。"),
+      !caseContext || caseHas(caseContext, "pillars") ? pillarsBlock(payload, caseContext) : caseSectionMissing("四柱"),
       !caseContext || caseHas(caseContext, "facts") ? factsBlock(payload, caseContext) : null,
       caseContext ? caseHas(caseContext, "wuxing") ? caseWuxingBlock(payload) : null : wuxingBlock(payload),
       caseContext ? caseHas(caseContext, "relations") ? caseRelationsBlock(payload) : null : renderDayun(),
-      !caseContext && state.advanced ? liuyueBlock(payload) : null,
-      state.advanced && (!caseContext || caseHas(caseContext, "shensha")) ? caseContext && (!payload?.shensha || typeof payload.shensha !== "object")
+      !caseContext ? liuyueBlock(payload) : null,
+      (!caseContext || caseHas(caseContext, "shensha")) ? caseContext && (!payload?.shensha || typeof payload.shensha !== "object")
         ? caseSectionMissing("神煞") : shenshaBlock(payload) : null,
       caseContext && caseMissing(caseContext).length ? h("p", { class: "cp-note cp-case-missing" }, `未载：${caseMissing(caseContext).join("、")}`) : null,
       h("button", { type: "button", class: "btn btn-sm btn-ghost cp-gloss", onClick: () => openGlossary("bazi") }, icon("book"), "名词解释"),
     ].filter(Boolean));
     restore(root, keep, !preserveScroll);
   };
-  // 更新动态行运时沿用进阶层级、大运/流年选择以及焦点和滑动位置。
+  // 更新动态行运时沿用大运/流年选择、局部展开状态以及焦点和滑动位置。
   root.updatePayload = next => { payload = next; render(true); };
   render();
   return root;
