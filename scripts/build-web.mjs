@@ -268,7 +268,7 @@ for (const [file, call] of [
   }
 }
 
-// 统一盘面的大运明细：字段与局部折叠（作用关系 / 逐柱落点）要接到当前选中的大运上。
+// 大运明细字段与逐柱明细展开状态要接到当前选中的大运上。
 const chartBazi = nextFile("ui/chart-bazi.js");
 for (const field of [
   "branch_hidden_stems",
@@ -280,18 +280,16 @@ for (const field of [
   "relations_to_natal",
   "relations_to_natal_endpoints",
 ]) {
-  if (!chartBazi.includes(field)) fail(`DaYun mechanics missing ${field}`);
+  if (!chartBazi.includes(field)) fail(`DaYun details missing ${field}`);
 }
 for (const marker of [
-  'data-dayun-mechanics-level="relations"',
   'data-dayun-mechanics-level="endpoints"',
-  "relationsOpen",
   "endpointsOpen",
 ]) {
-  if (!chartBazi.includes(marker)) fail(`DaYun mechanics disclosure missing ${marker}`);
+  if (!chartBazi.includes(marker)) fail(`DaYun details disclosure missing ${marker}`);
 }
 if ((chartBazi.match(/mechanicsBlock\(step,/g) || []).length < 2) {
-  fail("DaYun mechanics are not connected to the selected step");
+  fail("DaYun details are not connected to the selected step");
 }
 
 // 登录与注册：邮箱验证码注册、验证码或密码登录、重设密码；邀请码已下线（见上方禁用词）。

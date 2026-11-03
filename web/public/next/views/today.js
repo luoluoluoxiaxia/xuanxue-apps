@@ -1,15 +1,15 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n45";
-import { icon } from "../lib/icons.js?v=n45";
-import { get, post, put } from "../lib/api.js?v=n45";
-import { session, refreshSession } from "../lib/store.js?v=n45";
-import { greeting } from "../lib/format.js?v=n45";
-import { personalHomeRefreshAt } from "../lib/chart-refresh.js?v=n45";
-import { stateView } from "../ui/bits.js?v=n45";
-import { openSheet } from "../ui/overlay.js?v=n45";
-import { toast } from "../ui/toast.js?v=n45";
+import { h } from "../lib/dom.js?v=n46";
+import { icon } from "../lib/icons.js?v=n46";
+import { get, post, put } from "../lib/api.js?v=n46";
+import { session, refreshSession } from "../lib/store.js?v=n46";
+import { greeting } from "../lib/format.js?v=n46";
+import { personalHomeRefreshAt } from "../lib/chart-refresh.js?v=n46";
+import { stateView } from "../ui/bits.js?v=n46";
+import { openSheet } from "../ui/overlay.js?v=n46";
+import { toast } from "../ui/toast.js?v=n46";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
@@ -251,8 +251,8 @@ function braceletSection(outfit) {
 function monthBlock(payload, actions, view) {
   const month = payload?.month || {};
   const state = monthState(month);
-  const solar = month.display && typeof month.display === "object" ? month.display.solar_terms_text : "";
-  const period = [month.period_label, solar].map(text => String(text || "").trim()).filter(Boolean).join(" · ");
+  const solar = month.display && typeof month.display === "object" ? String(month.display.solar_terms_text || "").trim() : "";
+  const period = solar || String(month.period_label || "").trim();
   const head = h("header", { class: "td-month-head" },
     h("div", null,
       month.month_label ? h("p", { class: "kicker" }, month.month_label) : null,

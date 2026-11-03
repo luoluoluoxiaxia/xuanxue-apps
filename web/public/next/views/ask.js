@@ -1,21 +1,21 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n45";
-import { icon } from "../lib/icons.js?v=n45";
-import { get, post, put } from "../lib/api.js?v=n45";
-import { session, local, refreshSession } from "../lib/store.js?v=n45";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n45";
-import { readingDraftKey } from "../lib/sessions.js?v=n45";
-import { relativeTime, count } from "../lib/format.js?v=n45";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n45";
-import { handoff } from "../lib/handoff.js?v=n45";
-import { humanizeError } from "../lib/interpret.js?v=n45";
-import { stateView } from "../ui/bits.js?v=n45";
-import { toast } from "../ui/toast.js?v=n45";
-import { confirmDialog } from "../ui/overlay.js?v=n45";
-import { locationPicker } from "../ui/location.js?v=n45";
-import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n45";
-import { baziPanel } from "../ui/chart-bazi.js?v=n45";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n45";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n46";
+import { icon } from "../lib/icons.js?v=n46";
+import { get, post, put } from "../lib/api.js?v=n46";
+import { session, local, refreshSession } from "../lib/store.js?v=n46";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n46";
+import { readingDraftKey } from "../lib/sessions.js?v=n46";
+import { relativeTime, count } from "../lib/format.js?v=n46";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n46";
+import { handoff } from "../lib/handoff.js?v=n46";
+import { humanizeError } from "../lib/interpret.js?v=n46";
+import { stateView } from "../ui/bits.js?v=n46";
+import { toast } from "../ui/toast.js?v=n46";
+import { confirmDialog } from "../ui/overlay.js?v=n46";
+import { locationPicker } from "../ui/location.js?v=n46";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n46";
+import { baziPanel } from "../ui/chart-bazi.js?v=n46";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n46";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
@@ -740,7 +740,7 @@ function baziFlow(ctx) {
       ? focusHeader(ctx, "修改出生信息")
       : wantsHelp
         ? focusHeader(ctx, "排盘后请卦友帮看", "广场只显示脱敏命盘，出生时间与地点不会公开。")
-        : focusHeader(ctx, "八字看长期"));
+        : focusHeader(ctx, "八字排盘"));
   const body = h("div", { class: "birth-body" }, h("div", { class: "spinner-line" }, h("span", { class: "spinner" }), "正在准备…"));
 
   // 首页写好的问题：在这里也让用户看到，排好盘后会带进解读页。
@@ -864,17 +864,16 @@ function profilesUnavailable(error, retry) {
 function existingProfiles(ctx, profiles, { help = false } = {}) {
   const question = readDraft();
   const list = profiles.slice().sort((a, b) => Number(b.is_default) - Number(a.is_default) || Number(b.id) - Number(a.id)).slice(0, 6);
-  return h("section", { class: "flow-step" },
+  return h("section", { class: "flow-step bazi-existing" },
     h("div", { class: "flow-step-head" }, h("h2", null, "用已有命盘"), h("span", { class: "flow-hint" }, help ? "选一张盘，直接向卦友求助" : "同一张盘可以开新的对话")),
-    h("div", { class: "recent-grid" }, list.map(item => h("a", {
+    h("div", { class: "recent-grid bazi-profile-list" }, list.map(item => h("a", {
       class: "recent-card",
       href: `#/reading/${encodeURIComponent(item.id)}?fresh=1${help ? "&help=1" : ""}`,
       onClick: () => { if (question.trim()) { local.set(readingDraftKey(item.id), question.trim()); writeDraft(""); } },
     },
     h("span", { class: "recent-top" },
-      h("span", { class: "chip chip-bazi" }, "八字"),
+      h("b", null, item.name || "未命名命盘"),
       item.is_default ? h("span", { class: "chip chip-gold" }, "默认命盘") : null),
-    h("b", null, item.name || "未命名命盘"),
     h("span", { class: "recent-line serif" }, Object.values(item.summary?.pillars || {}).join(" ") || "四柱命盘")))),
     h("p", { class: "flow-or" }, h("span", null, "或者新建一张")));
 }
@@ -948,6 +947,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   const firstLabel = () => (previewFirst() ? "先看命盘" : submitLabel);
   const submit = h("button", { type: "submit", class: "btn btn-primary btn-lg btn-block submit-btn" }, icon("sparkle"), firstLabel());
   const previewSlot = h("section", { class: "flow-step birth-preview", hidden: true, "aria-label": "命盘预览", tabindex: "-1" });
+  let previewRevision = 0;
   const ritual = h("div", { class: "ritual", hidden: true, role: "status" },
     h("span", { class: "spinner", "aria-hidden": "true" }),
     h("span", { class: "ritual-text", "aria-hidden": "true" }),
@@ -969,9 +969,9 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
       onClick: () => { onPick(value); },
     }, label)));
   };
-  const renderGender = () => radio(genderSeg, () => state.gender, [["男", "男"], ["女", "女"], ["", "不透露"]], value => { state.gender = value; renderGender(); saveBirthDraft(); });
+  const renderGender = () => radio(genderSeg, () => state.gender, [["男", "男"], ["女", "女"], ["", "不透露"]], value => { state.gender = value; clearPreview(); renderGender(); saveBirthDraft(); });
   const renderCalendar = () => {
-    radio(calendarSeg, () => state.calendar, [["solar", "公历"], ["lunar", "农历"]], value => { state.calendar = value; renderCalendar(); saveBirthDraft(); if (day.value) checkDateField(day); });
+    radio(calendarSeg, () => state.calendar, [["solar", "公历"], ["lunar", "农历"]], value => { state.calendar = value; clearPreview(); renderCalendar(); saveBirthDraft(); if (day.value) checkDateField(day); });
     leapRow.hidden = state.calendar !== "lunar";
   };
   renderGender();
@@ -995,7 +995,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     if (!matches.includes(manualBirthYear)) manualBirthYear = matches.includes(preferredBirthYear) ? preferredBirthYear : matches[0] || null;
     const renderButtons = () => yearCandidates.replaceChildren(...matches.map((y, index) => h("button", {
       type: "button", class: ["pill-filter"], "aria-pressed": String(manualBirthYear === y),
-      onClick: () => { manualBirthYear = y; preferredBirthYear = y; renderButtons(); saveBirthDraft(); },
+      onClick: () => { manualBirthYear = y; preferredBirthYear = y; clearPreview(); renderButtons(); saveBirthDraft(); },
     }, `${text}年 · 公历 ${y}`, h("small", null, ` · ${index === 0 ? "本甲子" : "上一甲子"} · 虚岁约 ${now - y + 1}`))));
     renderButtons();
   };
@@ -1177,30 +1177,30 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     h("div", { class: "pillar-grid" }, pillarInputs.map(([, label, input]) => h("label", { class: "field" }, h("span", { class: "field-label" }, label), input))),
     pillarHint,
     picker,
-    h("div", { class: "field" }, h("span", { class: "field-label" }, "生年（匹配出生锚点）"), yearCandidates));
+    h("div", { class: "field" }, h("span", { class: "field-label" }, "出生年份"), yearCandidates));
   const modeSeg = h("div", { class: "seg", role: "tablist", "aria-label": "输入方式" });
   const renderMode = () => {
     modeSeg.replaceChildren(
-      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "birth_time"), onClick: () => { state.mode = "birth_time"; renderMode(); saveBirthDraft(); } }, "按出生时间"),
-      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "manual_pillars"), onClick: () => { state.mode = "manual_pillars"; renderMode(); saveBirthDraft(); } }, "已知四柱"));
+      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "birth_time"), onClick: () => { state.mode = "birth_time"; clearPreview(); renderMode(); saveBirthDraft(); } }, "按出生时间"),
+      h("button", { type: "button", role: "tab", "aria-selected": String(state.mode === "manual_pillars"), onClick: () => { state.mode = "manual_pillars"; clearPreview(); renderMode(); saveBirthDraft(); } }, "已知四柱"));
     timeSection.hidden = state.mode !== "birth_time";
     manualSection.hidden = state.mode !== "manual_pillars";
     if (state.mode !== "manual_pillars" && pickKey) closePicker(false);
   };
   renderMode();
 
+  const privacyNote = h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后按新信息重新排盘，原有解读不再挂在这张盘下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。");
   const form = h("form", { class: "birth-form", novalidate: true },
-    h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("h2", null, "你是谁")),
+    h("section", { class: "flow-step birth-fields" },
+      h("div", { class: "flow-step-head" }, h("h2", null, "出生信息")),
       h("label", { class: "field" }, h("span", { class: "field-label" }, "称呼（可选）"), name),
-      h("div", { class: "field" }, h("span", { class: "field-label" }, "性别"), genderSeg, h("span", { class: "field-hint" }, "性别决定大运顺逆；不透露则无法排大运。"))),
-    h("section", { class: "flow-step" },
-      h("div", { class: "flow-step-head" }, h("h2", null, "出生时间"), modeSeg),
+      h("div", { class: "field" }, h("span", { class: "field-label" }, "性别"), genderSeg, h("span", { class: "field-hint" }, "性别决定大运顺逆；不透露则无法排大运。")),
+      h("div", { class: "birth-time-head" }, modeSeg),
       timeSection,
       manualSection),
     h("div", { class: "flow-submit" }, error, submit),
     previewSlot,
-    h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), editing ? "更新后按新信息重新排盘，原有解读不再挂在这张盘下。" : setDefault ? "生成后设为默认命盘，用于每天的宜忌。" : "排盘免费，命盘只对本人可见。"),
+    privacyNote,
     editing ? null : h("p", { class: "risk-note" }, RISK_NOTE),
     ritual);
 
@@ -1309,6 +1309,7 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
   form.addEventListener("change", saveBirthDraft);
 
   function clearBirthForm() {
+    clearPreview();
     local.remove(BIRTH_DRAFT);
     [name, year, month, day, hour, minute, ...pillarInputs.map(entry => entry[2])].forEach(input => { input.value = ""; input.removeAttribute("aria-invalid"); });
     leap.checked = false;
@@ -1392,37 +1393,42 @@ function birthForm(ctx, { setDefault = false, hasProfiles = false, editing = nul
     return null;
   }
 
-  // 改了出生信息，之前的预览就作废，按钮回到「先看命盘」。
-  const clearPreview = () => {
+  // 修改也会使在途预览失效，避免旧响应显示成新输入的结果。
+  function clearPreview() {
+    previewRevision += 1;
     if (previewSlot.hidden) return;
     previewSlot.hidden = true;
     previewSlot.replaceChildren();
+    privacyNote.hidden = false;
     submit.hidden = false;
     submit.replaceChildren(icon("sparkle"), firstLabel());
-  };
+  }
   form.addEventListener("input", clearPreview);
   form.addEventListener("change", clearPreview);
 
   async function showPreview() {
+    if (submit.disabled) return;
+    const revision = previewRevision;
     const bodyPayload = buildBody();
     submit.disabled = true;
     submit.textContent = "排盘中…";
     try {
       const payload = await post("/api/chart/preview", bodyPayload);
-      if (!ctx.isCurrent()) return;
+      if (!ctx.isCurrent() || revision !== previewRevision) return;
       const save = h("button", { type: "button", class: "btn btn-primary btn-lg btn-block" }, icon("sparkle"), "保存命盘，开始解读");
       save.addEventListener("click", () => saveChart());
       previewSlot.replaceChildren(
-        h("div", { class: "flow-step-head" }, h("h2", null, "你的命盘"), h("span", { class: "flow-hint" }, "还没保存 · 注册后保存并开始解读")),
-        baziPanel(payload, { name: bodyPayload.name || "", input: bodyPayload }),
+        h("div", { class: "flow-step-head" }, h("h2", null, bodyPayload.name || "命盘预览"), h("span", { class: "flow-hint" }, "尚未保存")),
+        baziPanel(payload, { input: bodyPayload, beside: true }),
         learnEntry("bazi", () => baziLearnInput(bodyPayload, payload)),
         h("div", { class: "flow-submit" }, save, h("p", { class: "flow-foot" }, icon("lock", "icon-sm"), "保存后命盘只对你本人可见，换设备也能接着问。")));
       previewSlot.hidden = false;
+      privacyNote.hidden = true;
       submit.hidden = true;
       previewSlot.scrollIntoView({ block: "start", behavior: reducedMotion() ? "auto" : "smooth" });
       previewSlot.focus({ preventScroll: true });
     } catch (failure) {
-      if (!ctx.isCurrent()) return;
+      if (!ctx.isCurrent() || revision !== previewRevision) return;
       const message = humanizeError(failure.message, "请稍后再试");
       fail(`排盘失败：${message}`, fieldForMessage(message));
     } finally {
