@@ -1,12 +1,12 @@
 // 八字命盘面板：统一展示四柱、命局速览、五行分布、大运流年、当前流月与神煞。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n45";
-import { icon } from "../lib/icons.js?v=n45";
-import { TREND_NOTE } from "../lib/copy.js?v=n45";
-import { elementClass } from "./gua.js?v=n45";
-import { openGlossary } from "./glossary.js?v=n45";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n45";
+import { h, svg, esc } from "../lib/dom.js?v=n46";
+import { icon } from "../lib/icons.js?v=n46";
+import { TREND_NOTE } from "../lib/copy.js?v=n46";
+import { elementClass } from "./gua.js?v=n46";
+import { openGlossary } from "./glossary.js?v=n46";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n46";
 
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
 const WUXING = ["木", "火", "土", "金", "水"];
@@ -160,15 +160,13 @@ function wuxingBlock(payload) {
     h("p", { class: "cp-note" }, "深色为表层，浅色含藏干；数量只示分布，不等于旺衰强弱。"));
 }
 
-/* ---------- 走势折线（单系列，悬停查看数值；大运与运内流年共用） ---------- */
-// view：axis(item) 横轴文字；tip(item) 浮窗标题与副标题；label 读屏名称；caption / columns / cells 为读屏表格；
-// inset 左右留白（横轴是四位年份时放宽，窄屏两端不被裁掉）；numeric 横轴用等宽数字。
+/* ---------- 大运走势折线（单系列，悬停查看数值） ---------- */
+// view：axis(item) 横轴文字；tip(item) 浮窗标题与副标题；label 读屏名称；caption / columns / cells 为读屏表格。
 function trendChart(items, selectedIndex, onSelect, view) {
   const scores = items.map(item => Math.max(20, Math.min(95, Number(item.display_trend_score) || 60)));
   const width = 320;
   const height = 132;
-  const inset = view.inset ?? 12;
-  const pad = { l: inset, r: inset, t: 22, b: 26 };
+  const pad = { l: 12, r: 12, t: 22, b: 26 };
   const innerW = width - pad.l - pad.r;
   const innerH = height - pad.t - pad.b;
   const x = index => pad.l + (items.length === 1 ? innerW / 2 : (innerW * index) / (items.length - 1));
@@ -177,7 +175,7 @@ function trendChart(items, selectedIndex, onSelect, view) {
   const line = points.map(([px, py], index) => `${index ? "L" : "M"}${px.toFixed(1)} ${py.toFixed(1)}`).join(" ");
   const area = `${line} L${points[points.length - 1][0].toFixed(1)} ${pad.t + innerH} L${points[0][0].toFixed(1)} ${pad.t + innerH} Z`;
   const grid = [40, 60, 80].map(value => `<line x1="${pad.l}" x2="${width - pad.r}" y1="${y(value).toFixed(1)}" y2="${y(value).toFixed(1)}" class="trend-grid"/>`).join("");
-  const labels = items.map((item, index) => `<text x="${x(index).toFixed(1)}" y="${height - 8}" text-anchor="middle" class="trend-x${view.numeric ? " is-num" : ""}${index === selectedIndex ? " is-selected" : ""}">${esc(view.axis(item))}</text>`).join("");
+  const labels = items.map((item, index) => `<text x="${x(index).toFixed(1)}" y="${height - 8}" text-anchor="middle" class="trend-x${index === selectedIndex ? " is-selected" : ""}">${esc(view.axis(item))}</text>`).join("");
   const dots = points.map(([px, py], index) => `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${index === selectedIndex ? 5.5 : 4}" class="trend-dot${index === selectedIndex ? " is-selected" : ""}"/>`).join("");
   const sel = points[selectedIndex];
   const selLabel = sel ? `<text x="${sel[0].toFixed(1)}" y="${(sel[1] - 11).toFixed(1)}" text-anchor="middle" class="trend-label">${scores[selectedIndex]}</text>` : "";
@@ -236,18 +234,7 @@ const STEP_VIEW = count => ({
   cells: (step, score) => [step.ganzhi || "", step.age_range || ageRange(step), score],
 });
 
-const YEAR_VIEW = (step, count) => ({
-  inset: 16,
-  numeric: true,
-  axis: item => String(item.year || ""),
-  tip: item => [`${item.year || ""} ${item.pillar || ""} 流年`, [item.stem_ten_god, item.current ? "今年" : ""].filter(Boolean).join(" · ")],
-  label: `${step.ganzhi || ""}大运运内流年走势示意，共 ${count} 年`,
-  caption: `${step.ganzhi || ""}大运运内流年示意指数`,
-  columns: ["年份", "流年", "十神", "指数"],
-  cells: (item, score) => [item.year, item.pillar, item.stem_ten_god, score],
-});
-
-/* ---------- 所选大运 · 机械事实 ---------- */
+/* ---------- 所选大运详情 ---------- */
 // 逐柱落点：接口给出的干/支关系里，以「无固定」开头的占位说明不展示。
 function endpointDetail(endpoint) {
   const relations = [endpoint?.stem_relation, endpoint?.branch_relation, endpoint?.compound]
@@ -261,11 +248,9 @@ function endpointDetail(endpoint) {
 }
 
 // 长明细局部展开；状态记在面板里，切换大运和刷新行运后保持。
-function mechanicsLevel(key, open, onToggle) {
+function mechanicsLevel(open, onToggle) {
   const template = document.createElement("template");
-  template.innerHTML = key === "relations"
-    ? `<details class="dym-level" data-dayun-mechanics-level="relations"${open ? " open" : ""}></details>`
-    : `<details class="dym-level" data-dayun-mechanics-level="endpoints"${open ? " open" : ""}></details>`;
+  template.innerHTML = `<details class="dym-level" data-dayun-mechanics-level="endpoints"${open ? " open" : ""}></details>`;
   const details = template.content.firstElementChild;
   details.addEventListener("toggle", () => onToggle(details.open));
   return details;
@@ -276,32 +261,20 @@ function mechanicsBlock(step, state) {
   const shensha = list(step.shensha).filter(Boolean);
   const relations = list(step.relations_to_natal).filter(Boolean);
   const endpoints = list(step.relations_to_natal_endpoints).map(endpointDetail);
-  const range = [ageRange(step) ? `${ageRange(step)}岁` : "", yearRange(step)].filter(Boolean).join(" · ");
   const inKong = step.in_natal_xun_kong === true ? "是" : step.in_natal_xun_kong === false ? "否" : "—";
   const chips = items => h("div", { class: "cp-chips" }, items.map(item => h("span", { class: "chip" }, item)));
 
-  const relationsLevel = mechanicsLevel("relations", state.relationsOpen, open => { state.relationsOpen = open; });
-  relationsLevel.append(
-    h("summary", { "data-key": "dym-relations" }, h("span", null, "作用关系"), h("span", { class: "muted tnum" }, `${shensha.length} 神煞 · ${relations.length} 关系`)),
-    h("div", { class: "dym-level-body" },
-      h("div", { class: "dym-group" }, h("span", null, "神煞"), chips(shensha.length ? shensha : ["无"])),
-      h("div", { class: "dym-group" }, h("span", null, "与原局"), chips(relations.length ? relations : ["无固定合冲刑害"]))));
-
-  const endpointsLevel = mechanicsLevel("endpoints", state.endpointsOpen, open => { state.endpointsOpen = open; });
+  const endpointsLevel = mechanicsLevel(state.endpointsOpen, open => { state.endpointsOpen = open; });
   endpointsLevel.append(
-    h("summary", { "data-key": "dym-endpoints" }, h("span", null, "逐柱落点"), h("span", { class: "muted tnum" }, endpoints.length ? `${endpoints.length} 处` : "暂无")),
+    h("summary", { "data-key": "dym-endpoints" }, h("span", null, "逐柱明细"), h("span", { class: "muted tnum" }, endpoints.length ? `${endpoints.length} 处` : "暂无")),
     h("div", { class: "dym-level-body" },
-      h("div", { class: "dym-group" }, h("span", null, "关系落点"),
-        endpoints.length
-          ? h("ul", { class: "dym-endpoints" }, endpoints.map(item => h("li", { class: "dym-endpoint" },
-            h("span", null, item.pair), h("b", null, item.relations), item.actions ? h("em", null, item.actions) : null)))
-          : h("p", { class: "cp-note" }, "暂无明确落点"))));
+      endpoints.length
+        ? h("ul", { class: "dym-endpoints" }, endpoints.map(item => h("li", { class: "dym-endpoint" },
+          h("span", null, item.pair), h("b", null, item.relations), item.actions ? h("em", null, item.actions) : null)))
+        : h("p", { class: "cp-note" }, "暂无明确落点")));
 
-  return h("section", { class: "dym", "aria-label": `${step.ganzhi || "所选"}大运机械事实` },
-    h("div", { class: "dym-head" },
-      h("span", { class: "dym-kicker" }, "所选大运 · 机械事实"),
-      h("span", { class: "dym-title" }, ganzhi(step.ganzhi, step.stem_element, step.branch_element), range ? h("span", { class: "muted tnum" }, range) : null),
-      h("span", { class: "dym-badge" }, "排盘确定性结果 · 非 AI 判断")),
+  return h("section", { class: "dym", "aria-label": "大运详情" },
+    h("h4", { class: "dym-kicker" }, "大运详情"),
     h("dl", { class: "dym-grid" },
       h("div", { class: "dym-cell is-wide" }, h("dt", null, "地支藏干"),
         h("dd", { class: "dym-stems" }, hidden.length
@@ -311,12 +284,13 @@ function mechanicsBlock(step, state) {
       h("div", { class: "dym-cell" }, h("dt", null, "纳音"), h("dd", null, step.na_yin || "—")),
       h("div", { class: "dym-cell" }, h("dt", null, "本柱旬空"), h("dd", null, step.pillar_xun_kong || "—")),
       h("div", { class: "dym-cell" }, h("dt", null, "落本命日旬空"), h("dd", null, inKong))),
-    relationsLevel,
+    h("div", { class: "dym-group" }, h("span", null, "神煞"), chips(shensha.length ? shensha : ["无"])),
+    h("div", { class: "dym-group" }, h("span", null, "与原局"), chips(relations.length ? relations : ["无固定合冲刑害"])),
     endpointsLevel);
 }
 
-/* ---------- 行运：没有大运（未填性别等）时只列今年流年与当前流月 ---------- */
-function stageCard({ kicker, badge, current = false, item, god, range, key, open }) {
+/* ---------- 没有大运时保留今年流年；本月统一在流月区展示 ---------- */
+function stageCard({ kicker, badge, current = false, item, god, key, open }) {
   return h("button", {
     type: "button",
     class: ["cp-stage-card", current && "is-current"],
@@ -326,13 +300,11 @@ function stageCard({ kicker, badge, current = false, item, god, range, key, open
   h("span", { class: "cp-stage-top" }, h("span", { class: "cp-stage-kicker" }, kicker), h("span", { class: "cp-stage-badge" }, badge)),
   ganzhi(item.pillar, item.stem_element, item.branch_element, "cp-stage-gz"),
   h("span", { class: "cp-stage-god" }, god.filter(Boolean).join(" · ") || "—"),
-  range ? h("span", { class: "cp-stage-range tnum" }, range) : null,
   h("span", { class: "sr-only" }, "，查看古典解读"));
 }
 
 function stageWithoutDayun(payload) {
   const ln = payload?.liu_nian;
-  const clm = payload?.current_liu_yue;
   const cards = [];
   if (ln?.pillar) {
     cards.push(stageCard({
@@ -340,24 +312,14 @@ function stageWithoutDayun(payload) {
       god: [ln.stem_ten_god, ln.year ? `${ln.year} 年` : ""],
       open: trigger => liunianPop(ln, { returnFocus: trigger }),
     }));
-    if (clm?.pillar) {
-      cards.push(stageCard({
-        kicker: "当前流月", badge: "本月", item: clm, key: "stage-ly",
-        god: [clm.stem_ten_god, clm.month_name], range: clm.solar_term_range || "",
-        open: trigger => liuyuePop(clm, { year: ln.year, returnFocus: trigger }),
-      }));
-    }
   }
   return h("section", { class: "cp-section cp-dayun" },
     h("div", { class: "cp-section-head" }, h("h3", null, "行运")),
-    cards.length ? h("div", { class: "cp-stage", role: "group", "aria-label": "今年与本月（点开看古典解读）" }, cards) : null,
-    h("p", { class: "cp-note cp-stage-hint" },
-      cards.length ? "请先填写性别，再按出生时间定大运 / 人生走势。" : "请先填写性别，再定大运 / 流年 / 流月。",
-      h("br"),
-      "点顶部", h("span", { class: "cp-inline-icon" }, icon("edit", "icon-sm")), "「修改信息」补全。"));
+    cards.length ? h("div", { class: "cp-stage", role: "group", "aria-label": "今年流年（点开看古典解读）" }, cards) : null,
+    h("p", { class: "cp-note cp-stage-hint" }, "补充性别后，可查看大运。"));
 }
 
-/* ---------- 大运走势、运内流年，以及所选大运的机械事实 ---------- */
+/* ---------- 大运走势、运内流年与大运详情 ---------- */
 function dayunBlock(payload, state, rerender) {
   const dy = payload?.da_yun;
   if (!dy || !Array.isArray(dy.list) || !dy.list.length) return stageWithoutDayun(payload);
@@ -378,6 +340,7 @@ function dayunBlock(payload, state, rerender) {
       h("h3", null, "大运走势"),
       h("span", { class: "muted" }, `${steps.length} 步 · ${dy.forward ? "顺排" : "逆排"} · ${dy.start_age ?? "—"} 岁起运`)),
     trendChart(steps, selected, select, STEP_VIEW(steps.length)),
+    h("p", { class: "cp-note cp-trend-note" }, h("b", null, "〔按〕"), TREND_NOTE),
     h("div", { class: "dayun-cards", role: "group", "aria-label": "大运（选一步查看运内流年）", "data-strip": "dayun" },
       steps.map((item, index) => {
         const current = item.ganzhi === dy.current;
@@ -395,21 +358,20 @@ function dayunBlock(payload, state, rerender) {
         current ? h("span", { class: "dayun-now" }, "当前") : null);
       })),
     ...yearView(payload, step, selected, isCurrentStep, state, rerender),
-    h("p", { class: "cp-note cp-trend-note" }, h("b", null, "〔按〕"), TREND_NOTE),
     mechanicsBlock(step, state),
   ].filter(Boolean));
   return section;
 }
 
-// 所选大运的运内流年：逐年折线（display_years[].display_trend_score）＋流年条＋所选流年一行。
+// 所选大运的运内流年：年份选择条与所选流年摘要。
 function yearView(payload, step, selected, isCurrentStep, state, rerender) {
   const years = list(step?.display_years);
   const head = h("div", { class: "cp-sub-head" },
     h("div", { class: "cp-sub-title" },
       h("h4", null, `${step.ganzhi || ""} 运内流年`),
-      h("span", { class: "muted tnum" }, [yearRange(step), years.length ? `${years.length} 年` : ""].filter(Boolean).join(" · "))),
+      h("span", { class: "muted tnum" }, [ageRange(step) ? `${ageRange(step)}岁` : "", yearRange(step)].filter(Boolean).join(" · "))),
     infoButton("大运释义", `${step.ganzhi || ""}大运 古典释义`, "dy-info", trigger => dayunPop(step, { current: isCurrentStep, returnFocus: trigger })));
-  if (!years.length) return [head, h("p", { class: "cp-note" }, "逐年事实暂时不可用，请刷新后重试。")];
+  if (!years.length) return [head, h("p", { class: "cp-note" }, "流年信息暂时不可用，请刷新后重试。")];
   const ln = payload?.liu_nian;
   let yearIndex = state.year;
   if (yearIndex === null || yearIndex === undefined || !years[yearIndex]) {
@@ -419,13 +381,11 @@ function yearView(payload, step, selected, isCurrentStep, state, rerender) {
   }
   const chosen = years[yearIndex];
   const isThisYear = Number(chosen.year) === Number(ln?.year);
-  const clm = payload?.current_liu_yue;
   const selectYear = index => { state.year = index; rerender(); };
   // 逐年条目没有地支藏干；所选正是今年时，用接口的今年流年补上。
   const yearFacts = isThisYear && ln ? { ...chosen, branch_hidden_stems: ln.branch_hidden_stems } : chosen;
   return [
     head,
-    trendChart(years, yearIndex, selectYear, YEAR_VIEW(step, years.length)),
     h("div", { class: "liunian-strip", role: "group", "aria-label": `${step.ganzhi || ""}大运的流年`, "data-strip": `liunian-${selected}` },
       years.map((item, index) => h("button", {
         type: "button",
@@ -440,9 +400,7 @@ function yearView(payload, step, selected, isCurrentStep, state, rerender) {
         h("span", { class: "cp-pick-kicker" }, "所选流年"),
         h("b", null, `${chosen.year || ""} ${chosen.pillar || ""}`),
         ` · ${chosen.stem_ten_god || "—"} · `,
-        isThisYear && clm?.pillar
-          ? `今年 · 当前流月 ${clm.pillar} ${clm.stem_ten_god || ""} · ${clm.month_name || ""} · ${clm.solar_term_range || ""}`
-          : `${step.ganzhi || ""}大运第 ${yearIndex + 1} 年`),
+        isThisYear ? "今年" : `${step.ganzhi || ""}大运第 ${yearIndex + 1} 年`),
       infoButton("流年释义", `${chosen.year || ""}年 ${chosen.pillar || ""}流年 古典释义`, "ln-info", trigger => liunianPop(yearFacts, { returnFocus: trigger }))),
   ];
 }
@@ -453,19 +411,24 @@ function liuyueBlock(payload) {
   const clm = payload?.current_liu_yue;
   const year = payload?.liu_nian?.year || "";
   const hasDayun = list(payload?.da_yun?.list).length > 0;
+  const currentInGrid = months.some(month => month.is_current && month.pillar === clm?.pillar);
+  const currentSummary = clm?.pillar
+    ? currentInGrid
+      ? clm.solar_term_range ? `本月节气 · ${clm.solar_term_range}` : ""
+      : ["本月", clm.pillar, clm.month_name, clm.stem_ten_god, clm.solar_term_range].filter(Boolean).join(" · ")
+    : "";
   const relations = clm
     ? [...new Set([...list(clm.relations?.to_natal), ...list(clm.relations?.to_da_yun), ...list(clm.relations?.to_liu_nian)].filter(Boolean))]
     : [];
   return h("section", { class: "cp-section cp-liuyue" },
     h("div", { class: "cp-section-head" },
-      h("h3", null, "当前流月引动"),
-      clm?.pillar ? h("span", { class: "muted" }, `${clm.pillar} ↔ ${["本命", hasDayun && "大运", "流年"].filter(Boolean).join(" / ")}`) : null),
-    clm
-      ? h("div", { class: "cp-chips" }, (relations.length ? relations : ["本月无明显引动"]).map(item => h("span", { class: "chip" }, item)))
-      : h("p", { class: "cp-note" }, "当前流月暂时不可用，请刷新后重试。"),
-    h("div", { class: "cp-section-head cp-liuyue-head" },
       h("h3", null, `${year} 十二流月`.trim()),
       months.length ? h("span", { class: "muted" }, "点一格看古典解读") : null),
+    currentSummary
+      ? h("div", { class: "cp-liuyue-current" },
+        h("p", { class: "cp-note" }, currentSummary),
+        !currentInGrid ? infoButton("本月释义", `${year}年 ${clm.pillar}流月 古典释义`, "lm-current", trigger => liuyuePop(clm, { year, returnFocus: trigger })) : null)
+      : clm?.pillar ? null : h("p", { class: "cp-note" }, "当前流月暂时不可用，请刷新后重试。"),
     months.length
       ? h("div", { class: "lm-grid", role: "group", "aria-label": `${year} 十二流月`.trim() },
         months.map((month, index) => h("button", {
@@ -480,7 +443,10 @@ function liuyueBlock(payload) {
         h("span", { class: "lm-god" }, month.stem_ten_god || ""),
         month.is_current ? h("span", { class: "lm-now" }, "本月") : null,
         h("span", { class: "sr-only" }, "，查看古典解读"))))
-      : h("p", { class: "cp-note" }, "十二流月暂时不可用，请刷新后重试。"));
+      : h("p", { class: "cp-note" }, "十二流月暂时不可用，请刷新后重试。"),
+    clm ? h("div", { class: "cp-liuyue-relations" },
+      h("p", { class: "cp-note" }, `本月与${["本命", hasDayun && "大运", "流年"].filter(Boolean).join(" / ")}`),
+      h("div", { class: "cp-chips" }, (relations.length ? relations : ["本月无明显引动"]).map(item => h("span", { class: "chip" }, item)))) : null);
 }
 
 function shenshaBlock(payload) {
@@ -492,7 +458,7 @@ function shenshaBlock(payload) {
       : h("p", { class: "cp-note" }, "无特殊神煞"));
 }
 
-/* ---------- 盘头：性别 · 生肖 · 出生地或手动四柱 · 历法 · 出生时间 ---------- */
+/* ---------- 盘头：性别 · 出生地或手动四柱 · 历法 · 出生时间 ---------- */
 function genderText(value) {
   const text = String(value || "");
   if (text === "male" || text === "男") return "男";
@@ -506,7 +472,8 @@ function isManualChart(payload, input = {}) {
 
 // 手动四柱没有匹配到精确出生时刻时，接口在 warnings 里给出「行运近似锚点」说明。
 function anchorWarning(payload) {
-  return list(payload?.warnings).map(item => String(item || "")).find(item => item.includes("行运近似锚点")) || "";
+  const warning = list(payload?.warnings).map(item => String(item || "")).find(item => item.includes("行运近似锚点")) || "";
+  return warning.replaceAll("作为行运近似锚点", "估算行运时间").replaceAll("行运近似锚点", "行运时间估算");
 }
 
 export function baziMeta(payload, input = {}) {
@@ -517,8 +484,7 @@ export function baziMeta(payload, input = {}) {
   const solar = String(profile.solar || "").slice(0, 16);
   return [
     genderText(profile.gender || input.gender),
-    payload?.chart?.shengxiao ? `生肖${payload.chart.shengxiao}` : "",
-    manual ? `手动四柱 ${anchorWarning(payload) ? "近似锚点" : "匹配"}` : location,
+    manual ? ["手动四柱", anchorWarning(payload) ? "行运时间估算" : ""].filter(Boolean).join(" · ") : location,
     calendar,
     solar ? `${solar}${profile.used_true_solar ? " 真太阳时" : ""}` : "",
   ].filter(Boolean).join(" · ");
@@ -526,11 +492,10 @@ export function baziMeta(payload, input = {}) {
 
 // beside：摆在解读页标题旁边（桌面右栏），命盘名页面上已经有了，盘头只留出生信息。
 export function baziPanel(payload, { name = "", input = {}, beside = false, caseContext = null } = {}) {
-  // 「作用关系」默认展开、「逐柱落点」默认收起，重绘时沿用用户的选择。
+  // 逐柱明细默认收起，重绘时沿用用户的选择。
   const state = {
     dayun: null,
     year: null,
-    relationsOpen: true,
     endpointsOpen: false,
   };
   const root = h("section", { class: ["chart-panel is-bazi", caseContext && "is-book-case"], "aria-label": caseContext ? "书例八字盘" : "八字命盘" });

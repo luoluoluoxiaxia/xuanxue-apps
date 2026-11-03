@@ -108,7 +108,7 @@ class MockNode {
   get textContent() { return this.tagName ? this.childNodes.map(child => child.textContent).join("") : this.data; }
   set innerHTML(value) {
     assert.equal(this.tagName, "TEMPLATE", "API text must never be assigned to innerHTML");
-    const disclosure = value.match(/^<details class="dym-level" data-dayun-mechanics-level="(relations|endpoints)"( open)?><\/details>$/);
+    const disclosure = value.match(/^<details class="dym-level" data-dayun-mechanics-level="(endpoints)"( open)?><\/details>$/);
     if (disclosure) {
       const node = new MockNode("details");
       node.className = "dym-level";
@@ -214,7 +214,7 @@ function timedEnvironment(start) {
 
 async function todayEnvironment(start, userId, request) {
   const env = timedEnvironment(start);
-  const { session } = await import("../web/public/next/lib/store.js?v=n45");
+  const { session } = await import("../web/public/next/lib/store.js?v=n46");
   session.set({ ready: true, authenticated: true, user: { id: userId } });
   const { render: renderToday } = await import("../web/public/next/views/today.js");
   env.result = renderToday(env.ctx, request);
@@ -292,7 +292,7 @@ test("a BaZi guide crosses a solar term without replacing answered quizzes or th
     assert.ok(!env.result.node.querySelector(".learn-article").textContent.includes("戊戌对应的动态导读"));
     assert.match(env.result.node.querySelector(".learn-recap").textContent, /己亥对应的动态小结/);
     assert.ok(!env.result.node.querySelector(".learn-recap").textContent.includes("戊戌对应的动态小结"));
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n45");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n46");
     closeAllSheets();
   } finally { env.restore(); }
 });
@@ -355,6 +355,32 @@ test("a matched manual-pillar year is saved to its own draft and survives leavin
   }
 });
 
+test("Today chooses one solar-term label while keeping each distinct date and the legacy fallback", async () => {
+  const cases = [
+    { period: "立冬 11月7日 · 小雪 11月22日", solar: "立冬 11月7日 · 小雪 11月22日", expected: "立冬 11月7日 · 小雪 11月22日" },
+    { period: "旧的节气提示", solar: "立冬 11月7日 · 小雪 11月22日", expected: "立冬 11月7日 · 小雪 11月22日" },
+    { period: "", solar: "立春 2月3日 · 立春 2月4日", expected: "立春 2月3日 · 立春 2月4日" },
+    { period: "", solar: "立冬 2026年11月7日 · 立冬 2027年11月8日", expected: "立冬 2026年11月7日 · 立冬 2027年11月8日" },
+    { period: "立冬 11月7日 · 小雪 11月22日", expected: "立冬 11月7日 · 小雪 11月22日" },
+    { period: "旧版节气日期", solar: "   ", expected: "旧版节气日期" },
+    { period: "", solar: "", expected: "" },
+  ];
+  for (const [index, item] of cases.entries()) {
+    const payload = todayPayload("2026-11-03");
+    payload.month.period_label = item.period;
+    if (item.solar !== undefined) payload.month.display = { solar_terms_text: item.solar, solar_terms: [] };
+    const before = structuredClone(payload);
+    const env = await todayEnvironment("2026-11-03T12:00:00+08:00", `today-solar-copy-${index}`, async () => payload);
+    try {
+      await tick();
+      const period = env.result.node.querySelector(".td-month-period");
+      assert.equal(period?.textContent || "", item.expected);
+      assert.equal(!!period, !!item.expected);
+      assert.deepEqual(payload, before);
+    } finally { env.restore(); }
+  }
+});
+
 test("a complete Today page refreshes at Beijing midnight while keeping the selected color and an open city sheet", async () => {
   let calls = 0;
   const env = await todayEnvironment("2026-10-30T23:59:58+08:00", "today-midnight", async () => {
@@ -376,7 +402,7 @@ test("a complete Today page refreshes at Beijing midnight while keeping the sele
     assert.equal(env.result.node.querySelectorAll(".td-swatch")[1].getAttribute("aria-expanded"), "true");
     assert.equal(document.body.querySelector(".overlay"), sheet);
     assert.ok([...env.timers.values()][0].delay > 60 * 60 * 1000, "ready content must not keep polling");
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n45");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n46");
     closeAllSheets();
   } finally { env.restore(); }
 });
@@ -516,7 +542,7 @@ test("a live BaZi panel shows all facts despite an old basic preference and keep
     const old = { analysis_date: "2026-08-06", chart: { pillars: {} }, liu_nian: { year: 2026, pillar: "丙午" },
       pillars_detail: { year: { hidden: [{ stem: "癸", ten_god: "正官", element: "水" }], di_shi: "沐浴", na_yin: "海中金" } },
       shensha: { 文昌贵人: ["日"] },
-      current_liu_yue: month("乙未", true), liu_yue: [month("乙未", true), month("戊戌", false)] };
+      current_liu_yue: { ...month("乙未", true), solar_term_range: "小暑–立秋" }, liu_yue: [month("乙未", true), month("戊戌", false)] };
     const before = structuredClone(old);
     const panel = baziPanel(old);
     document.body.append(panel);
@@ -525,17 +551,20 @@ test("a live BaZi panel shows all facts despite an old basic preference and keep
     assert.match(panel.textContent, /癸正官/);
     assert.match(panel.textContent, /沐浴 · 海中金/);
     assert.match(panel.textContent, /文昌贵人 · 日/);
+    assert.equal(panel.querySelector(".cp-liuyue-current").textContent, "本月节气 · 小暑–立秋");
+    assert.equal(byText(panel.querySelector(".cp-liuyue"), "button", "本月释义"), undefined);
     const oldCell = panel.querySelectorAll(".lm-cell")[0];
     oldCell.dataset.key = "lm-0";
     oldCell.focus();
     assert.match(oldCell.textContent, /乙未.*本月/);
-    panel.updatePayload({ ...old, analysis_date: "2026-10-31", current_liu_yue: month("戊戌", true),
+    panel.updatePayload({ ...old, analysis_date: "2026-10-31", current_liu_yue: { ...month("戊戌", true), solar_term_range: "寒露–立冬" },
       liu_yue: [month("乙未", false), month("戊戌", true)] });
     const cells = panel.querySelectorAll(".lm-cell");
     assert.equal(panel.parentElement, document.body);
     assert.equal(byText(panel, "button", "进阶"), undefined);
     assert.ok(!cells[0].textContent.includes("本月"));
     assert.match(cells[1].textContent, /戊戌.*本月/);
+    assert.equal(panel.querySelector(".cp-liuyue-current").textContent, "本月节气 · 寒露–立冬");
     assert.equal(document.activeElement, cells[0]);
     assert.deepEqual(old, before);
   } finally { if (storage) Object.defineProperty(globalThis, "localStorage", storage); else delete globalThis.localStorage; }
@@ -547,7 +576,11 @@ test("live BaZi defaults follow the new year and luck cycle while explicit selec
   const payload = (year, current) => ({ chart: { pillars: {} }, liu_nian: { year, pillar: "丙午" },
     da_yun: { current, list: [
       { ganzhi: "甲申", display_years: [{ year: 2026, pillar: "丙午", current: year === 2026 }, { year: 2027, pillar: "丁未", current: year === 2027 }] },
-      { ganzhi: "癸未", display_years: [{ year: 2027, pillar: "丁未", current: year === 2027 }, { year: 2028, pillar: "戊申", current: year === 2028 }] },
+      { ganzhi: "癸未", start_age: 32, end_age: 42, start_year: 2027, end_year: 2036,
+        branch_hidden_stems: [{ stem: "己", ten_god: "比肩", qi: "本气" }], day_master_stage: "冠带", na_yin: "杨柳木",
+        pillar_xun_kong: "申酉", in_natal_xun_kong: false, shensha: ["天乙贵人"], relations_to_natal: ["未戌刑"],
+        relations_to_natal_endpoints: [{ a: "运支未", b: "时支戌", branch_relation: "未戌刑", branch_element_action: "土土比和" }],
+        display_years: [{ year: 2027, pillar: "丁未", current: year === 2027 }, { year: 2028, pillar: "戊申", current: year === 2028 }] },
     ] } });
   const selected = (panel, css) => panel.querySelectorAll(css).find(node => node.classList.contains("is-selected")).dataset.key;
   const automatic = baziPanel(payload(2026, "甲申"));
@@ -562,19 +595,58 @@ test("live BaZi defaults follow the new year and luck cycle while explicit selec
   document.body.append(chosen);
   chosen.querySelectorAll(".dayun-card")[1].emit("click");
   chosen.querySelectorAll(".liunian")[1].emit("click");
-  const relationDetails = chosen.querySelector('[data-dayun-mechanics-level="relations"]');
   const endpointDetails = chosen.querySelector('[data-dayun-mechanics-level="endpoints"]');
-  assert.equal(relationDetails.open, true);
+  assert.equal(chosen.querySelectorAll("details").length, 1);
+  assert.equal(chosen.querySelectorAll(".trend").length, 1, "the overview remains while years use the selection strip");
+  assert.match(chosen.querySelector(".cp-sub-head").textContent, /癸未 运内流年32–42岁 · 2027–2036/);
+  assert.match(chosen.querySelector(".dym-grid").textContent, /己比肩 · 本气.*冠带.*杨柳木.*申酉.*否/);
+  assert.match(chosen.querySelectorAll(".dym-group")[0].textContent, /神煞天乙贵人/);
+  assert.equal(chosen.querySelectorAll(".dym-group")[0].closest("details"), null, "summary information needs no extra expansion");
+  assert.match(chosen.querySelectorAll(".dym-group")[1].textContent, /与原局未戌刑/);
+  assert.doesNotMatch(chosen.textContent, /机械事实|排盘确定性|非 AI/);
+  assert.doesNotMatch(chosen.querySelector(".cp-dayun").textContent, /当前流月/);
   assert.equal(endpointDetails.open, false);
-  relationDetails.open = false; relationDetails.emit("toggle");
   endpointDetails.open = true; endpointDetails.emit("toggle");
+  endpointDetails.querySelector("summary").focus();
   chosen.querySelectorAll("[data-strip]").forEach((strip, index) => { strip.scrollLeft = 70 + index; });
   chosen.updatePayload(payload(2027, "甲申"));
   assert.equal(selected(chosen, ".dayun-card"), "dy-1");
   assert.equal(selected(chosen, ".liunian"), "ln-1-1");
-  assert.equal(chosen.querySelector('[data-dayun-mechanics-level="relations"]').open, false);
   assert.equal(chosen.querySelector('[data-dayun-mechanics-level="endpoints"]').open, true);
+  assert.match(chosen.querySelector(".dym-endpoints").textContent, /运支未 ↔ 时支戌未戌刑土土比和/);
+  assert.equal(document.activeElement, chosen.querySelector('[data-dayun-mechanics-level="endpoints"]').querySelector("summary"));
   assert.deepEqual(chosen.querySelectorAll("[data-strip]").map(strip => strip.scrollLeft), [70, 71]);
+});
+
+test("a chart without luck cycles keeps the current month and its explanation even when the month list is missing", async () => {
+  environment();
+  const { baziPanel } = await import("../web/public/next/ui/chart-bazi.js");
+  const payload = { chart: { pillars: {}, shengxiao: "猪" }, profile: { input_mode: "manual_pillars", solar: "1995-11-14 20:00:00" },
+    warnings: ["未能核定出生时刻，已按 1995-11-14 20:00 作为行运近似锚点；大运仅供参考。"], liu_nian: { year: 2026, pillar: "丙午", stem_ten_god: "正印" },
+    current_liu_yue: { pillar: "戊戌", month_name: "戌月", stem_ten_god: "劫财", solar_term_range: "寒露–立冬", relations: { to_natal: ["酉戌害"] } } };
+  const before = structuredClone(payload);
+  const panel = baziPanel(payload); document.body.append(panel);
+  const stage = panel.querySelector(".cp-dayun"), months = panel.querySelector(".cp-liuyue");
+  assert.equal(stage.querySelectorAll(".cp-stage-card").length, 1);
+  assert.match(stage.textContent, /丙午.*补充性别后，可查看大运。/);
+  assert.doesNotMatch(stage.textContent, /戊戌|寒露|立冬/);
+  assert.equal(months.querySelectorAll("h3").length, 1);
+  assert.match(months.textContent, /2026 十二流月.*本月 · 戊戌 · 戌月 · 劫财 · 寒露–立冬/);
+  assert.match(months.textContent, /十二流月暂时不可用.*本月与本命 \/ 流年.*酉戌害/);
+  assert.doesNotMatch(panel.querySelector(".cp-meta").textContent, /生肖|近似锚点|匹配/);
+  assert.match(panel.querySelector(".cp-meta").textContent, /手动四柱 · 行运时间估算/);
+  assert.equal(panel.querySelector(".cp-caveat").textContent, "未能核定出生时刻，已按 1995-11-14 20:00 估算行运时间；大运仅供参考。");
+  assert.doesNotMatch(panel.querySelector(".cp-caveat").textContent, /行运近似锚点|作为.*为估算/);
+  assert.equal(tags(panel.querySelector(".cp-facts"), "dt").filter(node => node.textContent === "生肖").length, 1);
+  assert.equal(panel.querySelector('[data-key="stage-ly"]'), null);
+  const trigger = byText(months, "button", "本月释义"); trigger.focus(); trigger.emit("click");
+  const pop = document.body.querySelector(".sheet-pop");
+  assert.ok(pop);
+  assert.match(pop.textContent, /戊戌/);
+  assert.match(pop.textContent, /寒露–立冬/);
+  byText(pop, "button", "知道了").emit("click"); await tick();
+  assert.equal(document.activeElement, trigger);
+  assert.deepEqual(payload, before);
 });
 
 test("reader directories keep case access beside existing links without adding a header row", async () => {

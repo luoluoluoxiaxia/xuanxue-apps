@@ -170,6 +170,13 @@
 /* 八字表单 */
 .birth-body { display: grid; gap: 18px; }
 .birth-form { display: grid; gap: 18px; }
+.birth-time-head { padding-top: 18px; border-top: 1px solid var(--line); }
+.flow-step.bazi-existing { padding: 0; background: transparent; border: 0; border-radius: 0; }
+.bazi-profile-list { gap: 0 18px; }
+.bazi-profile-list .recent-card { padding: 12px 0; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.bazi-profile-list .recent-top { align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.bazi-profile-list .recent-top b { min-width: 0; overflow-wrap: anywhere; }
+.bazi-profile-list .recent-card:hover b { color: var(--brand-ink); }
 .birth-time, .birth-manual { display: grid; gap: 14px; }
 .birth-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .date-grid { display: grid; grid-template-columns: 1.5fr repeat(4, minmax(0, 1fr)); gap: 8px; }
@@ -184,6 +191,8 @@
 .birth-more summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(45deg); transition: transform .2s var(--ease); }
 .birth-more[open] summary::after { transform: rotate(-135deg); }
 .birth-more[open] { padding-bottom: 14px; }
+.is-birth .birth-more { padding: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+.is-birth .birth-more[open] { padding-bottom: 10px; }
 .birth-more-label { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; min-width: 0; }
 .birth-more-value { padding: 2px 8px; color: var(--ink); background: var(--bg-sunken); border-radius: 999px; font-size: 13px; font-weight: 650; }
 .loc { display: grid; gap: 8px; }
@@ -237,6 +246,7 @@
 .thread-empty { display: grid; gap: 12px; padding: 26px; background: var(--bg-elev); border: 1px solid var(--line); border-radius: var(--r-xl); }
 .thread-empty h2 { font-size: 22px; font-weight: 800; }
 .thread-empty > p:not(.kicker) { color: var(--ink-2); }
+.thread-empty.is-bazi { padding: 8px 2px; background: transparent; border: 0; border-radius: 0; }
 .thread-empty-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
 .starters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
 .starter { display: grid; gap: 3px; padding: 12px 14px; text-align: left; background: var(--bg-sunken); border: 1px solid transparent; border-radius: 14px; transition: border-color .16s var(--ease), background .16s var(--ease); }
@@ -244,6 +254,9 @@
 .starter b { font-size: 14.5px; }
 .starter span { color: var(--ink-3); font-size: 12.5px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .starters.is-sheet { grid-template-columns: 1fr; margin: 0; }
+.thread-empty.is-bazi .starters { gap: 0 20px; }
+.thread-empty.is-bazi .starter, .starters.is-sheet .starter { padding: 14px 2px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; }
+.thread-empty.is-bazi .starter:hover b, .starters.is-sheet .starter:hover b { color: var(--brand-ink); }
 .starter-note { color: var(--ink-3); font-size: 12.5px; }
 .risk-note { margin: 0; color: var(--ink-3); font-size: 12.5px; line-height: 1.6; }
 .flow-submit .risk-note, .birth-form > .risk-note { text-align: center; }
@@ -362,8 +375,8 @@
 .cp-hidden { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px 6px; margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--line-strong); font: 700 13px/1.4 var(--font-serif); }
 .cp-hidden small { margin-left: 2px; color: var(--ink-3); font: 500 10.5px/1 var(--font-sans); }
 .cp-pillar-extra { color: var(--ink-3); font-size: 11px; }
-.cp-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.cp-facts div { display: grid; gap: 2px; padding: 9px 11px; background: var(--bg-sunken); border-radius: 12px; min-width: 0; }
+.cp-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 14px; margin: 0; }
+.cp-facts div { display: grid; gap: 2px; padding: 9px 0; border-bottom: 1px solid var(--line); min-width: 0; }
 .cp-facts dt { color: var(--ink-3); font-size: 11.5px; }
 .cp-facts dd { margin: 0; font-size: 13.5px; font-weight: 700; overflow-wrap: anywhere; }
 .cp-section { display: grid; gap: 10px; }
@@ -477,9 +490,10 @@
 .gloss-source { color: var(--ink-3); font-size: 12.5px; }
 .gloss-group { display: grid; gap: 10px; }
 .gloss-group h3 { font-size: 15px; font-weight: 800; letter-spacing: .3em; }
-.gloss-list { display: grid; gap: 8px; margin: 0; }
-.gloss-item { display: grid; gap: 4px; padding: 12px 14px; background: var(--bg-sunken); border-radius: 12px; }
-.gloss-item dt { display: flex; align-items: center; gap: 8px; }
+.gloss-list { display: grid; gap: 0; margin: 0; }
+.gloss-item { display: grid; gap: 6px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.gloss-item:last-child { border-bottom: 0; }
+.gloss-item dt { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; }
 .gloss-item dt b { font: 800 15px/1.3 var(--font-serif); }
 .gloss-item dd { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.7; }
 body[data-layout="reading"] .toasts { bottom: calc(var(--rd-composer-h, 96px) + 16px); }
@@ -525,5 +539,6 @@ body[data-layout="reading"] .toasts { bottom: calc(var(--rd-composer-h, 96px) + 
 }
 
 /* 注册前的排盘预览：卦成后的卦盘、八字「先看命盘」。 */
-.gua-preview .chart-panel, .birth-preview .chart-panel { margin-top: 4px; }
+.gua-preview .chart-panel { margin-top: 4px; }
+.birth-preview .chart-panel { padding: 0; border: 0; border-radius: 0; background: transparent; }
 .birth-preview:focus { outline: none; box-shadow: none; }

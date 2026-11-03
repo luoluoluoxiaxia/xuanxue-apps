@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n45`, base).href);
+const load = path => import(new URL(`${path}?v=n46`, base).href);
 
 test('an open BaZi chart refreshes at Beijing midnight or the supplied solar-term instant, whichever comes first', async () => {
   const { baziChartRefreshAt } = await load('lib/chart-refresh.js');

@@ -1,17 +1,21 @@
 // 古典解读浮层：点命盘的一柱、大运、流年、流月，或卦盘的一爻，查看这一格的排盘事实与静态古籍释义。
 // 桌面为居中对话框，手机为底部面板（均由 openSheet 提供）。干支颜色、十神、藏干等全部取接口字段；
 // 释义是 lib/copy.js 里的静态模板，不调用解读接口，也不在客户端推算旺衰喜忌。
-import { h, reducedMotion } from "../lib/dom.js?v=n45";
-import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n45";
-import { openSheet, closeAllSheets } from "./overlay.js?v=n45";
-import { openGlossary } from "./glossary.js?v=n45";
-import { elementClass } from "./gua.js?v=n45";
+import { h, reducedMotion } from "../lib/dom.js?v=n46";
+import { GODPHRASE, PILLAR_ROLE, POP_NOTE, LY_POS } from "../lib/copy.js?v=n46";
+import { openSheet, closeAllSheets } from "./overlay.js?v=n46";
+import { openGlossary } from "./glossary.js?v=n46";
+import { elementClass } from "./gua.js?v=n46";
 
 const str = value => (value === null || value === undefined ? "" : String(value)).trim();
 const orDash = value => str(value) || "—";
 const list = value => (Array.isArray(value) ? value : []);
 // 十神对应的古籍短语；接口给了不认识的十神时只省略这一句，不猜。
-const phrase = god => (Object.prototype.hasOwnProperty.call(GODPHRASE, god) ? `——${GODPHRASE[god]}` : "");
+const godMeaning = god => {
+  if (!Object.prototype.hasOwnProperty.call(GODPHRASE, god)) return "";
+  const text = GODPHRASE[god];
+  return `${text.startsWith(god) ? text.slice(god.length) : text}。`;
+};
 
 function hiddenTags(stems) {
   return list(stems).filter(item => item && item.stem).map(item => h("span", { class: "pop-tag" },
@@ -36,7 +40,10 @@ function openChartPop(model, { liuyao = false, returnFocus = null, caseContext =
   const tags = model.tags?.length
     ? h("section", { class: "pop-tags" }, h("h3", { class: "pop-sub" }, model.tagsLabel), h("div", { class: "pop-tag-list" }, model.tags))
     : null;
-  const facts = h("dl", { class: "pop-facts" }, model.facts.filter(Boolean).map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, orDash(value)))));
+  const rows = model.facts.filter(Boolean);
+  const facts = rows.length
+    ? h("dl", { class: "pop-facts" }, rows.map(([label, value]) => h("div", null, h("dt", null, label), h("dd", null, orDash(value)))))
+    : null;
   const classic = h("section", { class: "pop-classic" }, h("h3", { class: "pop-sub" }, caseContext ? "盘面释读" : "古典解读"), h("p", null, model.classic));
   const note = h("p", { class: "pop-note" }, caseContext ? "盘面释读供对照，原书判断见案例正文。" : liuyao ? POP_NOTE.liuyao : POP_NOTE.bazi);
   let sheet = null;
@@ -51,7 +58,7 @@ function openChartPop(model, { liuyao = false, returnFocus = null, caseContext =
   const ok = h("button", { type: "button", class: "btn btn-primary", onClick: () => sheet.close("ok") }, "知道了");
   sheet = openSheet({
     title: model.label,
-    body: h("div", { class: "pop" }, hero, tags, facts, classic, note),
+    body: h("div", { class: ["pop", !liuyao && "is-bazi"] }, hero, tags, facts, classic, note),
     footer: [secondary, ok],
     className: "sheet-pop",
     returnFocus: trigger,
@@ -68,8 +75,8 @@ export function pillarPop(key, pillar, detail = {}, options = {}) {
   const isDay = key === "day";
   const god = isDay ? "日元" : str(detail.stem_ten_god);
   const classic = isDay
-    ? `日柱${role.gloss}。${gan}为日元，坐${zhi}（地势${orDash(detail.di_shi)}），纳音${orDash(detail.na_yin)}。命主元神所系，全盘以此为中心，论与它干支之生克旺衰。`
-    : `${role.name}${role.gloss}。天干${gan}（${orDash(god)}）${phrase(god)}；坐${zhi}，地势${orDash(detail.di_shi)}，纳音${orDash(detail.na_yin)}。`;
+    ? `日柱${role.gloss}。日元是全盘的参照，需合看其他干支与它的生克关系。`
+    : `${role.name}${role.gloss}。${godMeaning(god)}`;
   return openChartPop({
     ganzhi: gan + zhi,
     stemElement: detail.stem_element,
@@ -79,7 +86,7 @@ export function pillarPop(key, pillar, detail = {}, options = {}) {
     elements: [detail.stem_element, detail.branch_element].filter(Boolean).join(" · "),
     tagsLabel: "地支藏干",
     tags: hiddenTags(detail.hidden),
-    facts: [["天干十神", god], ["地势", detail.di_shi], ["纳音", detail.na_yin]],
+    facts: [["地势", detail.di_shi], ["纳音", detail.na_yin]],
     classic,
   }, options);
 }
@@ -89,20 +96,17 @@ export function dayunPop(step = {}, { current = false, ...options } = {}) {
   const god = str(step.stem_ten_god);
   const ages = str(step.age_range) || [step.start_age, step.end_age].filter(value => value !== null && value !== undefined).join("–");
   const years = str(step.year_range) || (step.start_year ? `${step.start_year}起` : "");
-  const classic = current
-    ? `大运乃十年气运之纲。「${gz}」${god}临身${phrase(god)}。当下正行此运，外境与心志皆受其牵动；宜顺其气、借其势，最忌与之硬抗。`
-    : `「${gz}」大运，${god}主事${phrase(god)}。十年之内，以此为气运底色。`;
-  const start = step.start_age !== null && step.start_age !== undefined ? `${step.start_age}岁起` : "";
+  const classic = `大运以十年为一个阶段，是这一时期的背景。${current ? "这是当前所行的大运。" : ""}${godMeaning(god)}`;
   return openChartPop({
     ganzhi: gz,
     stemElement: step.stem_element,
     branchElement: step.branch_element,
-    label: ["大运", start].filter(Boolean).join(" · "),
+    label: "大运",
     god,
     elements: [step.stem_element, step.branch_element].filter(Boolean).join(" · "),
     tagsLabel: "地支藏干",
     tags: hiddenTags(step.branch_hidden_stems),
-    facts: [["十神", god], ["起止", [ages ? `${ages}岁` : "", years].filter(Boolean).join(" · ")], ["纳音", step.na_yin]],
+    facts: [["起止", [ages ? `${ages}岁` : "", years].filter(Boolean).join(" · ")], ["纳音", step.na_yin]],
     classic,
   }, options);
 }
@@ -114,13 +118,13 @@ export function liunianPop(ln = {}, options = {}) {
     ganzhi: pillar,
     stemElement: ln.stem_element,
     branchElement: ln.branch_element,
-    label: `流年 · ${[str(ln.year), pillar].filter(Boolean).join(" ")}`,
+    label: ["流年", str(ln.year)].filter(Boolean).join(" · "),
     god,
     elements: [ln.stem_element, ln.branch_element].filter(Boolean).join(" · "),
     tagsLabel: "流年地支藏干",
     tags: hiddenTags(ln.branch_hidden_stems),
-    facts: [["十神", god], ["流年", ln.year]],
-    classic: `流年为一岁之主。「${pillar}」${god}当值${phrase(god)}。与本命、大运相互引动，主一岁之内吉凶起伏。`,
+    facts: [],
+    classic: `流年是一年的干支背景，需与本命、大运合看。${godMeaning(god)}`,
   }, options);
 }
 
@@ -132,13 +136,13 @@ export function liuyuePop(month = {}, { year = "", ...options } = {}) {
     ganzhi: pillar,
     stemElement: month.stem_element,
     branchElement: month.branch_element,
-    label: `流月 · ${[str(year), str(month.month_name), pillar].filter(Boolean).join(" ")}`,
+    label: ["流月", [str(year), str(month.month_name)].filter(Boolean).join(" ")].filter(Boolean).join(" · "),
     god,
     elements: [month.stem_element, month.branch_element].filter(Boolean).join(" · "),
     tagsLabel: "引动关系",
     tags: textTags([...list(relations.to_natal), ...list(relations.to_da_yun), ...list(relations.to_liu_nian)]),
-    facts: [["十神", god], ["节气", str(month.solar_term_range) || "按节气分月"]],
-    classic: `「${pillar}」之月，${god}当令${phrase(god)}。流月之气，须合流年同参。`,
+    facts: [["节气", str(month.solar_term_range) || "按节气分月"]],
+    classic: `流月按节气划分，需与流年合看。${godMeaning(god)}`,
   }, options);
 }
 
