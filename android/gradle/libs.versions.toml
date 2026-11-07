@@ -19,7 +19,7 @@ eventsource = "4.3.0"
 kotlinxSerialization = "1.11.0"
 coroutines = "1.11.0"
 coil = "3.5.0"
-markdown = "0.44.0"
+markdown = "0.45.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
