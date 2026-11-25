@@ -1,7 +1,7 @@
 // 名词解释面板：只展示当前盘面相关的静态术语。
-import { h } from "../lib/dom.js?v=n46";
-import { GLOSSARY, GLOSSARY_BU } from "../lib/copy.js?v=n46";
-import { openSheet } from "./overlay.js?v=n46";
+import { h } from "../lib/dom.js?v=n47";
+import { GLOSSARY, GLOSSARY_BU } from "../lib/copy.js?v=n47";
+import { openSheet } from "./overlay.js?v=n47";
 
 // returnFocus：从古典解读浮层跳过来时，关闭后把焦点还给最初点开浮层的那一格。
 export function openGlossary(system = "bazi", { returnFocus = null } = {}) {

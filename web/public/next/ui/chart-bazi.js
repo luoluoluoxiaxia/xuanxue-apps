@@ -1,12 +1,12 @@
 // 八字命盘面板：统一展示四柱、命局速览、五行分布、大运流年、当前流月与神煞。
 // 十神、五行、逐年干支、走势分值与引动关系全部使用接口投影字段，客户端不推算。
 // 点一柱、所选大运、所选流年或一个流月可看古典解读（静态释义，见 ui/popover.js）。
-import { h, svg, esc } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { TREND_NOTE } from "../lib/copy.js?v=n46";
-import { elementClass } from "./gua.js?v=n46";
-import { openGlossary } from "./glossary.js?v=n46";
-import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n46";
+import { h, svg, esc } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { TREND_NOTE } from "../lib/copy.js?v=n47";
+import { elementClass } from "./gua.js?v=n47";
+import { openGlossary } from "./glossary.js?v=n47";
+import { pillarPop, dayunPop, liunianPop, liuyuePop } from "./popover.js?v=n47";
 
 const ORDER = [["year", "年柱"], ["month", "月柱"], ["day", "日柱"], ["hour", "时柱"]];
 const WUXING = ["木", "火", "土", "金", "水"];

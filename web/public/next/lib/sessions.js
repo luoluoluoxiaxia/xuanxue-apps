@@ -1,10 +1,10 @@
 // 解读会话的恢复规则（纯函数，便于单元测试）。
-import { isSessionId } from "./ids.js?v=n46";
+import { isSessionId } from "./ids.js?v=n47";
 
 // 六爻一卦一段对话：沿用最近一条记录（进行中 / 失败 / 已停止的任务，或已完成的历史）的会话；
 // 已完成的历史只带 task_id 时，向任务接口查它的会话编号；任务记录已过期查不到时，
 // 再从这张盘的对话列表里取最近一段。
-// 都找不到会话编号时报错——不能悄悄开一段新对话，否则会重复发起付费解读。
+// 都找不到会话编号时报错——不能悄悄开一段新对话，否则会重复发起解读。
 // 新对话（fresh）或没有任何记录时返回空字符串，由调用方开新会话。
 export async function resolveLiuyaoSession(detail, { fresh = false, fetchTask = null, fetchConversations = null } = {}) {
   if (fresh) return "";

@@ -155,7 +155,6 @@
 .vis-copy { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .vis-copy b { font-size: 15.5px; }
 .vis-copy span { color: var(--ink-2); font-size: 13.5px; }
-.vis-copy small { color: var(--ink-3); font-size: 12px; }
 .vis-radio { width: 20px; height: 20px; border-radius: 999px; border: 2px solid var(--line-strong); flex: none; position: relative; }
 .vis-card[aria-checked="true"] .vis-radio { border-color: var(--brand); }
 .vis-card[aria-checked="true"] .vis-radio::after { content: ""; position: absolute; inset: 3px; border-radius: 999px; background: var(--brand); }
@@ -298,10 +297,8 @@
 .ai-stopped { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-size: 13.5px; }
 .ai-public { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 14px; color: var(--brand-ink); background: var(--brand-tint); border-radius: 12px; font-size: 13.5px; font-weight: 600; }
 .ai-public.is-pending { color: var(--ink-3); background: var(--bg-sunken); }
-.ai-credits { color: var(--ink-3); font-size: 12.5px; }
 .ai-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; margin-left: -6px; }
 .ai-tool-more { margin-left: 6px; font-size: 13px; }
-.ai-tools .ai-credits { margin-left: auto; padding-left: 12px; text-align: right; }
 .ai-tool { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; color: var(--ink-3); }
 .ai-tool:hover { color: var(--ink); background: var(--bg-hover); }
 .ai-tool.is-on { color: var(--brand); }
@@ -472,7 +469,6 @@
   .rd-action-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .rd-layout.is-liuyao .rd-action-label { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .rd-actions .btn { padding: 0 10px; }
-  .ai-tools .ai-credits { flex-basis: 100%; margin-left: 0; padding: 2px 0 0 6px; text-align: left; }
   .starters { grid-template-columns: minmax(0, 1fr); }
   .thread-empty { padding: 18px 16px; border-radius: 20px; }
   .msg-ai .prose { font-size: 15.5px; }

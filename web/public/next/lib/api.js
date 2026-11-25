@@ -20,7 +20,6 @@ export class ApiError extends Error {
 const FALLBACK = {
   400: "请求内容有误，请检查后重试",
   401: "请先登录后再继续",
-  402: "积分不足，充值后可继续",
   403: "没有权限进行这个操作",
   404: "内容不存在，可能已被删除",
   409: "状态已经变化，请刷新后重试",
@@ -32,6 +31,7 @@ const FALLBACK = {
 function messageFrom(status, body) {
   const detail = body && body.detail;
   if (typeof detail === "string" && detail.trim()) return detail.trim();
+  if (typeof detail?.message === "string" && detail.message.trim()) return detail.message.trim();
   if (Array.isArray(detail) && detail.length) {
     const first = detail[0];
     if (first && typeof first.msg === "string" && /[一-鿿]/.test(first.msg)) return first.msg;

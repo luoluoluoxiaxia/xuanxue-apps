@@ -1,9 +1,9 @@
 // 分享面板：先给出复制链接，同时生成一张带二维码的分享长图（帖子页、解读页共用）。
-import { h } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { sharePost, renderShareImage, trackShare } from "../lib/share.js?v=n46";
-import { openSheet } from "./overlay.js?v=n46";
-import { toast } from "./toast.js?v=n46";
+import { h } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { sharePost, renderShareImage, trackShare } from "../lib/share.js?v=n47";
+import { openSheet } from "./overlay.js?v=n47";
+import { toast } from "./toast.js?v=n47";
 
 const inWeChat = () => typeof navigator !== "undefined" && /MicroMessenger/i.test(navigator.userAgent || "");
 
@@ -47,7 +47,7 @@ export function openShareSheet(post, { ref = "" } = {}) {
     const hint = wechat
       ? "微信内请长按图片保存；也可以点右上角「…」，用默认浏览器打开后分享"
       : coarse ? "长按图片保存或发给朋友" : "图片里的二维码可以直接扫码查看全文";
-    preview.replaceChildren(img, h("p", { class: "share-hint" }, hint, image.attributed ? " · 已记录你的邀请归因" : ""));
+    preview.replaceChildren(img, h("p", { class: "share-hint" }, hint));
     // 微信内置浏览器不支持下载和系统分享，只保留长按保存与复制链接。
     if (wechat) return;
     const file = typeof File === "function" ? new File([image.blob], image.filename || "玄枢卦帖.png", { type: "image/png" }) : null;

@@ -1,9 +1,9 @@
 // 解读任务引擎：发起、流式接收（SSE 事件为完整任务快照）、断线轮询、停止、恢复。
 // 只维护消息数据并通过 onChange 通知视图局部更新，不直接操作页面。
-import { api, get, post, ApiError } from "./api.js?v=n46";
-import { newRequestId, isSessionId } from "./ids.js?v=n46";
-import { followupsFor, scenarioLabel } from "./copy.js?v=n46";
-import { refreshSession } from "./store.js?v=n46";
+import { api, get, post, ApiError } from "./api.js?v=n47";
+import { newRequestId, isSessionId } from "./ids.js?v=n47";
+import { followupsFor, scenarioLabel } from "./copy.js?v=n47";
+import { refreshSession } from "./store.js?v=n47";
 
 const TERMINAL = new Set(["done", "failed", "cancelled"]);
 const INPUT_KEYS = [
@@ -120,7 +120,6 @@ export class Conversation {
       stopped: false,
       authLost: false,              // 发起时登录失效且没有重新登录：问题由视图退回输入框
       branch: null,
-      credits: null,
       publicPost: null,
       feedback: "",
       followups: [],
@@ -296,7 +295,6 @@ export class Conversation {
     if (task.profile_id) this.profileId = task.profile_id;
     if (isSessionId(task.session_id)) this.sessionId = task.session_id;
     if (task.streamable) message.streamable = true;
-    if (task.credits) message.credits = task.credits;
     message.stage = task.stage || message.stage;
     const status = task.status;
     if (status === "done") {

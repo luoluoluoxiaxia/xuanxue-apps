@@ -1,15 +1,15 @@
 // 今日（观象台）：按默认八字命盘准备的今日宜忌，以及本月宜忌、穿搭配色与手镯材质。
 // 内容与生成状态全部来自 /api/personal-home；准备中时每 1.8 秒静默刷新，离开页面或出错即停止。
 // 再次进入时先用几分钟内的上次内容秒开，再静默更新；已在顶部时再点一次「今日」会重新拉取。
-import { h } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { get, post, put } from "../lib/api.js?v=n46";
-import { session, refreshSession } from "../lib/store.js?v=n46";
-import { greeting } from "../lib/format.js?v=n46";
-import { personalHomeRefreshAt } from "../lib/chart-refresh.js?v=n46";
-import { stateView } from "../ui/bits.js?v=n46";
-import { openSheet } from "../ui/overlay.js?v=n46";
-import { toast } from "../ui/toast.js?v=n46";
+import { h } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { get, post, put } from "../lib/api.js?v=n47";
+import { session, refreshSession } from "../lib/store.js?v=n47";
+import { greeting } from "../lib/format.js?v=n47";
+import { personalHomeRefreshAt } from "../lib/chart-refresh.js?v=n47";
+import { stateView } from "../ui/bits.js?v=n47";
+import { openSheet } from "../ui/overlay.js?v=n47";
+import { toast } from "../ui/toast.js?v=n47";
 
 const POLL_MS = 1800;
 const PENDING = ["missing", "pending", "running"];
@@ -189,7 +189,7 @@ function dayBlock(payload, actions) {
     issueCard({
       tone: failed ? "error" : "quiet",
       title: failed ? "今日宜忌生成失败" : "今日宜忌暂未生成",
-      text: daily.message || "不消耗 AI 回答积分。",
+      text: daily.message || "",
       button: failed ? "重新生成今日" : "生成今日宜忌",
       busyText: "正在重新生成",
       onRetry: (buttonNode, busy, label) => actions.regenerate("day", buttonNode, busy, label),
@@ -284,7 +284,7 @@ function monthBlock(payload, actions, view) {
     issueCard({
       tone: failed ? "error" : "quiet",
       title: failed ? "本月内容生成失败" : "本月内容暂未生成",
-      text: month.message || "不消耗 AI 回答积分。",
+      text: month.message || "",
       button: failed ? "重新生成本月" : "生成本月内容",
       busyText: "正在重新生成",
       onRetry: (buttonNode, busy, label) => actions.regenerate("month", buttonNode, busy, label),
@@ -302,8 +302,7 @@ function gateNode(kind, payload, actions) {
       title: "先建立一张本人命盘",
       text: "设为默认命盘后显示今日、本月、颜色与手镯提示。",
       body: h("div", { class: "td-gate-actions" },
-        h("a", { class: "btn btn-primary btn-lg", href: "#/ask/bazi?set_default=1" }, icon("pillars"), "去排八字"),
-        h("p", { class: "td-gate-note" }, "排盘不调用 AI，不扣积分。")),
+        h("a", { class: "btn btn-primary btn-lg", href: "#/ask/bazi?set_default=1" }, icon("pillars"), "去排八字")),
     });
   }
   if (kind === "choose_default") {
@@ -337,9 +336,7 @@ function gateNode(kind, payload, actions) {
       tone: paused ? "" : "error",
       title: paused ? "今日与本月尚未更新" : "本次生成失败",
       text: generation.message || "",
-      body: h("div", { class: "td-gate-actions" },
-        button,
-        paused ? h("p", { class: "td-gate-note" }, "不消耗 AI 回答积分。") : null),
+      body: h("div", { class: "td-gate-actions" }, button),
     });
   }
   const refresh = h("button", { type: "button", class: "btn btn-ghost btn-sm" }, icon("refresh"), "刷新看看");

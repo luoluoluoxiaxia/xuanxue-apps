@@ -21,7 +21,7 @@ export function routeFromLegacy(search) {
     route = `#/ask/${system}${extra.toString() ? `?${extra}` : ""}`;
     ["start", "community", "set_default", "from"].forEach(key => params.delete(key));
   } else if (params.get("view") === "credits" || ["success", "cancelled"].includes(params.get("checkout"))) {
-    // 支付返回地址可能只带 checkout / session_id / order_id，同样落到积分页；month 定位到对应月份的明细。
+    // 支付返回地址可能只带 checkout / session_id / order_id，保留到历史订单页。
     ["checkout", "session_id", "checkout_session_id", "order_id"].forEach(key => {
       if (params.get(key)) extra.set(key, params.get(key));
       params.delete(key);
