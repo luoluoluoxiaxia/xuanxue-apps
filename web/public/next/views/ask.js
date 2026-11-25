@@ -607,7 +607,7 @@ function liuyaoFlow(ctx) {
     const reasons = {
       help: "登录并验证邮箱后即可向卦友求助。",
       private: "私密提问，先登录或注册。",
-      public: "登录后即可开始公开解读。",
+      public: "先登录，再开始公开解读。",
     };
     // 起卦提交时的登录默认停在「注册」。
     const ok = await ctx.requireAuth(reasons[state.visibility], { mode: "register" });

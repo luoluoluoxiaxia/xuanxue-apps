@@ -396,7 +396,7 @@ export function render(ctx) {
   async function requestHelpAi(button) {
     if (helpAiBusy) return;
     if (!session.get().authenticated) {
-      const ok = await ctx.requireAuth("登录后即可请 AI 解读。");
+      const ok = await ctx.requireAuth("先登录，再请 AI 解读。");
       if (!ok || !ctx.isCurrent()) return;
     }
     const confirmed = await confirmDialog({
