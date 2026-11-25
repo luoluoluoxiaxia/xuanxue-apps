@@ -51,7 +51,7 @@ export async function sharePost({ slug, title, ref = "" }) {
   const canNative = typeof navigator.share === "function" && window.matchMedia?.("(pointer: coarse)").matches;
   if (canNative) {
     try {
-      await navigator.share({ title: heading, text, url: target.url });
+      await navigator.share({ title: heading, text, url });
       trackShare(slug, "native", ref);
       return { ok: true, message: "分享已完成" };
     } catch (error) {

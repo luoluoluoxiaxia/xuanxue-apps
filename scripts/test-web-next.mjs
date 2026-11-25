@@ -924,3 +924,30 @@ test('composer drafts are isolated by chart and session, and removed on logout',
     globalThis.localStorage = previous;
   }
 });
+
+test('native sharing uses the attributed post URL returned for a signed-in reader', async () => {
+  const { sharePost } = await load('lib/share.js');
+  const { session } = await load('lib/store.js');
+  const previousAccount = session.get();
+  const previousMatchMedia = window.matchMedia;
+  const previousShare = navigator.share;
+  const previousFetch = globalThis.fetch;
+  const sharedUrl = 'https://example.test/s/attributed-post';
+  const calls = [];
+  session.set({ authenticated: true });
+  window.matchMedia = () => ({ matches: true });
+  navigator.share = async data => { calls.push(data); };
+  globalThis.fetch = async path => new Response(JSON.stringify(
+    path === '/api/referrals/share-link' ? { share_url: sharedUrl } : { ok: true },
+  ));
+  try {
+    const result = await sharePost({ slug: 'public-post', title: '公开卦帖' });
+    assert.equal(result.ok, true);
+    assert.deepEqual(calls, [{ title: '公开卦帖', text: '公开卦帖\n' + sharedUrl, url: sharedUrl }]);
+  } finally {
+    session.set(previousAccount);
+    window.matchMedia = previousMatchMedia;
+    navigator.share = previousShare;
+    globalThis.fetch = previousFetch;
+  }
+});
