@@ -930,13 +930,16 @@ test('native sharing uses the attributed post URL returned for a signed-in reade
   const { session } = await load('lib/store.js');
   const previousAccount = session.get();
   const previousMatchMedia = window.matchMedia;
-  const previousShare = navigator.share;
+  const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const previousFetch = globalThis.fetch;
   const sharedUrl = 'https://example.test/s/attributed-post';
   const calls = [];
   session.set({ authenticated: true });
   window.matchMedia = () => ({ matches: true });
-  navigator.share = async data => { calls.push(data); };
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: { share: async data => { calls.push(data); } },
+  });
   globalThis.fetch = async path => new Response(JSON.stringify(
     path === '/api/referrals/share-link' ? { share_url: sharedUrl } : { ok: true },
   ));
@@ -947,7 +950,8 @@ test('native sharing uses the attributed post URL returned for a signed-in reade
   } finally {
     session.set(previousAccount);
     window.matchMedia = previousMatchMedia;
-    navigator.share = previousShare;
+    if (previousNavigator) Object.defineProperty(globalThis, 'navigator', previousNavigator);
+    else delete globalThis.navigator;
     globalThis.fetch = previousFetch;
   }
 });
