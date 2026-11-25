@@ -214,11 +214,6 @@ private fun PostDetail(state: CommunityUiState) {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        text = "不走 AI · 不扣积分",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = XuanshuColors.GoldDim,
-                    )
-                    Text(
                         text = if (post.helpStatus == "resolved") "求助者已采纳一个回答" else "这条求助正在等待大家判断",
                         style = MaterialTheme.typography.titleMedium,
                         color = XuanshuColors.Text,

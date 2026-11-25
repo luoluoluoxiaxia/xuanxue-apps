@@ -17,7 +17,7 @@ next/app.js           外壳、导航、会话与路由装配
 ```
 
 - 所有相对导入都带同一个版本号（当前 `?v=n6`，与 `index.html` 中的入口脚本和样式表一致），发布新版本时统一替换。`scripts/build-web.mjs` 检查版本一致性和导入目标是否存在，防止同一模块被加载两份或缺模块导致整页打不开。
-- 路由使用哈希，静态托管无需改写：`#/` 首页（写下问题、选六爻或八字；旧的 `#/ask` 会跳到这里）、`#/ask/liuyao`、`#/ask/bazi` 起卦与排盘、`#/square` 广场、`#/post/<slug>` 帖子讨论、`#/reading/<档案 id>[?session=]` 解读工作台、`#/today` 今日、`#/inbox` 消息、`#/me`（`/archives`、`/credits`、`/settings`）。
+- 路由使用哈希，静态托管无需改写：`#/` 首页（写下问题、选六爻或八字；旧的 `#/ask` 会跳到这里）、`#/ask/liuyao`、`#/ask/bazi` 起卦与排盘、`#/square` 广场、`#/post/<slug>` 帖子讨论、`#/reading/<档案 id>[?session=]` 解读工作台、`#/today` 今日、`#/inbox` 消息、`#/me`（`/archives`、`/settings`）。旧 `#/me/credits` 地址用于历史订单和支付结果查询。
 - 导航：桌面顶栏「问 · 广场 · 今日 · 我的盘」；手机底栏「问 · 广场 · 今日 · 我」，消息收在「我」里（未读数挂在「我」上），手机顶栏不再放铃铛。
 - 旧版首页的地址在启动时映射过来（`next/lib/legacy.js`）：`?post=<slug>[&target=comment-<id>]`、`?start=liuyao|bazi[&community=help][&set_default=1]`、`?view=credits|archives`（含支付返回参数和 `month`）、`#gua-square`（广场）。
 - 外观默认浅色（红白）；顶栏的开关一键切换深色，设置里还可以选「跟随系统」（`localStorage.xz-next-theme`：`light` / `dark` / `auto`，未设置时按 `light`）。

@@ -1,5 +1,5 @@
-// 极简状态容器与账户会话：账户、额度与消息数都以服务端返回为准，客户端只缓存展示。
-import { get, post, setCsrfToken } from "./api.js?v=n46";
+// 极简状态容器与账户会话：账户与消息数都以服务端返回为准，客户端只缓存展示。
+import { get, post, setCsrfToken } from "./api.js?v=n47";
 
 export function createStore(initial) {
   let state = initial;
@@ -22,8 +22,6 @@ export const session = createStore({
   ready: false,
   authenticated: false,
   user: null,
-  wallet: null,
-  quota: null,
   archive: null,
 });
 
@@ -43,8 +41,6 @@ export function applyAccount(payload) {
     ready: true,
     authenticated,
     user: authenticated ? data.user || null : null,
-    wallet: authenticated ? data.credit_wallet || null : null,
-    quota: authenticated ? data.private_quota || null : null,
     archive: authenticated ? data.archive_summary || null : null,
   });
   if (previous.ready && previous.authenticated && !authenticated) clearPrivateDrafts();

@@ -214,7 +214,7 @@ function timedEnvironment(start) {
 
 async function todayEnvironment(start, userId, request) {
   const env = timedEnvironment(start);
-  const { session } = await import("../web/public/next/lib/store.js?v=n46");
+  const { session } = await import("../web/public/next/lib/store.js?v=n47");
   session.set({ ready: true, authenticated: true, user: { id: userId } });
   const { render: renderToday } = await import("../web/public/next/views/today.js");
   env.result = renderToday(env.ctx, request);
@@ -292,7 +292,7 @@ test("a BaZi guide crosses a solar term without replacing answered quizzes or th
     assert.ok(!env.result.node.querySelector(".learn-article").textContent.includes("戊戌对应的动态导读"));
     assert.match(env.result.node.querySelector(".learn-recap").textContent, /己亥对应的动态小结/);
     assert.ok(!env.result.node.querySelector(".learn-recap").textContent.includes("戊戌对应的动态小结"));
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n46");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n47");
     closeAllSheets();
   } finally { env.restore(); }
 });
@@ -402,7 +402,7 @@ test("a complete Today page refreshes at Beijing midnight while keeping the sele
     assert.equal(env.result.node.querySelectorAll(".td-swatch")[1].getAttribute("aria-expanded"), "true");
     assert.equal(document.body.querySelector(".overlay"), sheet);
     assert.ok([...env.timers.values()][0].delay > 60 * 60 * 1000, "ready content must not keep polling");
-    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n46");
+    const { closeAllSheets } = await import("../web/public/next/ui/overlay.js?v=n47");
     closeAllSheets();
   } finally { env.restore(); }
 });

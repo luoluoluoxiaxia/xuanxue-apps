@@ -16,8 +16,6 @@ import kotlinx.coroutines.launch
 import tech.zsien.xuanshu.XuanshuApplication
 import tech.zsien.xuanshu.core.network.model.AccountResponse
 import tech.zsien.xuanshu.core.network.model.AccountUser
-import tech.zsien.xuanshu.core.network.model.CreditWallet
-import tech.zsien.xuanshu.core.network.model.PrivateQuota
 import tech.zsien.xuanshu.data.AccountRepository
 import tech.zsien.xuanshu.data.SessionManager
 
@@ -31,8 +29,6 @@ data class AuthUiState(
     val verificationCodeEmail: String? = null,
     val verificationCodeRetryAfter: Int = 0,
     val user: AccountUser? = null,
-    val quota: PrivateQuota? = null,
-    val wallet: CreditWallet? = null,
     val error: String? = null,
 ) {
     val loggedIn: Boolean get() = user != null
@@ -160,8 +156,6 @@ class AuthViewModel(
                 sendingCode = false,
                 verificationCodeRetryAfter = 0,
                 user = response.user,
-                quota = response.privateQuota,
-                wallet = response.creditWallet,
                 error = null,
             )
         }

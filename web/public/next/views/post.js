@@ -1,17 +1,17 @@
 // 帖子详情：一条问题的完整讨论串。桌面左侧讨论、右侧盘面速览与同类问题；手机底部固定评论栏。
-import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n46";
-import { session, local, refreshSession } from "../lib/store.js?v=n46";
-import { relativeTime, fullTime, count } from "../lib/format.js?v=n46";
-import { stateView } from "../ui/bits.js?v=n46";
-import { elementClass } from "../ui/gua.js?v=n46";
-import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n46";
-import { toast } from "../ui/toast.js?v=n46";
-import { sharePost } from "../lib/share.js?v=n46";
-import { openShareSheet } from "../ui/share-sheet.js?v=n46";
-import { confirmDialog, openMenu, openSheet } from "../ui/overlay.js?v=n46";
-import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n46";
+import { h, fill, autoGrow, submitOnEnter, coarsePointer, reducedMotion } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { get, post as apiPost, del, query, cachedGet, peekCached, invalidateCached } from "../lib/api.js?v=n47";
+import { session, local, refreshSession } from "../lib/store.js?v=n47";
+import { relativeTime, fullTime, count } from "../lib/format.js?v=n47";
+import { stateView } from "../ui/bits.js?v=n47";
+import { elementClass } from "../ui/gua.js?v=n47";
+import { liuyaoPaipan, paipanFromOracle } from "../ui/chart-liuyao.js?v=n47";
+import { toast } from "../ui/toast.js?v=n47";
+import { sharePost } from "../lib/share.js?v=n47";
+import { openShareSheet } from "../ui/share-sheet.js?v=n47";
+import { confirmDialog, openMenu, openSheet } from "../ui/overlay.js?v=n47";
+import { likePost, syncLikes, syncPost, removePost, detailPath, DETAIL_TTL, stickyTop, wirePostLinks } from "./feed.js?v=n47";
 
 const COMMENT_MAX = 500;
 const draftKey = slug => `xz-next-draft:comment:${slug}`;
@@ -350,7 +350,7 @@ export function render(ctx) {
     revealTarget();
   }
 
-  /* ---------- 求助帖：卦友花自己的积分请 AI 解读（一帖一轮，每日免费积分不能用） ---------- */
+  /* ---------- 求助帖：卦友发起 AI 解读（一帖一轮） ---------- */
   ctx.cleanup(() => clearTimeout(helpAiTimer));
 
   // AI 解读还在生成：每隔几秒静默核对一次，出结果后整页重画；某次核对失败（例如断网）也照样继续。
@@ -369,11 +369,11 @@ export function render(ctx) {
     if (ai && ai.status === "published") {
       return h("section", { class: "answer-card help-ai", "aria-label": "AI 解读" },
         h("header", { class: "answer-head" },
-          h("div", null, h("h2", null, "AI 解读"), h("p", null, `${who} 用自己的积分请的 · AI 生成解读，仅供传统文化研究与娱乐参考`))),
+          h("div", null, h("h2", null, "AI 解读"), h("p", null, `由${who}发起 · 仅供传统文化研究与娱乐参考`))),
         renderMarkdown(ai.answer || ""));
     }
     if (ai && ai.status === "generating") {
-      // 发起人在本页请的：可以停止（生成中停止不扣分；已经公开的服务端会拒绝）。
+      // 发起人可在本页停止仍在生成的解读。
       const stop = helpAiTaskId
         ? h("button", { type: "button", class: "link-btn help-ai-stop", onClick: event => stopHelpAi(event.currentTarget) }, "停止")
         : null;
@@ -383,31 +383,25 @@ export function render(ctx) {
         stop);
     }
     if (!post.can_request_ai) return null;
-    const state = session.get();
-    const balance = Number(state.wallet?.balance ?? 0) || 0;
-    const button = h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => requestHelpAi(button) }, icon("sparkle"), "用我的积分请 AI 解读");
+    const button = h("button", { type: "button", class: "btn btn-soft btn-sm", onClick: () => requestHelpAi(button) }, icon("sparkle"), "请 AI 解读");
     return h("section", { class: "help-ai-cta", "aria-labelledby": "help-ai-title" },
       h("div", { class: "help-ai-copy" },
         h("h2", { id: "help-ai-title" }, "还没人回答？先请 AI 看看"),
         h("p", null, ai && ai.status === "failed"
-          ? "上次请的 AI 解读没有完成，没有扣积分，可以再请一次。"
-          : "花你自己的积分请 AI 解读这一卦；解读会直接公开在这条帖子上，并注明是你请的。"),
-        h("p", { class: "help-ai-meta" }, state.authenticated
-          ? `只扣账户积分，今日免费额度不能用在这里 · 账户积分 ${balance} 分`
-          : "只扣账户积分，今日免费额度不能用在这里")),
+          ? "上次 AI 解读未完成，可以再请一次。"
+          : "解读完成后会公开在这条帖子上。")),
       button);
   }
 
   async function requestHelpAi(button) {
     if (helpAiBusy) return;
     if (!session.get().authenticated) {
-      const ok = await ctx.requireAuth("登录后才能用自己的积分请 AI 解读。");
+      const ok = await ctx.requireAuth("登录后即可请 AI 解读。");
       if (!ok || !ctx.isCurrent()) return;
     }
-    // 余额够不够以服务端为准：本地的余额可能是旧的，不在这里拦。
     const confirmed = await confirmDialog({
-      title: "用你的积分请 AI 解读？",
-      message: "按这次解读的实际用量从账户积分里扣，今日免费额度不能用在这里。解读生成后直接公开在这条帖子上，并注明是你请的。",
+      title: "请 AI 解读这条求助？",
+      message: "解读完成后会公开在这条帖子上，并显示你是本次解读的发起人。",
       confirmText: "请 AI 解读",
       returnFocus: button,
     });
@@ -418,16 +412,13 @@ export function render(ctx) {
       const started = await apiPost(`/api/community/posts/${encodeURIComponent(post.slug)}/ai-answer`, undefined, { interaction: true });
       helpAiTaskId = String(started?.task_id || "");
       toast("已请 AI 解读，完成后会显示在帖子上", { type: "ok" });
-      refreshSession().catch(() => {});
       // 先在本地标成「生成中」并开始轮询：紧接着的这次刷新即使失败，也会继续核对到出结果。
       post.ai_answer = { status: "generating", answer: "", requested_by: "你", requested_at: new Date().toISOString(), published_at: null };
       post.can_request_ai = false;
       if (ctx.isCurrent()) repaint();
     } catch (error) {
       const message = error?.body?.detail?.message || error.message || "没能请到 AI，请稍后再试";
-      toast(message, error.status === 429
-        ? { type: "error", action: { label: "查看积分", onClick: () => ctx.navigate("/me/credits") } }
-        : { type: "error" });
+      toast(message, { type: "error" });
     } finally {
       helpAiBusy = false;
       button.removeAttribute("aria-busy");
@@ -443,8 +434,7 @@ export function render(ctx) {
       const result = await apiPost("/api/interpret/cancel", { task_id: taskId });
       helpAiTaskId = "";
       const stopped = result?.status === "cancelled";
-      toast(stopped ? "已停止，这次没有扣积分" : "解读已经完成并公开，没法再停止", { type: stopped ? "ok" : "info" });
-      refreshSession().catch(() => {});
+      toast(stopped ? "已停止解读" : "解读已经完成并公开，没法再停止", { type: stopped ? "ok" : "info" });
     } catch (error) {
       toast(error?.message || "没能停止，请稍后再试", { type: "error" });
     } finally {
@@ -586,7 +576,6 @@ export function render(ctx) {
         h("div", null, h("h2", null, "解答"), h("p", null, post.ai_disclosure || "AI 生成解读，仅供传统文化研究与娱乐参考"))),
       renderMarkdown(post.answer)) : null;
     const helpAi = isHelp && post.system !== "bazi" ? helpAiSection() : null;
-    ui.helpAi = helpAi;
     const updates = Array.isArray(post.updates) && post.updates.length ? h("section", { class: "updates", "aria-label": "卦主后续" },
       h("h2", { class: "block-title" }, "卦主后续"),
       h("ol", { class: "timeline" }, post.updates.map(update => h("li", null,
@@ -1148,19 +1137,6 @@ export function render(ctx) {
     lastAuth = state.authenticated;
     if (busy) reloadWhenIdle = true;
     else load({ countView: false, fresh: true });
-  });
-
-  // 登录、退出或余额变化时，只重画「请 AI 解读」这一段：帖子本身没变，不会整页重绘。
-  let lastWalletKey = "";
-  ctx.subscribe(session, state => {
-    const key = JSON.stringify([state.authenticated, state.wallet?.balance ?? null]);
-    if (key === lastWalletKey) return;
-    lastWalletKey = key;
-    if (!post || post.post_kind !== "help" || !ui.helpAi?.isConnected) return;
-    const next = helpAiSection();
-    if (next) ui.helpAi.replaceWith(next);
-    else ui.helpAi.remove();
-    ui.helpAi = next;
   });
 
   // 记住阅读位置（只在本页仍是当前页时记，避免浏览器前进后退时把别的页面的位置记进来）。

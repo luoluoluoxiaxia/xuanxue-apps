@@ -1,26 +1,26 @@
 // 玄枢 Web 入口：页面外壳、路由、账户会话与主题。
 // 只依赖公开接口；旧版地址（?post=、?start=、?view=、支付返回等）在启动时映射到对应页面。
-import { h, $, on, reducedMotion } from "./lib/dom.js?v=n46";
-import { icon, brandMark } from "./lib/icons.js?v=n46";
-import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n46";
-import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n46";
-import { get } from "./lib/api.js?v=n46";
-import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n46";
-import { toast } from "./ui/toast.js?v=n46";
-import { openAuth } from "./views/auth.js?v=n46";
-import * as FeedView from "./views/feed.js?v=n46";
-import * as PostView from "./views/post.js?v=n46";
-import * as AskView from "./views/ask.js?v=n46";
-import * as ReadingView from "./views/reading.js?v=n46";
-import * as TodayView from "./views/today.js?v=n46";
-import * as InboxView from "./views/inbox.js?v=n46";
-import * as MeView from "./views/me.js?v=n46";
-import * as BooksView from "./views/books.js?v=n46";
-import * as BookCasesView from "./views/book-cases.js?v=n46";
-import * as RoadmapView from "./views/roadmap.js?v=n46";
-import * as LearnView from "./views/learn.js?v=n46";
-import { openFeedback } from "./views/feedback.js?v=n46";
-import { routeFromLegacy } from "./lib/legacy.js?v=n46";
+import { h, $, on, reducedMotion } from "./lib/dom.js?v=n47";
+import { icon, brandMark } from "./lib/icons.js?v=n47";
+import { defineRoutes, startRouter, navigate, back, currentRoute, parse } from "./lib/router.js?v=n47";
+import { session, inbox, refreshSession, logout, displayName, local, hasSignedInHere } from "./lib/store.js?v=n47";
+import { get } from "./lib/api.js?v=n47";
+import { openMenu, closeMenus, closeAllSheets } from "./ui/overlay.js?v=n47";
+import { toast } from "./ui/toast.js?v=n47";
+import { openAuth } from "./views/auth.js?v=n47";
+import * as FeedView from "./views/feed.js?v=n47";
+import * as PostView from "./views/post.js?v=n47";
+import * as AskView from "./views/ask.js?v=n47";
+import * as ReadingView from "./views/reading.js?v=n47";
+import * as TodayView from "./views/today.js?v=n47";
+import * as InboxView from "./views/inbox.js?v=n47";
+import * as MeView from "./views/me.js?v=n47";
+import * as BooksView from "./views/books.js?v=n47";
+import * as BookCasesView from "./views/book-cases.js?v=n47";
+import * as RoadmapView from "./views/roadmap.js?v=n47";
+import * as LearnView from "./views/learn.js?v=n47";
+import { openFeedback } from "./views/feedback.js?v=n47";
+import { routeFromLegacy } from "./lib/legacy.js?v=n47";
 
 const THEME_KEY = "xz-next-theme";
 
@@ -201,11 +201,9 @@ function renderAccountSlot() {
 export function openAccountMenu(anchor) {
   const state = session.get();
   const name = displayName(state.user);
-  const balance = state.wallet ? `${state.wallet.balance ?? 0} 分` : "";
   openMenu(anchor, [
     { label: "我的主页", icon: "user", href: "#/me" },
     { label: "我的盘", icon: "layers", href: "#/me/archives" },
-    { label: "积分", icon: "coins", href: "#/me/credits", meta: balance },
     { label: "路线图", icon: "compass", href: "#/roadmap" },
     "sep",
     { label: "意见反馈", icon: "message", onSelect: () => openFeedback() },
@@ -242,7 +240,7 @@ function onSessionEnded() {
 }
 
 /* ---------- 邀请提示 ---------- */
-// 通过好友分享链接（?ref=invite）进来的游客：提示注册领取每日免费积分；登录后自动收起。
+// 好友分享链接（?ref=invite）可以邀请读者加入卦帖讨论。
 const INVITE_DISMISS_KEY = "xz-invite-dismissed";
 let inviteCard = null;
 
@@ -257,10 +255,10 @@ function showInvitePrompt() {
   };
   inviteCard = h("aside", { class: "float-card invite-card", "aria-label": "好友邀请" },
     h("div", { class: "invite-top" },
-      h("div", null, h("h2", null, "朋友分享了一条真实卦帖"), h("p", null, "注册后领取每日免费积分，也能和卦友一起讨论。"))),
+      h("div", null, h("h2", null, "朋友分享了一条真实卦帖"), h("p", null, "注册后可以和卦友一起讨论。"))),
     h("div", { class: "float-actions" },
       h("button", { type: "button", class: "btn btn-ghost btn-sm", onClick: close }, "稍后"),
-      h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => openAuth({ mode: "register", reason: "首次有效提问会为分享者增加每日积分。" }) }, "注册")));
+      h("button", { type: "button", class: "btn btn-primary btn-sm", onClick: () => openAuth({ mode: "register" }) }, "注册")));
   document.body.append(inviteCard);
 }
 

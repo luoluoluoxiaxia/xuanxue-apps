@@ -1,24 +1,24 @@
 // 解读工作台：同一张盘上的一段对话。桌面左对话右命盘；手机顶部命盘速览，点开看完整盘面。
-import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { get, post } from "../lib/api.js?v=n46";
-import { session, local } from "../lib/store.js?v=n46";
-import { newSessionId, isSessionId } from "../lib/ids.js?v=n46";
-import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n46";
-import { Conversation, humanizeError } from "../lib/interpret.js?v=n46";
-import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n46";
-import { takeHandoff } from "../lib/handoff.js?v=n46";
-import { baziChartRefreshAt } from "../lib/chart-refresh.js?v=n46";
-import { relativeTime, plainExcerpt } from "../lib/format.js?v=n46";
-import { errorView, stateView } from "../ui/bits.js?v=n46";
-import { openSheet, openMenu } from "../ui/overlay.js?v=n46";
-import { toast } from "../ui/toast.js?v=n46";
-import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n46";
-import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n46";
-import { copyText, sharePost } from "../lib/share.js?v=n46";
-import { openShareSheet } from "../ui/share-sheet.js?v=n46";
-import { openFeedback } from "./feedback.js?v=n46";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n46";
+import { h, autoGrow, reducedMotion, submitOnEnter, coarsePointer } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { get, post } from "../lib/api.js?v=n47";
+import { session, local } from "../lib/store.js?v=n47";
+import { newSessionId, isSessionId } from "../lib/ids.js?v=n47";
+import { resolveLiuyaoSession, readingDraftKey } from "../lib/sessions.js?v=n47";
+import { Conversation, humanizeError } from "../lib/interpret.js?v=n47";
+import { BAZI_STARTERS, LIUYAO_DEFAULT_QUESTION, RISK_ACK_KEY, RISK_ACK_TEXT, waitingLine, CN_NUM, LY_POS } from "../lib/copy.js?v=n47";
+import { takeHandoff } from "../lib/handoff.js?v=n47";
+import { baziChartRefreshAt } from "../lib/chart-refresh.js?v=n47";
+import { relativeTime, plainExcerpt } from "../lib/format.js?v=n47";
+import { errorView, stateView } from "../ui/bits.js?v=n47";
+import { openSheet, openMenu } from "../ui/overlay.js?v=n47";
+import { toast } from "../ui/toast.js?v=n47";
+import { baziPanel, baziStrip } from "../ui/chart-bazi.js?v=n47";
+import { liuyaoPanel, liuyaoStrip, liuyaoTitle } from "../ui/chart-liuyao.js?v=n47";
+import { copyText, sharePost } from "../lib/share.js?v=n47";
+import { openShareSheet } from "../ui/share-sheet.js?v=n47";
+import { openFeedback } from "./feedback.js?v=n47";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n47";
 
 const REAUTH_REASON = "登录已失效；重新登录后自动继续。";
 // 从解读页分享卦帖时记录的来源。
@@ -206,7 +206,7 @@ export function render(ctx) {
       const freshConversation = ctx.query.get("fresh") === "1";
       let sessionId = isSessionId(wanted) ? wanted : "";
       if (!sessionId && state.system === "liuyao") {
-        // 有历史却找不到会话时会报错，而不是打开空对话，避免重复发起付费解读。
+        // 有历史却找不到会话时会报错，而不是打开空对话，避免重复发起解读。
         sessionId = await resolveLiuyaoSession(detail, {
           fresh: freshConversation,
           fetchTask: taskId => get(`/api/interpret/tasks/${encodeURIComponent(taskId)}`),
@@ -590,20 +590,12 @@ export function render(ctx) {
         }
       }
       if (message.status === "done") {
-        const credits = message.credits;
-        // 只留关键数字：这次花了多少、还剩多少；免费与充值各扣多少可以在积分明细里看。和工具图标同一行。
-        const spent = credits && Number(credits.required_credits) > 0
-          ? h("p", { class: "ai-credits" }, credits.platform_covered > 0
-            ? "本次回答已完整送达 · 积分扣至 0，不足部分免扣"
-            : `本次 ${credits.required_credits} 分 · 今日免费额度还剩 ${credits.daily_remaining ?? 0} 分 · 账户积分 ${credits.paid_balance_after ?? 0} 分`)
-          : null;
         children.push(h("div", { class: "ai-tools" },
           feedbackButton(message, "like"),
           feedbackButton(message, "dislike"),
           copyButton(message),
           // 点了「没帮助」再给出写具体意见的入口，不单独占一个图标。
-          message.feedback === "dislike" ? h("button", { type: "button", class: "link-btn ai-tool-more", onClick: () => sendFeedback(message) }, "补充说明") : null,
-          spent));
+          message.feedback === "dislike" ? h("button", { type: "button", class: "link-btn ai-tool-more", onClick: () => sendFeedback(message) }, "补充说明") : null));
         if (message.followups && message.followups.length) {
           // 追问建议只填进输入框，由用户确认（可先修改）后再发送，避免误点直接发起一次解读；
           // 填入时有提示和撤销，这里不再放一行说明文字（读屏仍会读到）。
@@ -1030,31 +1022,12 @@ export function render(ctx) {
     }
     // 声明就写在输入区旁边：发出第一个问题即视为知晓。
     if (!riskAccepted()) local.set(RISK_ACK_KEY, "1");
-    const quota = session.get().quota;
-    if (quota && quota.can_start_answer === false) {
-      creditsExhausted();
-      return false;
-    }
     if (!session.get().authenticated) {
       // 解读前的登录默认停在「注册」。
-      const ok = await ctx.requireAuth(state.system === "liuyao" && state.visibility === "private" ? "私人问题，登录后继续解读。" : "登录后用今日免费额度解读。", { mode: "register" });
+      const ok = await ctx.requireAuth("登录后继续解读。", { mode: "register" });
       if (!ok) return false;
-      const again = session.get().quota;
-      if (again && again.can_start_answer === false) {
-        creditsExhausted();
-        return false;
-      }
     }
     return true;
-  }
-
-  // 积分用完：「去充值」直接打开积分页的充值档位。
-  function creditsExhausted() {
-    if (session.get().wallet?.topup_enabled) {
-      toast("今日免费额度与账户积分已用完；明日 0 点恢复，或充值后继续", { type: "error", action: { label: "去充值", onClick: () => ctx.navigate("/me/credits?topup=1") } });
-    } else {
-      toast("今日免费额度已用完，明日北京时间 0 点恢复", { type: "error" });
-    }
   }
 
   async function ask(text, { onAccepted, ...options } = {}) {
@@ -1086,7 +1059,7 @@ export function render(ctx) {
     syncUrl();
   }
 
-  // 先过检查再移除失败的这一轮：断网或额度不足时，失败记录和问题都还在。
+  // 先过检查再移除失败的这一轮，确保断网或登录失败时保留原问题。
   async function retry(message) {
     if (!(await preflight())) return;
     const question = message.question;
@@ -1185,7 +1158,7 @@ export function render(ctx) {
     const sheet = openSheet({
       title: "向社区求助",
       body: h("div", { class: "help-form" },
-        h("p", { class: "help-lead" }, h("span", { class: "chip chip-help" }, "不走 AI · 不扣积分"), liuyao
+        h("p", { class: "help-lead" }, h("span", { class: "chip chip-help" }, "由卦友回答"), liuyao
           ? "将公开当前卦象、所问和社区昵称；邮箱不会展示。求助内容需与起卦时所问一致。"
           : "将公开四柱、日主、五行数量和社区昵称；出生日期、时刻、地点与邮箱不会展示。"),
         h("label", { class: "field" }, h("span", { class: "field-label" }, "希望大家帮你看什么"), question, h("span", { class: "field-hint" }, "8–2000 字")),
@@ -1197,7 +1170,7 @@ export function render(ctx) {
       const text = question.value.trim();
       if (text.length < 8) { status.textContent = "请至少写 8 个字，说清楚想请大家看什么。"; question.focus(); return; }
       if (!consent.checked) { status.textContent = "请先勾选隐私确认。"; consent.focus(); return; }
-      const ok = await ctx.requireAuth("登录并验证邮箱后可免费求助，不调用 AI，不扣积分。", { mode: "register" });
+      const ok = await ctx.requireAuth("登录并验证邮箱后即可向卦友求助。", { mode: "register" });
       if (!ok) return;
       submit.disabled = true;
       submit.textContent = "正在发布…";

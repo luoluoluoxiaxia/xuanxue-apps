@@ -1,12 +1,12 @@
 // 登录 / 注册 / 重设密码面板。账户由服务端决定，这里只提交表单并应用返回的账户状态。
 // 交互：字段就地校验（中文提示，聚焦第一个有误的字段）；回车依次前进到下一个待填项；
 // 验证码可整段粘贴；提交中按钮保持焦点；面板在请求途中被关掉时，等请求结束再回报结果。
-import { h, svg } from "../lib/dom.js?v=n46";
-import { icon, brandMark } from "../lib/icons.js?v=n46";
-import { post } from "../lib/api.js?v=n46";
-import { applyAccount, hasSignedInHere } from "../lib/store.js?v=n46";
-import { openSheet } from "../ui/overlay.js?v=n46";
-import { toast } from "../ui/toast.js?v=n46";
+import { h, svg } from "../lib/dom.js?v=n47";
+import { icon, brandMark } from "../lib/icons.js?v=n47";
+import { post } from "../lib/api.js?v=n47";
+import { applyAccount, hasSignedInHere } from "../lib/store.js?v=n47";
+import { openSheet } from "../ui/overlay.js?v=n47";
+import { toast } from "../ui/toast.js?v=n47";
 
 const MODES = {
   login_password: { title: "登录玄枢", submit: "密码登录", busy: "正在登录…", done: "已登录", note: "密码无法登录时，可以验证邮箱后重设密码。" },
@@ -413,7 +413,7 @@ export function openAuth({ reason = "", mode = "" } = {}) {
         brandMark(),
         h("h2", { class: "auth-title" }, config.title),
         h("p", { class: "auth-sub" }, isRegister
-          ? (reason ? `${reason} 验证邮箱后创建账户，注册即赠送积分。` : "验证邮箱后创建账户，注册即赠送积分。")
+          ? (reason || "验证邮箱后创建账户。")
           : isReset ? "验证邮箱后设置一个新密码。" : reason || "登录后可以保存命盘、参与讨论、接收回复。")),
       methodSwitch,
       h("div", methodSwitch ? { id: `${uid}-panel`, role: "tabpanel", "aria-labelledby": `${uid}-tab-${state.mode}` } : null, form),

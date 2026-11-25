@@ -23,8 +23,6 @@ import tech.zsien.xuanshu.ui.chart.ChartScreen
 import tech.zsien.xuanshu.ui.chart.ChartViewModel
 import tech.zsien.xuanshu.ui.community.CommunityScreen
 import tech.zsien.xuanshu.ui.community.CommunityViewModel
-import tech.zsien.xuanshu.ui.credits.CreditHistoryScreen
-import tech.zsien.xuanshu.ui.credits.CreditHistoryViewModel
 import tech.zsien.xuanshu.ui.home.HomeScreen
 import tech.zsien.xuanshu.ui.liuyao.CastScreen
 import tech.zsien.xuanshu.ui.liuyao.GuaScreen
@@ -58,6 +56,7 @@ fun XuanshuApp(
     }
 }
 
+// 旧版的积分页可能仍在 Activity 的保存状态里，恢复时回到首页。
 private enum class Route { HOME, BAZI, LIUYAO, ARCHIVE, COMMUNITY, CREDITS }
 
 /**
@@ -75,11 +74,10 @@ private fun SignedInFlow(
     liuyaoViewModel: LiuyaoViewModel = viewModel(factory = LiuyaoViewModel.Factory),
     archiveViewModel: ArchiveViewModel = viewModel(factory = ArchiveViewModel.Factory),
     communityViewModel: CommunityViewModel = viewModel(factory = CommunityViewModel.Factory),
-    creditHistoryViewModel: CreditHistoryViewModel = viewModel(factory = CreditHistoryViewModel.Factory),
 ) {
     var route by rememberSaveable { mutableStateOf(Route.HOME) }
 
-    BackHandler(enabled = route != Route.HOME) {
+    BackHandler(enabled = route != Route.HOME && route != Route.CREDITS) {
         // 档案内部有「阅读 → 历史 → 列表」三层，先让它自己退，退无可退才回首页
         if (route == Route.ARCHIVE && archiveViewModel.back()) return@BackHandler
         if (route == Route.COMMUNITY && communityViewModel.back()) return@BackHandler
@@ -87,7 +85,7 @@ private fun SignedInFlow(
     }
 
     when (route) {
-        Route.HOME -> HomeScreen(
+        Route.HOME, Route.CREDITS -> HomeScreen(
             state = authState,
             onLogout = onLogout,
             onStartBazi = {
@@ -103,10 +101,6 @@ private fun SignedInFlow(
                 route = Route.ARCHIVE
             },
             onOpenCommunity = { route = Route.COMMUNITY },
-            onOpenCredits = {
-                creditHistoryViewModel.refresh()
-                route = Route.CREDITS
-            },
         )
 
         Route.BAZI -> {
@@ -143,19 +137,6 @@ private fun SignedInFlow(
                 onOpen = communityViewModel::open,
                 onLoadMore = communityViewModel::loadMore,
                 onBack = { if (!communityViewModel.back()) route = Route.HOME },
-            )
-        }
-
-        Route.CREDITS -> {
-            val creditState by creditHistoryViewModel.state.collectAsStateWithLifecycle()
-            CreditHistoryScreen(
-                state = creditState,
-                onBack = { route = Route.HOME },
-                onTab = creditHistoryViewModel::selectTab,
-                onFilter = creditHistoryViewModel::selectFilter,
-                onPrevious = creditHistoryViewModel::previousPage,
-                onNext = creditHistoryViewModel::nextPage,
-                onRetry = creditHistoryViewModel::refresh,
             )
         }
 

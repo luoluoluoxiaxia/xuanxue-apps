@@ -8,7 +8,7 @@ globalThis.localStorage = globalThis.localStorage || { getItem: () => null, setI
 globalThis.document = globalThis.document || { dispatchEvent() {} };
 
 const base = new URL('../web/public/next/', import.meta.url);
-const load = path => import(new URL(`${path}?v=n46`, base).href);
+const load = path => import(new URL(`${path}?v=n47`, base).href);
 
 test('an open BaZi chart refreshes at Beijing midnight or the supplied solar-term instant, whichever comes first', async () => {
   const { baziChartRefreshAt } = await load('lib/chart-refresh.js');
@@ -659,6 +659,7 @@ test('terminal task snapshots settle the message exactly once', async () => {
   assert.equal(done.streaming, false);
   assert.equal(done.body, '可以推进。');
   assert.equal(done.followups.length, 2);
+  assert.equal(done.credits, undefined);
   convo.applyTask(done, { status: 'running', answer: '不应覆盖' });
   assert.equal(done.body, '可以推进。');
 
@@ -705,6 +706,8 @@ test('API errors turn validation arrays into readable text instead of "[object O
     });
     globalThis.fetch = async () => ({ ok: false, status: 409, text: async () => JSON.stringify({ detail: '该邮箱已注册，请直接登录。' }) });
     await assert.rejects(api('/api/x', { method: 'POST', body: {} }), error => error.message === '该邮箱已注册，请直接登录。');
+    globalThis.fetch = async () => ({ ok: false, status: 429, text: async () => JSON.stringify({ detail: { code: 'answer_in_progress', message: '已有一个回答在进行，请等待完成后再试。' } }) });
+    await assert.rejects(api('/api/x', { method: 'POST', body: {} }), error => error.message === '已有一个回答在进行，请等待完成后再试。');
   } finally {
     globalThis.fetch = original;
   }
@@ -875,7 +878,7 @@ test('newer running/failed/cancelled tasks keep their own session; fresh or empt
   }
 });
 
-test('unrecoverable history reports failure instead of silently starting a new paid interpretation', async () => {
+test('unrecoverable history reports failure instead of silently starting a new interpretation', async () => {
   const { resolveLiuyaoSession } = await load('lib/sessions.js');
   const history = { system: 'liuyao', history: [{ task_id: 'expired', created_at: '2026-09-09' }] };
   await assert.rejects(resolveLiuyaoSession(history, { fetchTask: async () => { throw new Error('404'); } }), /无法恢复/);

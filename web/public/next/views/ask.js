@@ -1,21 +1,21 @@
 // 提问：首页先写下问题，再选方法。六爻是一场「三钱六掷」的小仪式，八字是分步填写出生信息。
-import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n46";
-import { icon } from "../lib/icons.js?v=n46";
-import { get, post, put } from "../lib/api.js?v=n46";
-import { session, local, refreshSession } from "../lib/store.js?v=n46";
-import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n46";
-import { readingDraftKey } from "../lib/sessions.js?v=n46";
-import { relativeTime, count } from "../lib/format.js?v=n46";
-import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n46";
-import { handoff } from "../lib/handoff.js?v=n46";
-import { humanizeError } from "../lib/interpret.js?v=n46";
-import { stateView } from "../ui/bits.js?v=n46";
-import { toast } from "../ui/toast.js?v=n46";
-import { confirmDialog } from "../ui/overlay.js?v=n46";
-import { locationPicker } from "../ui/location.js?v=n46";
-import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n46";
-import { baziPanel } from "../ui/chart-bazi.js?v=n46";
-import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n46";
+import { h, autoGrow, submitOnEnter, reducedMotion } from "../lib/dom.js?v=n47";
+import { icon } from "../lib/icons.js?v=n47";
+import { get, post, put } from "../lib/api.js?v=n47";
+import { session, local, refreshSession } from "../lib/store.js?v=n47";
+import { newSessionId, localDateTimeISO } from "../lib/ids.js?v=n47";
+import { readingDraftKey } from "../lib/sessions.js?v=n47";
+import { relativeTime, count } from "../lib/format.js?v=n47";
+import { ASK_EXAMPLES, LY_POS, LY_VALUE_NAME, CN_NUM, RISK_ACK_KEY, RISK_ACK_TEXT } from "../lib/copy.js?v=n47";
+import { handoff } from "../lib/handoff.js?v=n47";
+import { humanizeError } from "../lib/interpret.js?v=n47";
+import { stateView } from "../ui/bits.js?v=n47";
+import { toast } from "../ui/toast.js?v=n47";
+import { confirmDialog } from "../ui/overlay.js?v=n47";
+import { locationPicker } from "../ui/location.js?v=n47";
+import { liuyaoPanel, liuyaoTitle } from "../ui/chart-liuyao.js?v=n47";
+import { baziPanel } from "../ui/chart-bazi.js?v=n47";
+import { learnEntry, baziLearnInput, liuyaoLearnInput } from "../lib/learn.js?v=n47";
 
 const ASK_DRAFT = "xz-next-draft:ask";
 // 参考声明写在开始按钮下面：点「开始」即视为知晓，解读页不再要求单独勾选。
@@ -237,16 +237,8 @@ function liuyaoFlow(ctx) {
   ];
   const visibilityGroup = h("div", { class: "vis-grid", role: "radiogroup", "aria-label": "回答方式" });
   radioKeys(visibilityGroup);
-  const quotaLabel = () => {
-    const quota = session.get().quota;
-    const wallet = session.get().wallet;
-    if (!session.get().authenticated) return "注册即送积分 · 每天还有免费额度";
-    if (!quota) return "";
-    if (quota.remaining > 0) return `今日免费额度还剩 ${quota.remaining} 分`;
-    return wallet?.balance ? `今日免费已用完 · 账户还有 ${wallet.balance} 分` : "今日免费已用完 · 明天 0 点恢复";
-  };
   const renderVisibility = () => {
-    // 账户状态刷新时也会重画：焦点原本在选项上就留在选中项上。
+    // 焦点原本在选项上就留在选中项上。
     const hadFocus = visibilityGroup.contains(document.activeElement);
     visibilityGroup.replaceChildren(...visibilityOptions.map(([value, label, copy]) => h("button", {
       type: "button",
@@ -262,8 +254,7 @@ function liuyaoFlow(ctx) {
         syncSubmit();
       },
     },
-    h("span", { class: "vis-copy" }, h("b", null, label), h("span", null, copy),
-      value === "private" ? h("small", null, quotaLabel()) : value === "public" ? h("small", null, "消耗积分 · 分享可增加每日额度") : h("small", null, "不调用 AI · 不扣积分")),
+    h("span", { class: "vis-copy" }, h("b", null, label), h("span", null, copy)),
     h("span", { class: "vis-radio", "aria-hidden": "true" }))));
     if (hadFocus) visibilityGroup.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
   };
@@ -573,29 +564,17 @@ function liuyaoFlow(ctx) {
     return "";
   }
 
-  // 积分用完（今日免费与充值都不够开始一次解读）：AI 解读暂不可用，求助不受影响。
-  const creditsOut = () => state.visibility !== "help" && session.get().authenticated && session.get().quota?.can_start_answer === false;
-
   function syncSubmit() {
     const labels = { help: "发布社区求助", private: "开始私密解读", public: "开始公开解读" };
     const missing = missingStep();
-    const exhausted = !missing && creditsOut();
     submit.disabled = state.submitting;
-    submit.classList.toggle("is-waiting", !!missing || exhausted);
+    submit.classList.toggle("is-waiting", !!missing);
     submit.setAttribute("aria-disabled", String(!!missing));
     submit.replaceChildren(...[
-      icon(state.visibility === "help" ? "hand" : exhausted ? "coins" : "sparkle"),
-      exhausted ? "今日额度已用完" : labels[state.visibility],
+      icon(state.visibility === "help" ? "hand" : "sparkle"),
+      labels[state.visibility],
       missing && h("small", null, ` · ${missing}`),
     ].filter(Boolean));
-  }
-
-  function showCreditsOut() {
-    const topup = !!session.get().wallet?.topup_enabled;
-    submitError.replaceChildren(
-      topup ? "今日免费额度与账户积分已用完；明日北京时间 0 点恢复，或充值后继续。 " : "今日免费额度已用完，明日北京时间 0 点恢复。也可以先向卦友求助，不扣积分。 ",
-      topup ? h("a", { class: "link-btn", href: "#/me/credits?topup=1" }, "去充值") : h("button", { type: "button", class: "link-btn", onClick: () => { state.visibility = "help"; state.visibilityChosen = true; saveCast(); renderVisibility(); syncSubmit(); submitError.hidden = true; } }, "改为向卦友求助"));
-    submitError.hidden = false;
   }
 
   function showRitual(lines) {
@@ -626,20 +605,14 @@ function liuyaoFlow(ctx) {
       return;
     }
     const reasons = {
-      help: "登录并验证邮箱后可免费求助，不调用 AI，不扣积分。",
+      help: "登录并验证邮箱后即可向卦友求助。",
       private: "私密提问，先登录或注册。",
-      public: "登录后使用今日免费额度；分享公开问题可以增加额度。",
+      public: "登录后即可开始公开解读。",
     };
     // 起卦提交时的登录默认停在「注册」。
     const ok = await ctx.requireAuth(reasons[state.visibility], { mode: "register" });
     if (!ok || !ctx.isCurrent() || state.submitting) return;
     if (!help) acceptRisk();
-    const quota = session.get().quota;
-    if (!help && quota && quota.can_start_answer === false) {
-      showCreditsOut();
-      syncSubmit();
-      return;
-    }
     state.submitting = true;
     syncSubmit();
     const stop = showRitual(help ? ["装卦 · 纳甲定世应 …", "整理脱敏卦面 …"] : ["装卦 · 纳甲定世应 …", "排六神 · 观动爻 …"]);
@@ -701,7 +674,6 @@ function liuyaoFlow(ctx) {
   renderVisibility();
   syncCast();
   syncSubmit();
-  ctx.subscribe(session, () => { renderVisibility(); syncSubmit(); });
   if (restored) toast(restored.lines.length >= 6 ? "已恢复刚才摇出的六爻" : `已恢复刚才摇出的 ${restored.lines.length} 爻，可以接着摇`);
   if (!question.value) requestAnimationFrame(() => question.focus({ preventScroll: true }));
   return { node, title: "六爻问事", layout: "focus" };
